@@ -436,7 +436,7 @@ Deno.serve(async (req) => {
         .eq("organization_id", organization_id)
         .maybeSingle();
       if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
-        const spText = Object.entries(salesPlan.answers as Record<string, any>)
+        const spText = Object.entries(salesPlan.answers as Record<string, unknown>)
           .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
           .join("\n");
         salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido):\n${spText}\n\nUse esses dados para enriquecer ICP, proposta de valor e projeções.`;
@@ -505,7 +505,7 @@ Use a ferramenta generate_strategy para retornar.`;
     const aiData = await aiResponse.json();
     const tokensUsed = aiData.usage?.total_tokens || 0;
 
-    let result: any = null;
+    let result: Record<string, unknown> | null = null;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {
@@ -559,10 +559,10 @@ Use a ferramenta generate_strategy para retornar.`;
       JSON.stringify({ result, tokens_used: tokensUsed }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Strategy generation error:", err);
     return new Response(
-      JSON.stringify({ error: err.message || "Erro interno" }),
+      JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno" }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }

@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
 
     let salesPlanContext = "";
     if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
-      const sp = salesPlan.answers as Record<string, any>;
+      const sp = salesPlan.answers as Record<string, unknown>;
       const parts: string[] = [];
       if (sp.produtos_servicos) parts.push(`Produtos/Serviços: ${sp.produtos_servicos}`);
       if (sp.diferenciais) parts.push(`Diferenciais: ${sp.diferenciais}`);
@@ -134,13 +134,13 @@ Deno.serve(async (req) => {
 
     const strategyContext = strategy?.answers ? JSON.stringify(strategy.answers) : "Nenhuma estratégia de marketing definida";
     const contentsContext = contents?.length
-      ? contents.map((c: any) => `${c.title} (${c.type}, ${c.platform}) - ${c.main_message || ""}`).join("; ")
+      ? contents.map((c: { title: string; type: string; platform: string; main_message?: string }) => `${c.title} (${c.type}, ${c.platform}) - ${c.main_message || ""}`).join("; ")
       : "Nenhum conteúdo publicado";
     const sitesContext = sites?.length
-      ? sites.map((s: any) => `${s.name}: ${s.url || "sem URL"} (${s.status})`).join("; ")
+      ? sites.map((s: { name: string; url?: string; status: string }) => `${s.name}: ${s.url || "sem URL"} (${s.status})`).join("; ")
       : "Nenhum site";
     const postsContext = posts?.length
-      ? posts.map((p: any) => `${p.type} (${p.format || p.style})`).join("; ")
+      ? posts.map((p: { type: string; format?: string; style?: string }) => `${p.type} (${p.format || p.style})`).join("; ")
       : "Nenhum criativo";
 
     const selectedPlatforms = plataformas.length > 0 ? plataformas.join(", ") : "Meta Ads, Google Ads, TikTok Ads, LinkedIn Ads";
@@ -238,7 +238,7 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
     // Deactivate previous
     await adminClient
       .from("traffic_strategies")
-      .update({ is_active: false } as any)
+      .update({ is_active: false } as Record<string, unknown>)
       .eq("organization_id", organization_id)
       .eq("is_active", true);
 
@@ -263,7 +263,7 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
         status: "pending",
         created_by: userId,
         strategy_id: strategy_id || null,
-      } as any)
+      } as Record<string, unknown>)
       .select()
       .single();
 
@@ -272,9 +272,9 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
     return new Response(JSON.stringify({ success: true, strategy: inserted }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("generate-traffic-strategy error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }

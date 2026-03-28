@@ -66,7 +66,7 @@ serve(async (req) => {
       total_impressions: metrics.reduce((s, m) => s + Number(m.impressions), 0),
       total_clicks: metrics.reduce((s, m) => s + Number(m.clicks), 0),
       total_conversions: metrics.reduce((s, m) => s + Number(m.conversions), 0),
-      campaigns: {} as Record<string, any>,
+      campaigns: {} as Record<string, unknown>,
     };
 
     for (const m of metrics) {
@@ -141,7 +141,7 @@ Retorne um JSON com a seguinte estrutura:
     let analysisText = aiData.choices?.[0]?.message?.content || "";
 
     // Try to parse JSON from response
-    let analysis: any;
+    let analysis: Record<string, unknown>;
     try {
       const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : { resumo: analysisText };

@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // Match instance by client_token, or fallback to first
     let instance = instances[0];
     if (clientToken) {
-      const matched = instances.find((i: any) => i.client_token === clientToken);
+      const matched = instances.find((i: { client_token: string }) => i.client_token === clientToken);
       if (matched) {
         instance = matched;
       } else {
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
 
     if (existingContact) {
       contactId = existingContact.id;
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         name: senderName || undefined,
         last_message_at: new Date().toISOString(),
         last_message_preview: (isFromMe ? "Você: " : "") + previewText,
@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
     }
 
     // Auto-link CRM lead if contact has no crm_lead_id
-    if (!isFromMe && (!existingContact || !(existingContact as any).crm_lead_id)) {
+    if (!isFromMe && (!existingContact || !("crm_lead_id" in existingContact && existingContact.crm_lead_id))) {
       try {
         const { data: matchedLead } = await adminClient
           .from("crm_leads")

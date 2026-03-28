@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     if (Array.isArray(knowledgeBase) && knowledgeBase.length > 0) {
       const kbText = knowledgeBase
         .slice(0, 10)
-        .map((item: any) => typeof item === "string" ? item : item.content || item.name || "")
+        .map((item: unknown) => typeof item === "string" ? item : (item as Record<string, string>).content || (item as Record<string, string>).name || "")
         .filter(Boolean)
         .join("\n---\n");
       if (kbText) systemPrompt += `\n\nBase de conhecimento:\n${kbText}`;
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
 
     systemPrompt += "\n\nEsta é uma SIMULAÇÃO de teste. Responda normalmente como faria em uma conversa real de WhatsApp.";
 
-    const chatHistory = (history || []).map((m: any) => ({ role: m.role, content: m.content }));
+    const chatHistory = (history || []).map((m: { role: string; content: string }) => ({ role: m.role, content: m.content }));
     const model = promptConfig.modelo ? `google/${promptConfig.modelo}` : "google/gemini-3-flash-preview";
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

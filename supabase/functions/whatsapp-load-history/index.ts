@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     }
 
     // Find instance
-    let instance: any = null;
+    let instance: Record<string, unknown> | null = null;
     if (instanceId) {
       const { data } = await adminClient
         .from("whatsapp_instances")
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     }
 
     // Try primary endpoint
-    let rawMessages: any[] = [];
+    let rawMessages: Record<string, unknown>[] = [];
     let usedFallback = false;
 
     console.log(`[load-history] Trying chat-messages for ${zapiPhone} (isGroup: ${isGroup})`);
@@ -176,9 +176,9 @@ Deno.serve(async (req) => {
       .eq("organization_id", orgId)
       .in("message_id_zapi", zapiIds);
 
-    const existingSet = new Set((existingMsgs || []).map((m: any) => m.message_id_zapi));
+    const existingSet = new Set((existingMsgs || []).map((m: { message_id_zapi: string }) => m.message_id_zapi));
 
-    const toInsert: any[] = [];
+    const toInsert: Record<string, unknown>[] = [];
 
     for (const msg of rawMessages) {
       const messageIdZapi = msg.messageId || msg.id?.id || msg.id || null;

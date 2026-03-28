@@ -32,281 +32,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { formatBRL } from "@/lib/formatting";
 
+import {
+  downloadCsv, downloadReportPdf, getDateRange, filterByDate,
+  getGoalStatusLabel, METRIC_TO_KPI, DashboardKpiCard,
+  type GoalStatus,
+} from "./ClienteDashboardHelpers";
 
-interface WaContact {
-  id: string;
-  name: string | null;
-  phone: string | null;
-  last_message_at: string | null;
-  attending_mode?: string;
-  unread_count?: number;
-  created_at: string;
-  [key: string]: unknown;
-}
-
-interface WaMessage {
-  id: string;
-  contact_id: string;
-  direction: string;
-  type: string;
-  content: string | null;
-  created_at: string;
-  status?: string;
-  [key: string]: unknown;
-}
-
-interface GoalRow {
-  id: string;
-  title: string;
-  metric: string;
-  target_value: number;
-  current_value?: number;
-  scope?: string;
-  status?: string;
-  period_start?: string;
-  period_end?: string;
-  [key: string]: unknown;
-}
-
-interface AgentRow {
-  id: string;
-  name: string;
-  status: string;
-  [key: string]: unknown;
-}
-
-interface AiLogRow {
-  id: string;
-  agent_id: string;
-  tokens_used: number;
-  model: string;
-  created_at: string;
-  [key: string]: unknown;
-}
-
-/* ========== CSV EXPORT ========== */
-function downloadCsv(filename: string, headers: string[], rows: string[][]) {
-  const csv = [headers.join(";"), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* ========== PDF EXPORT ========== */
-async function downloadReportPdf(containerId: string, title: string, orgName?: string) {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import("html2canvas"),
-    import("jspdf"),
-  ]);
-
-  const element = document.getElementById(containerId);
-  if (!element) return;
-
-  // Hide export buttons during capture
-  element.classList.add("pdf-exporting");
-
-  // Small delay to let the DOM update
-  await new Promise(r => setTimeout(r, 100));
-
-  try {
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      logging: false,
-      scrollY: -window.scrollY,
-    });
-
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10;
-    const headerHeight = 22;
-
-    // Draw header
-    pdf.setFillColor(226, 35, 59); // brand red
-    pdf.rect(0, 0, pageWidth, headerHeight, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(orgName || "Relatório", margin, 10);
-    pdf.setFontSize(9);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(title, margin, 16);
-    const dateStr = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-    pdf.text(dateStr, pageWidth - margin - pdf.getTextWidth(dateStr), 16);
-
-    // Add captured image with pagination
-    const imgData = canvas.toDataURL("image/png");
-    const imgWidth = pageWidth - margin * 2;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    const contentStart = headerHeight + 4;
-    const usableHeight = pageHeight - margin;
-
-    let heightLeft = imgHeight;
-    let position = contentStart;
-    let srcY = 0;
-
-    while (heightLeft > 0) {
-      const sliceHeight = Math.min(heightLeft, usableHeight - position);
-      // Create a slice of the canvas for this page
-      const sliceCanvas = document.createElement("canvas");
-      sliceCanvas.width = canvas.width;
-      const srcSliceHeight = (sliceHeight / imgHeight) * canvas.height;
-      sliceCanvas.height = srcSliceHeight;
-      const ctx = sliceCanvas.getContext("2d")!;
-      ctx.drawImage(canvas, 0, srcY, canvas.width, srcSliceHeight, 0, 0, canvas.width, srcSliceHeight);
-
-      const sliceData = sliceCanvas.toDataURL("image/png");
-      pdf.addImage(sliceData, "PNG", margin, position, imgWidth, sliceHeight);
-
-      heightLeft -= sliceHeight;
-      srcY += srcSliceHeight;
-
-      if (heightLeft > 0) {
-        pdf.addPage();
-        position = margin;
-      }
-    }
-
-    const filename = `${title.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`;
-    pdf.save(filename);
-  } finally {
-    element.classList.remove("pdf-exporting");
-  }
-}
-
-/* ========== DATE FILTER HELPER ========== */
-function getDateRange(period: string, customFrom: string, customTo: string): { from: Date | null; to: Date } {
-  const now = new Date();
-  const to = new Date(now);
-  to.setHours(23, 59, 59, 999);
-
-  switch (period) {
-    case "7d": {
-      const from = new Date(now);
-      from.setDate(from.getDate() - 7);
-      from.setHours(0, 0, 0, 0);
-      return { from, to };
-    }
-    case "30d": {
-      const from = new Date(now);
-      from.setDate(from.getDate() - 30);
-      from.setHours(0, 0, 0, 0);
-      return { from, to };
-    }
-    case "90d": {
-      const from = new Date(now);
-      from.setDate(from.getDate() - 90);
-      from.setHours(0, 0, 0, 0);
-      return { from, to };
-    }
-    case "custom": {
-      const from = customFrom ? new Date(customFrom + "T00:00:00") : null;
-      const customEnd = customTo ? new Date(customTo + "T23:59:59") : to;
-      return { from, to: customEnd };
-    }
-    default: // "all"
-      return { from: null, to };
-  }
-}
-
-function filterByDate<T extends { created_at: string }>(items: T[], from: Date | null, to: Date): T[] {
-  if (!from) return items;
-  return items.filter(item => {
-    const d = new Date(item.created_at);
-    return d >= from && d <= to;
-  });
-}
-
-/* ========== GOAL STATUS HELPERS ========== */
-type GoalStatus = "batida" | "no_ritmo" | "em_andamento" | "abaixo" | "critica";
-
-function getGoalGradient(status: GoalStatus | undefined, fallback: string) {
-  if (!status) return fallback;
-  if (status === "batida" || status === "no_ritmo") return "from-emerald-500/20 to-emerald-600/5";
-  if (status === "em_andamento") return "from-amber-500/20 to-amber-600/5";
-  return "from-red-500/20 to-red-600/5";
-}
-
-function getGoalStatusLabel(status: GoalStatus) {
-  switch (status) {
-    case "batida": return { label: "✓ Meta batida", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" };
-    case "no_ritmo": return { label: "↗ No ritmo", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" };
-    case "em_andamento": return { label: "→ Em andamento", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" };
-    case "abaixo": return { label: "↓ Abaixo", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
-    case "critica": return { label: "↓ Crítica", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
-  }
-}
-
-const METRIC_TO_KPI: Record<string, string[]> = {
-  revenue: ["Receita Total"], faturamento: ["Receita Total"],
-  leads: ["Leads Captados"],
-  conversions: ["Taxa de Conversão"],
-  avg_ticket: ["Ticket Médio"],
-  contracts: ["Pipeline Ativo"], contratos: ["Pipeline Ativo"],
-};
-
-function KpiCard({ label, value, icon: Icon, gradient, trend, goalStatus, goalTarget, goalPercent, goalDaysLeft }: {
-  label: string; value: string; icon: React.ElementType; gradient: string;
-  trend?: { value: string; positive: boolean }; goalStatus?: GoalStatus;
-  goalTarget?: string; goalPercent?: number; goalDaysLeft?: number;
-}) {
-  const statusInfo = goalStatus ? getGoalStatusLabel(goalStatus) : null;
-  const barColor =
-    goalStatus === "batida" || goalStatus === "no_ritmo" ? "bg-emerald-500" :
-    goalStatus === "em_andamento" ? "bg-amber-500" :
-    goalStatus ? "bg-red-500" : "";
-  return (
-    <Card className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-      <div className={`absolute inset-0 bg-gradient-to-br ${getGoalGradient(goalStatus, gradient)} opacity-60`} />
-      <CardContent className="relative p-4">
-        <div className="w-9 h-9 rounded-lg bg-background/50 border flex items-center justify-center">
-          <Icon className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <div className="mt-3">
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-            {trend && (
-              <span className={`text-[10px] font-medium flex items-center gap-0.5 ${trend.positive ? "text-emerald-600" : "text-red-500"}`}>
-                {trend.positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {trend.value}
-              </span>
-            )}
-          </div>
-          {/* Goal progress inline */}
-          {goalStatus && goalPercent !== undefined && (
-            <div className="mt-2.5 space-y-1">
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(goalPercent, 100)}%` }} />
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                {goalTarget && (
-                  <span className="text-[9px] text-muted-foreground truncate">Meta: {goalTarget}</span>
-                )}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[9px] font-semibold" style={{ color: barColor === "bg-emerald-500" ? "#059669" : barColor === "bg-amber-500" ? "#d97706" : "#dc2626" }}>
-                    {Math.round(goalPercent)}%
-                  </span>
-                  {goalDaysLeft !== undefined && goalDaysLeft > 0 && (
-                    <span className="text-[9px] text-muted-foreground">{goalDaysLeft}d</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          {statusInfo && !goalPercent && (
-            <span className={`inline-block mt-1.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${statusInfo.className}`}>
-              {statusInfo.label}
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+interface WaContact { id: string; name: string | null; phone: string | null; last_message_at: string | null; attending_mode?: string; unread_count?: number; created_at: string; [key: string]: unknown; }
+interface WaMessage { id: string; contact_id: string; direction: string; type: string; content: string | null; created_at: string; status?: string; [key: string]: unknown; }
+interface GoalRow { id: string; title: string; metric: string; target_value: number; current_value?: number; scope?: string; status?: string; period_start?: string; period_end?: string; [key: string]: unknown; }
+interface AgentRow { id: string; name: string; status: string; [key: string]: unknown; }
+interface AiLogRow { id: string; agent_id: string; tokens_used: number; model: string; created_at: string; [key: string]: unknown; }
 
 /* ========== MAIN COMPONENT ========== */
 export default function ClienteDashboard() {
@@ -321,60 +57,33 @@ export default function ClienteDashboard() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
-  // Goals data
   const { data: activeGoals } = useActiveGoals();
   const { data: goalProgress } = useGoalProgress(activeGoals);
 
-  // Chat data
   const { data: chatContacts } = useQuery({
     queryKey: ["dashboard-chat-contacts", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("whatsapp_contacts" as unknown as "profiles").select("*").eq("organization_id", orgId ?? "");
-      if (error) return [];
-      return data || [];
-    },
+    queryFn: async () => { const { data } = await supabase.from("whatsapp_contacts" as unknown as "profiles").select("*").eq("organization_id", orgId ?? ""); return data || []; },
     enabled: !!orgId,
   });
-
   const { data: chatMessages } = useQuery({
     queryKey: ["dashboard-chat-messages", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("whatsapp_messages" as unknown as "profiles").select("*").eq("organization_id", orgId ?? "").order("created_at", { ascending: false }).limit(500);
-      if (error) return [];
-      return data || [];
-    },
+    queryFn: async () => { const { data } = await supabase.from("whatsapp_messages" as unknown as "profiles").select("*").eq("organization_id", orgId ?? "").order("created_at", { ascending: false }).limit(500); return data || []; },
     enabled: !!orgId,
   });
-
-  // AI Agents data
   const { data: agents } = useQuery({
     queryKey: ["dashboard-agents", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("client_ai_agents").select("*").eq("organization_id", orgId ?? "");
-      if (error) return [];
-      return data || [];
-    },
+    queryFn: async () => { const { data } = await supabase.from("client_ai_agents").select("*").eq("organization_id", orgId ?? ""); return data || []; },
     enabled: !!orgId,
   });
-
   const { data: aiLogs } = useQuery({
     queryKey: ["dashboard-ai-logs", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("ai_conversation_logs").select("*").eq("organization_id", orgId ?? "").order("created_at", { ascending: false }).limit(200);
-      if (error) return [];
-      return data || [];
-    },
+    queryFn: async () => { const { data } = await supabase.from("ai_conversation_logs").select("*").eq("organization_id", orgId ?? "").order("created_at", { ascending: false }).limit(200); return data || []; },
     enabled: !!orgId,
   });
 
-  // ===== DATE RANGE =====
   const { from: dateFrom, to: dateTo } = useMemo(() => getDateRange(period, customFrom, customTo), [period, customFrom, customTo]);
-
-  // ===== FILTERED DATA =====
   const allLeadsRaw = leads ?? [];
   const allLeads = useMemo(() => filterByDate(allLeadsRaw, dateFrom, dateTo), [allLeadsRaw, dateFrom, dateTo]);
-
-  // Previous period for comparison
   const prevLeads = useMemo(() => {
     if (!dateFrom) return [];
     const periodMs = dateTo.getTime() - dateFrom.getTime();
@@ -383,7 +92,6 @@ export default function ClienteDashboard() {
     return filterByDate(allLeadsRaw, prevFrom, prevTo);
   }, [allLeadsRaw, dateFrom, dateTo]);
 
-  // CRM computed values
   const wonLeads = allLeads.filter(l => l.won_at);
   const lostLeads = allLeads.filter(l => l.lost_at);
   const activeLeads = allLeads.filter(l => !l.won_at && !l.lost_at);
@@ -393,7 +101,6 @@ export default function ClienteDashboard() {
   const lossRate = allLeads.length > 0 ? ((lostLeads.length / allLeads.length) * 100).toFixed(1) : "0";
   const ticketMedio = wonLeads.length > 0 ? totalValue / wonLeads.length : 0;
 
-  // Previous period comparison
   const prevWonLeads = prevLeads.filter(l => l.won_at);
   const prevTotalValue = prevWonLeads.reduce((sum, l) => sum + Number(l.value || 0), 0);
   const prevConversionRate = prevLeads.length > 0 ? ((prevWonLeads.length / prevLeads.length) * 100) : 0;
@@ -405,7 +112,6 @@ export default function ClienteDashboard() {
     return { value: `${Number(pct) >= 0 ? "+" : ""}${pct}%`, positive: Number(pct) >= 0 };
   }
 
-  // Goal status for KPI labels
   function getKpiGoalData(kpiLabel: string): { status: GoalStatus; percent: number; targetFormatted: string; daysLeft: number } | undefined {
     if (!activeGoals || !goalProgress) return undefined;
     for (const goal of activeGoals) {
@@ -423,20 +129,17 @@ export default function ClienteDashboard() {
     return undefined;
   }
 
-  // Goal for conversion chart color
   const conversionGoal = useMemo(() => {
     if (!activeGoals || !goalProgress) return null;
     const g = activeGoals.find((g: GoalRow) => g.metric === "conversions");
     return g ? goalProgress[g.id] : null;
   }, [activeGoals, goalProgress]);
 
-  // Goal for leads chart reference line
   const leadsGoal = useMemo(() => {
     if (!activeGoals) return null;
     return activeGoals.find((g: GoalRow) => g.metric === "leads") || null;
   }, [activeGoals]);
 
-  // Average closing time (days between created_at and won_at)
   const avgClosingDays = useMemo(() => {
     const closedLeads = wonLeads.filter(l => l.won_at && l.created_at);
     if (closedLeads.length === 0) return 0;
@@ -447,147 +150,97 @@ export default function ClienteDashboard() {
     return Math.round(totalDays / closedLeads.length);
   }, [wonLeads]);
 
-  // Leads created per week (last 8 weeks)
   const leadsPerWeek = useMemo(() => {
     const weeks: { name: string; value: number }[] = [];
     const now = new Date();
     for (let i = 7; i >= 0; i--) {
-      const start = new Date(now);
-      start.setDate(start.getDate() - (i + 1) * 7);
-      const end = new Date(now);
-      end.setDate(end.getDate() - i * 7);
-      const count = allLeads.filter(l => {
-        const d = new Date(l.created_at);
-        return d >= start && d < end;
-      }).length;
+      const start = new Date(now); start.setDate(start.getDate() - (i + 1) * 7);
+      const end = new Date(now); end.setDate(end.getDate() - i * 7);
+      const count = allLeads.filter(l => { const d = new Date(l.created_at); return d >= start && d < end; }).length;
       weeks.push({ name: `S${8 - i}`, value: count });
     }
     return weeks;
   }, [allLeads]);
 
-  // Lost reasons
   const lostReasons = useMemo(() => {
     const map: Record<string, number> = {};
-    lostLeads.forEach(l => {
-      const reason = l.lost_reason || "Sem motivo";
-      map[reason] = (map[reason] || 0) + 1;
-    });
+    lostLeads.forEach(l => { const reason = l.lost_reason || "Sem motivo"; map[reason] = (map[reason] || 0) + 1; });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
   }, [lostLeads]);
 
-  // Leads by source
   const leadsBySource = useMemo(() => {
     const map: Record<string, number> = {};
     allLeads.forEach(l => { const s = l.source || "Sem origem"; map[s] = (map[s] || 0) + 1; });
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 6);
   }, [allLeads]);
 
-  // Leads by stage
   const leadsByStage = useMemo(() => {
     const map: Record<string, number> = {};
     allLeads.forEach(l => { map[l.stage] = (map[l.stage] || 0) + 1; });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [allLeads]);
 
-  // Top leads by value
-  const topLeads = useMemo(() =>
-    [...allLeads].filter(l => (l.value || 0) > 0).sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 5),
-    [allLeads]
-  );
-
-  // Open proposals
+  const topLeads = useMemo(() => [...allLeads].filter(l => (l.value || 0) > 0).sort((a, b) => (b.value || 0) - (a.value || 0)).slice(0, 5), [allLeads]);
   const openProposals = (proposals ?? []).filter(p => p.status === "draft" || p.status === "sent");
   const openProposalsValue = openProposals.reduce((s, p) => s + (p.value || 0), 0);
 
-  // Chat computed - also filtered by date
   const allContacts = chatContacts ?? [];
   const allMessagesRaw = chatMessages ?? [];
   const allMessages = useMemo(() => {
     if (!dateFrom) return allMessagesRaw;
-    return allMessagesRaw.filter((m: WaMessage) => {
-      const d = new Date(m.created_at);
-      return d >= dateFrom && d <= dateTo;
-    });
+    return allMessagesRaw.filter((m: WaMessage) => { const d = new Date(m.created_at); return d >= dateFrom && d <= dateTo; });
   }, [allMessagesRaw, dateFrom, dateTo]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const messagesToday = allMessagesRaw.filter((m: WaMessage) => m.created_at?.startsWith(todayStr));
 
-  // Messages per day (last 7 days)
   const messagesPerDay = useMemo(() => {
     const days: { name: string; inbound: number; outbound: number }[] = [];
     const now = new Date();
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
+      const d = new Date(now); d.setDate(d.getDate() - i);
       const dayStr = d.toISOString().slice(0, 10);
       const dayMsgs = allMessagesRaw.filter((m: WaMessage) => m.created_at?.startsWith(dayStr));
-      days.push({
-        name: d.toLocaleDateString("pt-BR", { weekday: "short" }),
-        inbound: dayMsgs.filter((m: WaMessage) => m.direction === "inbound").length,
-        outbound: dayMsgs.filter((m: WaMessage) => m.direction === "outbound").length,
-      });
+      days.push({ name: d.toLocaleDateString("pt-BR", { weekday: "short" }), inbound: dayMsgs.filter((m: WaMessage) => m.direction === "inbound").length, outbound: dayMsgs.filter((m: WaMessage) => m.direction === "outbound").length });
     }
     return days;
   }, [allMessagesRaw]);
 
-  // AI vs Human distribution
-  const aiVsHuman = useMemo(() => {
-    const aiContacts = allContacts.filter((c: WaContact) => c.attending_mode === "ai").length;
-    const humanContacts = allContacts.filter((c: WaContact) => c.attending_mode === "human").length;
-    return [
-      { name: "IA", value: aiContacts },
-      { name: "Humano", value: humanContacts },
-    ];
-  }, [allContacts]);
+  const aiVsHuman = useMemo(() => [
+    { name: "IA", value: allContacts.filter((c: WaContact) => c.attending_mode === "ai").length },
+    { name: "Humano", value: allContacts.filter((c: WaContact) => c.attending_mode === "human").length },
+  ], [allContacts]);
 
-  // Contacts without response
-  const noResponseCount = useMemo(() => {
-    return allContacts.filter((c: WaContact) => {
-      const contactMsgs = allMessagesRaw.filter((m: WaMessage) => m.contact_id === c.id);
-      if (contactMsgs.length === 0) return false;
-      const lastMsg = contactMsgs[0];
-      return lastMsg.direction === "inbound";
-    }).length;
-  }, [allContacts, allMessagesRaw]);
+  const noResponseCount = useMemo(() => allContacts.filter((c: WaContact) => {
+    const contactMsgs = allMessagesRaw.filter((m: WaMessage) => m.contact_id === c.id);
+    if (contactMsgs.length === 0) return false;
+    return contactMsgs[0].direction === "inbound";
+  }).length, [allContacts, allMessagesRaw]);
 
-  // Average response time (minutes)
   const avgResponseTime = useMemo(() => {
-    let totalTime = 0;
-    let count = 0;
+    let totalTime = 0; let count = 0;
     const sorted = [...allMessages].sort((a: WaMessage, b: WaMessage) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     for (let i = 0; i < sorted.length - 1; i++) {
       const m = sorted[i];
       if (m.direction === "inbound") {
         const next = sorted.slice(i + 1).find((n: WaMessage) => n.direction === "outbound" && n.contact_id === m.contact_id);
-        if (next) {
-          const diff = (new Date(next.created_at).getTime() - new Date(m.created_at).getTime()) / (1000 * 60);
-          if (diff < 1440) {
-            totalTime += diff;
-            count++;
-          }
-        }
+        if (next) { const diff = (new Date(next.created_at).getTime() - new Date(m.created_at).getTime()) / (1000 * 60); if (diff < 1440) { totalTime += diff; count++; } }
       }
     }
     return count > 0 ? Math.round(totalTime / count) : 0;
   }, [allMessages]);
 
-  // AI computed - also filtered
   const allAgents = agents ?? [];
   const activeAgents = allAgents.filter((a: AgentRow) => a.status === "active");
   const filteredAiLogs = useMemo(() => {
     const logs = aiLogs ?? [];
     if (!dateFrom) return logs;
-    return logs.filter((l: AiLogRow) => {
-      const d = new Date(l.created_at);
-      return d >= dateFrom && d <= dateTo;
-    });
+    return logs.filter((l: AiLogRow) => { const d = new Date(l.created_at); return d >= dateFrom && d <= dateTo; });
   }, [aiLogs, dateFrom, dateTo]);
-  
+
   const totalTokens = filteredAiLogs.reduce((s: number, l: AiLogRow) => s + (l.tokens_used || 0), 0);
   const avgTokensPerConvo = filteredAiLogs.length > 0 ? Math.round(totalTokens / filteredAiLogs.length) : 0;
 
-  // Conversations per agent
   const conversationsPerAgent = useMemo(() => {
     const map: Record<string, { name: string; count: number }> = {};
     filteredAiLogs.forEach((log: AiLogRow) => {
@@ -599,17 +252,13 @@ export default function ClienteDashboard() {
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [filteredAiLogs, allAgents]);
 
-  // Handoff rate
   const handoffRate = useMemo(() => {
     const total = allContacts.length;
     if (total === 0) return "0";
-    const handoffs = allContacts.filter((c: WaContact) => c.attending_mode === "human").length;
-    return ((handoffs / total) * 100).toFixed(1);
+    return ((allContacts.filter((c: WaContact) => c.attending_mode === "human").length / total) * 100).toFixed(1);
   }, [allContacts]);
 
   const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--muted-foreground))"];
-
-  // Period label for display
   const periodLabel = period === "7d" ? "7 dias" : period === "30d" ? "30 dias" : period === "90d" ? "90 dias" : period === "custom" ? "Personalizado" : "Todo período";
 
   if (leadsLoading) {
@@ -623,50 +272,24 @@ export default function ClienteDashboard() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader
-        title="Relatórios"
-        subtitle="Analise e exporte relatórios das suas frentes comerciais"
-        icon={<BarChart3 className="w-5 h-5 text-primary" />}
+      <PageHeader title="Relatórios" subtitle="Analise e exporte relatórios das suas frentes comerciais" icon={<BarChart3 className="w-5 h-5 text-primary" />}
         actions={
           <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border items-center flex-wrap">
-            {[
-              { key: "7d", label: "7 dias" },
-              { key: "30d", label: "30 dias" },
-              { key: "90d", label: "90 dias" },
-              { key: "all", label: "Todo período" },
-            ].map(p => (
+            {[{ key: "7d", label: "7 dias" }, { key: "30d", label: "30 dias" }, { key: "90d", label: "90 dias" }, { key: "all", label: "Todo período" }].map(p => (
               <Button key={p.key} variant={period === p.key ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3" onClick={() => setPeriod(p.key)}>{p.label}</Button>
             ))}
             <Popover>
-              <PopoverTrigger asChild>
-                <Button variant={period === "custom" ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3 gap-1">
-                  <Calendar className="w-3 h-3" /> Personalizado
-                </Button>
-              </PopoverTrigger>
+              <PopoverTrigger asChild><Button variant={period === "custom" ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3 gap-1"><Calendar className="w-3 h-3" /> Personalizado</Button></PopoverTrigger>
               <PopoverContent className="w-auto p-3 space-y-2" align="end">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-muted-foreground font-medium">De</label>
-                  <Input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }} className="h-8 text-xs" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-muted-foreground font-medium">Até</label>
-                  <Input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }} className="h-8 text-xs" />
-                </div>
+                <div className="space-y-1"><label className="text-[10px] text-muted-foreground font-medium">De</label><Input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPeriod("custom"); }} className="h-8 text-xs" /></div>
+                <div className="space-y-1"><label className="text-[10px] text-muted-foreground font-medium">Até</label><Input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPeriod("custom"); }} className="h-8 text-xs" /></div>
               </PopoverContent>
             </Popover>
           </div>
         }
       />
 
-      {/* Period info badge */}
-      {dateFrom && (
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-[10px]">
-            {dateFrom.toLocaleDateString("pt-BR")} — {dateTo.toLocaleDateString("pt-BR")}
-          </Badge>
-          <span className="text-[10px] text-muted-foreground">{allLeads.length} de {allLeadsRaw.length} leads no período</span>
-        </div>
-      )}
+      {dateFrom && <div className="flex items-center gap-2"><Badge variant="secondary" className="text-[10px]">{dateFrom.toLocaleDateString("pt-BR")} — {dateTo.toLocaleDateString("pt-BR")}</Badge><span className="text-[10px] text-muted-foreground">{allLeads.length} de {allLeadsRaw.length} leads no período</span></div>}
 
       <Tabs defaultValue="crm" className="w-full">
         <TabsList className="grid grid-cols-3 w-full max-w-md">
@@ -679,108 +302,54 @@ export default function ClienteDashboard() {
         <TabsContent value="crm" className="space-y-6 mt-4" id="report-crm">
           <div className="flex justify-end">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs gap-1">
-                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="text-xs gap-1"><Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"],
-                    allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])
-                  );
-                  toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` });
-                }}>
-                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={async () => {
-                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-crm", "CRM — Relatório", orgName);
-                  toast({ title: "PDF exportado", description: "Relatório visual do CRM baixado" });
-                }}>
-                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { downloadCsv("crm-leads.csv", ["Nome", "Empresa", "Valor", "Etapa", "Origem", "Criado em"], allLeads.map(l => [l.name, l.company || "", String(l.value || 0), l.stage, l.source || "", l.created_at])); toast({ title: "CSV exportado", description: `${allLeads.length} leads exportados (${periodLabel})` }); }}><FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)</DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => { toast({ title: "Gerando PDF…" }); await downloadReportPdf("report-crm", "CRM — Relatório", orgName); toast({ title: "PDF exportado" }); }}><FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
 
           {(() => {
-            const gRecTotal = getKpiGoalData("Receita Total");
-            const gLeads = getKpiGoalData("Leads Captados");
-            const gConv = getKpiGoalData("Taxa de Conversão");
-            const gTicket = getKpiGoalData("Ticket Médio");
-            const gPipeline = getKpiGoalData("Pipeline Ativo");
+            const gRecTotal = getKpiGoalData("Receita Total"); const gLeads = getKpiGoalData("Leads Captados"); const gConv = getKpiGoalData("Taxa de Conversão"); const gTicket = getKpiGoalData("Ticket Médio"); const gPipeline = getKpiGoalData("Pipeline Ativo");
             return (<>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} goalStatus={gRecTotal?.status} goalPercent={gRecTotal?.percent} goalTarget={gRecTotal?.targetFormatted} goalDaysLeft={gRecTotal?.daysLeft} />
-                <KpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} goalStatus={gLeads?.status} goalPercent={gLeads?.percent} goalTarget={gLeads?.targetFormatted} goalDaysLeft={gLeads?.daysLeft} />
-                <KpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} goalStatus={gConv?.status} goalPercent={gConv?.percent} goalTarget={gConv?.targetFormatted} goalDaysLeft={gConv?.daysLeft} />
-                <KpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" goalStatus={gTicket?.status} goalPercent={gTicket?.percent} goalTarget={gTicket?.targetFormatted} goalDaysLeft={gTicket?.daysLeft} />
+                <DashboardKpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} goalStatus={gRecTotal?.status} goalPercent={gRecTotal?.percent} goalTarget={gRecTotal?.targetFormatted} goalDaysLeft={gRecTotal?.daysLeft} />
+                <DashboardKpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} goalStatus={gLeads?.status} goalPercent={gLeads?.percent} goalTarget={gLeads?.targetFormatted} goalDaysLeft={gLeads?.daysLeft} />
+                <DashboardKpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} goalStatus={gConv?.status} goalPercent={gConv?.percent} goalTarget={gConv?.targetFormatted} goalDaysLeft={gConv?.daysLeft} />
+                <DashboardKpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" goalStatus={gTicket?.status} goalPercent={gTicket?.percent} goalTarget={gTicket?.targetFormatted} goalDaysLeft={gTicket?.daysLeft} />
               </div>
-
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" goalStatus={gPipeline?.status} goalPercent={gPipeline?.percent} goalTarget={gPipeline?.targetFormatted} goalDaysLeft={gPipeline?.daysLeft} />
-                <KpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
-                <KpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
-                <KpiCard label="Tempo Médio Fechamento" value={`${avgClosingDays}d`} icon={Target} gradient="from-indigo-500/15 to-indigo-600/5" />
+                <DashboardKpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" goalStatus={gPipeline?.status} goalPercent={gPipeline?.percent} goalTarget={gPipeline?.targetFormatted} goalDaysLeft={gPipeline?.daysLeft} />
+                <DashboardKpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
+                <DashboardKpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
+                <DashboardKpiCard label="Tempo Médio Fechamento" value={`${avgClosingDays}d`} icon={Target} gradient="from-indigo-500/15 to-indigo-600/5" />
               </div>
             </>);
           })()}
 
-          {/* ===== METAS DO MÊS ===== */}
           {activeGoals && activeGoals.length > 0 && goalProgress ? (
             <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Target className="w-4 h-4 text-primary" /> Metas do Mês
-                  </CardTitle>
-                  <Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => navigate("/metas-ranking")}>
-                    Ver todas →
-                  </Button>
-                </div>
-              </CardHeader>
+              <CardHeader className="pb-3"><div className="flex items-center justify-between"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Metas do Mês</CardTitle><Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => navigate("/metas-ranking")}>Ver todas →</Button></div></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {activeGoals.map((goal: GoalRow) => {
-                    const prog = goalProgress[goal.id];
-                    if (!prog) return null;
+                    const prog = goalProgress[goal.id]; if (!prog) return null;
                     const statusInfo = getGoalStatusLabel(prog.status);
-                    const barColor =
-                      prog.status === "batida" || prog.status === "no_ritmo" ? "bg-emerald-500" :
-                      prog.status === "em_andamento" ? "bg-amber-500" : "bg-red-500";
-                    const ringColor =
-                      prog.status === "batida" || prog.status === "no_ritmo" ? "text-emerald-600" :
-                      prog.status === "em_andamento" ? "text-amber-600" : "text-red-600";
+                    const barColor = prog.status === "batida" || prog.status === "no_ritmo" ? "bg-emerald-500" : prog.status === "em_andamento" ? "bg-amber-500" : "bg-red-500";
                     const isMonetary = ["revenue", "faturamento", "avg_ticket"].includes(goal.metric || "");
                     const isPct = goal.metric === "conversions";
                     const currentFmt = isMonetary ? formatBRL(prog.currentValue) : isPct ? `${prog.currentValue}%` : String(prog.currentValue);
                     const targetFmt = isMonetary ? formatBRL(goal.target_value) : isPct ? `${goal.target_value}%` : String(goal.target_value);
-                    // Projection
-                    const projectedPercent = prog.daysLeft > 0 && prog.pacePerDay > 0
-                      ? Math.round(((prog.currentValue + prog.pacePerDay * prog.daysLeft) / (goal.target_value || 1)) * 100)
-                      : Math.round(prog.percent);
+                    const projectedPercent = prog.daysLeft > 0 && prog.pacePerDay > 0 ? Math.round(((prog.currentValue + prog.pacePerDay * prog.daysLeft) / (goal.target_value || 1)) * 100) : Math.round(prog.percent);
                     return (
                       <div key={goal.id} className="flex gap-3 p-3 rounded-xl border bg-card/50">
                         <GoalProgressRing percent={prog.percent} size={52} strokeWidth={5} />
                         <div className="flex-1 min-w-0 space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold truncate">{goal.title}</span>
-                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${statusInfo.className}`}>
-                              {statusInfo.label}
-                            </span>
-                          </div>
+                          <div className="flex items-center gap-2"><span className="text-xs font-semibold truncate">{goal.title}</span><span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${statusInfo.className}`}>{statusInfo.label}</span></div>
                           <p className="text-[11px] text-muted-foreground">{currentFmt} / {targetFmt}</p>
-                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(prog.percent, 100)}%` }} />
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] text-muted-foreground">
-                              {prog.daysLeft > 0
-                                ? `Projeção: ~${Math.min(projectedPercent, 999)}% • ${prog.daysLeft}d restantes`
-                                : "Período encerrado"}
-                            </span>
-                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className={`h-full rounded-full ${barColor} transition-all duration-700`} style={{ width: `${Math.min(prog.percent, 100)}%` }} /></div>
+                          <div className="flex items-center justify-between"><span className="text-[9px] text-muted-foreground">{prog.daysLeft > 0 ? `Projeção: ~${Math.min(projectedPercent, 999)}% · ${prog.daysLeft}d restantes` : "Período encerrado"}</span></div>
                         </div>
                       </div>
                     );
@@ -789,173 +358,25 @@ export default function ClienteDashboard() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex items-center justify-between py-4">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Nenhuma meta ativa para este mês.</p>
-                </div>
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/metas-ranking")}>
-                  Criar metas
-                </Button>
-              </CardContent>
-            </Card>
+            <Card className="border-dashed"><CardContent className="flex items-center justify-between py-4"><div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-muted-foreground" /><p className="text-xs text-muted-foreground">Nenhuma meta ativa para este mês.</p></div><Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/metas-ranking")}>Criar metas</Button></CardContent></Card>
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Conversion radial */}
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Taxa de Conversão</CardTitle></CardHeader>
-              <CardContent className="flex flex-col items-center justify-center">
-                <div className="h-40 w-full max-w-xs">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{
-                      name: "Conversão", value: Number(conversionRate),
-                      fill: conversionGoal
-                        ? conversionGoal.status === "batida" || conversionGoal.status === "no_ritmo" ? "hsl(142 76% 36%)"
-                        : conversionGoal.status === "em_andamento" ? "hsl(45 93% 47%)"
-                        : "hsl(0 84% 60%)"
-                        : "hsl(var(--primary))"
-                    }]} startAngle={90} endAngle={-270}>
-                      <RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} />
-                    </RadialBarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="text-center -mt-24 relative z-10">
-                  <p className="text-3xl font-bold">{conversionRate}%</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">de conversão</p>
-                  {conversionGoal && (
-                    <p className="text-[10px] text-muted-foreground">Meta: {conversionGoal.remaining > 0 ? `faltam ${conversionGoal.remaining}%` : "✓ atingida"}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Leads by stage */}
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Etapa</CardTitle></CardHeader>
-              <CardContent>
-                {leadsByStage.length > 0 ? (
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={leadsByStage}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <ReTooltip />
-                        <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}
-              </CardContent>
-            </Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Taxa de Conversão</CardTitle></CardHeader><CardContent className="flex flex-col items-center justify-center"><div className="h-40 w-full max-w-xs"><ResponsiveContainer width="100%" height="100%"><RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: "Conversão", value: Number(conversionRate), fill: conversionGoal ? conversionGoal.status === "batida" || conversionGoal.status === "no_ritmo" ? "hsl(142 76% 36%)" : conversionGoal.status === "em_andamento" ? "hsl(45 93% 47%)" : "hsl(0 84% 60%)" : "hsl(var(--primary))" }]} startAngle={90} endAngle={-270}><RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} /></RadialBarChart></ResponsiveContainer></div><div className="text-center -mt-24 relative z-10"><p className="text-3xl font-bold">{conversionRate}%</p><p className="text-[10px] text-muted-foreground uppercase tracking-wider">de conversão</p></div></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Etapa</CardTitle></CardHeader><CardContent>{leadsByStage.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsByStage}><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><ReTooltip /><Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Leads by source */}
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Origem</CardTitle></CardHeader>
-              <CardContent>
-                {leadsBySource.length > 0 ? (
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={leadsBySource} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis type="number" tick={{ fontSize: 10 }} />
-                        <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} />
-                        <ReTooltip />
-                        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                          {leadsBySource.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}
-              </CardContent>
-            </Card>
-
-            {/* Open proposals + top leads */}
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Origem</CardTitle></CardHeader><CardContent>{leadsBySource.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsBySource} layout="vertical"><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} /><ReTooltip /><Bar dataKey="value" radius={[0, 4, 4, 0]}>{leadsBySource.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
             <div className="space-y-4">
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Propostas em Aberto</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-2xl font-bold">{openProposals.length}</p>
-                    <p className="text-xs text-muted-foreground">propostas · R$ {openProposalsValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Top Leads por Valor</CardTitle></CardHeader>
-                <CardContent className="p-0">
-                  {topLeads.length > 0 ? (
-                    <Table>
-                      <TableBody>
-                        {topLeads.map(l => (
-                          <TableRow key={l.id}>
-                            <TableCell className="py-2 text-xs font-medium">{l.name}</TableCell>
-                            <TableCell className="py-2 text-xs text-right text-primary font-semibold">
-                              R$ {(l.value || 0).toLocaleString("pt-BR")}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : <p className="text-xs text-muted-foreground text-center py-4">Sem dados no período</p>}
-                </CardContent>
-              </Card>
+              <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Propostas em Aberto</CardTitle></CardHeader><CardContent><div className="flex items-baseline gap-3"><p className="text-2xl font-bold">{openProposals.length}</p><p className="text-xs text-muted-foreground">propostas · R$ {openProposalsValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div></CardContent></Card>
+              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Top Leads por Valor</CardTitle></CardHeader><CardContent className="p-0">{topLeads.length > 0 ? <Table><TableBody>{topLeads.map(l => <TableRow key={l.id}><TableCell className="py-2 text-xs font-medium">{l.name}</TableCell><TableCell className="py-2 text-xs text-right text-primary font-semibold">R$ {(l.value || 0).toLocaleString("pt-BR")}</TableCell></TableRow>)}</TableBody></Table> : <p className="text-xs text-muted-foreground text-center py-4">Sem dados no período</p>}</CardContent></Card>
             </div>
           </div>
 
-          {/* Leads per week + Lost reasons */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Leads Criados por Semana</CardTitle></CardHeader>
-              <CardContent>
-                {leadsPerWeek.some(w => w.value > 0) ? (
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={leadsPerWeek}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <ReTooltip />
-                        <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
-                        {leadsGoal && leadsGoal.target_value && (
-                          <ReferenceLine
-                            y={Math.round(leadsGoal.target_value / 4)}
-                            stroke="hsl(45 93% 47%)"
-                            strokeDasharray="6 3"
-                            label={{ value: "Meta/semana", position: "right", fontSize: 9, fill: "hsl(45 93% 47%)" }}
-                          />
-                        )}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Motivos de Perda</CardTitle></CardHeader>
-              <CardContent>
-                {lostReasons.length > 0 ? (
-                  <div className="space-y-2">
-                    {lostReasons.map((r, i) => (
-                      <div key={r.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                          <span className="text-xs text-muted-foreground truncate">{r.name}</span>
-                        </div>
-                        <Badge variant="secondary" className="text-[10px]">{r.value}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido no período</p>}
-              </CardContent>
-            </Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads Criados por Semana</CardTitle></CardHeader><CardContent>{leadsPerWeek.some(w => w.value > 0) ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><LineChart data={leadsPerWeek}><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><ReTooltip /><Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />{leadsGoal && leadsGoal.target_value && <ReferenceLine y={Math.round(leadsGoal.target_value / 4)} stroke="hsl(45 93% 47%)" strokeDasharray="6 3" label={{ value: "Meta/semana", position: "right", fontSize: 9, fill: "hsl(45 93% 47%)" }} />}</LineChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Motivos de Perda</CardTitle></CardHeader><CardContent>{lostReasons.length > 0 ? <div className="space-y-2">{lostReasons.map((r, i) => <div key={r.name} className="flex items-center justify-between"><div className="flex items-center gap-2 flex-1 min-w-0"><div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} /><span className="text-xs text-muted-foreground truncate">{r.name}</span></div><Badge variant="secondary" className="text-[10px]">{r.value}</Badge></div>)}</div> : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido no período</p>}</CardContent></Card>
           </div>
         </TabsContent>
 
@@ -963,157 +384,47 @@ export default function ClienteDashboard() {
         <TabsContent value="chat" className="space-y-6 mt-4" id="report-chat">
           <div className="flex justify-end">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs gap-1">
-                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="text-xs gap-1"><Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
-                    allContacts.map((c: WaContact) => [c.name || "", c.phone || "", c.last_message_at || ""])
-                  );
-                  toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
-                }}>
-                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={async () => {
-                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-chat", "Chat — Relatório", orgName);
-                  toast({ title: "PDF exportado", description: "Relatório visual do Chat baixado" });
-                }}>
-                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"], allContacts.map((c: WaContact) => [c.name || "", c.phone || "", c.last_message_at || ""])); toast({ title: "CSV exportado" }); }}><FileText className="w-3.5 h-3.5 mr-2" /> CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => { toast({ title: "Gerando PDF…" }); await downloadReportPdf("report-chat", "Chat — Relatório", orgName); toast({ title: "PDF exportado" }); }}><FileImage className="w-3.5 h-3.5 mr-2" /> PDF</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Total Conversas" value={String(allContacts.length)} icon={MessageCircle} gradient="from-emerald-500/15 to-emerald-600/5" />
-            <KpiCard label="Mensagens Hoje" value={String(messagesToday.length)} icon={MessageCircle} gradient="from-blue-500/15 to-blue-600/5" />
-            <KpiCard label="Tempo Médio Resposta" value={`${avgResponseTime}min`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" />
-            <KpiCard label="Sem Resposta" value={String(noResponseCount)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
+            <DashboardKpiCard label="Total Conversas" value={String(allContacts.length)} icon={MessageCircle} gradient="from-emerald-500/15 to-emerald-600/5" />
+            <DashboardKpiCard label="Mensagens Hoje" value={String(messagesToday.length)} icon={MessageCircle} gradient="from-blue-500/15 to-blue-600/5" />
+            <DashboardKpiCard label="Tempo Médio Resposta" value={`${avgResponseTime}min`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" />
+            <DashboardKpiCard label="Sem Resposta" value={String(noResponseCount)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
           </div>
-
-          {/* Messages per day + AI vs Human */}
           {allMessagesRaw.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Mensagens por Dia (7 dias)</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={messagesPerDay}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <ReTooltip />
-                        <Legend wrapperStyle={{ fontSize: 10 }} />
-                        <Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Atendimento: IA vs Humano</CardTitle></CardHeader>
-                <CardContent className="flex items-center justify-center">
-                  <div className="h-48 w-full max-w-xs">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={aiVsHuman} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
-                          {aiVsHuman.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                        </Pie>
-                        <ReTooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Mensagens por Dia (7 dias)</CardTitle></CardHeader><CardContent><div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={messagesPerDay}><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><ReTooltip /><Legend wrapperStyle={{ fontSize: 10 }} /><Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} /><Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></CardContent></Card>
+              <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Atendimento: IA vs Humano</CardTitle></CardHeader><CardContent className="flex items-center justify-center"><div className="h-48 w-full max-w-xs"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={aiVsHuman} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>{aiVsHuman.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><ReTooltip /></PieChart></ResponsiveContainer></div></CardContent></Card>
             </div>
           )}
-
-          {allContacts.length === 0 && (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <MessageCircle className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium">Sem dados de chat</p>
-                <p className="text-xs text-muted-foreground mt-1">Configure o WhatsApp para ver métricas de conversas.</p>
-              </CardContent>
-            </Card>
-          )}
+          {allContacts.length === 0 && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-12 text-center"><MessageCircle className="w-10 h-10 text-muted-foreground/30 mb-3" /><p className="text-sm font-medium">Sem dados de chat</p><p className="text-xs text-muted-foreground mt-1">Configure o WhatsApp para ver métricas de conversas.</p></CardContent></Card>}
         </TabsContent>
 
         {/* ===== AGENTS TAB ===== */}
         <TabsContent value="agents" className="space-y-6 mt-4" id="report-agents">
           <div className="flex justify-end">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs gap-1">
-                  <Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="text-xs gap-1"><Download className="w-3 h-3" /> Exportar <ChevronDown className="w-3 h-3" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
-                    filteredAiLogs.map((l: AiLogRow) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
-                  );
-                  toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
-                }}>
-                  <FileText className="w-3.5 h-3.5 mr-2" /> CSV (planilha)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={async () => {
-                  toast({ title: "Gerando PDF…", description: "Aguarde enquanto o relatório é gerado" });
-                  await downloadReportPdf("report-agents", "Agentes IA — Relatório", orgName);
-                  toast({ title: "PDF exportado", description: "Relatório visual dos Agentes IA baixado" });
-                }}>
-                  <FileImage className="w-3.5 h-3.5 mr-2" /> PDF (relatório visual)
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"], filteredAiLogs.map((l: AiLogRow) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])); toast({ title: "CSV exportado" }); }}><FileText className="w-3.5 h-3.5 mr-2" /> CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => { toast({ title: "Gerando PDF…" }); await downloadReportPdf("report-agents", "Agentes IA — Relatório", orgName); toast({ title: "PDF exportado" }); }}><FileImage className="w-3.5 h-3.5 mr-2" /> PDF</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Total Agentes" value={String(allAgents.length)} icon={Bot} gradient="from-emerald-500/15 to-emerald-600/5" />
-            <KpiCard label="Agentes Ativos" value={String(activeAgents.length)} icon={Bot} gradient="from-blue-500/15 to-blue-600/5" />
-            <KpiCard label="Taxa de Handoff" value={`${handoffRate}%`} icon={Users} gradient="from-purple-500/15 to-purple-600/5" />
-            <KpiCard label="Média Tokens/Conversa" value={String(avgTokensPerConvo)} icon={TrendingUp} gradient="from-amber-500/15 to-amber-600/5" />
+            <DashboardKpiCard label="Total Agentes" value={String(allAgents.length)} icon={Bot} gradient="from-emerald-500/15 to-emerald-600/5" />
+            <DashboardKpiCard label="Agentes Ativos" value={String(activeAgents.length)} icon={Bot} gradient="from-blue-500/15 to-blue-600/5" />
+            <DashboardKpiCard label="Taxa de Handoff" value={`${handoffRate}%`} icon={Users} gradient="from-purple-500/15 to-purple-600/5" />
+            <DashboardKpiCard label="Média Tokens/Conversa" value={String(avgTokensPerConvo)} icon={TrendingUp} gradient="from-amber-500/15 to-amber-600/5" />
           </div>
-
-          {/* Conversations per agent */}
-          {conversationsPerAgent.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Conversas por Agente</CardTitle></CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={conversationsPerAgent} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" tick={{ fontSize: 10 }} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
-                      <ReTooltip />
-                      <Bar dataKey="count" name="Conversas" radius={[0, 4, 4, 0]}>
-                        {conversationsPerAgent.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {allAgents.length === 0 && (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Bot className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm font-medium">Sem agentes IA</p>
-                <p className="text-xs text-muted-foreground mt-1">Crie agentes IA para ver métricas de uso.</p>
-              </CardContent>
-            </Card>
-          )}
-
+          {conversationsPerAgent.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Conversas por Agente</CardTitle></CardHeader><CardContent><div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={conversationsPerAgent} layout="vertical"><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} /><ReTooltip /><Bar dataKey="count" name="Conversas" radius={[0, 4, 4, 0]}>{conversationsPerAgent.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar></BarChart></ResponsiveContainer></div></CardContent></Card>}
+          {allAgents.length === 0 && <Card className="border-dashed"><CardContent className="flex flex-col items-center justify-center py-12 text-center"><Bot className="w-10 h-10 text-muted-foreground/30 mb-3" /><p className="text-sm font-medium">Sem agentes IA</p><p className="text-xs text-muted-foreground mt-1">Crie agentes IA para ver métricas de uso.</p></CardContent></Card>}
         </TabsContent>
       </Tabs>
     </div>

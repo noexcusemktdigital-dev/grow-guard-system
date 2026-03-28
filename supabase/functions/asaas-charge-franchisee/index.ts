@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
     const [yearStr, monthStr] = month.split("-");
     const year = parseInt(yearStr);
     const monthNum = parseInt(monthStr);
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
         .gte("date", startDate)
         .lt("date", endDate);
 
-      const totalRevenue = (revenues || []).reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+      const totalRevenue = (revenues || []).reduce((sum: number, r: { amount: number }) => sum + (Number(r.amount) || 0), 0);
       const royaltyPct = Number(franchisee.royalty_percentage) || 1;
       const royaltyAmount = Math.round(totalRevenue * (royaltyPct / 100) * 100) / 100;
       const totalAmount = royaltyAmount + SYSTEM_FEE;

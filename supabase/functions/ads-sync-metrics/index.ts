@@ -23,7 +23,30 @@ async function refreshGoogleToken(refreshToken: string): Promise<{ access_token:
   return await res.json();
 }
 
-async function syncGoogleAds(connection: any, supabase: any) {
+interface AdMetricRow {
+  organization_id: string;
+  connection_id: string;
+  platform: string;
+  campaign_id: string;
+  campaign_name: string;
+  campaign_status: string;
+  date: string;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  conversions: number;
+  ctr: number;
+  cpc: number;
+  cpl: number;
+  raw_data: Record<string, unknown>;
+}
+
+interface AdAction {
+  action_type: string;
+  value: string;
+}
+
+async function syncGoogleAds(connection: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
   let accessToken = connection.access_token;
   const devToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN");
   if (!devToken) throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured");
@@ -80,7 +103,7 @@ async function syncGoogleAds(connection: any, supabase: any) {
   }
 
   const results = JSON.parse(bodyText);
-  const metrics: any[] = [];
+  const metrics: AdMetricRow[] = [];
 
   for (const batch of results) {
     for (const row of batch.results || []) {
@@ -110,7 +133,7 @@ async function syncGoogleAds(connection: any, supabase: any) {
   return metrics;
 }
 
-async function syncMetaAds(connection: any, supabase: any) {
+async function syncMetaAds(connection: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
   const accessToken = connection.access_token;
   let accountId = connection.account_id;
   if (!accountId) throw new Error("No Meta ad account ID");
@@ -139,13 +162,13 @@ async function syncMetaAds(connection: any, supabase: any) {
   }
 
   const data = JSON.parse(bodyText);
-  const metrics: any[] = [];
+  const metrics: AdMetricRow[] = [];
 
   for (const row of data.data || []) {
     const spend = parseFloat(row.spend || "0");
     const conversions = (row.actions || [])
-      .filter((a: any) => ["lead", "offsite_conversion.fb_pixel_lead", "purchase", "complete_registration"].includes(a.action_type))
-      .reduce((sum: number, a: any) => sum + parseInt(a.value || "0"), 0);
+      .filter((a: AdAction) => ["lead", "offsite_conversion.fb_pixel_lead", "purchase", "complete_registration"].includes(a.action_type))
+      .reduce((sum: number, a: AdAction) => sum + parseInt(a.value || "0"), 0);
 
     metrics.push({
       organization_id: connection.organization_id,
@@ -178,8 +201,8 @@ async function syncMetaAds(connection: any, supabase: any) {
     for (const row of nextData.data || []) {
       const spend = parseFloat(row.spend || "0");
       const conversions = (row.actions || [])
-        .filter((a: any) => ["lead", "offsite_conversion.fb_pixel_lead", "purchase", "complete_registration"].includes(a.action_type))
-        .reduce((sum: number, a: any) => sum + parseInt(a.value || "0"), 0);
+        .filter((a: AdAction) => ["lead", "offsite_conversion.fb_pixel_lead", "purchase", "complete_registration"].includes(a.action_type))
+        .reduce((sum: number, a: AdAction) => sum + parseInt(a.value || "0"), 0);
       metrics.push({
         organization_id: connection.organization_id,
         connection_id: connection.id,
@@ -239,7 +262,7 @@ serve(async (req) => {
       });
     }
 
-    let metrics: any[];
+    let metrics: AdMetricRow[];
     if (connection.platform === "google_ads") {
       metrics = await syncGoogleAds(connection, supabase);
     } else if (connection.platform === "meta_ads") {

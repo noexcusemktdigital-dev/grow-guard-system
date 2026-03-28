@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
         const { error: profileInsertError } = await supabaseAdmin
           .from("profiles")
-          .insert({ id: user_id, full_name: fullName } as any);
+          .insert({ id: user_id, full_name: fullName } as Record<string, unknown>);
 
         if (!profileInsertError || profileInsertError.code === "23505") {
           userExists = true;
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
           await supabaseAdmin.rpc("increment_referral_uses", { _org_id: referralData.id }).catch(() => {
             supabaseAdmin
               .from("referral_discounts")
-              .update({ uses_count: (discountData as any).uses_count + 1 } as any)
+              .update({ uses_count: ((discountData as Record<string, unknown>).uses_count as number) + 1 } as Record<string, unknown>)
               .eq("organization_id", referralData.id);
           });
         } else {
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     // 1. Create organization
-    const orgPayload: any = {
+    const orgPayload: Record<string, unknown> = {
       name: company_name || "Minha Empresa",
       type: "cliente",
     };
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    const subPayload: any = {
+    const subPayload: Record<string, unknown> = {
       organization_id: org.id,
       plan: "trial",
       status: "active",

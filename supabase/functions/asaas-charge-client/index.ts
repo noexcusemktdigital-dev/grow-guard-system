@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     const splitConfig = await buildSplitConfig(adminClient, organization_id, baseValue, surplusValue);
 
     // Create charge
-    const chargePayload: Record<string, any> = {
+    const chargePayload: Record<string, unknown> = {
       customer: clientCustomerId,
       billingType,
       value: amount,
@@ -241,9 +241,9 @@ Deno.serve(async (req) => {
       franqueadora_share: franqueadoraShare,
       franchisee_share: franchiseeShare,
     }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("asaas-charge-client error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }

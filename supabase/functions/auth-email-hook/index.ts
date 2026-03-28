@@ -19,7 +19,7 @@ const EMAIL_SUBJECTS: Record<string, string> = {
   reauthentication: 'Seu código de verificação',
 }
 
-const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
+const EMAIL_TEMPLATES: Record<string, React.ComponentType<Record<string, unknown>>> = {
   signup: SignupEmail,
   invite: InviteEmail,
   magiclink: MagicLinkEmail,
@@ -151,7 +151,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
-  let payload: any
+  let payload: Record<string, unknown>
   let run_id = ''
   try {
     const verified = await verifyWebhookRequest({

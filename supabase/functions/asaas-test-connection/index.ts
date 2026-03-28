@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     console.log("[asaas-test] Response body (raw):", rawBody.substring(0, 500));
 
     // Parse response
-    let parsed: any = null;
+    let parsed: Record<string, unknown> | null = null;
     try { parsed = JSON.parse(rawBody); } catch { /* not JSON */ }
 
     // Detect error codes
@@ -93,10 +93,11 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
-    console.error("[asaas-test] Fatal error:", err.message);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[asaas-test] Fatal error:", errMsg);
     return new Response(
-      JSON.stringify({ connected: false, error: err.message }),
+      JSON.stringify({ connected: false, error: errMsg }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }

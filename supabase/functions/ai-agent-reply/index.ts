@@ -62,14 +62,14 @@ COMPORTAMENTO OBRIGATÓRIO:
 
 // ─── Engagement rule helpers ───
 
-function isWithinWorkingHours(workingHours: any): boolean {
+function isWithinWorkingHours(workingHours: Record<string, unknown> | null): boolean {
   if (!workingHours?.enabled) return true;
   const tz = workingHours.timezone || "America/Sao_Paulo";
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
   const parts = formatter.formatToParts(now);
-  const hour = parseInt(parts.find((p: any) => p.type === "hour")?.value || "0");
-  const minute = parseInt(parts.find((p: any) => p.type === "minute")?.value || "0");
+  const hour = parseInt(parts.find((p: { type: string; value: string }) => p.type === "hour")?.value || "0");
+  const minute = parseInt(parts.find((p: { type: string; value: string }) => p.type === "minute")?.value || "0");
   const currentMinutes = hour * 60 + minute;
   const [startH, startM] = (workingHours.start || "08:00").split(":").map(Number);
   const [endH, endM] = (workingHours.end || "18:00").split(":").map(Number);
@@ -82,7 +82,7 @@ function hoursSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
 }
 
-async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
+async function debitCredits(adminClient: ReturnType<typeof createClient>, orgId: string, tokensUsed: number, agentName: string) {
   const FIXED_CREDIT_COST = 2;
   try {
     await adminClient.rpc("debit_credits", {
@@ -96,12 +96,12 @@ async function debitCredits(adminClient: any, orgId: string, tokensUsed: number,
   }
 }
 
-async function executeHandoff(adminClient: any, orgId: string, contactId: string, agentName: string, reason: string) {
+async function executeHandoff(adminClient: ReturnType<typeof createClient>, orgId: string, contactId: string, agentName: string, reason: string) {
   await adminClient.from("whatsapp_contacts").update({ attending_mode: "human" }).eq("id", contactId);
   const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", orgId);
   if (members) {
     await adminClient.from("client_notifications").insert(
-      members.map((m: any) => ({
+      members.map((m: { user_id: string }) => ({
         organization_id: orgId,
         user_id: m.user_id,
         title: "IA transferiu atendimento",
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     }
 
     // Find active AI agent — with fallback if assigned agent is inactive
-    let agent: any = null;
+    let agent: Record<string, unknown> | null = null;
     if (contact.agent_id) {
       const { data: assignedAgents } = await adminClient
         .from("client_ai_agents")
@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
           .eq("organization_id", organization_id);
 
         if (members && members.length > 0) {
-          const notifications = members.map((m: any) => ({
+          const notifications = members.map((m: { user_id: string }) => ({
             user_id: m.user_id,
             organization_id,
             title: "Atendimento transferido para humano",
@@ -374,8 +374,8 @@ Deno.serve(async (req) => {
 
     // Fetch CRM lead context
     let leadContext = "";
-    let leadData: any = null;
-    let funnelStages: any[] = [];
+    let leadData: Record<string, unknown> | null = null;
+    let funnelStages: { key: string; label?: string }[] = [];
     const crmActions = agent.crm_actions || {};
     const role = agent.role || "sdr";
 
@@ -393,7 +393,7 @@ Deno.serve(async (req) => {
           if (funnel?.stages && Array.isArray(funnel.stages)) funnelStages = funnel.stages;
         }
 
-        const stageNames = funnelStages.map((s: any) => s.label || s.key).join(", ");
+        const stageNames = funnelStages.map((s: { key: string; label?: string }) => s.label || s.key).join(", ");
         leadContext = `\n\nInformações do lead vinculado:
 - Nome: ${lead.name}
 - Etapa atual: ${lead.stage}
@@ -424,7 +424,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       .order("created_at", { ascending: false })
       .limit(Math.min(historyLimit, 15));
 
-    const chatHistory = (history || []).reverse().map((m: any) => ({
+    const chatHistory = (history || []).reverse().map((m: { direction: string; content: string }) => ({
       role: m.direction === "inbound" ? "user" : "assistant",
       content: m.content || "",
     }));
@@ -458,12 +458,12 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     // Add objections from prompt_config
     const objections = promptConfig.objections || [];
     if (objections.length > 0) {
-      systemPrompt += `\n\nObjeções comuns e como responder:\n${objections.map((o: any) => `- Objeção: "${o.objection}" → Resposta sugerida: "${o.response}"`).join("\n")}`;
+      systemPrompt += `\n\nObjeções comuns e como responder:\n${objections.map((o: { objection: string; response: string }) => `- Objeção: "${o.objection}" → Resposta sugerida: "${o.response}"`).join("\n")}`;
     }
 
     if (Array.isArray(knowledgeBase) && knowledgeBase.length > 0) {
       let kbText = knowledgeBase
-        .map((item: any) => typeof item === "string" ? item : item.content || JSON.stringify(item))
+        .map((item: unknown) => typeof item === "string" ? item : (item as Record<string, string>).content || JSON.stringify(item))
         .join("\n---\n");
       // Truncate knowledge base to avoid exceeding context window
       if (kbText.length > 4000) kbText = kbText.slice(0, 4000) + "\n[...base de conhecimento truncada]";
@@ -480,11 +480,11 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         .select("user_id, profiles(full_name)")
         .eq("organization_id", organization_id);
 
-      const memberNames = (teamMembers || []).map((m: any) => m.profiles?.full_name || "Sem nome").filter(Boolean);
+      const memberNames = (teamMembers || []).map((m: { profiles?: { full_name?: string }; user_id: string }) => m.profiles?.full_name || "Sem nome").filter(Boolean);
 
       let assignedName = "Nenhum atribuído";
       if (leadData?.assigned_to) {
-        const assigned = (teamMembers || []).find((m: any) => m.user_id === leadData.assigned_to);
+        const assigned = (teamMembers || []).find((m: { user_id: string; profiles?: { full_name?: string } }) => m.user_id === leadData.assigned_to);
         if (assigned) assignedName = assigned.profiles?.full_name || "Sem nome";
       }
 
@@ -510,7 +510,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         for (const ev of upcomingEvents) {
           const start = new Date(ev.start_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
           const end = new Date(ev.end_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-          const owner = (teamMembers || []).find((m: any) => m.user_id === ev.created_by);
+          const owner = (teamMembers || []).find((m: { user_id: string; profiles?: { full_name?: string } }) => m.user_id === ev.created_by);
           const ownerName = owner?.profiles?.full_name || "—";
           teamContext += `\n- ${start} a ${end} — ${ev.title} (responsável: ${ownerName})`;
         }
@@ -596,7 +596,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       try {
         if (action.type === "MOVE_STAGE" && leadData && crmActions.can_move_stage) {
           const targetStage = funnelStages.find(
-            (s: any) => (s.label || "").toLowerCase() === action.value.toLowerCase() || (s.key || "") === action.value
+            (s: { key: string; label?: string }) => (s.label || "").toLowerCase() === action.value.toLowerCase() || (s.key || "") === action.value
           );
           const stageKey = targetStage?.key || action.value;
           await adminClient.from("crm_leads").update({ stage: stageKey }).eq("id", leadData.id);
@@ -702,7 +702,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     // Send via Z-API — prefer the contact's instance, fallback to any connected instance
-    let instance: any = null;
+    let instance: Record<string, unknown> | null = null;
     if (contact.instance_id) {
       const { data: contactInstance } = await adminClient.from("whatsapp_instances").select("*").eq("id", contact.instance_id).eq("status", "connected").maybeSingle();
       if (contactInstance) instance = contactInstance;
@@ -742,7 +742,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     await new Promise(resolve => setTimeout(resolve, delayMs));
 
     let sendRes: Response;
-    let sendData: any;
+    let sendData: Record<string, unknown>;
 
     if (instance.provider === "evolution") {
       const baseUrl = (instance.base_url || "").replace(/\/+$/, "");

@@ -193,8 +193,8 @@ async function analyzeAndOptimizePrompt(
     format: string;
     nivel: string;
     estilo: string;
-    identidade_visual: any;
-    persona: any;
+    identidade_visual: Record<string, unknown>;
+    persona: Record<string, unknown>;
     tipo_postagem?: string;
     headline?: string;
     subheadline?: string;
@@ -317,7 +317,7 @@ Analyze everything above and produce the structured visual prompt sections. Reme
 
   try {
     // Build multimodal content if we have reference images
-    let messageContent: any;
+    let messageContent: string | { type: string; text?: string; image_url?: { url: string } }[];
     if (hasRefs) {
       messageContent = [
         { type: "text", text: userMessage },
@@ -440,7 +440,7 @@ function getArtStyleInstructions(art_style: string): string {
   return artStyleMap[art_style] || "";
 }
 
-async function getFeedbackHistory(supabase: any, organizationId: string): Promise<string> {
+async function getFeedbackHistory(supabase: ReturnType<typeof createClient>, organizationId: string): Promise<string> {
   try {
     const { data: feedback } = await supabase
       .from("social_art_feedback")
@@ -452,15 +452,15 @@ async function getFeedbackHistory(supabase: any, organizationId: string): Promis
 
     if (!feedback || feedback.length === 0) return "";
 
-    const approved = feedback.filter((f: any) => f.status === "approved");
-    const rejected = feedback.filter((f: any) => f.status === "rejected");
+    const approved = feedback.filter((f: { status: string }) => f.status === "approved");
+    const rejected = feedback.filter((f: { status: string }) => f.status === "rejected");
 
     let summary = "\n\nPAST FEEDBACK CONTEXT:";
     if (approved.length > 0) {
-      summary += `\n- ${approved.length} images APPROVED. Successful themes: ${approved.slice(0, 5).map((a: any) => a.prompt_used?.slice(0, 80) || "N/A").join("; ")}`;
+      summary += `\n- ${approved.length} images APPROVED. Successful themes: ${approved.slice(0, 5).map((a: { prompt_used?: string }) => a.prompt_used?.slice(0, 80) || "N/A").join("; ")}`;
     }
     if (rejected.length > 0) {
-      summary += `\n- ${rejected.length} images REJECTED. Avoid these approaches: ${rejected.slice(0, 5).map((r: any) => `"${r.prompt_used?.slice(0, 60)}" ${r.feedback_note ? `(reason: ${r.feedback_note})` : ""}`).join("; ")}`;
+      summary += `\n- ${rejected.length} images REJECTED. Avoid these approaches: ${rejected.slice(0, 5).map((r: { prompt_used?: string; feedback_note?: string }) => `"${r.prompt_used?.slice(0, 60)}" ${r.feedback_note ? `(reason: ${r.feedback_note})` : ""}`).join("; ")}`;
     }
     return summary;
   } catch {
@@ -557,7 +557,7 @@ function buildFallbackPrompt(
   qualityInstructions: string,
   artStyleInstructions: string,
   formatDescription: string,
-  identidade_visual: any,
+  identidade_visual: Record<string, unknown>,
   manual_colors?: string,
   manual_style?: string,
 ): string {
@@ -865,7 +865,7 @@ MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
     // Stage 2: Generate image (with photo images if provided)
-    let messageContent: any;
+    let messageContent: string | { type: string; text?: string; image_url?: { url: string } }[];
     if (photoBase64s.length > 0) {
       messageContent = [
         { type: "text", text: fullPrompt },

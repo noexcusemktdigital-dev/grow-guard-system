@@ -14,10 +14,8 @@ import {
 } from "./constants";
 import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
-import {
-  Check, FileText, X, Wand2, Loader2, AlertTriangle, Sparkles, ArrowLeft, Pencil, Plus,
-  Upload, Star, Camera, Info,
-} from "lucide-react";
+import { Sparkles, ArrowLeft } from "lucide-react";
+import { ArtWizardStep, ArtWizardStep8Review } from "./ArtWizardSteps";
 
 interface ArtWizardProps {
   orgId: string | undefined;
@@ -243,15 +241,6 @@ export function ArtWizard({
     else onBack();
   };
 
-  const SelectCard = ({ selected, onClick, children, className }: { selected: boolean; onClick: () => void; children: React.ReactNode; className?: string }) => (
-    <Card
-      className={`cursor-pointer transition-all hover:shadow-md ${selected ? "ring-2 ring-primary bg-primary/5" : ""} ${className || ""}`}
-      onClick={onClick}
-    >
-      {children}
-    </Card>
-  );
-
   const StepProgress = () => (
     <div className="flex items-center gap-1.5 mb-4">
       {Array.from({ length: TOTAL_STEPS }, (_, i) => (
@@ -293,68 +282,67 @@ export function ArtWizard({
   };
 
   const renderStep = () => {
-    switch (step) {
-      // ─── Step 1: Output Mode ───
-      case 1:
-        return (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-base font-semibold mb-1">🎯 Onde será usada?</h3>
-              <p className="text-sm text-muted-foreground">Escolha o destino da arte para otimizar formato e cores</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <SelectCard selected={outputMode === "digital"} onClick={() => setOutputMode("digital")}>
-                <CardContent className="p-5 text-center">
-                  <p className="text-3xl mb-2">📱</p>
-                  <p className="font-semibold text-sm">Digital (Rede Social)</p>
-                  <p className="text-xs text-muted-foreground mt-1">Feed, Stories, Reels — cores RGB vibrantes</p>
-                </CardContent>
-              </SelectCard>
-              <SelectCard selected={outputMode === "print"} onClick={() => setOutputMode("print")}>
-                <CardContent className="p-5 text-center">
-                  <p className="text-3xl mb-2">🖨️</p>
-                  <p className="font-semibold text-sm">Impressão (CMYK)</p>
-                  <p className="text-xs text-muted-foreground mt-1">Cartão de visita, flyer, banner</p>
-                </CardContent>
-              </SelectCard>
-            </div>
-            {outputMode === "print" && (
-              <div>
-                <Label className="text-xs font-semibold">Tipo de material</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {PRINT_TYPES.map((t) => (
-                    <SelectCard key={t.value} selected={printType === t.value} onClick={() => setPrintType(t.value)}>
-                      <CardContent className="p-3 text-center">
-                        <p className="text-xl mb-1">{t.icon}</p>
-                        <p className="font-semibold text-xs">{t.label}</p>
-                        <p className="text-[10px] text-muted-foreground">{t.desc}</p>
-                      </CardContent>
-                    </SelectCard>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
+    if (step >= 1 && step <= 7) {
+      return (
+        <ArtWizardStep
+          step={step}
+          outputMode={outputMode} setOutputMode={setOutputMode}
+          printType={printType} setPrintType={setPrintType}
+          briefingText={briefingText} setBriefingText={setBriefingText}
+          objective={objective} setObjective={setObjective}
+          mandatoryPhrase={mandatoryPhrase} setMandatoryPhrase={setMandatoryPhrase}
+          tipoPostagem={tipoPostagem} setTipoPostagem={setTipoPostagem}
+          quantity={quantity} setQuantity={setQuantity}
+          carouselSlides={carouselSlides} setCarouselSlides={setCarouselSlides}
+          creditCost={creditCost}
+          logoUrl={logoUrl} setLogoUrl={setLogoUrl}
+          referenceUrls={referenceUrls} setReferenceUrls={setReferenceUrls}
+          orgId={orgId} uploading={uploading} setUploading={setUploading}
+          primaryRefIndex={primaryRefIndex} setPrimaryRefIndex={setPrimaryRefIndex}
+          visualIdentity={visualIdentity}
+          photoUrls={photoUrls} setPhotoUrls={setPhotoUrls}
+          uploadingPhotos={uploadingPhotos}
+          artFormat={artFormat} setArtFormat={setArtFormat}
+          artFormats={artFormats} setArtFormats={setArtFormats}
+          printFormat={printFormat} setPrintFormat={setPrintFormat}
+          totalPieces={totalPieces}
+          onLogoUpload={handleLogoUpload}
+          onPhotoUpload={handlePhotoUpload}
+          contentData={contentData}
+        />
+      );
+    }
 
-      // ─── Step 2: Briefing + Objective ───
-      case 2:
-        return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold mb-1">💡 O que você quer comunicar?</h3>
-              <p className="text-sm text-muted-foreground">
-                Descreva livremente. A IA vai gerar todos os textos, cena e composição para você.
-              </p>
-            </div>
+    if (step === 8) {
+      return (
+        <ArtWizardStep8Review
+          artTexts={artTexts} updateArtText={updateArtText}
+          editingPieceIndex={editingPieceIndex} setEditingPieceIndex={setEditingPieceIndex}
+          totalPieces={totalPieces} creditCost={creditCost}
+          isFillingAI={isFillingAI} briefingFilled={briefingFilled}
+          allTextsApproved={allTextsApproved}
+          referenceUrls={referenceUrls} logoUrl={logoUrl}
+          photoUrls={photoUrls} primaryRefIndex={primaryRefIndex}
+          outputMode={outputMode} printFormat={printFormat}
+          artFormat={artFormat} tipoPostagem={tipoPostagem}
+          visualIdentity={visualIdentity}
+          onRegenerateTexts={() => {
+            setBriefingFilled(false);
+            setArtTexts([]);
+            handleAutoFillTexts();
+          }}
+          setBriefingFilled={setBriefingFilled}
+          setArtTexts={setArtTexts}
+        />
+      );
+    }
 
-            <Textarea
-              placeholder="Ex: Quero divulgar que investir em imóveis exige estratégia, não sorte. Para a marca Klir, tom profissional e sofisticado."
-              value={briefingText}
-              onChange={(e) => setBriefingText(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
+    return null;
+  };
+
+  // Steps 1-8 rendering delegated to ArtWizardSteps.tsx sub-components.
+  // @ts-ignore - dead code removal marker
+  if (false as boolean) { void 0;
 
             <div>
               <Label className="text-xs font-semibold">Qual resultado quer gerar?</Label>

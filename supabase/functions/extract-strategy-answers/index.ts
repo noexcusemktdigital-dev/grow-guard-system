@@ -146,7 +146,7 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    let answers: any = null;
+    let answers: Record<string, unknown> | null = null;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {

@@ -73,7 +73,7 @@ Escreva em português brasileiro, com 3-4 parágrafos descrevendo como esse agen
     } else if (type === "prompt") {
       const kbSummary = (knowledge_base || [])
         .slice(0, 5)
-        .map((item: any) => typeof item === "string" ? item : item.content || item.name)
+        .map((item: unknown) => typeof item === "string" ? item : (item as Record<string, string>).content || (item as Record<string, string>).name)
         .filter(Boolean)
         .join("; ");
 

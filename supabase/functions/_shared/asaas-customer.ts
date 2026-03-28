@@ -1,3 +1,4 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "./asaas-fetch.ts";
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
@@ -19,7 +20,7 @@ interface CustomerInput {
  *  4. Save asaas_customer_id back to organizations
  */
 export async function getOrCreateAsaasCustomer(
-  adminClient: any,
+  adminClient: ReturnType<typeof createClient>,
   asaasApiKey: string,
   input: CustomerInput
 ): Promise<string> {
@@ -110,8 +111,8 @@ export async function fetchPixQrCode(
       }
       const errBody = await res.text();
       console.warn(`[fetchPixQrCode] Attempt ${attempt + 1} failed (${res.status}): ${errBody}`);
-    } catch (e: any) {
-      console.warn(`[fetchPixQrCode] Attempt ${attempt + 1} error: ${e.message}`);
+    } catch (e: unknown) {
+      console.warn(`[fetchPixQrCode] Attempt ${attempt + 1} error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   return { encodedImage: null, payload: null };
@@ -129,7 +130,7 @@ export async function fetchPixQrCode(
  * the remainder stays with the franchisee (charge emitter).
  */
 export async function buildSplitConfig(
-  adminClient: any,
+  adminClient: ReturnType<typeof createClient>,
   orgId: string,
   baseValue: number,
   surplusValue: number = 0

@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
         // Count existing follow-ups
         const followupCount = lastMessages.filter(
-          (m: any) => m.direction === "outbound" && m.metadata?.followup === true
+          (m: { direction: string; metadata?: { followup?: boolean } }) => m.direction === "outbound" && m.metadata?.followup === true
         ).length;
 
         if (followupCount >= maxAttempts) {
@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
           const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", agent.organization_id);
           if (members) {
             await adminClient.from("client_notifications").insert(
-              members.map((m: any) => ({
+              members.map((m: { user_id: string }) => ({
                 organization_id: agent.organization_id,
                 user_id: m.user_id,
                 title: "Follow-up esgotado",
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false })
           .limit(10);
 
-        const chatHistory = (history || []).reverse().map((m: any) => ({
+        const chatHistory = (history || []).reverse().map((m: { direction: string; content: string }) => ({
           role: m.direction === "inbound" ? "user" : "assistant",
           content: m.content || "",
         }));

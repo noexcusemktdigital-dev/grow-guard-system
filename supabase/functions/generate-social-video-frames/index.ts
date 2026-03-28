@@ -123,7 +123,7 @@ Style: ${styleDescription}${brandContext ? `\n\n${brandContext}` : ""}`;
 - Composition optimized for mobile viewing`;
 
       const hasRefs = reference_images && reference_images.length > 0;
-      const messageContent: any = hasRefs
+      const messageContent: string | { type: string; text?: string; image_url?: { url: string } }[] = hasRefs
         ? [
             { type: "text", text: framePrompt },
             ...reference_images.slice(0, 3).map((url: string) => ({

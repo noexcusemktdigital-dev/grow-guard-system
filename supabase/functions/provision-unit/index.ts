@@ -199,9 +199,9 @@ Deno.serve(async (req) => {
       }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("provision-unit error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

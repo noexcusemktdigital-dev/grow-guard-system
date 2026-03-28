@@ -41,7 +41,7 @@ serve(async (req) => {
 
     // Build distribution string
     const formatDist = (formatos || [])
-      .map((f: any) => `${f.qtd}x ${f.tipo}`)
+      .map((f: { qtd: number; tipo: string }) => `${f.qtd}x ${f.tipo}`)
       .join(", ");
 
     const objList = (objetivos || []).join(", ");
@@ -92,7 +92,7 @@ serve(async (req) => {
 
       // Pillars
       if (pilares.length) {
-        const pilarNames = pilares.map((p: any) =>
+        const pilarNames = pilares.map((p: unknown) =>
           typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p)
         );
         sections.push(`Pilares de conteúdo: ${pilarNames.join(", ")}`);
@@ -125,7 +125,7 @@ IMPORTANTE: Use TODOS estes dados para personalizar cada conteúdo. Respeite o t
         .eq("organization_id", organization_id)
         .maybeSingle();
       if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
-        const sp = salesPlan.answers as Record<string, any>;
+        const sp = salesPlan.answers as Record<string, unknown>;
         const parts: string[] = [];
         if (sp.produtos_servicos) parts.push(`Produtos/Serviços: ${sp.produtos_servicos}`);
         if (sp.diferenciais) parts.push(`Diferenciais: ${sp.diferenciais}`);

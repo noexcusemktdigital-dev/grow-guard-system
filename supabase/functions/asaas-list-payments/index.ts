@@ -4,8 +4,8 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
-async function fetchAllPages(baseUrl: string, apiKey: string): Promise<any[]> {
-  const all: any[] = [];
+async function fetchAllPages(baseUrl: string, apiKey: string): Promise<Record<string, unknown>[]> {
+  const all: Record<string, unknown>[] = [];
   let offset = 0;
   let hasMore = true;
   while (hasMore) {
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       const rawPayments = await fetchAllPages(url, asaasApiKey);
       console.log(`[asaas-list-payments] Fetched ${rawPayments.length} payments (all mode)`);
 
-      const uniqueCustomerIds = [...new Set(rawPayments.map((p: any) => p.customer).filter(Boolean))] as string[];
+      const uniqueCustomerIds = [...new Set(rawPayments.map((p: Record<string, unknown>) => p.customer as string).filter(Boolean))] as string[];
       const customerNameMap: Record<string, string> = {};
       await Promise.all(
         uniqueCustomerIds.map(async (custId) => {
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
         })
       );
 
-      const allPayments = rawPayments.map((p: any) => ({
+      const allPayments = rawPayments.map((p: Record<string, unknown>) => ({
         id: p.id, value: p.value, netValue: p.netValue ?? p.value,
         status: p.status,
         dueDate: p.dueDate, paymentDate: p.paymentDate,
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         orgId: null, customerAsaasId: p.customer,
       }));
 
-      allPayments.sort((a: any, b: any) => (b.dueDate || "").localeCompare(a.dueDate || ""));
+      allPayments.sort((a, b) => ((b.dueDate as string) || "").localeCompare((a.dueDate as string) || ""));
 
       return new Response(JSON.stringify({ payments: allPayments }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
         .from("organizations")
         .select("id, name, asaas_customer_id")
         .or(`id.eq.${organization_id},parent_org_id.eq.${organization_id}`);
-      orgsToQuery = (allOrgs || []).filter((o: any) => o.asaas_customer_id);
+      orgsToQuery = (allOrgs || []).filter((o: { id: string; name: string; asaas_customer_id: string }) => o.asaas_customer_id);
     } else {
       const { data: org } = await adminClient
         .from("organizations")
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const allPayments: any[] = [];
+    const allPayments: Record<string, unknown>[] = [];
     await Promise.all(
       orgsToQuery.map(async (org) => {
         let url = `${ASAAS_BASE}/payments?customer=${org.asaas_customer_id}`;
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
               customerAsaasId: org.asaas_customer_id,
             });
           }
-        } catch (e: any) {
+        } catch (e: unknown) {
           console.error(`Error fetching payments for org ${org.id}:`, e);
         }
       })
@@ -164,9 +164,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ payments: allPayments }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("asaas-list-payments error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }

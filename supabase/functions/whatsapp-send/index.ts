@@ -45,8 +45,8 @@ Deno.serve(async (req) => {
     const { contactPhone, contactId, message, type = "text", mediaUrl, quotedMessageId, action } = await req.json();
 
     // ─── Helper: resolve instance from contact or org ───
-    async function resolveInstance(cId?: string): Promise<any> {
-      let inst: any = null;
+    async function resolveInstance(cId?: string): Promise<Record<string, unknown> | null> {
+      let inst: Record<string, unknown> | null = null;
       if (cId) {
         const { data: contact } = await adminClient.from("whatsapp_contacts").select("instance_id").eq("id", cId).maybeSingle();
         if (contact?.instance_id) {
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
 
     // ─── Send via provider ───
     let apiRes: Response;
-    let apiData: any;
+    let apiData: Record<string, unknown>;
     let resolvedType = type;
 
     if (instance.provider === "evolution") {

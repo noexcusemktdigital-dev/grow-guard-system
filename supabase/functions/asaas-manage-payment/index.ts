@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ error: "Invalid action. Use 'cancel' or 'update'." }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[asaas-manage-payment] Error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
   }
 });

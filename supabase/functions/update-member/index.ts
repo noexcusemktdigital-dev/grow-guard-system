@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
         .from("org_teams")
         .select("id")
         .eq("organization_id", organization_id);
-      const orgTeamIds = (orgTeams ?? []).map((t: any) => t.id);
+      const orgTeamIds = (orgTeams ?? []).map((t: { id: string }) => t.id);
 
       // Delete team memberships for this org's teams only
       if (orgTeamIds.length > 0) {
@@ -70,10 +70,10 @@ Deno.serve(async (req) => {
     }
 
     // action === "update"
-    const updates: Promise<any>[] = [];
+    const updates: Promise<unknown>[] = [];
 
     if (full_name !== undefined || job_title !== undefined) {
-      const profileUpdate: Record<string, any> = {};
+      const profileUpdate: Record<string, unknown> = {};
       if (full_name !== undefined) profileUpdate.full_name = full_name;
       if (job_title !== undefined) profileUpdate.job_title = job_title;
       updates.push(admin.from("profiles").update(profileUpdate).eq("id", user_id));
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
             .from("organization_memberships")
             .select("user_id")
             .eq("organization_id", organization_id);
-          const memberIds = (orgMembers ?? []).map((m: any) => m.user_id);
+          const memberIds = (orgMembers ?? []).map((m: { user_id: string }) => m.user_id);
 
           const { data: superAdminRoles } = await admin
             .from("user_roles")
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
             .eq("role", "super_admin")
             .in("user_id", memberIds);
 
-          const otherSuperAdmins = (superAdminRoles ?? []).filter((r: any) => r.user_id !== user_id);
+          const otherSuperAdmins = (superAdminRoles ?? []).filter((r: { user_id: string }) => r.user_id !== user_id);
           if (otherSuperAdmins.length === 0) {
             return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin desta organização" }), { status: 400, headers: getCorsHeaders(req) });
           }
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
     await Promise.all(updates);
     return new Response(JSON.stringify({ success: true }), { headers: getCorsHeaders(req) });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: getCorsHeaders(req) });
+  } catch (err: unknown) {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: getCorsHeaders(req) });
   }
 });

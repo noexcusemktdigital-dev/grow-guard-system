@@ -87,13 +87,13 @@ Deno.serve(async (req) => {
 
     // Match instance by instance_id (instanceName in Evolution)
     const instanceName = body.instance || body.instanceName || "";
-    let instance = instances.find((i: any) => i.instance_id === instanceName) || instances[0];
+    let instance = instances.find((i: { instance_id: string }) => i.instance_id === instanceName) || instances[0];
 
     // ─── CONNECTION_UPDATE ───
     if (event === "CONNECTION_UPDATE") {
       const state = body.data?.state || body.state || "";
       const connected = state === "open";
-      const updatePayload: Record<string, any> = {
+      const updatePayload: Record<string, unknown> = {
         status: connected ? "connected" : "disconnected",
       };
 
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
 
         if (existingContact) {
           contactId = existingContact.id;
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             last_message_at: new Date().toISOString(),
             last_message_preview: (isFromMe ? "Você: " : "") + previewText,
             instance_id: instance.id,

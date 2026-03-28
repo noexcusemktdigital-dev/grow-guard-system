@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 
-function parseLastMessageTime(raw: any): string | null {
+function parseLastMessageTime(raw: unknown): string | null {
   if (raw == null || typeof raw === "boolean") return null;
 
   // Object with _seconds / seconds (Firestore-style)
@@ -47,7 +47,7 @@ function parseLastMessageTime(raw: any): string | null {
   return null;
 }
 
-function extractTimestamp(chat: any): string | null {
+function extractTimestamp(chat: Record<string, unknown>): string | null {
   // Chain of fallback fields
   const candidates = [
     chat.lastMessageTime,
@@ -80,7 +80,7 @@ function extractTimestamp(chat: any): string | null {
   return null;
 }
 
-function extractLastMessagePreview(chat: any): string | null {
+function extractLastMessagePreview(chat: Record<string, unknown>): string | null {
   if (chat.lastMessageText && typeof chat.lastMessageText === "string") return chat.lastMessageText.slice(0, 200);
   if (chat.lastMessage) {
     if (typeof chat.lastMessage === "string") return chat.lastMessage.slice(0, 200);
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
     const { instanceId, phone: filterPhone } = body;
 
     // Find the instance
-    let instance: any = null;
+    let instance: Record<string, unknown> | null = null;
     if (instanceId) {
       const { data } = await adminClient
         .from("whatsapp_instances")
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
     const zapiHeaders: Record<string, string> = { "Client-Token": instance.client_token };
 
     // Fetch all chats from Z-API (paginated)
-    let allChats: any[] = [];
+    let allChats: Record<string, unknown>[] = [];
     let page = 1;
     const pageSize = 50;
 
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
     console.log(`[sync] Fetched ${allChats.length} chats from Z-API`);
 
     // Classify chats by type (individual, group, broadcast) but keep all except broadcast/status
-    let validChats = allChats.filter((chat: any) => {
+    let validChats = allChats.filter((chat: Record<string, unknown>) => {
       const phone = chat.phone || "";
       if (!phone) return false;
       if (phone.includes("broadcast")) return false;
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
     });
     
     // Detect contact type
-    const getContactType = (chat: any): string => {
+    const getContactType = (chat: Record<string, unknown>): string => {
       if (chat.isGroup) return "group";
       const phone = chat.phone || "";
       if (phone.includes("@g.us") || /^\d+-\d{10,}$/.test(phone) || phone.endsWith("-group")) return "group";
@@ -209,13 +209,13 @@ Deno.serve(async (req) => {
     };
 
     if (filterPhone) {
-      validChats = validChats.filter((c: any) => c.phone === filterPhone);
+      validChats = validChats.filter((c: Record<string, unknown>) => c.phone === filterPhone);
     }
 
     console.log(`[sync] ${validChats.length} valid chats after filtering`);
 
     // Collect all phones from Z-API for orphan detection
-    const zapiPhones = new Set<string>(validChats.map((c: any) => c.phone));
+    const zapiPhones = new Set<string>(validChats.map((c: Record<string, unknown>) => c.phone as string));
 
     // Get existing contacts in ONE query
     const { data: existingContacts } = await adminClient
@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
       .eq("organization_id", orgId);
 
     const existingMap = new Map<string, { id: string; attending_mode: string | null; last_message_preview: string | null }>();
-    (existingContacts || []).forEach((c: any) => {
+    (existingContacts || []).forEach((c: { id: string; phone: string; attending_mode: string | null; last_message_preview: string | null }) => {
       existingMap.set(c.phone, { id: c.id, attending_mode: c.attending_mode, last_message_preview: c.last_message_preview });
     });
 
@@ -235,8 +235,8 @@ Deno.serve(async (req) => {
     const BATCH_SIZE = 100;
     for (let batchStart = 0; batchStart < validChats.length; batchStart += BATCH_SIZE) {
       const batch = validChats.slice(batchStart, batchStart + BATCH_SIZE);
-      const inserts: any[] = [];
-      const updates: { id: string; data: any }[] = [];
+      const inserts: Record<string, unknown>[] = [];
+      const updates: { id: string; data: Record<string, unknown> }[] = [];
 
       for (let i = 0; i < batch.length; i++) {
         const chat = batch[i];
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
         const existing = existingMap.get(phone);
 
         if (existing) {
-          const upd: any = {
+          const upd: Record<string, unknown> = {
             instance_id: instance.id,
             unread_count: unreadCount,
             contact_type: contactType,
@@ -314,7 +314,7 @@ Deno.serve(async (req) => {
       .eq("organization_id", orgId)
       .eq("instance_id", instance.id);
 
-    const orphans = (allDbContacts || []).filter((c: any) => !zapiPhones.has(c.phone));
+    const orphans = (allDbContacts || []).filter((c: { id: string; phone: string; last_message_at: string | null }) => !zapiPhones.has(c.phone));
 
     for (const orphan of orphans) {
       const lastMsg = orphan.last_message_at ? new Date(orphan.last_message_at) : null;

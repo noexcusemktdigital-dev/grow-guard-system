@@ -584,9 +584,9 @@ Deno.serve(async (req) => {
     }
 
     return jsonOk({ ok: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("asaas-webhook error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
@@ -595,7 +595,7 @@ Deno.serve(async (req) => {
 
 // ── Helper functions ──
 
-function jsonOk(data: any) {
+function jsonOk(data: Record<string, unknown>) {
   return new Response(JSON.stringify(data), {
     headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
@@ -612,7 +612,7 @@ function valueToCreditAmount(value: number): number {
   return Math.round(value * 100);
 }
 
-async function getOrCreateWallet(adminClient: any, orgId: string) {
+async function getOrCreateWallet(adminClient: ReturnType<typeof createClient>, orgId: string) {
   let { data: wallet } = await adminClient
     .from("credit_wallets")
     .select("id, balance")
@@ -633,7 +633,7 @@ async function getOrCreateWallet(adminClient: any, orgId: string) {
 
 /** Notify all members of an organization */
 async function notifyOrgMembers(
-  adminClient: any,
+  adminClient: ReturnType<typeof createClient>,
   orgId: string,
   notification: { title: string; message: string; type: string }
 ) {
@@ -643,7 +643,7 @@ async function notifyOrgMembers(
     .eq("organization_id", orgId);
 
   if (members && members.length > 0) {
-    const notifications = members.map((m: any) => ({
+    const notifications = members.map((m: { user_id: string }) => ({
       organization_id: orgId,
       user_id: m.user_id,
       title: notification.title,
@@ -657,7 +657,7 @@ async function notifyOrgMembers(
 
 /** Update payment status based on externalReference routing */
 async function updatePaymentStatus(
-  adminClient: any,
+  adminClient: ReturnType<typeof createClient>,
   externalRef: string,
   refParts: string[],
   asaasPaymentId: string,

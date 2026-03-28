@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
         roteiros_pendentes_aprovacao: pendingContent || 0,
         postagens_rascunho: draftPosts || 0,
       },
-      metas: (goalsData || []).map((g: any) => ({
+      metas: (goalsData || []).map((g: { title: string; current_value: number; target_value: number }) => ({
         titulo: g.title,
         atual: g.current_value,
         alvo: g.target_value,
@@ -174,11 +174,11 @@ Deno.serve(async (req) => {
         nivel: gamData?.level || 1,
       },
       creditos: walletData?.balance ?? 0,
-      tem_estrategia: (strategyData as any)?.count > 0,
+      tem_estrategia: (strategyData as { count?: number })?.count ? (strategyData as { count: number }).count > 0 : false,
     };
 
     // Custom templates to include
-    const templateTasks = (templates || []).map((t: any) => t.title);
+    const templateTasks = (templates || []).map((t: { title: string }) => t.title);
 
     let tasks: { title: string; category: string; priority: string }[] = [];
 
@@ -322,7 +322,7 @@ Gere o checklist diário personalizado.`;
       .eq("user_id", userId)
       .eq("date", yesterday);
 
-    const allCompletedYesterday = yesterdayItems && yesterdayItems.length > 0 && yesterdayItems.every((i: any) => i.is_completed);
+    const allCompletedYesterday = yesterdayItems && yesterdayItems.length > 0 && yesterdayItems.every((i: { is_completed: boolean }) => i.is_completed);
 
     if (gamData) {
       const newStreak = allCompletedYesterday ? (gamData.streak_days || 0) + 1 : allCompletedYesterday === false ? 0 : gamData.streak_days || 0;

@@ -101,14 +101,14 @@ Deno.serve(async (req) => {
   }
 });
 
-async function markProcessed(admin: any, eventId: string) {
+async function markProcessed(admin: ReturnType<typeof createClient>, eventId: string) {
   await admin
     .from("crm_automation_queue")
     .update({ processed: true })
     .eq("id", eventId);
 }
 
-function matchesTriggerConfig(config: any, triggerData: any): boolean {
+function matchesTriggerConfig(config: Record<string, unknown> | null, triggerData: Record<string, unknown> | null): boolean {
   if (!config || Object.keys(config).length === 0) return true;
 
   // Filter by source
@@ -135,12 +135,12 @@ function matchesTriggerConfig(config: any, triggerData: any): boolean {
 }
 
 async function executeAction(
-  admin: any,
+  admin: ReturnType<typeof createClient>,
   supabaseUrl: string,
   serviceRoleKey: string,
-  automation: any,
-  lead: any,
-  event: any
+  automation: Record<string, unknown>,
+  lead: Record<string, unknown>,
+  event: Record<string, unknown>
 ) {
   const actionType = automation.action_type;
   const actionConfig = automation.action_config || {};
@@ -198,7 +198,7 @@ async function executeAction(
         .eq("organization_id", orgId);
 
       if (members) {
-        const notifications = members.map((m: any) => ({
+        const notifications = members.map((m: { user_id: string }) => ({
           user_id: m.user_id,
           organization_id: orgId,
           title: actionConfig.notification_title || `Automação: ${automation.name}`,
@@ -391,10 +391,10 @@ function normalizePhone(phone: string | null): string | null {
 }
 
 async function ensureWhatsAppContact(
-  admin: any,
+  admin: ReturnType<typeof createClient>,
   orgId: string,
   phone: string,
-  lead: any
+  lead: Record<string, unknown>
 ): Promise<string> {
   // Check existing contact
   const { data: existing } = await admin
@@ -441,7 +441,7 @@ async function ensureWhatsAppContact(
 }
 
 async function sendWhatsApp(
-  admin: any,
+  admin: ReturnType<typeof createClient>,
   orgId: string,
   phone: string,
   message: string
@@ -477,7 +477,7 @@ async function sendWhatsApp(
 async function triggerAiReply(
   supabaseUrl: string,
   serviceRoleKey: string,
-  payload: any
+  payload: Record<string, unknown>
 ) {
   try {
     const url = `${supabaseUrl}/functions/v1/ai-agent-reply`;

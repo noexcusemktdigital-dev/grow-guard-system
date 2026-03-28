@@ -1,22 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import {
-  Send, Loader2, MessageCircle, Bot, User, UserPlus, ExternalLink,
-  ArrowRight, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Paperclip, Smile,
-  ArrowDown, Search, X, Mic, Square, Trash2, ArrowLeft, WifiOff,
-} from "lucide-react";
-import { ChatQuickReplies } from "./ChatQuickReplies";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ChatMessageBubble } from "./ChatMessageBubble";
+import { MessageCircle } from "lucide-react";
 import { ChatForwardDialog } from "./ChatForwardDialog";
 import { ImageLightbox } from "./ImageLightbox";
+import { ChatConversationHeader } from "./ChatConversationHeader";
+import { ChatConversationMessages } from "./ChatConversationMessages";
+import { ChatConversationInput } from "./ChatConversationInput";
 import {
   useSendWhatsAppMessage,
   useUpdateAttendingMode,
@@ -35,8 +23,7 @@ import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
 import { useNavigate } from "react-router-dom";
-import { isToday, isYesterday, format, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+// date-fns no longer needed in parent (moved to ChatConversationMessages)
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -56,25 +43,6 @@ interface PendingMessage extends WhatsAppMessage {
 }
 
 const DISPLAY_STEP = 100;
-
-const EMOJI_CATEGORIES: { label: string; icon: string; emojis: string[] }[] = [
-  { label: "Carinhas", icon: "😀", emojis: ["😀","😂","😅","🤣","😊","😍","🥰","😘","😁","😎","🤔","🤗","🤩","😏","😢","😭","😤","🤯","🥳","😴","🙄","😬","🤐","😇","🫡","🥹","😮‍💨","🫠"] },
-  { label: "Mãos", icon: "👍", emojis: ["👍","👎","👏","🙌","🤝","✌️","🤞","💪","👋","🙏","👀","👆","👇","👉","👈","✋","🤙","🫶","🫰","✊"] },
-  { label: "Símbolos", icon: "❤️", emojis: ["❤️","🔥","✅","⭐","💯","✨","⚡","🚀","🎯","💡","📌","💬","📱","📞","⏰","📅","💰","🏠","🎉","🎊","⚠️","❌","🔗","📎","🏷️","📊","🔔","💎","🌟","♻️"] },
-];
-
-const DateSeparator = React.forwardRef<HTMLDivElement, { date: Date }>(({ date }, ref) => {
-  let label: string;
-  if (isToday(date)) label = "Hoje";
-  else if (isYesterday(date)) label = "Ontem";
-  else label = format(date, "dd 'de' MMM", { locale: ptBR });
-  return (
-    <div ref={ref} className="flex justify-center my-3">
-      <span className="text-[10px] font-medium text-muted-foreground bg-muted/80 px-3 py-0.5 rounded-full shadow-sm">{label}</span>
-    </div>
-  );
-});
-DateSeparator.displayName = "DateSeparator";
 
 export function ChatConversation({ contact, messages, isLoading, agents = [], instanceId, onBack }: Props) {
   const [text, setText] = useState("");
@@ -335,8 +303,6 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     recorder.stop();
   };
 
-  const formatRecordingTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
-
   // === Send with optimistic UI ===
   const handleSend = () => {
     if (!text.trim() || !contact) return;
@@ -590,27 +556,6 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     return displayedMessages.filter(m => m.content?.toLowerCase().includes(q));
   }, [displayedMessages, searchQuery]);
 
-  // Group messages by date + timestamp grouping (hide timestamp for consecutive same-direction within 1 min)
-  const messagesWithSeparators = useMemo(() => {
-    const items: { type: "date" | "message"; date?: Date; message?: WhatsAppMessage; isGrouped?: boolean; hideTimestamp?: boolean }[] = [];
-    let lastDate: Date | null = null;
-
-    displayedMessages.forEach((msg, i) => {
-      const msgDate = new Date(msg.created_at);
-      if (!lastDate || !isSameDay(lastDate, msgDate)) {
-        items.push({ type: "date", date: msgDate });
-        lastDate = msgDate;
-      }
-      const prev = displayedMessages[i - 1];
-      const next = displayedMessages[i + 1];
-      const isGrouped = prev && prev.direction === msg.direction && (msgDate.getTime() - new Date(prev.created_at).getTime()) < 60000;
-      // Hide timestamp if next message is from same direction within 1 min
-      const hideTimestamp = next && next.direction === msg.direction && (new Date(next.created_at).getTime() - msgDate.getTime()) < 60000;
-      items.push({ type: "message", message: msg, isGrouped, hideTimestamp });
-    });
-
-    return items;
-  }, [displayedMessages]);
 
   if (!contact) {
     return (
@@ -628,328 +573,79 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* WhatsApp-style Header */}
-      <div className="flex items-center gap-2 px-3 md:px-4 py-3 wa-header shrink-0">
-        {onBack && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/10 md:hidden shrink-0" onClick={onBack} aria-label="Voltar">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        )}
-        <Avatar className="h-10 w-10 border-2 border-white/20">
-          <AvatarImage src={contact.photo_url || undefined} />
-          <AvatarFallback className="bg-white/20 text-white text-xs font-semibold">
-            {(contact.name || contact.phone).substring(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold truncate text-white">{contact.name || contact.phone}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-white/70">{contact.phone}</span>
-            {contactTyping && <span className="text-[11px] text-emerald-300 animate-pulse">digitando...</span>}
-            {linkedLead && <Badge className="text-[8px] px-1.5 py-0 bg-emerald-600/80 text-white border-0">{linkedLead.stage}</Badge>}
-          </div>
-        </div>
+      <ChatConversationHeader
+        contact={contact}
+        contactTyping={contactTyping}
+        linkedLead={linkedLead}
+        attendingMode={attendingMode as string | null}
+        agentId={agentId as string | null}
+        agents={agents}
+        stages={stages}
+        actionsOpen={actionsOpen}
+        setActionsOpen={setActionsOpen}
+        searchOpen={searchOpen}
+        searchQuery={searchQuery}
+        searchResultsCount={searchResults ? searchResults.length : null}
+        onToggleSearch={() => { setSearchOpen(!searchOpen); setSearchQuery(""); }}
+        onSearchChange={setSearchQuery}
+        onCloseSearch={() => { setSearchOpen(false); setSearchQuery(""); }}
+        onToggleMode={handleToggleMode}
+        onCreateLead={handleCreateLead}
+        onChangeAgent={handleChangeAgent}
+        onChangeStage={handleChangeStage}
+        onNavigateCrm={() => navigate("/cliente/crm")}
+        onBack={onBack}
+        isHandoffAlert={isHandoffAlert}
+        updateModePending={updateMode.isPending}
+        createLeadPending={createLead.isPending}
+        linkMutationPending={linkMutation.isPending}
+      />
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full text-white hover:bg-white/10" onClick={() => { setSearchOpen(!searchOpen); setSearchQuery(""); }}>
-            <Search className="w-3.5 h-3.5" />
-          </Button>
-          {attendingMode && (
-            <Badge variant="outline" className={`text-[10px] gap-1 rounded-full border-white/30 ${attendingMode === "ai" ? "text-purple-200" : "text-emerald-200"}`}>
-              {attendingMode === "ai" ? <><Bot className="w-3 h-3" /> IA</> : <><User className="w-3 h-3" /> Humano</>}
-            </Badge>
-          )}
-          {attendingMode && (
-            <Button variant="ghost" size="sm" className={`h-7 text-[11px] gap-1 rounded-full text-white hover:bg-white/10 ${attendingMode !== "ai" ? "border border-white/30" : ""}`} onClick={handleToggleMode} disabled={updateMode.isPending}>
-              {attendingMode === "ai" ? <><User className="w-3 h-3" /> Assumir</> : <><RefreshCw className="w-3 h-3" /> IA</>}
-            </Button>
-          )}
-          {!linkedLead && (
-            <Button size="sm" className="h-7 text-[11px] gap-1 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md" onClick={handleCreateLead} disabled={createLead.isPending || linkMutation.isPending}>
-              <UserPlus className="w-3 h-3" /> Criar Lead
-            </Button>
-          )}
-          <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full text-white hover:bg-white/10">
-                {actionsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </Button>
-            </CollapsibleTrigger>
-          </Collapsible>
-        </div>
-      </div>
+      <ChatConversationMessages
+        allMessages={allMessages}
+        displayedMessages={displayedMessages}
+        hasMore={hasMore}
+        isLoading={isLoading}
+        loadingHistory={loadingHistory}
+        contactTyping={contactTyping}
+        attendingMode={attendingMode as string | null}
+        searchQuery={searchQuery}
+        showScrollBtn={showScrollBtn}
+        newMsgCount={newMsgCount}
+        onLoadMore={() => setDisplayCount((c) => c + DISPLAY_STEP)}
+        onScrollToBottom={scrollToBottom}
+        onReply={handleReply}
+        onRetry={handleRetry}
+        onImageClick={handleImageClick}
+        onForward={handleForward}
+        onStar={handleStar}
+        onDelete={handleDelete}
+        onReact={handleReact}
+        onScroll={handleScroll}
+        scrollAreaRef={scrollAreaRef}
+        bottomRef={bottomRef}
+      />
 
-      {/* Search bar */}
-      {searchOpen && (
-        <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
-          <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Input autoFocus placeholder="Buscar na conversa..." className="h-7 text-xs border-0 bg-transparent focus-visible:ring-0" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} aria-label="Buscar na conversa" />
-          {searchResults && <span className="text-[10px] text-muted-foreground whitespace-nowrap">{searchResults.length} resultado{searchResults.length !== 1 ? "s" : ""}</span>}
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>
-            <X className="w-3 h-3" />
-          </Button>
-        </div>
-      )}
-
-      {/* Collapsible Actions Panel */}
-      <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
-        <CollapsibleContent>
-          <div className="px-4 py-2.5 border-b border-border bg-muted/30 space-y-2">
-            {isHandoffAlert && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <p className="text-[11px] font-medium">IA solicitou transbordo — atendimento humano necessário</p>
-              </div>
-            )}
-            <div className="flex items-center gap-2 flex-wrap">
-              {linkedLead ? (
-                <Card className="flex-1 min-w-[200px] border-border/50">
-                  <CardContent className="p-2 flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold truncate">{linkedLead.name}</p>
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="text-[8px] px-1 py-0">{linkedLead.stage}</Badge>
-                        {linkedLead.value != null && <span className="text-[10px] font-medium text-primary">R$ {Number(linkedLead.value).toLocaleString()}</span>}
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => navigate("/cliente/crm")}>
-                      <ExternalLink className="w-3 h-3" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1 rounded-full" onClick={handleCreateLead} disabled={createLead.isPending || linkMutation.isPending}>
-                  <UserPlus className="w-3 h-3" /> Criar Lead
-                </Button>
-              )}
-              {linkedLead && stages.length > 0 && (
-                <Select value={linkedLead.stage} onValueChange={handleChangeStage}>
-                  <SelectTrigger className="h-7 text-[10px] w-32 rounded-full"><ArrowRight className="w-3 h-3 mr-1" /><SelectValue placeholder="Etapa" /></SelectTrigger>
-                  <SelectContent>{stages.map((s) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}</SelectContent>
-                </Select>
-              )}
-              {agents.length > 0 && (
-                <Select value={agentId || ""} onValueChange={handleChangeAgent}>
-                  <SelectTrigger className="h-7 text-[10px] w-32 rounded-full"><Bot className="w-3 h-3 mr-1" /><SelectValue placeholder="Agente" /></SelectTrigger>
-                  <SelectContent>{agents.map((a) => <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>)}</SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Messages area with WhatsApp background */}
-      <div className="flex-1 min-h-0 overflow-y-auto whatsapp-bg relative" ref={scrollAreaRef} onScroll={handleScroll}>
-        <div className="px-4 py-3">
-          <div className="flex justify-center mb-3 gap-2">
-            {hasMore && (
-              <Button variant="ghost" size="sm" className="text-[11px] text-muted-foreground rounded-full bg-muted/60 hover:bg-muted" onClick={() => setDisplayCount((c) => c + DISPLAY_STEP)}>
-                Carregar anteriores
-              </Button>
-            )}
-          </div>
-          {contact && allMessages.length === 0 && !isLoading && (
-            <div className="text-center py-4 mb-2">
-              <p className="text-xs text-muted-foreground bg-muted/60 inline-block px-4 py-2 rounded-xl max-w-xs">
-                📱 Mensagens aparecerão aqui em tempo real conforme forem enviadas ou recebidas.
-              </p>
-            </div>
-          )}
-          {isLoading || loadingHistory ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                {loadingHistory && <span className="text-[11px] text-muted-foreground">Carregando histórico...</span>}
-              </div>
-            </div>
-          ) : allMessages.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-xs text-muted-foreground bg-muted/60 inline-block px-3 py-1 rounded-full">Nenhuma mensagem ainda. Envie a primeira!</p>
-            </div>
-          ) : (
-            <>
-              {messagesWithSeparators.map((item, i) => {
-                if (item.type === "date") return <DateSeparator key={`date-${i}`} date={item.date!} />;
-                const isHighlighted = searchQuery && item.message?.content?.toLowerCase().includes(searchQuery.toLowerCase());
-                return (
-                  <div key={item.message?.id ?? `msg-${i}`} className={isHighlighted ? "ring-2 ring-primary/50 rounded-xl" : ""}>
-                    <ChatMessageBubble
-                      message={item.message!}
-                      isGrouped={item.isGrouped}
-                      hideTimestamp={item.hideTimestamp}
-                      onReply={handleReply}
-                      onRetry={((item.message as Record<string, unknown>)?._pending ? handleRetry : undefined}
-                      onImageClick={handleImageClick}
-                      onForward={handleForward}
-                      onStar={handleStar}
-                      onDelete={handleDelete}
-                      onReact={handleReact}
-                      allMessages={allMessages}
-                    />
-                  </div>
-                );
-              })}
-              {/* AI typing indicator */}
-              {attendingMode === "ai" && messages.length > 0 && (() => {
-                const lastMsg = messages[messages.length - 1];
-                if (lastMsg.direction !== "inbound") return false;
-                return Date.now() - new Date(lastMsg.created_at).getTime() < 30000;
-              })() && (
-                <div className="flex justify-start mb-2">
-                  <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
-                    <div className="flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5 text-purple-400" />
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Contact typing indicator */}
-              {contactTyping && (
-                <div className="flex justify-start mb-2">
-                  <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5 shadow-sm">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted-foreground font-medium">digitando</span>
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Scroll to bottom button with new message count */}
-        {showScrollBtn && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="absolute bottom-4 right-4 rounded-full shadow-lg z-10 bg-card border border-border gap-1.5 px-3 h-9"
-            onClick={scrollToBottom}
-          >
-            <ArrowDown className="w-4 h-4" />
-            {newMsgCount > 0 && (
-              <Badge className="h-5 min-w-5 px-1.5 text-[10px] bg-primary text-primary-foreground rounded-full">
-                {newMsgCount}
-              </Badge>
-            )}
-          </Button>
-        )}
-      </div>
-
-      {/* Reply preview */}
-      {replyingTo && (
-        <div className="px-3 pt-2 pb-0 border-t border-border bg-card/95 shrink-0">
-          <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 border-l-4 border-primary">
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-semibold text-primary">
-                {replyingTo.direction === "outbound" ? "Você" : (contact?.name || contact?.phone || "Contato")}
-              </p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {replyingTo.type === "audio" ? "🎤 Áudio" : replyingTo.type === "image" ? "📷 Imagem" : (replyingTo.content || "Mídia")}
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0" onClick={() => setReplyingTo(null)}>
-              <X className="w-3 h-3" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp-style Input */}
-      <div className={`px-3 py-2.5 border-t border-border bg-card/95 shrink-0 ${replyingTo ? "border-t-0 pt-1.5" : ""}`}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip,application/x-rar-compressed"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
-
-        {isRecording ? (
-          <div className="flex items-center gap-3">
-            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-destructive hover:bg-destructive/10" onClick={() => stopRecording(true)} aria-label="Excluir">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-2xl px-4 py-2">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-sm font-mono text-foreground">{formatRecordingTime(recordingTime)}</span>
-              <span className="text-xs text-muted-foreground">Gravando...</span>
-            </div>
-            <Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => stopRecording(false)} aria-label="Enviar">
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex items-end gap-2">
-            <ChatQuickReplies onSelect={(t) => setText(t)} />
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" aria-label="Emoji">
-                  <Smile className="w-4 h-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0" align="start" side="top">
-                <Tabs defaultValue="Carinhas" className="w-full">
-                  <TabsList className="w-full h-8 rounded-none border-b border-border bg-muted/30">
-                    {EMOJI_CATEGORIES.map((cat) => (
-                      <TabsTrigger key={cat.label} value={cat.label} className="text-sm px-3 py-1 data-[state=active]:bg-background">{cat.icon}</TabsTrigger>
-                    ))}
-                  </TabsList>
-                  {EMOJI_CATEGORIES.map((cat) => (
-                    <TabsContent key={cat.label} value={cat.label} className="p-2 mt-0">
-                      <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
-                        {cat.emojis.map((emoji) => (
-                          <button key={emoji} type="button" className="h-8 w-8 flex items-center justify-center text-lg hover:bg-muted rounded transition-colors" onClick={() => handleInsertEmoji(emoji)}>
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              </PopoverContent>
-            </Popover>
-
-            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" onClick={() => fileInputRef.current?.click()} disabled={uploading} aria-label="Carregando">
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-            </Button>
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                placeholder="Digite uma mensagem..."
-                className="w-full resize-none rounded-2xl bg-muted/50 border-0 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground min-h-[36px] max-h-[120px]"
-                rows={1}
-                value={text}
-                onChange={handleTextChange}
-                onKeyDown={handleKeyDown}
-                disabled={sendMutation.isPending}
-              />
-            </div>
-
-            {text.trim() ? (
-              <Button type="submit" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendMutation.isPending} aria-label="Carregando">
-                {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
-            ) : (
-              <Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={startRecording} disabled={sendingAudio} aria-label="Carregando">
-                {sendingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-              </Button>
-            )}
-          </form>
-        )}
-      </div>
+      <ChatConversationInput
+        text={text}
+        setText={setText}
+        replyingTo={replyingTo}
+        setReplyingTo={setReplyingTo}
+        contactName={contact?.name || contact?.phone || "Contato"}
+        isRecording={isRecording}
+        recordingTime={recordingTime}
+        sendingAudio={sendingAudio}
+        uploading={uploading}
+        sendPending={sendMutation.isPending}
+        onSend={handleSend}
+        onTextChange={handleTextChange}
+        onKeyDown={handleKeyDown}
+        onFileUpload={handleFileUpload}
+        onStartRecording={startRecording}
+        onStopRecording={stopRecording}
+        onInsertEmoji={handleInsertEmoji}
+        inputRef={inputRef}
+      />
 
       {/* Image Lightbox */}
       {lightboxImages.length > 0 && (

@@ -110,7 +110,7 @@ serve(async (req) => {
         .eq("organization_id", organization_id)
         .maybeSingle();
       if (salesPlan?.answers && Object.keys(salesPlan.answers).length > 3) {
-        const sp = salesPlan.answers as Record<string, any>;
+        const sp = salesPlan.answers as Record<string, unknown>;
         const parts: string[] = [];
         if (sp.produtos_servicos) parts.push(`Products: ${sp.produtos_servicos}`);
         if (sp.diferenciais) parts.push(`Differentials: ${sp.diferenciais}`);
@@ -127,7 +127,7 @@ serve(async (req) => {
     let importedContext = "";
     if (roteiros_importados && roteiros_importados.length > 0) {
       importedContext = `\n\nIMPORTED CONTENT SCRIPTS (use these as creative base for captions and visual context):
-${roteiros_importados.map((r: any, i: number) => `
+${roteiros_importados.map((r: { titulo?: string; legenda?: string; roteiro?: string; etapa?: string; funil?: string; formato?: string }, i: number) => `
 Script ${i + 1}:
 - Title: ${r.titulo || "N/A"}
 - Caption/Body: ${r.legenda || r.roteiro || "N/A"}
@@ -276,7 +276,7 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
 
     // Build multimodal user message if references exist
     const hasRefs = reference_images && reference_images.length > 0;
-    const userContent: any = hasRefs
+    const userContent: string | { type: string; text?: string; image_url?: { url: string } }[] = hasRefs
       ? [
           { type: "text", text: userTextPrompt },
           ...reference_images.slice(0, 5).map((url: string) => ({

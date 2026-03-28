@@ -10,7 +10,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 
 const IZITECH_URL = "https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/provision-instance";
 
-const json = (body: any, status = 200) =>
+const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
@@ -130,8 +130,9 @@ Deno.serve(async (req) => {
     }
 
     return json(data, izitechRes.status);
-  } catch (e: any) {
-    console.error("[izitech-provision] Error:", e.message || e);
-    return json({ error: e.message || "Internal error" }, 500);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    console.error("[izitech-provision] Error:", errMsg);
+    return json({ error: errMsg || "Internal error" }, 500);
   }
 });

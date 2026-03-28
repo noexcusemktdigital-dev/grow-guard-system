@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
 
     // 1. Find user
     const { data: users } = await sb.auth.admin.listUsers();
-    const user = users?.users?.find((u: any) => u.email === "franqueado.teste@noexcuse.com");
+    const user = users?.users?.find((u: { email?: string }) => u.email === "franqueado.teste@noexcuse.com");
     if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: getCorsHeaders(req) });
 
     const userId = user.id;
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     }
 
     const leadMap: Record<string, string> = {};
-    leads.forEach((l: any) => { leadMap[l.name] = l.id; });
+    leads.forEach((l: { name: string; id: string }) => { leadMap[l.name] = l.id; });
 
     // 8. Activities (~15)
     const activities = [
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
         due_date: t.due_date,
         priority: t.priority,
         assigned_to: userId,
-        completed_at: (t as any).completed_at || null,
+        completed_at: (t as { completed_at?: string }).completed_at || null,
       }))
     );
 
@@ -222,8 +222,8 @@ Deno.serve(async (req) => {
         status: p.status,
         created_by: userId,
         items: JSON.stringify([]),
-        sent_at: (p as any).sent_at || null,
-        accepted_at: (p as any).accepted_at || null,
+        sent_at: (p as { sent_at?: string }).sent_at || null,
+        accepted_at: (p as { accepted_at?: string }).accepted_at || null,
       }))
     );
 
@@ -243,11 +243,11 @@ Deno.serve(async (req) => {
         monthly_value: c.monthly_value,
         total_value: c.total_value,
         duration_months: c.duration_months,
-        start_date: (c as any).start_date || null,
-        end_date: (c as any).end_date || null,
-        signed_at: (c as any).signed_at || null,
-        signer_name: (c as any).signer_name || null,
-        signer_email: (c as any).signer_email || null,
+        start_date: (c as { start_date?: string }).start_date || null,
+        end_date: (c as { end_date?: string }).end_date || null,
+        signed_at: (c as { signed_at?: string }).signed_at || null,
+        signer_name: (c as { signer_name?: string }).signer_name || null,
+        signer_email: (c as { signer_email?: string }).signer_email || null,
         created_by: userId,
       }))
     );

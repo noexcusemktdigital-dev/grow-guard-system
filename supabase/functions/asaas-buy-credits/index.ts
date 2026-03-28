@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     dueDate.setDate(dueDate.getDate() + 1);
 
     // Build split if linked to franchisee
-    const splitConfig: any[] = [];
+    const splitConfig: { walletId: string; fixedValue: number }[] = [];
     if (org.parent_org_id) {
       const { data: parentOrg } = await adminClient
         .from("organizations")
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const chargeBody: any = {
+    const chargeBody: Record<string, unknown> = {
       customer: asaasCustomerId,
       billingType: billing_type,
       value: pack.price,
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     }
 
     // Get PIX data if billing_type is PIX
-    let pixData: any = null;
+    let pixData: Record<string, unknown> | null = null;
     if (billing_type === "PIX" && chargeData.id) {
       try {
         const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
@@ -161,9 +161,9 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("asaas-buy-credits error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }

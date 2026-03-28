@@ -252,7 +252,7 @@ Sempre responda em português brasileiro. Seja prático, direto e use linguagem 
     const tokensUsed = aiData.usage?.total_tokens || 0;
 
     // Extract tool call result
-    let result: any = null;
+    let result: Record<string, unknown> | null = null;
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       try {

@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
     let firstStage = "novo";
     if (defaultFunnel?.stages && Array.isArray(defaultFunnel.stages) && defaultFunnel.stages.length > 0) {
-      firstStage = (defaultFunnel.stages as any[])[0].key || "novo";
+      firstStage = (defaultFunnel.stages as { key: string }[])[0].key || "novo";
     }
 
     // Check roulette
@@ -161,8 +161,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, lead_id: newLead.id, action: "created" }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

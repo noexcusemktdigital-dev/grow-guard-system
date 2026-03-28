@@ -109,7 +109,7 @@ serve(async (req) => {
 CONTEXTO DO NEGÓCIO (extraído automaticamente do Plano de Vendas):
 - Segmento: ${context?.segment || "Não informado"}
 - Modelo de Negócio: ${context?.modeloNegocio || "Não informado"}
-- Produtos/Serviços: ${context?.produtosServicos || (context?.products?.length ? context.products.map((p: any) => `${p.name} (R$${p.price})`).join(", ") : "Não cadastrados")}
+- Produtos/Serviços: ${context?.produtosServicos || (context?.products?.length ? context.products.map((p: { name: string; price: number }) => `${p.name} (R$${p.price})`).join(", ") : "Não cadastrados")}
 - Diferenciais Competitivos: ${context?.diferenciais || "Não informados"}
 - Dor Principal do Cliente: ${context?.dorPrincipal || "Não informada"}
 - Ticket Médio: ${context?.ticketMedio || "Não informado"}

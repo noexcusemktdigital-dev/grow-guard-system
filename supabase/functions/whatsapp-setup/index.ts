@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
 
     // ─── Action: check-status ───
     if (action === "check-status") {
-      let instances: any[] = [];
+      let instances: Record<string, unknown>[] = [];
       if (instanceId) {
         const { data } = await adminClient.from("whatsapp_instances").select("*").eq("organization_id", orgId).eq("instance_id", instanceId).maybeSingle();
         if (data) instances = [data];
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const results: any[] = [];
+      const results: Record<string, unknown>[] = [];
 
       for (const inst of instances) {
         try {
@@ -218,9 +218,9 @@ Deno.serve(async (req) => {
                 });
                 if (listRes.ok) {
                   const allInstances = await listRes.json();
-                  console.log("[check-status] Evolution all instances:", JSON.stringify(allInstances?.map?.((i: any) => i.instance?.instanceName || i.instanceName) || allInstances));
+                  console.log("[check-status] Evolution all instances:", JSON.stringify(allInstances?.map?.((i: { instance?: { instanceName?: string }; instanceName?: string }) => i.instance?.instanceName || i.instanceName) || allInstances));
                   // Find by case-insensitive name match
-                  const match = (Array.isArray(allInstances) ? allInstances : []).find((i: any) => {
+                  const match = (Array.isArray(allInstances) ? allInstances : []).find((i: { instance?: { instanceName?: string; state?: string }; instanceName?: string; state?: string }) => {
                     const name = i.instance?.instanceName || i.instanceName || "";
                     return name.toLowerCase() === inst.instance_id.toLowerCase();
                   });
@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
                   headers: { apikey: inst.client_token },
                 });
                 const rawFindBody = await findRes.text();
-                let findData: any = rawFindBody;
+                let findData: Record<string, unknown> | string = rawFindBody;
                 try {
                   findData = rawFindBody ? JSON.parse(rawFindBody) : null;
                 } catch {}
@@ -401,7 +401,7 @@ Deno.serve(async (req) => {
 
       let setOk = false;
       let lastSetStatus = 0;
-      let lastSetBody: any = null;
+      let lastSetBody: Record<string, unknown> | string | null = null;
 
       for (const payload of payloadAttempts) {
         try {
@@ -442,7 +442,7 @@ Deno.serve(async (req) => {
       }
 
       // Verify by finding current webhook config
-      let currentWebhook: any = null;
+      let currentWebhook: Record<string, unknown> | null = null;
       try {
         const findRes = await fetch(`${cleanBase}/webhook/find/${encodeURIComponent(inst.instance_id)}`, {
           headers: { apikey: key },
@@ -486,7 +486,7 @@ Deno.serve(async (req) => {
       const key = apiKey || inst.client_token;
       const expectedUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
 
-      let currentWebhook: any = null;
+      let currentWebhook: Record<string, unknown> | null = null;
       try {
         const findRes = await fetch(`${cleanBase}/webhook/find/${encodeURIComponent(inst.instance_id)}`, {
           headers: { apikey: key },
@@ -582,7 +582,7 @@ Deno.serve(async (req) => {
           });
 
           const rawSetBody = await setRes.text();
-          let parsedSetBody: any = rawSetBody;
+          let parsedSetBody: Record<string, unknown> | string = rawSetBody;
           try {
             parsedSetBody = rawSetBody ? JSON.parse(rawSetBody) : null;
           } catch {}
@@ -616,9 +616,9 @@ Deno.serve(async (req) => {
             });
             if (listRes.ok) {
               const allInstances = await listRes.json();
-              const names = (Array.isArray(allInstances) ? allInstances : []).map((i: any) => i.instance?.instanceName || i.instanceName || "?");
+              const names = (Array.isArray(allInstances) ? allInstances : []).map((i: { instance?: { instanceName?: string }; instanceName?: string }) => i.instance?.instanceName || i.instanceName || "?");
               console.log("[connect] Evolution available instances:", JSON.stringify(names));
-              const match = (Array.isArray(allInstances) ? allInstances : []).find((i: any) => {
+              const match = (Array.isArray(allInstances) ? allInstances : []).find((i: { instance?: { instanceName?: string; state?: string }; instanceName?: string; state?: string }) => {
                 const name = i.instance?.instanceName || i.instanceName || "";
                 return name.toLowerCase() === instanceName.toLowerCase();
               });

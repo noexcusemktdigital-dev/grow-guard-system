@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     const nextDueDate = today.toISOString().split("T")[0];
 
     // Build split config if client is linked to a franchisee
-    const splitConfig: any[] = [];
+    const splitConfig: { walletId: string; fixedValue: number }[] = [];
     if (referralOrgId) {
       const { data: franchiseeOrg } = await adminClient
         .from("organizations")
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const subscriptionBody: any = {
+    const subscriptionBody: Record<string, unknown> = {
       customer: asaasCustomerId,
       billingType: billing_type,
       value: finalPrice,
@@ -265,8 +265,8 @@ Deno.serve(async (req) => {
           }
         }
       }
-    } catch (payErr: any) {
-      console.warn("Failed to fetch first payment details:", payErr.message);
+    } catch (payErr: unknown) {
+      console.warn("Failed to fetch first payment details:", payErr instanceof Error ? payErr.message : String(payErr));
     }
 
     console.log(`Subscription created for org ${org.id}: plan=${plan}, price=${finalPrice}, discount=${discountPercent}%, asaas_sub=${subscriptionData.id}`);
@@ -288,9 +288,9 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("asaas-create-subscription error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }

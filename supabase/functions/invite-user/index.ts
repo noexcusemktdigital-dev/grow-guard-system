@@ -51,7 +51,7 @@ async function sendViaResend(to: string, html: string): Promise<void> {
 }
 
 /** Find an existing user by email using paginated admin.listUsers */
-async function findUserByEmail(adminClient: any, email: string): Promise<any | null> {
+async function findUserByEmail(adminClient: ReturnType<typeof createClient>, email: string): Promise<Record<string, unknown> | null> {
   const normalizedEmail = email.toLowerCase().trim();
   let page = 1;
   const perPage = 100;
@@ -59,7 +59,7 @@ async function findUserByEmail(adminClient: any, email: string): Promise<any | n
     const { data: { users }, error } = await adminClient.auth.admin.listUsers({ page, perPage });
     if (error) throw error;
     if (!users || users.length === 0) break;
-    const found = users.find((u: any) => u.email?.toLowerCase() === normalizedEmail);
+    const found = users.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
     if (found) return found;
     if (users.length < perPage) break; // last page
     page++;
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewUser = true;
 
-    if (createErr && (createErr as any).code === "email_exists") {
+    if (createErr && (createErr as { code?: string }).code === "email_exists") {
       isNewUser = false;
       // User already exists — find them via paginated search
       console.log("[invite-user] User already exists, looking up:", email);
@@ -277,9 +277,9 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, user_id: userId }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("invite-user error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

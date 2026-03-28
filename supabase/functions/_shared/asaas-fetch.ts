@@ -17,12 +17,12 @@ export function asaasFetch(url: string, options?: RequestInit): Promise<Response
   if (proxyUrl && /^https?:\/\/.+/.test(proxyUrl.trim())) {
     try {
       const client = Deno.createHttpClient({ proxy: { url: proxyUrl.trim() } });
-      return fetch(url, { ...patchedOptions, client } as any).catch((err) => {
+      return fetch(url, { ...patchedOptions, client } as RequestInit).catch((err) => {
         console.warn(`[asaasFetch] Proxy fetch failed, falling back to direct: ${err.message}`);
         return fetch(url, patchedOptions);
       });
-    } catch (err: any) {
-      console.warn(`[asaasFetch] Failed to create proxy client, using direct fetch: ${err.message}`);
+    } catch (err: unknown) {
+      console.warn(`[asaasFetch] Failed to create proxy client, using direct fetch: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (proxyUrl) {
     console.warn(`[asaasFetch] Invalid ASAAS_PROXY_URL ("${proxyUrl}"), ignoring proxy`);
