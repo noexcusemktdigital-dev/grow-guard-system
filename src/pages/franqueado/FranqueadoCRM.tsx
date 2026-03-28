@@ -244,7 +244,7 @@ export default function FranqueadoCRM() {
 
   const pipelineSummary = useMemo(() => {
     const activeLeads = filteredLeads.filter((l: CrmLead) => !l.won_at && !l.lost_at);
-    const totalValue = activeLeads.reduce((s: number, l: any) => s + (l.value || 0), 0);
+    const totalValue = activeLeads.reduce((s: number, l: CrmLead) => s + (l.value || 0), 0);
     const wonLeads = filteredLeads.filter((l: CrmLead) => l.won_at);
     const convRate = filteredLeads.length > 0 ? Math.round((wonLeads.length / filteredLeads.length) * 100) : 0;
     const avgValue = activeLeads.length > 0 ? Math.round(totalValue / activeLeads.length) : 0;
@@ -253,7 +253,7 @@ export default function FranqueadoCRM() {
 
   const stageValues = useMemo(() => {
     const map: Record<string, number> = {};
-    stages.forEach(s => { map[s.key] = (leadsByStage[s.key] || []).reduce((sum: number, l: any) => sum + (l.value || 0), 0); });
+    stages.forEach(s => { map[s.key] = (leadsByStage[s.key] || []).reduce((sum: number, l: CrmLead) => sum + (l.value || 0), 0); });
     return map;
   }, [leadsByStage, stages]);
   const totalPipelineValue = useMemo(() => Object.values(stageValues).reduce((a, b) => a + b, 0), [stageValues]);

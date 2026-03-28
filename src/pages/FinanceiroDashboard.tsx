@@ -768,7 +768,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
       const { data, error } = await supabase
         .from("franchisee_charges")
         .select("*, franchisee_org:organizations!franchisee_charges_franchisee_org_id_fkey(name)")
-        .eq("organization_id", orgId!)
+        .eq("organization_id", orgId ?? "")
         .order("month", { ascending: false });
       if (error) throw error;
       return data;

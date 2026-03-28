@@ -1130,7 +1130,7 @@ export default function ClientePlanoMarketing() {
     try {
       await approveStrategy.mutateAsync(activeStrategy.id);
       toast({ title: "Estratégia aprovada! ✅", description: "50 créditos foram consumidos." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
       } else {

@@ -215,7 +215,7 @@ function Medal3D({ medal, colors, MedalIcon }: { medal: typeof allMedals[0] & { 
   );
 }
 
-function CompletenessScore({ profile, org, waConnected }: { profile: any; org: any; waConnected: boolean }) {
+function CompletenessScore({ profile, org, waConnected }: { profile: Record<string, unknown>; org: Record<string, unknown>; waConnected: boolean }) {
   const checks = [
     { label: "Nome completo", done: !!profile?.full_name },
     { label: "Telefone pessoal", done: !!profile?.phone },
@@ -264,7 +264,7 @@ function CompletenessScore({ profile, org, waConnected }: { profile: any; org: a
 
 /* ─── XP Actions Suggestions ─── */
 function XpSuggestions({ profile, org, waConnected, totalLeads, wonLeads, contentCount, siteCount, activeAgents, hasStrategy }: {
-  profile: any; org: any; waConnected: boolean; totalLeads: number; wonLeads: number; contentCount: number; siteCount: number; activeAgents: number; hasStrategy: boolean;
+  profile: Record<string, unknown>; org: Record<string, unknown>; waConnected: boolean; totalLeads: number; wonLeads: number; contentCount: number; siteCount: number; activeAgents: number; hasStrategy: boolean;
 }) {
   const suggestions = useMemo(() => {
     const items: { text: string; xp: number; icon: React.ElementType; href: string }[] = [];
@@ -346,7 +346,7 @@ export default function ClienteGamificacao() {
   const { data: calendarEvents } = useQuery({
     queryKey: ["gamification-events", orgId],
     queryFn: async () => {
-      const { count } = await supabase.from("calendar_events").select("id", { count: "exact", head: true }).eq("organization_id", orgId!);
+      const { count } = await supabase.from("calendar_events").select("id", { count: "exact", head: true }).eq("organization_id", orgId ?? "");
       return count ?? 0;
     },
     enabled: !!orgId,
@@ -387,11 +387,11 @@ export default function ClienteGamificacao() {
     queryKey: ["gamification-claims", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("gamification_claims" as any)
+        .from("gamification_claims" as unknown as "profiles")
         .select("*")
         .eq("organization_id", orgId ?? "");
       if (error) throw error;
-      return data as any[];
+      return (data || []) as unknown as Array<Record<string, unknown>>;
     },
     enabled: !!orgId,
   });
@@ -414,8 +414,8 @@ export default function ClienteGamificacao() {
   const claimReward = useMutation({
     mutationFn: async ({ level, value }: { level: number; value: number }) => {
       const { error: claimError } = await supabase
-        .from("gamification_claims" as any)
-        .insert({ user_id: user?.id ?? "", organization_id: orgId ?? "", reward_id: `level-${level}` as any, status: "claimed" } as any);
+        .from("gamification_claims" as unknown as "profiles")
+        .insert({ user_id: user?.id ?? "", organization_id: orgId ?? "", reward_id: `level-${level}`, status: "claimed" } as Record<string, unknown>);
       if (claimError) throw claimError;
       if (value > 0) {
         const { data: wallet } = await supabase
@@ -457,7 +457,7 @@ export default function ClienteGamificacao() {
   // Complete leads count (value + phone + email)
   const completeLeads = orgLeads.filter(l => l.value && Number(l.value) > 0 && l.phone && l.email).length;
 
-  const xp = (gamification as any)?.xp ?? 0;
+  const xp = (gamification as Record<string, unknown>)?.xp ?? 0;
   const streakDays = gamification?.streak_days ?? 0;
   const points = gamification?.points ?? 0;
   const lastActivity = gamification?.last_activity_at;
@@ -526,7 +526,7 @@ export default function ClienteGamificacao() {
     }).sort((a, b) => b.xp - a.xp);
   }, [team, teamGamification]);
 
-  const claimedLevels = useMemo(() => new Set((claims || []).map((c: any) => c.reward_id)), [claims]);
+  const claimedLevels = useMemo(() => new Set((claims || []).map((c: Record<string, unknown>) => c.reward_id as string)), [claims]);
 
   if (isLoading) {
     return (

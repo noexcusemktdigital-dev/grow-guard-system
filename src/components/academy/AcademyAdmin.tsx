@@ -69,7 +69,20 @@ function AcademyAdminInner({
   selectedModuleFilter, setSelectedModuleFilter,
   filteredLessons, filteredQuiz, activeQuizId,
   mutations,
-}: any) {
+}: {
+  modules: Array<{ id: string; title: string; description: string; category: string; sort_order: number; [key: string]: unknown }>;
+  allLessons: Array<{ id: string; module_id: string; title: string; content: string; video_url: string | null; sort_order: number; duration_minutes: number; [key: string]: unknown }>;
+  questions: Array<{ id: string; lesson_id: string; question: string; options: string[]; correct_index: number; [key: string]: unknown }>;
+  createModule: { mutate: (data: Record<string, unknown>) => void };
+  updateModule: { mutate: (data: Record<string, unknown>) => void };
+  deleteModule: { mutate: (id: string) => void };
+  createLesson: { mutate: (data: Record<string, unknown>) => void };
+  updateLesson: { mutate: (data: Record<string, unknown>) => void };
+  deleteLesson: { mutate: (id: string) => void };
+  createQuestion: { mutate: (data: Record<string, unknown>) => void };
+  updateQuestion: { mutate: (data: Record<string, unknown>) => void };
+  deleteQuestion: { mutate: (id: string) => void };
+}) {
   const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId);
 
   // Module dialog
@@ -93,7 +106,7 @@ function AcademyAdminInner({
   // Quiz config
   const [passingScore, setPassingScore] = useState<number>(filteredQuiz?.passing_score ?? 70);
 
-  const openEditModule = (mod: any) => {
+  const openEditModule = (mod: Record<string, unknown>) => {
     setEditingModuleId(mod.id);
     setModuleForm({ title: mod.title, category: mod.category || "Comercial", description: mod.description || "" });
     setModuleDialog(true);
@@ -119,7 +132,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditLesson = (les: any) => {
+  const openEditLesson = (les: Record<string, unknown>) => {
     setEditingLessonId(les.id);
     setLessonForm({ title: les.title, content: les.content || "", videoUrl: les.video_url || "", durationMinutes: les.duration_minutes || 30, sortOrder: les.sort_order || 1 });
     setLessonDialog(true);
@@ -145,7 +158,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditQuestion = (q: any) => {
+  const openEditQuestion = (q: Record<string, unknown>) => {
     setEditingQuestionId(q.id);
     const opts = (q.options as string[]) ?? [];
     setQuestionForm({ question: q.question, options: [...opts, "", "", "", ""].slice(0, 4), correctAnswer: q.correct_answer });
@@ -193,7 +206,7 @@ function AcademyAdminInner({
   };
 
   const handleCreateQuiz = () => {
-    const mod = modules.find((m: any) => m.id === selectedModuleFilter);
+    const mod = modules.find((m) => m.id === selectedModuleFilter);
     mutations.createQuiz.mutate(
       { title: `Prova - ${mod?.title || "Módulo"}`, module_id: selectedModuleFilter, passing_score: 70 },
       { onSuccess: () => toast({ title: "Prova criada!" }), onError: () => toast({ title: "Erro", variant: "destructive" }) }
@@ -230,7 +243,7 @@ function AcademyAdminInner({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {modules.map((mod: any) => (
+                {modules.map((mod) => (
                   <TableRow key={mod.id}>
                     <TableCell className="font-medium">{mod.title}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{mod.category}</Badge></TableCell>
@@ -239,7 +252,7 @@ function AcademyAdminInner({
                         {mod.is_published ? "Publicado" : "Rascunho"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{allLessons.filter((l: any) => l.module_id === mod.id).length}</TableCell>
+                    <TableCell>{allLessons.filter((l) => l.module_id === mod.id).length}</TableCell>
                     <TableCell>{mod.sort_order}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -271,7 +284,7 @@ function AcademyAdminInner({
             <Select value={selectedModuleFilter} onValueChange={setSelectedModuleFilter}>
               <SelectTrigger className="w-[250px]"><SelectValue placeholder="Selecione o módulo" /></SelectTrigger>
               <SelectContent>
-                {modules.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}
+                {modules.map((m) => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button size="sm" className="gap-1" onClick={openNewLesson}>
@@ -290,7 +303,7 @@ function AcademyAdminInner({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLessons.map((les: any) => (
+                {filteredLessons.map((les) => (
                   <TableRow key={les.id}>
                     <TableCell>{les.sort_order}</TableCell>
                     <TableCell className="font-medium">{les.title}</TableCell>
@@ -318,7 +331,7 @@ function AcademyAdminInner({
           <Select value={selectedModuleFilter} onValueChange={setSelectedModuleFilter}>
             <SelectTrigger className="w-[250px]"><SelectValue placeholder="Selecione o módulo" /></SelectTrigger>
             <SelectContent>
-              {modules.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}
+              {modules.map((m) => <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -354,7 +367,7 @@ function AcademyAdminInner({
                 </Button>
               </div>
               <div className="space-y-2">
-                {questions.map((q: any, i: number) => {
+                {questions.map((q, i: number) => {
                   const options = (q.options as string[]) ?? [];
                   return (
                     <Card key={q.id} className="p-3">
@@ -387,17 +400,17 @@ function AcademyAdminInner({
         <DialogContent>
           <DialogHeader><DialogTitle>{editingModuleId ? "Editar Módulo" : "Novo Módulo"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Título</Label><Input value={moduleForm.title} onChange={(e: any) => setModuleForm({ ...moduleForm, title: e.target.value })} className="mt-1" /></div>
+            <div><Label>Título</Label><Input value={moduleForm.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModuleForm({ ...moduleForm, title: e.target.value })} className="mt-1" /></div>
             <div>
               <Label>Categoria</Label>
-              <Select value={moduleForm.category} onValueChange={(v: any) => setModuleForm({ ...moduleForm, category: v })}>
+              <Select value={moduleForm.category} onValueChange={(v: string) => setModuleForm({ ...moduleForm, category: v })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(["Comercial", "Estrategia", "Institucional", "Produtos"] as const).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Descrição</Label><Textarea value={moduleForm.description} onChange={(e: any) => setModuleForm({ ...moduleForm, description: e.target.value })} className="mt-1" /></div>
+            <div><Label>Descrição</Label><Textarea value={moduleForm.description} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setModuleForm({ ...moduleForm, description: e.target.value })} className="mt-1" /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModuleDialog(false)}>Cancelar</Button>
@@ -413,15 +426,15 @@ function AcademyAdminInner({
         <DialogContent>
           <DialogHeader><DialogTitle>{editingLessonId ? "Editar Aula" : "Nova Aula"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Título</Label><Input value={lessonForm.title} onChange={(e: any) => setLessonForm({ ...lessonForm, title: e.target.value })} className="mt-1" /></div>
-            <div><Label>Descrição</Label><Textarea value={lessonForm.content} onChange={(e: any) => setLessonForm({ ...lessonForm, content: e.target.value })} className="mt-1" /></div>
+            <div><Label>Título</Label><Input value={lessonForm.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLessonForm({ ...lessonForm, title: e.target.value })} className="mt-1" /></div>
+            <div><Label>Descrição</Label><Textarea value={lessonForm.content} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setLessonForm({ ...lessonForm, content: e.target.value })} className="mt-1" /></div>
             <div>
               <Label>YouTube URL (embed)</Label>
-              <Input value={lessonForm.videoUrl} onChange={(e: any) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })} placeholder="https://www.youtube.com/embed/..." className="mt-1" />
+              <Input value={lessonForm.videoUrl} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLessonForm({ ...lessonForm, videoUrl: e.target.value })} placeholder="https://www.youtube.com/embed/..." className="mt-1" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Duração (min)</Label><Input type="number" value={lessonForm.durationMinutes} onChange={(e: any) => setLessonForm({ ...lessonForm, durationMinutes: Number(e.target.value) })} className="mt-1" /></div>
-              <div><Label>Ordem</Label><Input type="number" value={lessonForm.sortOrder} onChange={(e: any) => setLessonForm({ ...lessonForm, sortOrder: Number(e.target.value) })} className="mt-1" /></div>
+              <div><Label>Duração (min)</Label><Input type="number" value={lessonForm.durationMinutes} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLessonForm({ ...lessonForm, durationMinutes: Number(e.target.value) })} className="mt-1" /></div>
+              <div><Label>Ordem</Label><Input type="number" value={lessonForm.sortOrder} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLessonForm({ ...lessonForm, sortOrder: Number(e.target.value) })} className="mt-1" /></div>
             </div>
           </div>
           <DialogFooter>
@@ -440,7 +453,7 @@ function AcademyAdminInner({
           <div className="space-y-4">
             <div>
               <Label>Pergunta</Label>
-              <Textarea value={questionForm.question} onChange={(e: any) => setQuestionForm({ ...questionForm, question: e.target.value })} className="mt-1" placeholder="Digite a pergunta..." />
+              <Textarea value={questionForm.question} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuestionForm({ ...questionForm, question: e.target.value })} className="mt-1" placeholder="Digite a pergunta..." />
             </div>
             <div className="space-y-2">
               <Label>Opções (marque a correta)</Label>
@@ -450,7 +463,7 @@ function AcademyAdminInner({
                     <RadioGroupItem value={String(i)} id={`opt-${i}`} />
                     <Input
                       value={opt}
-                      onChange={(e: any) => {
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const newOpts = [...questionForm.options];
                         newOpts[i] = e.target.value;
                         setQuestionForm({ ...questionForm, options: newOpts });

@@ -712,7 +712,7 @@ export default function ClientePlanoVendas() {
     const currentDay = today.getDate();
     const data = [];
     for (let d = 1; d <= daysInMonth; d++) {
-      const point: any = { dia: d };
+      const point: Record<string, unknown> = { dia: d };
       activeGoals.forEach(g => {
         const p = goalProgress[g.id];
         if (!p) return;
@@ -1750,7 +1750,7 @@ export default function ClientePlanoVendas() {
                   goal={goal}
                   progress={goalProgress?.[goal.id]}
                   onEdit={() => {
-                    const g = goal as any;
+                    const g = goal as Record<string, unknown>;
                     const mesRef = g.period_start ? g.period_start.slice(0, 7) : "";
                     setNovaMeta({
                       title: g.title || "",

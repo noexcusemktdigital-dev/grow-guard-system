@@ -32,6 +32,58 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { formatBRL } from "@/lib/formatting";
 
+
+interface WaContact {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  last_message_at: string | null;
+  attending_mode?: string;
+  unread_count?: number;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+interface WaMessage {
+  id: string;
+  contact_id: string;
+  direction: string;
+  type: string;
+  content: string | null;
+  created_at: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
+interface GoalRow {
+  id: string;
+  title: string;
+  metric: string;
+  target_value: number;
+  current_value?: number;
+  scope?: string;
+  status?: string;
+  period_start?: string;
+  period_end?: string;
+  [key: string]: unknown;
+}
+
+interface AgentRow {
+  id: string;
+  name: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface AiLogRow {
+  id: string;
+  agent_id: string;
+  tokens_used: number;
+  model: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
 /* ========== CSV EXPORT ========== */
 function downloadCsv(filename: string, headers: string[], rows: string[][]) {
   const csv = [headers.join(";"), ...rows.map(r => r.map(c => `"${(c ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
@@ -277,7 +329,7 @@ export default function ClienteDashboard() {
   const { data: chatContacts } = useQuery({
     queryKey: ["dashboard-chat-contacts", orgId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("whatsapp_contacts").select("*").eq("organization_id", orgId!);
+      const { data, error } = await supabase.from("whatsapp_contacts" as unknown as "profiles").select("*").eq("organization_id", orgId ?? "");
       if (error) return [];
       return data || [];
     },
@@ -287,7 +339,7 @@ export default function ClienteDashboard() {
   const { data: chatMessages } = useQuery({
     queryKey: ["dashboard-chat-messages", orgId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("whatsapp_messages").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false }).limit(500);
+      const { data, error } = await supabase.from("whatsapp_messages" as unknown as "profiles").select("*").eq("organization_id", orgId ?? "").order("created_at", { ascending: false }).limit(500);
       if (error) return [];
       return data || [];
     },
@@ -298,7 +350,7 @@ export default function ClienteDashboard() {
   const { data: agents } = useQuery({
     queryKey: ["dashboard-agents", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("client_ai_agents").select("*").eq("organization_id", orgId!);
+      const { data, error } = await supabase.from("client_ai_agents").select("*").eq("organization_id", orgId ?? "");
       if (error) return [];
       return data || [];
     },
@@ -308,7 +360,7 @@ export default function ClienteDashboard() {
   const { data: aiLogs } = useQuery({
     queryKey: ["dashboard-ai-logs", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ai_conversation_logs").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false }).limit(200);
+      const { data, error } = await supabase.from("ai_conversation_logs").select("*").eq("organization_id", orgId ?? "").order("created_at", { ascending: false }).limit(200);
       if (error) return [];
       return data || [];
     },
@@ -374,14 +426,14 @@ export default function ClienteDashboard() {
   // Goal for conversion chart color
   const conversionGoal = useMemo(() => {
     if (!activeGoals || !goalProgress) return null;
-    const g = activeGoals.find((g: any) => g.metric === "conversions");
+    const g = activeGoals.find((g: GoalRow) => g.metric === "conversions");
     return g ? goalProgress[g.id] : null;
   }, [activeGoals, goalProgress]);
 
   // Goal for leads chart reference line
   const leadsGoal = useMemo(() => {
     if (!activeGoals) return null;
-    return activeGoals.find((g: any) => g.metric === "leads") || null;
+    return activeGoals.find((g: GoalRow) => g.metric === "leads") || null;
   }, [activeGoals]);
 
   // Average closing time (days between created_at and won_at)
@@ -452,14 +504,14 @@ export default function ClienteDashboard() {
   const allMessagesRaw = chatMessages ?? [];
   const allMessages = useMemo(() => {
     if (!dateFrom) return allMessagesRaw;
-    return allMessagesRaw.filter((m: any) => {
+    return allMessagesRaw.filter((m: WaMessage) => {
       const d = new Date(m.created_at);
       return d >= dateFrom && d <= dateTo;
     });
   }, [allMessagesRaw, dateFrom, dateTo]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const messagesToday = allMessagesRaw.filter((m: any) => m.created_at?.startsWith(todayStr));
+  const messagesToday = allMessagesRaw.filter((m: WaMessage) => m.created_at?.startsWith(todayStr));
 
   // Messages per day (last 7 days)
   const messagesPerDay = useMemo(() => {
@@ -469,11 +521,11 @@ export default function ClienteDashboard() {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dayStr = d.toISOString().slice(0, 10);
-      const dayMsgs = allMessagesRaw.filter((m: any) => m.created_at?.startsWith(dayStr));
+      const dayMsgs = allMessagesRaw.filter((m: WaMessage) => m.created_at?.startsWith(dayStr));
       days.push({
         name: d.toLocaleDateString("pt-BR", { weekday: "short" }),
-        inbound: dayMsgs.filter((m: any) => m.direction === "inbound").length,
-        outbound: dayMsgs.filter((m: any) => m.direction === "outbound").length,
+        inbound: dayMsgs.filter((m: WaMessage) => m.direction === "inbound").length,
+        outbound: dayMsgs.filter((m: WaMessage) => m.direction === "outbound").length,
       });
     }
     return days;
@@ -481,8 +533,8 @@ export default function ClienteDashboard() {
 
   // AI vs Human distribution
   const aiVsHuman = useMemo(() => {
-    const aiContacts = allContacts.filter((c: any) => c.attending_mode === "ai").length;
-    const humanContacts = allContacts.filter((c: any) => c.attending_mode === "human").length;
+    const aiContacts = allContacts.filter((c: WaContact) => c.attending_mode === "ai").length;
+    const humanContacts = allContacts.filter((c: WaContact) => c.attending_mode === "human").length;
     return [
       { name: "IA", value: aiContacts },
       { name: "Humano", value: humanContacts },
@@ -491,8 +543,8 @@ export default function ClienteDashboard() {
 
   // Contacts without response
   const noResponseCount = useMemo(() => {
-    return allContacts.filter((c: any) => {
-      const contactMsgs = allMessagesRaw.filter((m: any) => m.contact_id === c.id);
+    return allContacts.filter((c: WaContact) => {
+      const contactMsgs = allMessagesRaw.filter((m: WaMessage) => m.contact_id === c.id);
       if (contactMsgs.length === 0) return false;
       const lastMsg = contactMsgs[0];
       return lastMsg.direction === "inbound";
@@ -503,13 +555,13 @@ export default function ClienteDashboard() {
   const avgResponseTime = useMemo(() => {
     let totalTime = 0;
     let count = 0;
-    const sorted = [...allMessages].sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const sorted = [...allMessages].sort((a: WaMessage, b: WaMessage) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     for (let i = 0; i < sorted.length - 1; i++) {
-      const m = sorted[i] as any;
+      const m = sorted[i];
       if (m.direction === "inbound") {
-        const next = sorted.slice(i + 1).find((n: any) => n.direction === "outbound" && n.contact_id === m.contact_id);
+        const next = sorted.slice(i + 1).find((n: WaMessage) => n.direction === "outbound" && n.contact_id === m.contact_id);
         if (next) {
-          const diff = (new Date((next as any).created_at).getTime() - new Date(m.created_at).getTime()) / (1000 * 60);
+          const diff = (new Date(next.created_at).getTime() - new Date(m.created_at).getTime()) / (1000 * 60);
           if (diff < 1440) {
             totalTime += diff;
             count++;
@@ -522,24 +574,24 @@ export default function ClienteDashboard() {
 
   // AI computed - also filtered
   const allAgents = agents ?? [];
-  const activeAgents = allAgents.filter((a: any) => a.status === "active");
+  const activeAgents = allAgents.filter((a: AgentRow) => a.status === "active");
   const filteredAiLogs = useMemo(() => {
     const logs = aiLogs ?? [];
     if (!dateFrom) return logs;
-    return logs.filter((l: any) => {
+    return logs.filter((l: AiLogRow) => {
       const d = new Date(l.created_at);
       return d >= dateFrom && d <= dateTo;
     });
   }, [aiLogs, dateFrom, dateTo]);
   
-  const totalTokens = filteredAiLogs.reduce((s: number, l: any) => s + (l.tokens_used || 0), 0);
+  const totalTokens = filteredAiLogs.reduce((s: number, l: AiLogRow) => s + (l.tokens_used || 0), 0);
   const avgTokensPerConvo = filteredAiLogs.length > 0 ? Math.round(totalTokens / filteredAiLogs.length) : 0;
 
   // Conversations per agent
   const conversationsPerAgent = useMemo(() => {
     const map: Record<string, { name: string; count: number }> = {};
-    filteredAiLogs.forEach((log: any) => {
-      const agent = allAgents.find((a: any) => a.id === log.agent_id);
+    filteredAiLogs.forEach((log: AiLogRow) => {
+      const agent = allAgents.find((a: AgentRow) => a.id === log.agent_id);
       const name = agent?.name || "Desconhecido";
       if (!map[log.agent_id]) map[log.agent_id] = { name, count: 0 };
       map[log.agent_id].count++;
@@ -551,7 +603,7 @@ export default function ClienteDashboard() {
   const handoffRate = useMemo(() => {
     const total = allContacts.length;
     if (total === 0) return "0";
-    const handoffs = allContacts.filter((c: any) => c.attending_mode === "human").length;
+    const handoffs = allContacts.filter((c: WaContact) => c.attending_mode === "human").length;
     return ((handoffs / total) * 100).toFixed(1);
   }, [allContacts]);
 
@@ -690,7 +742,7 @@ export default function ClienteDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {activeGoals.map((goal: any) => {
+                  {activeGoals.map((goal: GoalRow) => {
                     const prog = goalProgress[goal.id];
                     if (!prog) return null;
                     const statusInfo = getGoalStatusLabel(prog.status);
@@ -919,7 +971,7 @@ export default function ClienteDashboard() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => {
                   downloadCsv("chat-contacts.csv", ["Nome", "Telefone", "Última mensagem"],
-                    allContacts.map((c: any) => [c.name || "", c.phone || "", c.last_message_at || ""])
+                    allContacts.map((c: WaContact) => [c.name || "", c.phone || "", c.last_message_at || ""])
                   );
                   toast({ title: "CSV exportado", description: `${allContacts.length} contatos exportados` });
                 }}>
@@ -1006,7 +1058,7 @@ export default function ClienteDashboard() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => {
                   downloadCsv("ai-logs.csv", ["Agente ID", "Tokens", "Modelo", "Data"],
-                    filteredAiLogs.map((l: any) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
+                    filteredAiLogs.map((l: AiLogRow) => [l.agent_id, String(l.tokens_used || 0), l.model || "", l.created_at])
                   );
                   toast({ title: "CSV exportado", description: `${filteredAiLogs.length} logs exportados (${periodLabel})` });
                 }}>

@@ -54,7 +54,7 @@ export default function MetasRanking() {
   const { data: networkTrophies, isLoading: loadingNetworkTrophies } = useNetworkTrophies();
   const { createGoal, updateGoal, archiveGoal } = useGoalMutations();
 
-  const activeGoals = (goals ?? []).filter((g: any) => g.status === "active");
+  const activeGoals = (goals ?? []).filter((g: Record<string, unknown>) => g.status === "active");
   const { data: goalProgress } = useGoalProgress(activeGoals.length > 0 ? activeGoals : undefined);
 
   const [showGoalDialog, setShowGoalDialog] = useState(false);
@@ -64,7 +64,7 @@ export default function MetasRanking() {
 
   const isLoading = loadingGoals || loadingRankings;
 
-  const goalsWithProgress = activeGoals.map((g: any) => {
+  const goalsWithProgress = activeGoals.map((g: Record<string, unknown>) => {
     const progress = goalProgress?.[g.id];
     return { ...g, realPercent: progress?.percent ?? 0, realValue: progress?.currentValue ?? 0, status_calc: progress?.status ?? "em_andamento" };
   });
@@ -80,7 +80,7 @@ export default function MetasRanking() {
     setShowGoalDialog(true);
   };
 
-  const openEditGoal = (g: any) => {
+  const openEditGoal = (g: Record<string, unknown>) => {
     setEditingGoal(g);
     const pMonth = g.period_start ? String(Number(g.period_start.substring(5, 7))) : "";
     const pYear = g.period_start ? g.period_start.substring(0, 4) : String(currentYear);
@@ -98,7 +98,7 @@ export default function MetasRanking() {
 
   const handleSaveGoal = () => {
     if (!goalForm.title || !goalForm.target_value) return;
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       title: goalForm.title,
       type: goalForm.type,
       target_value: parseFormattedNumber(goalForm.target_value),
@@ -137,7 +137,7 @@ export default function MetasRanking() {
         {[
           { label: "Metas Ativas", value: activeGoals.length, icon: Target, color: "text-emerald-500", bg: "bg-emerald-500/10" },
           { label: "Atingimento Médio", value: `${avgProgress}%`, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
-          { label: "Unidades no Target", value: (rankings ?? []).filter((r: any) => r.score >= 80).length, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
+          { label: "Unidades no Target", value: (rankings ?? []).filter((r: Record<string, unknown>) => (r.score as number) >= 80).length, icon: Users, color: "text-amber-500", bg: "bg-amber-500/10" },
           { label: "Metas Atingidas", value: metasAtingidas, icon: Medal, color: "text-purple-500", bg: "bg-purple-500/10" },
         ].map((kpi) => (
           <Card key={kpi.label}>
@@ -159,8 +159,8 @@ export default function MetasRanking() {
           <CardHeader className="pb-3"><CardTitle className="text-sm">Ranking do Mês</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(rankings ?? []).slice(0, 5).map((r: any, i: number) => {
-                const unit = (units ?? []).find((u: any) => u.unit_org_id === r.unit_org_id);
+              {(rankings ?? []).slice(0, 5).map((r: Record<string, unknown>, i: number) => {
+                const unit = (units ?? []).find((u: Record<string, unknown>) => u.unit_org_id === r.unit_org_id);
                 return (
                   <div key={r.id} className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-500/20 text-amber-600" : i === 1 ? "bg-gray-300/20 text-gray-600" : i === 2 ? "bg-orange-500/20 text-orange-600" : "bg-muted text-muted-foreground"}`}>
@@ -194,11 +194,11 @@ export default function MetasRanking() {
         <div className="text-center py-12"><Inbox className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">Nenhuma meta criada ainda.</p></div>
       ) : (
         <div className="grid gap-3">
-          {(goals ?? []).map((g: any) => {
+          {(goals ?? []).map((g: Record<string, unknown>) => {
             const gp = goalProgress?.[g.id];
             const progress = gp ? Math.min(100, Math.round(gp.percent)) : 0;
             const currentValue = gp?.currentValue ?? 0;
-            const unit = g.unit_org_id ? (units ?? []).find((u: any) => u.unit_org_id === g.unit_org_id) : null;
+            const unit = g.unit_org_id ? (units ?? []).find((u: Record<string, unknown>) => u.unit_org_id === g.unit_org_id) : null;
             const statusColor = gp?.status === "batida" ? "text-green-500" : gp?.status === "critica" ? "text-red-500" : gp?.status === "abaixo" ? "text-orange-500" : "text-blue-500";
             return (
               <Card key={g.id}>
@@ -272,8 +272,8 @@ export default function MetasRanking() {
           <div className="text-center py-8"><Inbox className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">Nenhum dado de ranking disponível.</p></div>
         ) : (
           <div className="space-y-3">
-            {(rankings ?? []).map((r: any, i: number) => {
-              const unit = (units ?? []).find((u: any) => u.unit_org_id === r.unit_org_id);
+            {(rankings ?? []).map((r: Record<string, unknown>, i: number) => {
+              const unit = (units ?? []).find((u: Record<string, unknown>) => u.unit_org_id === r.unit_org_id);
               const medals = ["🥇", "🥈", "🥉"];
               return (
                 <Card key={r.id} className={i < 3 ? "border-amber-500/20" : ""}>
@@ -306,7 +306,7 @@ export default function MetasRanking() {
           <p className="text-sm text-muted-foreground">Nenhuma unidade cadastrada.</p>
         ) : (
           <div className="space-y-3">
-            {(units ?? []).map((unit: any) => {
+            {(units ?? []).map((unit: Record<string, unknown>) => {
               const unitTrophies = networkTrophies?.[unit.unit_org_id];
               const unlockedCount = unitTrophies ? Object.values(unitTrophies).filter(t => t.unlocked).length : 0;
               return (
@@ -355,8 +355,8 @@ export default function MetasRanking() {
           <div className="grid gap-3 sm:grid-cols-2">
             {orgMembers.map((member) => {
               // Count goals assigned to this member
-              const memberGoals = activeGoals.filter((g: any) => g.assigned_to === member.user_id);
-              const memberAchieved = memberGoals.filter((g: any) => {
+              const memberGoals = activeGoals.filter((g: Record<string, unknown>) => g.assigned_to === member.user_id);
+              const memberAchieved = memberGoals.filter((g: Record<string, unknown>) => {
                 const gp = goalProgress?.[g.id];
                 return gp && gp.percent >= 100;
               }).length;
@@ -459,7 +459,7 @@ export default function MetasRanking() {
                 <Select value={goalForm.unit_org_id} onValueChange={(v) => setGoalForm(f => ({ ...f, unit_org_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
                   <SelectContent>
-                    {(units ?? []).map((u: any) => <SelectItem key={u.id} value={u.unit_org_id || u.id}>{u.name}</SelectItem>)}
+                    {(units ?? []).map((u: Record<string, unknown>) => <SelectItem key={u.id as string} value={(u.unit_org_id || u.id) as string}>{u.name as string}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

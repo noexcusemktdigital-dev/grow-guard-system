@@ -42,7 +42,7 @@ type ViewMode = "month" | "week" | "day";
 
 /* ───────── Week View ───────── */
 function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
-  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+  currentDate: Date; events: AgendaEvent[]; onEventClick: (ev: AgendaEvent) => void; onNewEvent: (day: Date) => void;
 }) {
   const weekStart = startOfWeek(currentDate, { locale: ptBR });
   const weekDays = eachDayOfInterval({ start: weekStart, end: endOfWeek(currentDate, { locale: ptBR }) });
@@ -102,7 +102,7 @@ function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
 
 /* ───────── Day View ───────── */
 function DayView({ currentDate, events, onEventClick, onNewEvent }: {
-  currentDate: Date; events: any[]; onEventClick: (ev: any) => void; onNewEvent: (day: Date) => void;
+  currentDate: Date; events: AgendaEvent[]; onEventClick: (ev: AgendaEvent) => void; onNewEvent: (day: Date) => void;
 }) {
   const dayEvents = useMemo(() => {
     const key = format(currentDate, "yyyy-MM-dd");
@@ -187,7 +187,7 @@ export default function FranqueadoAgenda() {
   const syncGoogle = useGoogleCalendarSync();
   const [syncing, setSyncing] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
-  const isGoogleConnected = googleConnection && !!(googleConnection as any).access_token && !(googleConnection as any).pending_oauth;
+  const isGoogleConnected = googleConnection && !!((googleConnection as Record<string, unknown>).access_token) && !((googleConnection as Record<string, unknown>).pending_oauth);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -195,7 +195,7 @@ export default function FranqueadoAgenda() {
       const redirectUri = `${window.location.origin}/franqueado/agenda`;
       exchangeCode.mutate({ code, redirectUri }, {
         onSuccess: () => { setSearchParams({}); handleGooglePull(); },
-        onError: (e: any) => toast.error(e.message || "Erro ao conectar Google"),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Erro ao conectar Google"),
       });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -203,9 +203,9 @@ export default function FranqueadoAgenda() {
   async function handleGooglePull() {
     setSyncing(true);
     try {
-      const result = await syncGoogle.mutateAsync("pull" as any);
-      toast.success(`Sincronizado! ${(result as any)?.imported || 0} novos eventos importados.`);
-    } catch (e: any) { toast.error(e.message || "Erro ao sincronizar"); }
+      const result = await syncGoogle.mutateAsync("pull" as unknown as string);
+      toast.success(`Sincronizado! ${(result as Record<string, unknown>)?.imported || 0} novos eventos importados.`);
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
     setSyncing(false);
   }
 
@@ -256,7 +256,7 @@ export default function FranqueadoAgenda() {
     setFormOpen(true);
   }
 
-  function openEditEvent(ev: any) {
+  function openEditEvent(ev: AgendaEvent) {
     setEditingEvent(ev);
     setTitle(ev.title); setDescription(ev.description || "");
     setStartAt(format(parseISO(ev.start_at), "yyyy-MM-dd'T'HH:mm"));
@@ -270,7 +270,7 @@ export default function FranqueadoAgenda() {
   function handleSave() {
     if (!title.trim()) { toast.error("Informe o título"); return; }
     if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       title, description: description || undefined,
       start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),
       location: location || undefined, all_day: allDay, color,
@@ -508,9 +508,9 @@ export default function FranqueadoAgenda() {
                   <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="w-4 h-4" /> {detailEvent.location}</div>
                 )}
                 {detailEvent.description && <p className="text-foreground/80 whitespace-pre-wrap">{detailEvent.description}</p>}
-                {(detailEvent as any).readonly && <Badge variant="secondary" className="text-[10px]">Somente leitura (Franqueadora)</Badge>}
+                {(detailEvent as AgendaEvent).readonly && <Badge variant="secondary" className="text-[10px]">Somente leitura (Franqueadora)</Badge>}
               </div>
-              {!(detailEvent as any).readonly && (
+              {!(detailEvent as AgendaEvent).readonly && (
                 <div className="flex gap-2 pt-2">
                   <Button size="sm" variant="outline" onClick={() => openEditEvent(detailEvent)}><Edit2 className="w-3.5 h-3.5 mr-1" /> Editar</Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(detailEvent.id)}><Trash2 className="w-3.5 h-3.5 mr-1" /> Excluir</Button>

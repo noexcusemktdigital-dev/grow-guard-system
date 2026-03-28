@@ -80,9 +80,9 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
       setForm({
         ...defaultAgent,
         ...agent,
-        persona: { ...(defaultAgent.persona as any), ...(agent.persona as any ?? {}) },
-        prompt_config: { ...(defaultAgent.prompt_config as any), ...(agent.prompt_config as any ?? {}) },
-        crm_actions: { ...(defaultAgent.crm_actions as any), ...(agent.crm_actions as any ?? {}) },
+        persona: { ...(defaultAgent.persona as Record<string, unknown>), ...((agent.persona as Record<string, unknown>) ?? {}) },
+        prompt_config: { ...(defaultAgent.prompt_config as Record<string, unknown>), ...((agent.prompt_config as Record<string, unknown>) ?? {}) },
+        crm_actions: { ...(defaultAgent.crm_actions as Record<string, unknown>), ...((agent.crm_actions as Record<string, unknown>) ?? {}) },
         objectives: agent.objectives ?? [],
         whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
       });
@@ -146,21 +146,21 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     if (next && canAccessTab(next)) setActiveTab(next);
   };
 
-  const updatePersona = (key: string, value: any) => setForm((f) => ({ ...f, persona: { ...persona, [key]: value } }));
-  const updatePrompt = (key: string, value: any) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
+  const updatePersona = (key: string, value: unknown) => setForm((f) => ({ ...f, persona: { ...persona, [key]: value } }));
+  const updatePrompt = (key: string, value: unknown) => setForm((f) => ({ ...f, prompt_config: { ...promptConfig, [key]: value } }));
   const updateCrmAction = (key: string, value: boolean) => setForm((f) => ({ ...f, crm_actions: { ...crmActions, [key]: value } }));
 
   const engagementRules = promptConfig.engagement_rules || { max_messages: 10, inactivity_timeout_hours: 48, timeout_action: "handoff", limit_action: "handoff", working_hours: { enabled: false, start: "08:00", end: "18:00" } };
   const followupConfig = promptConfig.followup || { enabled: false, delay_hours: 24, max_attempts: 3, style: "ai_generated" };
   const objectionsConfig = promptConfig.objections || [];
 
-  const updateEngagement = (key: string, value: any) => {
+  const updateEngagement = (key: string, value: unknown) => {
     updatePrompt("engagement_rules", { ...engagementRules, [key]: value });
   };
-  const updateWorkingHours = (key: string, value: any) => {
+  const updateWorkingHours = (key: string, value: unknown) => {
     updateEngagement("working_hours", { ...engagementRules.working_hours, [key]: value });
   };
-  const updateFollowup = (key: string, value: any) => {
+  const updateFollowup = (key: string, value: unknown) => {
     updatePrompt("followup", { ...followupConfig, [key]: value });
   };
   const addObjection = () => {
@@ -172,7 +172,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     updatePrompt("objections", updated);
   };
   const removeObjection = (idx: number) => {
-    updatePrompt("objections", objectionsConfig.filter((_: any, i: number) => i !== idx));
+    updatePrompt("objections", objectionsConfig.filter((_: Record<string, unknown>, i: number) => i !== idx));
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -776,7 +776,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">Ensine o agente a contra-argumentar objeções frequentes.</p>
-              {objectionsConfig.map((obj: any, idx: number) => (
+              {objectionsConfig.map((obj: Record<string, unknown>, idx: number) => (
                 <div key={idx} className="space-y-1.5 bg-muted/30 rounded-md p-3 relative">
                   <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeObjection(idx)} aria-label="Fechar">
                     <X className="w-3 h-3" />
@@ -858,7 +858,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               {agentStats?.recentLogs && agentStats.recentLogs.length > 0 ? (
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-2">
-                    {agentStats.recentLogs.map((log: any) => (
+                    {agentStats.recentLogs.map((log: Record<string, unknown>) => (
                       <div key={log.id} className="p-3 rounded-lg border space-y-1.5">
                         <div className="flex items-center justify-between">
                           <Badge variant="outline" className="text-[9px]">

@@ -133,7 +133,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const readSentRef = useRef<string | null>(null);
   const prevMsgCountRef = useRef(0);
 
-  const contactAny = contact as any;
+  const contactAny = contact as Record<string, unknown>;
   const attendingMode = contactAny?.attending_mode || null;
   const crmLeadId = contactAny?.crm_lead_id || null;
   const agentId = contactAny?.agent_id || null;
@@ -143,9 +143,9 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   const stages = useMemo(() => {
     if (!funnelsData || funnelsData.length === 0) return [];
     const defaultFunnel = funnelsData.find((f) => f.is_default) || funnelsData[0];
-    const dbStages = defaultFunnel.stages as any[];
+    const dbStages = defaultFunnel.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>;
     if (!Array.isArray(dbStages)) return [];
-    return dbStages.map((s: any) => ({
+    return dbStages.map((s: { key?: string; label?: string; color?: string; icon?: string }) => ({
       key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage",
       label: s.label || "Etapa",
     }));
@@ -187,7 +187,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   useEffect(() => {
     if (!orgId || !contact?.phone) return;
     const channel = supabase.channel(`whatsapp-typing-${orgId}`);
-    channel.on("broadcast", { event: "typing" }, (payload: any) => {
+    channel.on("broadcast", { event: "typing" }, (payload: { payload: Record<string, unknown> }) => {
       const data = payload.payload;
       if (data?.phone === contact.phone) {
         setContactTyping(data.isTyping);
@@ -321,10 +321,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           { contactId: contact.id, contactPhone: contact.phone, message: "", mediaUrl: urlData.publicUrl, type: "audio" },
           {
             onSuccess: () => { isNearBottomRef.current = true; },
-            onError: (err: any) => toast({ title: "Erro ao enviar áudio", description: err.message, variant: "destructive" }),
+            onError: (err: unknown) => toast({ title: "Erro ao enviar áudio", description: err instanceof Error ? err.message : String(err), variant: "destructive" }),
           }
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         toast({ title: "Erro no upload do áudio", description: err.message, variant: "destructive" });
       } finally {
         setSendingAudio(false);
@@ -379,7 +379,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           // Remove from pending (will be replaced by real message via Realtime)
           setPendingMessages(prev => prev.filter(m => m.id !== tempId));
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
           // Mark as failed
           setPendingMessages(prev =>
             prev.map(m => m.id === tempId ? { ...m, status: "failed" } : m)
@@ -451,10 +451,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         { contactId: contact.id, contactPhone: contact.phone, message: "", mediaUrl: urlData.publicUrl, type: fileType },
         {
           onSuccess: () => { isNearBottomRef.current = true; },
-          onError: (err: any) => toast({ title: "Erro ao enviar mídia", description: err.message, variant: "destructive" }),
+          onError: (err: unknown) => toast({ title: "Erro ao enviar mídia", description: err instanceof Error ? err.message : String(err), variant: "destructive" }),
         }
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
@@ -474,7 +474,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     if (!contact) return;
     try {
       const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
-      const dbStages = defaultFunnel?.stages as any[] | undefined;
+      const dbStages = defaultFunnel?.stages as Array<{ key?: string; label?: string }> | undefined;
       const firstStage = Array.isArray(dbStages) && dbStages.length > 0 ? (dbStages[0].key || "novo") : "novo";
       const lead = await createLead.mutateAsync({
         name: contact.name || contact.phone, phone: contact.phone, source: "whatsapp", tags: ["whatsapp"],
@@ -484,7 +484,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         await linkMutation.mutateAsync({ contactId: contact.id, leadId: lead.id });
         toast({ title: "Lead criado e vinculado!" });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao criar lead", description: err.message, variant: "destructive" });
     }
   };
@@ -527,7 +527,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
   }, []);
 
   const handleStar = useCallback((message: WhatsAppMessage) => {
-    const currentlyStarred = !!(message as any).is_starred;
+    const currentlyStarred = !!((message as Record<string, unknown>).is_starred);
     starMessage.mutate(
       { messageId: message.id, starred: !currentlyStarred },
       { onSuccess: () => toast({ title: currentlyStarred ? "Estrela removida" : "Mensagem marcada ⭐" }) }
@@ -543,12 +543,12 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
   const handleReact = useCallback((message: WhatsAppMessage, emoji: string) => {
     // Store reaction in metadata - update optimistically
-    const currentReactions = ((message.metadata as any)?.reactions || []) as Array<{ emoji: string; from: string }>;
+    const currentReactions = (((message.metadata as Record<string, unknown>)?.reactions || []) as Array<{ emoji: string; from: string }>;
     const newReactions = [...currentReactions, { emoji, from: "user" }];
     // Update via supabase directly
     supabase
-      .from("whatsapp_messages" as any)
-      .update({ metadata: { ...message.metadata, reactions: newReactions } } as any)
+      .from("whatsapp_messages" as unknown as "profiles")
+      .update({ metadata: { ...message.metadata, reactions: newReactions } } as Record<string, unknown>)
       .eq("id", message.id)
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
@@ -779,7 +779,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
                       isGrouped={item.isGrouped}
                       hideTimestamp={item.hideTimestamp}
                       onReply={handleReply}
-                      onRetry={(item.message as any)?._pending ? handleRetry : undefined}
+                      onRetry={((item.message as Record<string, unknown>)?._pending ? handleRetry : undefined}
                       onImageClick={handleImageClick}
                       onForward={handleForward}
                       onStar={handleStar}

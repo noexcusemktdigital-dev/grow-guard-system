@@ -141,8 +141,8 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
               <div onClick={e => e.stopPropagation()}>
                 {(() => {
                   const temps = ["Frio", "Morno", "Quente"] as const;
-                  const current = (lead as any).temperature || "Morno";
-                  const idx = temps.indexOf(current as any);
+                  const current = ((lead as Record<string, unknown>).temperature as string) || "Morno";
+                  const idx = temps.indexOf(current as typeof temps[number]);
                   const next = temps[(idx + 1) % temps.length];
                   const cfg: Record<string, { bg: string; icon: React.ReactNode }> = {
                     Frio: { bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400", icon: <Snowflake className="w-3 h-3" /> },
@@ -313,9 +313,9 @@ export default function ClienteCRM() {
 
   const stages: FunnelStage[] = useMemo(() => {
     if (selectedFunnel) {
-      const dbStages = selectedFunnel.stages as any[];
+      const dbStages = selectedFunnel.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>;
       if (Array.isArray(dbStages) && dbStages.length > 0) {
-        return dbStages.map((s: any, idx: number) => ({
+        return dbStages.map((s: { key?: string; label?: string; color?: string; icon?: string }, idx: number) => ({
           key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || `stage_${idx}`,
           label: s.label || `Etapa ${idx + 1}`,
           color: s.color || "blue",
@@ -447,7 +447,7 @@ export default function ClienteCRM() {
   const handleBulkTransferFunnel = (funnelId: string) => {
     const targetFunnel = accessibleFunnels.find(f => f.id === funnelId);
     if (!targetFunnel) return;
-    const targetStages = targetFunnel.stages as any[];
+    const targetStages = targetFunnel.stages as Array<{ key?: string; label?: string }>;
     const firstStageKey = Array.isArray(targetStages) && targetStages.length > 0
       ? (targetStages[0].key || targetStages[0].label?.toLowerCase().replace(/\s+/g, "_") || "novo")
       : "novo";
@@ -504,7 +504,7 @@ export default function ClienteCRM() {
 
   const draggingLead = draggingId ? allLeads.find(l => l.id === draggingId) : null;
 
-  const handleCreateLeadFromContact = (contact: any) => {
+  const handleCreateLeadFromContact = (contact: Record<string, unknown>) => {
     setNewLeadContact(contact);
     setActiveTab("pipeline");
     setNewLeadOpen(true);
@@ -988,7 +988,7 @@ export default function ClienteCRM() {
       )}
 
       {/* Lead Detail Sheet */}
-      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as any[] }))} currentFunnelId={selectedFunnelId || undefined} />
+      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }> }))} currentFunnelId={selectedFunnelId || undefined} />
 
       {/* New Lead Dialog */}
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={(o) => { setNewLeadOpen(o); if (!o) setNewLeadContact(null); }} defaultStage={stages[0]?.key || "novo"} funnelId={selectedFunnelId || undefined} prefillContact={newLeadContact} />
