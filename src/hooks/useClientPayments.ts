@@ -30,7 +30,7 @@ export function useClientPayments(month?: string) {
     queryKey: ["client-payments", orgId, month],
     queryFn: async () => {
       let q = supabase
-        .from("client_payments" as any)
+        .from("client_payments" as unknown as "contracts")
         .select("*")
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
@@ -48,7 +48,7 @@ export function useAllClientPayments() {
     queryKey: ["all-client-payments"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("client_payments" as any)
+        .from("client_payments" as unknown as "contracts")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -78,8 +78,8 @@ export function useChargeClient() {
       queryClient.invalidateQueries({ queryKey: ["client-payments"] });
       toast.success("Cobrança gerada com sucesso!");
     },
-    onError: (err: any) => {
-      const msg = err?.message || "Erro ao gerar cobrança";
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
       if (msg === "already_paid") {
         toast.info("Já pago neste mês");
       } else if (msg.includes("Unauthorized") || msg.includes("401")) {
@@ -151,8 +151,8 @@ export function useManagePayment() {
         toast.success("Cobrança atualizada com sucesso!");
       }
     },
-    onError: (err: any) => {
-      toast.error(err?.message || "Erro ao processar ação");
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Erro ao processar ação");
     },
   });
 }

@@ -36,7 +36,7 @@ export function useSupportTicketMutations() {
   const createTicket = useMutation({
     mutationFn: async (ticket: { title: string; description?: string; category?: string; subcategory?: string; priority?: string; attachments?: string[] }) => {
       if (!orgId || !user) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase.from("support_tickets").insert({ ...ticket, organization_id: orgId, created_by: user.id } as any).select().single();
+      const { data, error } = await supabase.from("support_tickets").insert({ ...ticket, organization_id: orgId, created_by: user.id } as Record<string, unknown>).select().single();
       if (error) throw error;
       return data;
     },
@@ -47,7 +47,7 @@ export function useSupportTicketMutations() {
   });
 
   const updateTicket = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("support_tickets").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -61,7 +61,7 @@ export function useSupportTicketMutations() {
   const sendMessage = useMutation({
     mutationFn: async (msg: { ticket_id: string; content: string; is_internal?: boolean; attachments?: string[] }) => {
       if (!user) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase.from("support_messages").insert({ ...msg, user_id: user.id } as any).select().single();
+      const { data, error } = await supabase.from("support_messages").insert({ ...msg, user_id: user.id } as Record<string, unknown>).select().single();
       if (error) throw error;
       return data;
     },

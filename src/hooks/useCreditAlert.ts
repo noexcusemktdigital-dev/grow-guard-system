@@ -22,7 +22,7 @@ export function useCreditAlert(): CreditAlertData {
 
   const isTrial = subscription?.status === "trial";
 
-  const planId = (subscription as any)?.plan as string | null;
+  const planId = (subscription as unknown as Record<string, unknown>)?.plan as string | null;
   const limits = getEffectiveLimits(planId, isTrial);
   const total = limits.totalCredits || 1000;
   const balance = wallet?.balance ?? 0;

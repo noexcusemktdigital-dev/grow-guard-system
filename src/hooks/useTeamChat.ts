@@ -91,7 +91,7 @@ export function useTeamChat() {
         .select("user_id, profiles(full_name, avatar_url)")
         .eq("organization_id", orgId!);
       if (error) throw error;
-      return (data || []).map((m: any) => ({
+      return (data || []).map((m: { user_id: string; profiles: { full_name: string | null; avatar_url: string | null } | null }) => ({
         user_id: m.user_id,
         full_name: m.profiles?.full_name || "Usuário",
         avatar_url: m.profiles?.avatar_url || null,

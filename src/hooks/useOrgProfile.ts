@@ -23,7 +23,7 @@ export function useOrgProfile() {
   const qc = useQueryClient();
 
   const update = useMutation({
-    mutationFn: async (updates: Record<string, any>) => {
+    mutationFn: async (updates: Record<string, unknown>) => {
       if (!orgId) throw new Error("Organização não encontrada. Tente novamente.");
       const { error } = await supabase
         .from("organizations")
@@ -35,7 +35,10 @@ export function useOrgProfile() {
       qc.invalidateQueries({ queryKey: ["org-profile", orgId] });
       toast.success("Dados da organização salvos!");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : (typeof err === "object" && err !== null && "message" in err) ? String((err as Record<string, unknown>).message) : String(err);
+      toast.error(msg);
+    },
   });
 
   return { ...query, update };

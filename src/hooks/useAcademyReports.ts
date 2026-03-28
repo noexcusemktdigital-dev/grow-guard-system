@@ -17,7 +17,7 @@ export function useAcademyReports() {
   return useQuery({
     queryKey: ["academy-reports", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_academy_reports" as any, {
+      const { data, error } = await supabase.rpc("get_academy_reports" as unknown as "get_parent_org_id", {
         _org_id: orgId!,
       });
       if (error) throw error;

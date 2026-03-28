@@ -28,9 +28,9 @@ export function useCrmAutomationMutations() {
     mutationFn: async (automation: {
       name: string;
       trigger_type: string;
-      trigger_config?: Record<string, any>;
+      trigger_config?: Record<string, unknown>;
       action_type: string;
-      action_config?: Record<string, any>;
+      action_config?: Record<string, unknown>;
       is_active?: boolean;
     }) => {
       const { data, error } = await supabase
@@ -45,7 +45,7 @@ export function useCrmAutomationMutations() {
   });
 
   const updateAutomation = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase
         .from("crm_automations")
         .update(updates)

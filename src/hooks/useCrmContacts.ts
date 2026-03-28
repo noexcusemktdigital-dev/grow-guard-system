@@ -16,7 +16,7 @@ export interface CrmContact {
   notes: string | null;
   tags: string[];
   source: string | null;
-  custom_fields: Record<string, any>;
+  custom_fields: Record<string, unknown>;
   document: string | null;
   address: string | null;
   birth_date: string | null;
@@ -77,7 +77,7 @@ export function useCrmContactMutations() {
     mutationFn: async (contact: Partial<CrmContact> & { name: string }) => {
       const { data, error } = await supabase
         .from("crm_contacts")
-        .insert({ ...contact, organization_id: orgId! } as any)
+        .insert({ ...contact, organization_id: orgId ?? "" } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -87,7 +87,7 @@ export function useCrmContactMutations() {
   });
 
   const updateContact = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase
         .from("crm_contacts")
         .update(updates)
@@ -109,7 +109,7 @@ export function useCrmContactMutations() {
   });
 
   const bulkUpdateContacts = useMutation({
-    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, any> }) => {
+    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, unknown> }) => {
       const { error } = await supabase.from("crm_contacts").update(fields).in("id", ids);
       if (error) throw error;
     },

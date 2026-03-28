@@ -23,7 +23,7 @@ export function useFranqueadoSystemPayments() {
     queryKey: ["franchisee-system-payments", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("franchisee_system_payments" as any)
+        .from("franchisee_system_payments" as unknown as "organizations")
         .select("*")
         .eq("organization_id", orgId!)
         .order("month", { ascending: false })
@@ -63,8 +63,8 @@ export function useChargeSystemFee() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["franchisee-system-payments"] });
     },
-    onError: (err: any) => {
-      const msg = err?.message || "Erro ao gerar cobrança";
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Erro ao gerar cobrança";
       if (msg === "already_paid") {
         toast.info("Sistema já pago neste mês");
       } else if (msg.includes("Unauthorized") || msg.includes("401")) {

@@ -34,7 +34,7 @@ export function useAnnouncementMutations() {
   });
 
   const updateAnnouncement = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("announcements").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

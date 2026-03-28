@@ -89,7 +89,7 @@ export function useOnboardingMutations() {
   });
 
   const updateUnit = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("onboarding_units").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -124,7 +124,7 @@ export function useOnboardingMutations() {
   });
 
   const updateMeeting = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { error } = await supabase.from("onboarding_meetings").update(updates).eq("id", id);
       if (error) throw error;
     },

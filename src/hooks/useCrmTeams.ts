@@ -25,7 +25,7 @@ export function useCrmTeams() {
         .eq("organization_id", orgId!)
         .order("name");
       if (error) throw error;
-      return (data || []).map((t: any) => ({
+      return (data || []).map((t: Record<string, unknown>) => ({
         ...t,
         members: Array.isArray(t.members) ? t.members : [],
         funnel_ids: Array.isArray(t.funnel_ids) ? t.funnel_ids : [],
@@ -43,7 +43,7 @@ export function useCrmTeamMutations() {
     mutationFn: async (team: { name: string; description?: string; members?: string[]; funnel_ids?: string[] }) => {
       const { data, error } = await supabase
         .from("crm_teams")
-        .insert({ ...team, organization_id: orgId! } as any)
+        .insert({ ...team, organization_id: orgId ?? "" } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -53,7 +53,7 @@ export function useCrmTeamMutations() {
   });
 
   const updateTeam = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase
         .from("crm_teams")
         .update(updates)

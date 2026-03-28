@@ -27,7 +27,7 @@ export function useCreateClientCampaign() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ name, type, content }: { name: string; type?: string; content: any }) => {
+    mutationFn: async ({ name, type, content }: { name: string; type?: string; content: Record<string, unknown> }) => {
       if (!orgId) throw new Error("No org");
       const { data, error } = await supabase
         .from("client_campaigns")
@@ -36,7 +36,7 @@ export function useCreateClientCampaign() {
           name,
           type: type || "content",
           status: "active",
-          content: content as any,
+          content: content as Record<string, unknown>,
           created_by: user?.id,
         })
         .select()
@@ -54,10 +54,10 @@ export function useUpdateClientCampaign() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, content }: { id: string; content: any }) => {
+    mutationFn: async ({ id, content }: { id: string; content: Record<string, unknown> }) => {
       const { data, error } = await supabase
         .from("client_campaigns")
-        .update({ content: content as any })
+        .update({ content: content as Record<string, unknown> })
         .eq("id", id)
         .select()
         .single();

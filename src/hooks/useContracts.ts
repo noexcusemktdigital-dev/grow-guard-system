@@ -12,7 +12,7 @@ export function useContractTemplates() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
   });
@@ -27,7 +27,7 @@ export function useContracts() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
   });
@@ -40,7 +40,7 @@ export function useNetworkContracts() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_network_contracts", { _org_id: orgId! });
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
   });
@@ -52,7 +52,7 @@ export function useContractMutations() {
   const { user } = useAuth();
 
   const createTemplate = useMutation({
-    mutationFn: async (t: { name: string; content?: string; variables?: any[]; template_type?: string; description?: string }) => {
+    mutationFn: async (t: { name: string; content?: string; variables?: Record<string, unknown>[]; template_type?: string; description?: string }) => {
       const { data, error } = await supabase.from("contract_templates").insert({ ...t, organization_id: orgId! }).select().single();
       if (error) throw error;
       return data;
@@ -61,7 +61,7 @@ export function useContractMutations() {
   });
 
   const updateTemplate = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("contract_templates").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -103,7 +103,7 @@ export function useContractMutations() {
   });
 
   const updateContract = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("contracts").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

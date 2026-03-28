@@ -18,11 +18,11 @@ export function useApprovalStats() {
     queryFn: async (): Promise<ApprovalStats> => {
       const [contentsRes, postsRes, sitesRes] = await Promise.all([
         supabase
-          .from("client_content" as any)
+          .from("client_content" as unknown as "organizations")
           .select("status")
           .eq("organization_id", orgId!),
         supabase
-          .from("client_posts" as any)
+          .from("client_posts" as unknown as "organizations")
           .select("status")
           .eq("organization_id", orgId!),
         supabase
@@ -31,7 +31,7 @@ export function useApprovalStats() {
           .eq("organization_id", orgId!),
       ]);
 
-      const countStatus = (rows: any[] | null, pendingVals: string[], approvedVals: string[]) => {
+      const countStatus = (rows: { status: string }[] | null, pendingVals: string[], approvedVals: string[]) => {
         const items = rows || [];
         return {
           pending: items.filter(r => pendingVals.includes(r.status)).length,

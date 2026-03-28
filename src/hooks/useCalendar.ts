@@ -28,7 +28,7 @@ export function useCalendarEvents(startDate?: string, endDate?: string) {
         _end: endDate ?? null,
       });
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
     staleTime: 1000 * 60 * 2,
@@ -50,7 +50,7 @@ export function useCalendarEventMutations() {
   });
 
   const updateEvent = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("calendar_events").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

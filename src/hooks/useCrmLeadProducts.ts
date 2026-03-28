@@ -27,7 +27,7 @@ export function useCrmLeadProducts(leadId: string | null) {
         .eq("lead_id", leadId!)
         .order("created_at");
       if (error) throw error;
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row: Record<string, unknown> & { crm_products: { name: string } | null }) => ({
         ...row,
         product_name: row.crm_products?.name || "Produto removido",
       })) as CrmLeadProduct[];
@@ -59,7 +59,7 @@ export function useCrmLeadProductMutations() {
           unit_price: input.unit_price,
           discount_percent: input.discount_percent || 0,
           notes: input.notes || null,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -70,7 +70,7 @@ export function useCrmLeadProductMutations() {
   });
 
   const updateProduct = useMutation({
-    mutationFn: async ({ id, lead_id, ...updates }: { id: string; lead_id: string; [k: string]: any }) => {
+    mutationFn: async ({ id, lead_id, ...updates }: { id: string; lead_id: string; [k: string]: unknown }) => {
       const { error } = await supabase
         .from("crm_lead_products")
         .update(updates)

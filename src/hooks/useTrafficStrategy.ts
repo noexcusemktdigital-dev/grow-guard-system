@@ -18,7 +18,7 @@ export interface TrafficPlatformStrategy {
   keywords?: string[];
   interests?: string[];
   tips: string[];
-  campaign_structure?: any;
+  campaign_structure?: Record<string, unknown>;
   tutorial?: string[];
 }
 
@@ -26,7 +26,7 @@ export interface TrafficStrategy {
   id: string;
   organization_id: string;
   platforms: TrafficPlatformStrategy[];
-  source_data: Record<string, any>;
+  source_data: Record<string, unknown>;
   is_active: boolean;
   status: string;
   created_by: string | null;
@@ -52,7 +52,7 @@ export function useActiveTrafficStrategy() {
     queryKey: ["traffic-strategy-active", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("traffic_strategies" as any)
+        .from("traffic_strategies" as unknown as "organizations")
         .select("*")
         .eq("organization_id", orgId!)
         .eq("is_active", true)
@@ -73,7 +73,7 @@ export function useTrafficStrategyHistory() {
     queryKey: ["traffic-strategy-history", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("traffic_strategies" as any)
+        .from("traffic_strategies" as unknown as "organizations")
         .select("*")
         .eq("organization_id", orgId!)
         .eq("is_active", false)
@@ -98,7 +98,7 @@ export function useGenerateTrafficStrategy() {
       if (error) throw error;
       if (data?.error) {
         const err = new Error(data.error);
-        (err as any).code = data.code;
+        (err as unknown as Record<string, unknown>).code = data.code;
         throw err;
       }
       return data.strategy as TrafficStrategy;
@@ -127,8 +127,8 @@ export function useApproveTrafficStrategy() {
       if (rpcErr) throw rpcErr;
       // Update status
       const { error } = await supabase
-        .from("traffic_strategies" as any)
-        .update({ status: "approved" } as any)
+        .from("traffic_strategies" as unknown as "organizations")
+        .update({ status: "approved" } as Record<string, unknown>)
         .eq("id", strategyId);
       if (error) throw error;
     },

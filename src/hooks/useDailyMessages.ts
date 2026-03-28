@@ -11,7 +11,7 @@ export function useDailyMessages() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return (data as any[])?.[0] ?? null;
+      return (data as Record<string, unknown>[])?.[0] ?? null;
     },
     enabled: !!orgId,
   });

@@ -168,7 +168,7 @@ export function useClienteContentMutations() {
   });
 
   const createSite = useMutation({
-    mutationFn: async (site: { name: string; type?: string; content?: any }) => {
+    mutationFn: async (site: { name: string; type?: string; content?: Record<string, unknown> }) => {
       const { data, error } = await supabase.from("client_sites").insert({ ...site, organization_id: orgId!, created_by: user?.id }).select().single();
       if (error) throw error;
       return data;
@@ -212,7 +212,7 @@ export function useClienteContentMutations() {
             .eq("user_id", user.id)
             .eq("date", today);
 
-          const allDone = todayItems && todayItems.every((i: any) => i.is_completed || i.id === id);
+          const allDone = todayItems && todayItems.every((i: { is_completed: boolean; id: string }) => i.is_completed || i.id === id);
           if (allDone && todayItems && todayItems.length > 1) {
             xpGain += 50; // Bonus for completing all
           }

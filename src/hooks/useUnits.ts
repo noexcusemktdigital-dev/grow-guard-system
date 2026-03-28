@@ -29,7 +29,7 @@ export function useUnitMutations() {
   });
 
   const updateUnit = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("units").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

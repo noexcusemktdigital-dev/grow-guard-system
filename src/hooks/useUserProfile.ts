@@ -35,7 +35,10 @@ export function useUserProfile() {
       refreshProfile();
       toast.success("Perfil salvo com sucesso!");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : (typeof err === "object" && err !== null && "message" in err) ? String((err as Record<string, unknown>).message) : String(err);
+      toast.error(msg);
+    },
   });
 
   return { ...query, update };

@@ -97,7 +97,7 @@ export function useGoogleCalendarSync() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (action: "pull" | "push" | "delete", event?: any) => {
+    mutationFn: async (action: "pull" | "push" | "delete", event?: Record<string, unknown>) => {
       const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
         body: { action, event },
       });

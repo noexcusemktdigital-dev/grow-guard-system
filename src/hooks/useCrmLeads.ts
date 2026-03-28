@@ -122,9 +122,10 @@ export function useCrmLeadMutations() {
           .maybeSingle();
 
         if (settings) {
-          const rouletteEnabled = (settings as any).lead_roulette_enabled;
-          const members = (settings as any).roulette_members as string[] | null;
-          const lastIndex = ((settings as any).roulette_last_index as number) || 0;
+          const settingsRecord = settings as unknown as Record<string, unknown>;
+          const rouletteEnabled = settingsRecord.lead_roulette_enabled;
+          const members = settingsRecord.roulette_members as string[] | null;
+          const lastIndex = (settingsRecord.roulette_last_index as number) || 0;
 
           if (rouletteEnabled && members && members.length > 0) {
             const nextIndex = lastIndex % members.length;
@@ -137,7 +138,7 @@ export function useCrmLeadMutations() {
 
             await supabase
               .from("crm_settings")
-              .update({ roulette_last_index: nextIndex + 1 } as any)
+              .update({ roulette_last_index: nextIndex + 1 } as Record<string, unknown>)
               .eq("id", settings.id);
 
             data.assigned_to = assignedTo;
@@ -157,7 +158,7 @@ export function useCrmLeadMutations() {
   });
 
   const updateLead = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase
         .from("crm_leads")
         .update(updates)
@@ -219,7 +220,7 @@ export function useCrmLeadMutations() {
   });
 
   const bulkUpdateLeads = useMutation({
-    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, any> }) => {
+    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, unknown> }) => {
       const { error } = await supabase.from("crm_leads").update(fields).in("id", ids);
       if (error) throw error;
     },
@@ -242,7 +243,7 @@ export function useCrmLeadMutations() {
 
   const bulkAddTag = useMutation({
     mutationFn: async ({ ids, tag }: { ids: string[]; tag: string }) => {
-      const { error } = await supabase.rpc("bulk_add_tag" as any, { _ids: ids, _tag: tag });
+      const { error } = await supabase.rpc("bulk_add_tag" as unknown as "get_parent_org_id", { _ids: ids, _tag: tag } as Record<string, unknown>);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
@@ -254,7 +255,7 @@ export function useCrmLeadMutations() {
       cutoff.setDate(cutoff.getDate() - 90);
       const { error } = await supabase
         .from("crm_leads")
-        .update({ archived_at: new Date().toISOString() } as any)
+        .update({ archived_at: new Date().toISOString() } as Record<string, unknown>)
         .eq("organization_id", orgId!)
         .not("lost_at", "is", null)
         .lt("lost_at", cutoff.toISOString());

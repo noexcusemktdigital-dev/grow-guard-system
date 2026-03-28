@@ -14,7 +14,47 @@ interface GoalProgressResult {
   daysLeft: number;
 }
 
-export function useGoalProgress(goals: any[] | undefined) {
+interface GoalInput {
+  id: string;
+  scope?: string;
+  assigned_to?: string;
+  period_start?: string;
+  period_end?: string;
+  metric?: string;
+  target_value?: number;
+  current_value?: number;
+}
+
+interface LeadRow {
+  id: string;
+  value?: number;
+  won_at?: string | null;
+  created_at: string;
+  assigned_to?: string;
+  stage?: string;
+}
+
+interface ActivityRow {
+  id: string;
+  type?: string;
+  created_at: string;
+  user_id?: string;
+}
+
+interface NetworkDataRow {
+  lead_id?: string;
+  lead_value?: number;
+  lead_won_at?: string | null;
+  lead_created_at?: string;
+  lead_assigned_to?: string;
+  lead_stage?: string;
+  activity_id?: string;
+  activity_type?: string;
+  activity_created_at?: string;
+  activity_user_id?: string;
+}
+
+export function useGoalProgress(goals: GoalInput[] | undefined) {
   const { data: orgId } = useUserOrgId();
   const hasNetworkGoals = goals?.some(g => g.scope === "network" || g.scope === "global");
 
@@ -24,18 +64,18 @@ export function useGoalProgress(goals: any[] | undefined) {
       if (!goals?.length || !orgId) return {};
 
       // If there are network/global goals, fetch aggregated data via RPC
-      let allLeads: any[] = [];
-      let allActivities: any[] = [];
+      let allLeads: LeadRow[] = [];
+      let allActivities: ActivityRow[] = [];
 
       if (hasNetworkGoals) {
         const { data: networkData } = await supabase.rpc("get_network_crm_data", { _org_id: orgId });
-        const rows = networkData || [];
-        allLeads = rows.filter((r: any) => r.lead_id).map((r: any) => ({
-          id: r.lead_id, value: r.lead_value, won_at: r.lead_won_at,
-          created_at: r.lead_created_at, assigned_to: r.lead_assigned_to, stage: r.lead_stage,
+        const rows = (networkData || []) as NetworkDataRow[];
+        allLeads = rows.filter((r) => r.lead_id).map((r) => ({
+          id: r.lead_id!, value: r.lead_value, won_at: r.lead_won_at,
+          created_at: r.lead_created_at!, assigned_to: r.lead_assigned_to, stage: r.lead_stage,
         }));
-        allActivities = rows.filter((r: any) => r.activity_id).map((r: any) => ({
-          id: r.activity_id, type: r.activity_type, created_at: r.activity_created_at, user_id: r.activity_user_id,
+        allActivities = rows.filter((r) => r.activity_id).map((r) => ({
+          id: r.activity_id!, type: r.activity_type, created_at: r.activity_created_at!, user_id: r.activity_user_id,
         }));
       } else {
         const [leadsRes, activitiesRes] = await Promise.all([
@@ -68,7 +108,7 @@ export function useGoalProgress(goals: any[] | undefined) {
         });
 
         // Scope filtering
-        const filterByScope = (items: any[], field: string = "assigned_to") => {
+        const filterByScope = (items: Record<string, unknown>[], field: string = "assigned_to") => {
           if (goal.scope === "individual" && goal.assigned_to) {
             return items.filter(i => i[field] === goal.assigned_to);
           }

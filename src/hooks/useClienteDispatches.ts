@@ -41,7 +41,7 @@ export function useClienteDispatchMutations() {
           ...dispatch,
           organization_id: orgId!,
           recipients: dispatch.recipients || [],
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -51,7 +51,7 @@ export function useClienteDispatchMutations() {
   });
 
   const updateDispatch = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("client_dispatches").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

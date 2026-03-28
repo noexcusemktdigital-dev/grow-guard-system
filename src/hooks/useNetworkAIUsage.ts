@@ -22,7 +22,7 @@ export function useNetworkAIUsage() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_network_ai_usage", {
         _org_id: orgId!,
-      } as any);
+      });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return row as NetworkAIUsage | null;

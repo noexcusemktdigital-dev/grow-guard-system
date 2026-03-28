@@ -27,7 +27,7 @@ export function useUserFunnelAccess() {
 
       // Filter teams where user is in members (JSONB array)
       // Since we can't filter JSONB arrays easily, we fetch all and filter client-side
-      const allTeams = (teams || []) as any[];
+      const allTeams = (teams || []) as Record<string, unknown>[];
       const userTeams = allTeams.filter((t) => {
         const members = Array.isArray(t.members) ? t.members : [];
         return members.includes(user.id);

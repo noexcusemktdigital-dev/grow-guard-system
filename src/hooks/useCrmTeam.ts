@@ -19,7 +19,7 @@ export function useCrmTeam() {
         .select("user_id, role, profiles(full_name)")
         .eq("organization_id", orgId!);
       if (error) throw error;
-      return (data || []).map((m: any) => ({
+      return (data || []).map((m: { user_id: string; role: string | null; profiles: { full_name: string | null } | null }) => ({
         user_id: m.user_id,
         full_name: m.profiles?.full_name || "Sem nome",
         role: m.role || "membro",

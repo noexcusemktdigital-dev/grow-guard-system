@@ -10,7 +10,7 @@ export function useNetworkClientStats() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_network_client_stats", {
         _org_id: orgId!,
-      } as any);
+      });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return row as {

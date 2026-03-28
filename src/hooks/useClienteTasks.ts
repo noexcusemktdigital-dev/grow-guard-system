@@ -78,7 +78,7 @@ export function useClienteTaskMutations() {
   });
 
   const updateTask = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase
         .from("client_tasks")
         .update({ ...updates, updated_at: new Date().toISOString() })

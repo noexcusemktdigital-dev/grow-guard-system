@@ -81,7 +81,7 @@ export interface Strategy {
   organization_id: string;
   lead_id: string | null;
   title: string;
-  diagnostic_answers: Record<string, any>;
+  diagnostic_answers: Record<string, unknown>;
   result: StrategyResult | null;
   status: string;
   created_by: string | null;
@@ -119,7 +119,7 @@ export function useCreateStrategy() {
       leadId,
     }: {
       title: string;
-      answers: Record<string, any>;
+      answers: Record<string, unknown>;
       leadId?: string | null;
     }) => {
       if (!orgId || !user) throw new Error("Não autenticado");
@@ -129,7 +129,7 @@ export function useCreateStrategy() {
         .insert({
           organization_id: orgId,
           title,
-          diagnostic_answers: answers as any,
+          diagnostic_answers: answers as Record<string, unknown>,
           status: "draft",
           created_by: user.id,
           lead_id: leadId || null,
@@ -161,7 +161,7 @@ export function useCreateStrategy() {
 
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_strategies")
-        .update({ result: fnData.result as any, status: "completed" })
+        .update({ result: fnData.result as Record<string, unknown>, status: "completed" })
         .eq("id", row.id)
         .select()
         .single();
@@ -207,7 +207,7 @@ export function useRegenerateStrategy() {
     }: {
       id: string;
       title: string;
-      answers: Record<string, any>;
+      answers: Record<string, unknown>;
     }) => {
       if (!user) throw new Error("Não autenticado");
 
@@ -215,7 +215,7 @@ export function useRegenerateStrategy() {
         .from("franqueado_strategies")
         .update({
           title,
-          diagnostic_answers: answers as any,
+          diagnostic_answers: answers as Record<string, unknown>,
           status: "draft",
         })
         .eq("id", id);
@@ -243,7 +243,7 @@ export function useRegenerateStrategy() {
 
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_strategies")
-        .update({ result: fnData.result as any, status: "completed" })
+        .update({ result: fnData.result as Record<string, unknown>, status: "completed" })
         .eq("id", id)
         .select()
         .single();

@@ -25,7 +25,7 @@ export function useCrmFunnelMutations() {
   const { data: orgId } = useUserOrgId();
 
   const createFunnel = useMutation({
-    mutationFn: async (funnel: { name: string; description?: string; stages?: any[]; is_default?: boolean }) => {
+    mutationFn: async (funnel: { name: string; description?: string; stages?: Record<string, unknown>[]; is_default?: boolean }) => {
       if (funnel.is_default && orgId) {
         await supabase
           .from("crm_funnels")
@@ -44,7 +44,7 @@ export function useCrmFunnelMutations() {
   });
 
   const updateFunnel = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       if (updates.is_default === true && orgId) {
         await supabase
           .from("crm_funnels")

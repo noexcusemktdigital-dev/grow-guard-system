@@ -65,7 +65,7 @@ export function useClienteAgentMutations() {
           whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
           organization_id: orgId!,
           created_by: user?.id,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -78,7 +78,7 @@ export function useClienteAgentMutations() {
     mutationFn: async ({ id, ...updates }: Partial<AiAgent> & { id: string }) => {
       const { data, error } = await supabase
         .from("client_ai_agents")
-        .update(updates as any)
+        .update(updates as Record<string, unknown>)
         .eq("id", id)
         .select()
         .single();
@@ -87,8 +87,8 @@ export function useClienteAgentMutations() {
       // When agent is paused/disabled, unlock all its contacts to human mode
       if (updates.status && updates.status !== "active" && orgId) {
         await supabase
-          .from("whatsapp_contacts" as any)
-          .update({ attending_mode: "human" } as any)
+          .from("whatsapp_contacts" as unknown as "profiles")
+          .update({ attending_mode: "human" } as Record<string, unknown>)
           .eq("agent_id", id)
           .eq("organization_id", orgId);
       }
@@ -132,7 +132,7 @@ export function useClienteAgentMutations() {
           whatsapp_instance_ids: agent.whatsapp_instance_ids ?? [],
           organization_id: orgId!,
           created_by: user?.id,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -146,8 +146,8 @@ export function useClienteAgentMutations() {
       if (!orgId) return;
       // Set all contacts that were previously assigned to this agent back to AI mode
       await supabase
-        .from("whatsapp_contacts" as any)
-        .update({ attending_mode: "ai" } as any)
+        .from("whatsapp_contacts" as unknown as "profiles")
+        .update({ attending_mode: "ai" } as Record<string, unknown>)
         .eq("agent_id", agentId)
         .eq("organization_id", orgId)
         .eq("attending_mode", "human");
@@ -170,18 +170,18 @@ export function useAgentStats(agentId: string | null) {
 
       const [contactsRes, messagesRes, logsRes] = await Promise.all([
         supabase
-          .from("whatsapp_contacts" as any)
+          .from("whatsapp_contacts" as unknown as "profiles")
           .select("id", { count: "exact", head: true })
           .eq("agent_id", agentId)
           .eq("organization_id", orgId)
           .eq("attending_mode", "ai"),
         supabase
-          .from("whatsapp_messages" as any)
+          .from("whatsapp_messages" as unknown as "profiles")
           .select("id", { count: "exact", head: true })
           .eq("organization_id", orgId)
           .eq("direction", "outbound")
           .gte("created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
-          .contains("metadata" as any, { agent_id: agentId }),
+          .contains("metadata" as unknown as "id", { agent_id: agentId }),
         supabase
           .from("ai_conversation_logs")
           .select("id, created_at, input_message, output_message, contact_id")

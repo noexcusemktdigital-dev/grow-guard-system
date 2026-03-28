@@ -116,8 +116,8 @@ export function useSyncMetrics() {
         toast({ title: "Métricas sincronizadas!", description: `${synced} registros importados.` });
       }
     },
-    onError: (err: any) => {
-      toast({ title: "Erro ao sincronizar", description: err.message, variant: "destructive" });
+    onError: (err: unknown) => {
+      toast({ title: "Erro ao sincronizar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     },
   });
 }
@@ -153,8 +153,8 @@ export function useSelectAdAccount() {
       qc.invalidateQueries({ queryKey: ["ad-connections"] });
       toast({ title: "Conta selecionada com sucesso!" });
     },
-    onError: (err: any) => {
-      toast({ title: "Erro ao selecionar conta", description: err.message, variant: "destructive" });
+    onError: (err: unknown) => {
+      toast({ title: "Erro ao selecionar conta", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     },
   });
 }
@@ -168,16 +168,17 @@ export function useAnalyzeAds() {
         body: { organization_id: orgId, period_days: periodDays },
       });
       if (error) throw error;
-      return data as { analysis: AdAnalysis; summary: any };
+      return data as { analysis: AdAnalysis; summary: Record<string, unknown> };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
     },
-    onError: (err: any) => {
-      if (err.message?.includes("INSUFFICIENT")) {
+    onError: (err: unknown) => {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg?.includes("INSUFFICIENT")) {
         toast({ title: "Créditos insuficientes", description: "Você precisa de 30 créditos para a análise IA.", variant: "destructive" });
       } else {
-        toast({ title: "Erro na análise", description: err.message, variant: "destructive" });
+        toast({ title: "Erro na análise", description: errMsg, variant: "destructive" });
       }
     },
   });

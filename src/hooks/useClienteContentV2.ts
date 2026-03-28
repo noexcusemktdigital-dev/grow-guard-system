@@ -16,7 +16,7 @@ export interface ContentItem {
   objective: string | null;
   cta: string | null;
   main_message: string | null;
-  result: any | null;
+  result: Record<string, unknown> | null;
   status: string;
   strategy_id: string | null;
   organization_id: string;
@@ -91,7 +91,7 @@ export function useGenerateContent() {
       plataforma: string;
       tom?: string;
       publico?: string;
-      estrategia: any | null;
+      estrategia: Record<string, unknown> | null;
       // New fields
       funilMomento?: string;
       contextoEspecial?: string;
@@ -129,19 +129,19 @@ export function useGenerateContent() {
       });
 
       if (resp.error) throw new Error(resp.error.message || "Erro ao gerar conteúdo");
-      const result = resp.data as any;
-      if (result?.error) throw new Error(result.error);
+      const result = resp.data as Record<string, unknown>;
+      if (result?.error) throw new Error(result.error as string);
 
-      const conteudos: any[] = result.conteudos || [];
+      const conteudos = (result.conteudos || []) as Record<string, unknown>[];
       if (conteudos.length === 0) throw new Error("Nenhum conteúdo gerado");
 
       // Batch insert
-      const rows = conteudos.map((c: any) => ({
+      const rows = conteudos.map((c) => ({
         organization_id: orgId,
-        title: c.titulo || "Conteúdo",
+        title: (c.titulo as string) || "Conteúdo",
         format: c.formato,
         objective: c.objetivo,
-        result: c as any,
+        result: c as Record<string, unknown>,
         status: "pending",
         created_by: user?.id,
         platform: payload.plataforma,
@@ -149,7 +149,7 @@ export function useGenerateContent() {
 
       const { data, error } = await supabase
         .from("client_content")
-        .insert(rows as any)
+        .insert(rows as Record<string, unknown>[])
         .select();
 
       if (error) throw error;
@@ -170,7 +170,7 @@ export function useApproveContent() {
     mutationFn: async (contentId: string) => {
       if (!orgId) throw new Error("Org not found");
 
-      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+      const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_parent_org_id", {
         _org_id: orgId,
         _amount: CREDIT_COST_APPROVE_CONTENT,
         _description: "Conteúdo aprovado",
@@ -180,7 +180,7 @@ export function useApproveContent() {
 
       const { error } = await supabase
         .from("client_content")
-        .update({ status: "approved" } as any)
+        .update({ status: "approved" } as Record<string, unknown>)
         .eq("id", contentId);
       if (error) throw error;
     },
@@ -200,7 +200,7 @@ export function useApproveBatch() {
       if (!orgId) throw new Error("Org not found");
 
       for (const id of contentIds) {
-        const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+        const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_parent_org_id", {
           _org_id: orgId,
           _amount: CREDIT_COST_APPROVE_CONTENT,
           _description: "Conteúdo aprovado (lote)",
@@ -210,7 +210,7 @@ export function useApproveBatch() {
 
         const { error } = await supabase
           .from("client_content")
-          .update({ status: "approved" } as any)
+          .update({ status: "approved" } as Record<string, unknown>)
           .eq("id", id);
         if (error) throw error;
       }

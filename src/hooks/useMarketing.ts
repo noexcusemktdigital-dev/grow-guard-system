@@ -55,7 +55,7 @@ export function useMarketingMutations() {
 
   const createFolder = useMutation({
     mutationFn: async (folder: { name: string; parent_id?: string; category?: string }) => {
-      const { data, error } = await supabase.from("marketing_folders").insert({ ...folder, organization_id: orgId! } as any).select().single();
+      const { data, error } = await supabase.from("marketing_folders").insert({ ...folder, organization_id: orgId ?? "" } as Record<string, unknown>).select().single();
       if (error) throw error;
       return data;
     },

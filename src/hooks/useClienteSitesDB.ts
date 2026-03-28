@@ -51,10 +51,10 @@ export function useCreateClientSite() {
           name,
           type,
           status: "Rascunho",
-          content: { html } as any,
+          content: { html } as Record<string, unknown>,
           created_by: user?.id,
           strategy_id: strategy_id || null,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -74,7 +74,7 @@ export function useApproveSite() {
     mutationFn: async (siteId: string) => {
       const { error } = await supabase
         .from("client_sites")
-        .update({ status: "Aprovado" } as any)
+        .update({ status: "Aprovado" } as Record<string, unknown>)
         .eq("id", siteId);
       if (error) throw error;
     },
@@ -92,7 +92,7 @@ export function useUpdateSiteUrl() {
     mutationFn: async ({ siteId, url }: { siteId: string; url: string }) => {
       const { error } = await supabase
         .from("client_sites")
-        .update({ url, status: "Publicado", published_at: new Date().toISOString() } as any)
+        .update({ url, status: "Publicado", published_at: new Date().toISOString() } as Record<string, unknown>)
         .eq("id", siteId);
       if (error) throw error;
     },

@@ -106,7 +106,7 @@ export function useFinanceClosings() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
   });
@@ -126,7 +126,7 @@ export function useFinanceMutations() {
   });
 
   const updateRevenue = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("finance_revenues").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
@@ -152,7 +152,7 @@ export function useFinanceMutations() {
   });
 
   const updateExpense = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from("finance_expenses").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

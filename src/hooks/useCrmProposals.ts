@@ -19,7 +19,7 @@ export interface CrmProposal {
   title: string;
   value: number | null;
   status: string;
-  content: any;
+  content: Record<string, unknown> | null;
   items: ProposalItem[];
   partner_company_id: string | null;
   notes: string | null;
@@ -48,7 +48,7 @@ export function useCrmProposals(leadId?: string) {
       if (leadId) q = q.eq("lead_id", leadId);
       const { data, error } = await q;
       if (error) throw error;
-      return (data as any[]).map(d => ({
+      return (data as Record<string, unknown>[]).map(d => ({
         ...d,
         items: Array.isArray(d.items) ? d.items : [],
         discount_total: d.discount_total ?? 0,
@@ -72,7 +72,7 @@ export function useCrmProposalMutations() {
           organization_id: orgId!,
           created_by: user?.id ?? null,
           items: JSON.stringify(proposal.items ?? []),
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
@@ -82,7 +82,7 @@ export function useCrmProposalMutations() {
   });
 
   const updateProposal = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
       const payload = { ...updates };
       if (payload.items) payload.items = JSON.stringify(payload.items);
       const { data, error } = await supabase
@@ -122,7 +122,7 @@ export function useCrmProposalMutations() {
           payment_terms: proposal.payment_terms,
           discount_total: proposal.discount_total,
           created_by: user?.id ?? null,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
       if (error) throw error;
