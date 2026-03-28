@@ -95,8 +95,8 @@ function NovaProspeccaoTab() {
       setResult(p.result);
       setProspectionId(p.id);
       toast.success("Plano de prospecção gerado com sucesso!");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar prospecção");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e) || "Erro ao gerar prospecção");
     }
   };
 

@@ -54,7 +54,7 @@ export default function ComunicadoForm({ comunicado, onPublish, onSaveDraft, onC
 
   // File upload state
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [attachmentUrl, setAttachmentUrl] = useState<string | undefined>((comunicado as any)?.attachmentUrl);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | undefined>((comunicado as unknown as { attachmentUrl?: string })?.attachmentUrl);
   const [uploading, setUploading] = useState(false);
 
   const handlePublicoToggle = (p: PublicoAlvo) => {

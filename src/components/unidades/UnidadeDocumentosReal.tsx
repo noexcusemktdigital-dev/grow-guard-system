@@ -67,7 +67,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
 
   // For franchisee view, filter out franqueadora_only docs
   const visibleDocs = isFranqueadoView
-    ? (docs || []).filter((d: any) => d.visibility !== "franqueadora_only")
+    ? (docs || []).filter((d: { visibility?: string }) => d.visibility !== "franqueadora_only")
     : docs;
 
   return (
@@ -94,7 +94,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleDocs.map((d: any) => {
+              {visibleDocs.map((d: { id: string; type: string; name: string; visibility?: string; created_at: string; file_url?: string; uploaded_by?: string }) => {
                 // Franchisee can only delete docs they uploaded
                 const canDelete = isFranqueadoView ? d.uploaded_by === user?.id : true;
                 return (

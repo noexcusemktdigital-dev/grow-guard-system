@@ -108,15 +108,15 @@ export default function ComunicadoDetail({ comunicado, onEdit, onDuplicate, onAr
         <CardContent className="space-y-4">
           <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(comunicado.conteudo) }} />
 
-          {(comunicado as any).attachmentUrl && (
+          {(comunicado as unknown as { attachmentUrl?: string }).attachmentUrl && (
             <a
-              href={(comunicado as any).attachmentUrl}
+              href={(comunicado as unknown as { attachmentUrl?: string }).attachmentUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-primary hover:underline p-3 rounded-lg border border-border bg-muted/30"
             >
               <Download className="w-4 h-4 shrink-0" />
-              <span className="truncate">{(comunicado as any).attachmentUrl.split("/").pop()}</span>
+              <span className="truncate">{(comunicado as unknown as { attachmentUrl?: string }).attachmentUrl.split("/").pop()}</span>
             </a>
           )}
 

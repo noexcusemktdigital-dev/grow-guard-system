@@ -192,7 +192,7 @@ export default function ClienteRedesSociais() {
             print_format: payload.printFormat,
           });
           results.push(result);
-        } catch (slideErr: any) {
+        } catch (slideErr: unknown) {
           if (isInsufficientCreditsError(slideErr)) {
             if (results.length === 0) {
               setShowCreditsDialog(true);
@@ -216,7 +216,7 @@ export default function ClienteRedesSociais() {
         toast({ title: "Nenhum slide gerado com sucesso", variant: "destructive" });
         setView("art-wizard");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
       } else {
@@ -245,7 +245,7 @@ export default function ClienteRedesSociais() {
       });
       toast({ title: "Campos preenchidos com IA!" });
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao preencher com IA", description: err.message, variant: "destructive" });
       return null;
     }
@@ -260,7 +260,7 @@ export default function ClienteRedesSociais() {
         }
       }
       resetAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
       } else {

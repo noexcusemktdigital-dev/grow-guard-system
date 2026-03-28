@@ -82,7 +82,7 @@ export default function FinanceiroDespesas() {
                   <td className="py-3 px-4 text-center">
                     <span className={`text-xs px-2 py-0.5 rounded ${e.status === "paid" ? "bg-emerald-500/15 text-emerald-500" : "bg-yellow-500/15 text-yellow-500"}`}>{e.status === "paid" ? "Pago" : "Previsto"}</span>
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground">{(e as any).date ? new Date((e as any).date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
+                  <td className="py-3 px-4 text-muted-foreground">{(e as unknown as { date?: string }).date ? new Date((e as unknown as { date?: string }).date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                 </tr>
               ))}
             </tbody>

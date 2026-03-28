@@ -62,7 +62,7 @@ export function CrmProductsManager() {
       updateProduct.mutate({ id: editing.id, ...payload });
       toast({ title: "Produto atualizado" });
     } else {
-      createProduct.mutate(payload as any);
+      createProduct.mutate(payload as Omit<CrmProduct, 'id' | 'organization_id' | 'created_at'>);
       toast({ title: "Produto criado" });
     }
     setShowForm(false); resetForm();

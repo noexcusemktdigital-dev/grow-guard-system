@@ -123,8 +123,8 @@ export default function ClienteOnboardingCompany() {
       
       toast.success("Dados salvos! Vamos montar seu plano comercial.");
       navigate("/cliente/plano-vendas");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err) || "Erro ao salvar");
     } finally {
       setSaving(false);
     }

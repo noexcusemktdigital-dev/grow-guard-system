@@ -537,7 +537,7 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
       setPaymentResult(data);
       qc.invalidateQueries({ queryKey: ["asaas-payments"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   if (!pack) return null;

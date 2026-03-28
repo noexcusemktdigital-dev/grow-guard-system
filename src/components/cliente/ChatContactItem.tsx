@@ -30,14 +30,14 @@ function formatContactTime(dateStr: string | null) {
 
 export const ChatContactItem = React.memo(React.forwardRef<HTMLButtonElement, Props>(
   function ChatContactItem({ contact, isSelected, onSelect, stageLabel, preview, onArchive }, ref) {
-    const contactAny = contact as any;
-    const mode = contactAny.attending_mode || null;
-    const contactType = contactAny.contact_type || "individual";
-    const assignedName = contactAny.assigned_name || null;
+    const contactExt = contact as WhatsAppContact & { attending_mode?: string; contact_type?: string; assigned_name?: string; is_archived?: boolean };
+    const mode = contactExt.attending_mode || null;
+    const contactType = contactExt.contact_type || "individual";
+    const assignedName = contactExt.assigned_name || null;
     const isGroup = contactType === "group";
     const isLid = contactType === "lid";
     const isWebsite = contactType === "website";
-    const isArchived = !!(contactAny.is_archived);
+    const isArchived = !!(contactExt.is_archived);
 
     return (
       <ContextMenu>

@@ -22,7 +22,7 @@ export interface ContentBatch {
 }
 
 /** Safely parse conteudo_principal (AI may return Python-like string) */
-export function parseConteudoPrincipal(raw: any): any {
+export function parseConteudoPrincipal(raw: unknown): unknown {
   if (!raw) return null;
   if (typeof raw === "string") {
     try { return JSON.parse(raw); } catch { /* ignore */ }

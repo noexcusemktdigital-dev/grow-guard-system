@@ -34,7 +34,7 @@ interface UnifiedEntry {
   bankSlipUrl?: string | null;
   billingType?: string;
   asaasStatus?: string;
-  raw?: any;
+  raw?: Record<string, unknown>;
 }
 
 function mapAsaasStatus(s: string): string {
@@ -66,26 +66,26 @@ export default function FinanceiroControle() {
   const [search, setSearch] = useState("");
   // Revenue dialog
   const [revDialog, setRevDialog] = useState(false);
-  const [editingRev, setEditingRev] = useState<any>(null);
+  const [editingRev, setEditingRev] = useState<{ id: string; description: string; amount: number; category?: string; status?: string; date?: string } | null>(null);
   const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Assessoria", status: "pending", date: "" });
   const [viaAsaas, setViaAsaas] = useState(false);
   const [asaasContractId, setAsaasContractId] = useState("");
   const [asaasBillingType, setAsaasBillingType] = useState("PIX");
   // Expense dialog
   const [expDialog, setExpDialog] = useState(false);
-  const [editingExp, setEditingExp] = useState<any>(null);
+  const [editingExp, setEditingExp] = useState<{ id: string; description: string; amount: number; category?: string; status?: string; is_recurring?: boolean; date?: string } | null>(null);
   const [expForm, setExpForm] = useState({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" });
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<{ type: "rev" | "exp"; id: string } | null>(null);
 
   // Charge dialog state (from contracts tab)
-  const [chargeContract, setChargeContract] = useState<any>(null);
+  const [chargeContract, setChargeContract] = useState<{ id: string; organization_id: string; monthly_value?: number; signer_name?: string } | null>(null);
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
-  const [chargeResult, setChargeResult] = useState<any>(null);
+  const [chargeResult, setChargeResult] = useState<Record<string, unknown> | null>(null);
 
   const isLoading = lr || le || lc;
 
-  const activeContracts = useMemo(() => (contracts ?? []).filter((c: any) => c.status === "active" || c.status === "signed"), [contracts]);
+  const activeContracts = useMemo(() => (contracts ?? []).filter((c) => c.status === "active" || c.status === "signed"), [contracts]);
 
   // Build unified entries list
   const unifiedEntries: UnifiedEntry[] = useMemo(() => {
@@ -134,7 +134,7 @@ export default function FinanceiroControle() {
   const totalAsaasPaid = (asaasPayments ?? []).filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0);
   const totalRev = totalManualRev + totalAsaasPaid;
   const totalExp = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
-  const networkMRR = activeContracts.reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
+  const networkMRR = activeContracts.reduce((s: number, c) => s + Number(c.monthly_value || 0), 0);
 
   // Revenue handlers
   const openNewRev = () => {
@@ -145,13 +145,13 @@ export default function FinanceiroControle() {
     setAsaasBillingType("PIX");
     setRevDialog(true);
   };
-  const openEditRev = (r: any) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Assessoria", status: r.status || "pending", date: r.date || "" }); setViaAsaas(false); setRevDialog(true); };
+  const openEditRev = (r: { id: string; description: string; amount: number; category?: string; status?: string; date?: string }) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Assessoria", status: r.status || "pending", date: r.date || "" }); setViaAsaas(false); setRevDialog(true); };
 
   const saveRev = () => {
     if (viaAsaas && !editingRev) {
       // Charge via Asaas
       if (!asaasContractId) { toast({ title: "Selecione um contrato", variant: "destructive" }); return; }
-      const contract = activeContracts.find((c: any) => c.id === asaasContractId);
+      const contract = activeContracts.find((c) => c.id === asaasContractId);
       if (!contract) return;
       chargeClient.mutate(
         { contract_id: asaasContractId, billing_type: asaasBillingType, organization_id: contract.organization_id },
@@ -178,7 +178,7 @@ export default function FinanceiroControle() {
 
   // Expense handlers
   const openNewExp = () => { setEditingExp(null); setExpForm({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" }); setExpDialog(true); };
-  const openEditExp = (e: any) => { setEditingExp(e); setExpForm({ description: e.description, amount: Number(e.amount), category: e.category || "Plataformas", status: e.status || "pending", is_recurring: !!e.is_recurring, date: e.date || "" }); setExpDialog(true); };
+  const openEditExp = (e: { id: string; description: string; amount: number; category?: string; status?: string; is_recurring?: boolean; date?: string }) => { setEditingExp(e); setExpForm({ description: e.description, amount: Number(e.amount), category: e.category || "Plataformas", status: e.status || "pending", is_recurring: !!e.is_recurring, date: e.date || "" }); setExpDialog(true); };
   const saveExp = () => {
     if (!expForm.description.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
     if (editingExp) {
@@ -204,7 +204,7 @@ export default function FinanceiroControle() {
   };
 
   // Charge handlers (from contracts tab)
-  const handleEmitCharge = (contract: any) => {
+  const handleEmitCharge = (contract: { id: string; organization_id: string; monthly_value?: number; signer_name?: string }) => {
     setChargeContract(contract);
     setChargeBillingType("PIX");
     setChargeResult(null);
@@ -413,7 +413,7 @@ export default function FinanceiroControle() {
                   <th className="text-center py-3 px-4 font-medium">Ações</th>
                 </tr></thead>
                 <tbody>
-                  {activeContracts.map((c: any) => (
+                  {activeContracts.map((c) => (
                     <tr key={c.id} className="border-b hover:bg-muted/30">
                       <td className="py-3 px-4 font-medium">{c.signer_name || "—"}</td>
                       <td className="py-3 px-4 text-muted-foreground">{c.title}</td>
@@ -542,7 +542,7 @@ export default function FinanceiroControle() {
                   <Select value={asaasContractId} onValueChange={setAsaasContractId}>
                     <SelectTrigger><SelectValue placeholder="Selecione um contrato" /></SelectTrigger>
                     <SelectContent>
-                      {activeContracts.map((c: any) => (
+                      {activeContracts.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.signer_name || c.title} — {c.monthly_value ? formatBRL(Number(c.monthly_value)) : "sem valor"}
                         </SelectItem>

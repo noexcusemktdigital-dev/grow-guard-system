@@ -136,8 +136,8 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
     : null;
 
   const resolvedMediaUrl = message.media_url
-    || (message.type === "audio" && metadata.ptt ? ((metadata.ptt as any)?.audioUrl || (metadata.ptt as any)?.pttUrl) : null)
-    || (message.type === "audio" && metadata.audio ? (metadata.audio as any)?.audioUrl : null)
+    || (message.type === "audio" && metadata.ptt ? ((metadata.ptt as { audioUrl?: string })?.audioUrl || (metadata.ptt as { pttUrl?: string })?.pttUrl) : null)
+    || (message.type === "audio" && metadata.audio ? (metadata.audio as { audioUrl?: string })?.audioUrl : null)
     || null;
 
   const isSticker = message.type === "sticker" || !!(metadata.stickerMessage);
@@ -189,8 +189,8 @@ export const ChatMessageBubble = React.forwardRef<HTMLDivElement, Props>(functio
     );
   };
 
-  const isDeleted = !!(message as any).is_deleted;
-  const isStarredMsg = !!(message as any).is_starred;
+  const isDeleted = !!(message as unknown as { is_deleted?: boolean }).is_deleted;
+  const isStarredMsg = !!(message as unknown as { is_starred?: boolean }).is_starred;
   const reactions = (metadata.reactions as Array<{ emoji: string; from: string }>) || [];
 
   if (isDeleted) {

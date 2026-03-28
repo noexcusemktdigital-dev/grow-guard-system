@@ -32,11 +32,11 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
     const filtered = contacts.filter((c) => {
       const q = search.toLowerCase();
       const matchSearch = !q || (c.name?.toLowerCase().includes(q) || c.phone.includes(q));
-      const contactAny = c as any;
-      const mode = contactAny.attending_mode || "ai";
-      const contactType = contactAny.contact_type || "individual";
+      const contactExt = c as WhatsAppContact & { attending_mode?: string; contact_type?: string; is_archived?: boolean; agent_id?: string };
+      const mode = contactExt.attending_mode || "ai";
+      const contactType = contactExt.contact_type || "individual";
       const isGroup = contactType === "group";
-      const isArchived = !!(contactAny.is_archived);
+      const isArchived = !!(contactExt.is_archived);
       
       // Filter archived unless showing archived
       if (!showArchived && isArchived) return false;
@@ -47,11 +47,11 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
       else if (modeFilter === "ai") matchMode = mode === "ai" && !isGroup;
       else if (modeFilter === "human") matchMode = mode === "human" && !isGroup;
       else if (modeFilter === "waiting") matchMode = c.unread_count > 0;
-      const matchAgent = !agentFilter || contactAny.agent_id === agentFilter;
+      const matchAgent = !agentFilter || contactExt.agent_id === agentFilter;
       return matchSearch && matchMode && matchAgent;
     });
 
-    const archivedCount = contacts.filter(c => !!(c as any).is_archived).length;
+    const archivedCount = contacts.filter(c => !!(c as WhatsAppContact & { is_archived?: boolean }).is_archived).length;
 
     const sortedContacts = useMemo(() => {
     return [...filtered].sort((a, b) => {

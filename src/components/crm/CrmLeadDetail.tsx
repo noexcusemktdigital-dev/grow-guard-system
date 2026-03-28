@@ -175,7 +175,7 @@ export function CrmLeadDetail({
             </div>
             <div>
               <Label>Origem</Label>
-              <Select value={editData.origin} onValueChange={(v) => setEditData({ ...editData, origin: v as any })}>
+              <Select value={editData.origin} onValueChange={(v) => setEditData({ ...editData, origin: v as Lead["origin"] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{LEAD_ORIGINS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
               </Select>
@@ -189,7 +189,7 @@ export function CrmLeadDetail({
             </div>
             <div>
               <Label>Temperatura</Label>
-              <Select value={editData.temperature} onValueChange={(v) => setEditData({ ...editData, temperature: v as any })}>
+              <Select value={editData.temperature} onValueChange={(v) => setEditData({ ...editData, temperature: v as Lead["temperature"] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{TEMPERATURES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
@@ -201,7 +201,7 @@ export function CrmLeadDetail({
               <>
                 <div>
                   <Label>Perfil</Label>
-                  <Select value={editData.perfil || ""} onValueChange={(v) => setEditData({ ...editData, perfil: v as any })}>
+                  <Select value={editData.perfil || ""} onValueChange={(v) => setEditData({ ...editData, perfil: v as Lead["perfil"] })}>
                     <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="investidor">Investidor</SelectItem>
@@ -373,7 +373,7 @@ export function CrmLeadDetail({
           <div className="space-y-3">
             <div><Label>Valor (R$)</Label><Input type="number" value={propValue} onChange={(e) => setPropValue(e.target.value)} /></div>
             <div><Label>Status</Label>
-              <Select value={propStatus} onValueChange={(v) => setPropStatus(v as any)}>
+              <Select value={propStatus} onValueChange={(v) => setPropStatus(v as "rascunho" | "enviada" | "aceita")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="rascunho">Rascunho</SelectItem>

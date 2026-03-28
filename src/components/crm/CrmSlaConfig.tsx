@@ -35,7 +35,7 @@ export function CrmSlaConfig() {
   useEffect(() => {
     if (settings) {
       // First contact
-      const fcMin = (settings as any).sla_first_contact_minutes || settings.sla_first_contact_hours * 60;
+      const fcMin = (settings as Record<string, unknown>).sla_first_contact_minutes as number || settings.sla_first_contact_hours * 60;
       if (fcMin >= 60 && fcMin % 60 === 0) {
         setContactValue(fcMin / 60);
         setContactUnit("hours");
@@ -45,7 +45,7 @@ export function CrmSlaConfig() {
       }
 
       // No response
-      const nrMin = (settings as any).sla_no_response_minutes || 4320;
+      const nrMin = (settings as Record<string, unknown>).sla_no_response_minutes as number || 4320;
       if (nrMin >= 60 && nrMin % 60 === 0) {
         setNoResponseValue(nrMin / 60);
         setNoResponseUnit("hours");
@@ -54,7 +54,7 @@ export function CrmSlaConfig() {
         setNoResponseUnit("minutes");
       }
 
-      setStageStuckDays((settings as any).sla_stage_stuck_days || 7);
+      setStageStuckDays((settings as Record<string, unknown>).sla_stage_stuck_days as number || 7);
       setAlertsEnabled(settings.alerts_enabled);
       setAutoTasks(settings.auto_tasks_on_stage_move);
     }
@@ -91,7 +91,7 @@ export function CrmSlaConfig() {
           </div>
           <div className="flex gap-2">
             <Input type="number" value={contactValue} onChange={e => setContactValue(Number(e.target.value))} className="h-8 w-24" min={1} />
-            <Select value={contactUnit} onValueChange={(v: any) => setContactUnit(v)}>
+            <Select value={contactUnit} onValueChange={(v: string) => setContactUnit(v as "minutes" | "hours")}>
               <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="minutes" className="text-xs">Minutos</SelectItem>
@@ -110,7 +110,7 @@ export function CrmSlaConfig() {
           {noResponseEnabled && (
             <div className="flex gap-2">
               <Input type="number" value={noResponseValue} onChange={e => setNoResponseValue(Number(e.target.value))} className="h-8 w-24" min={1} />
-              <Select value={noResponseUnit} onValueChange={(v: any) => setNoResponseUnit(v)}>
+              <Select value={noResponseUnit} onValueChange={(v: string) => setNoResponseUnit(v as "minutes" | "hours")}>
                 <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="minutes" className="text-xs">Minutos</SelectItem>

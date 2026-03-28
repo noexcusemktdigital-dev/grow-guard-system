@@ -165,7 +165,7 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
         });
         const foundResult = res?.results?.find((r: any) => r.instance_id === inst.instance_id) || res;
         newResults[inst.id] = { status: foundResult?.status || res?.status || "unknown", checking: false };
-      } catch (err: any) {
+      } catch (err: unknown) {
         newResults[inst.id] = { status: "error", checking: false, error: err.message };
       }
       setResults({ ...newResults });
@@ -452,7 +452,7 @@ export default function ClienteIntegracoes() {
       navigator.clipboard.writeText(key);
       toast.success("API Key gerada e copiada!");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const handleCheckStatus = async (instance: WhatsAppInstance) => {
@@ -469,8 +469,8 @@ export default function ClienteIntegracoes() {
       });
       refetch();
       toast.success("Status atualizado");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -479,8 +479,8 @@ export default function ClienteIntegracoes() {
       await setupMutation.mutateAsync({ instanceId: instance.instance_id, instanceToken: instance.token, clientToken: instance.client_token, action: "disconnect" });
       refetch();
       toast.success("Instância removida");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -494,8 +494,8 @@ export default function ClienteIntegracoes() {
       } else {
         toast.warning("Instância salva, mas status: " + (res?.status || "desconectado"), { description: "Verifique as credenciais ou o nome da instância no servidor." });
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -592,7 +592,7 @@ export default function ClienteIntegracoes() {
           toast.warning("Reconexão executada, mas status: " + (res?.status || "desconectado"));
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setQrDialogOpen(false);
       toast.error("Erro na reconexão: " + err.message);
     }
@@ -613,7 +613,7 @@ export default function ClienteIntegracoes() {
       } else {
         toast.warning("Webhook pode não ter sido configurado corretamente");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("Erro ao reconfigurar webhook: " + err.message);
     }
   };

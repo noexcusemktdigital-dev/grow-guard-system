@@ -35,7 +35,7 @@ export function CrmIntegrations() {
       const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
       const rows = lines.slice(1).map(line => {
         const values = line.split(",");
-        const obj: any = {};
+        const obj: Record<string, string> = {};
         headers.forEach((h, i) => { obj[h] = values[i]?.trim() || ""; });
         return obj;
       });

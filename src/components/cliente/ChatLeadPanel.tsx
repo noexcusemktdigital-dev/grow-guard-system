@@ -22,10 +22,10 @@ interface Props {
 
 export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
   const navigate = useNavigate();
-  const contactAny = contact as any;
-  const crmLeadId = contactAny?.crm_lead_id || null;
+  const contactExt = contact as (WhatsAppContact & { crm_lead_id?: string | null }) | null;
+  const crmLeadId = contactExt?.crm_lead_id || null;
   const { data: leadData } = useFindLeadByPhone(contact?.phone ?? null);
-  const lead = leadData as any;
+  const lead = leadData as { id: string; name: string; email?: string | null; company?: string | null; stage: string; value?: number | null; tags?: string[] } | null;
   const effectiveLeadId = crmLeadId || lead?.id || null;
   const { data: activities } = useCrmActivities(effectiveLeadId);
   const { data: allMessages = [] } = useWhatsAppMessages(contact?.id ?? null);
@@ -118,7 +118,7 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
               {activities && activities.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Atividades recentes</span>
-                  {activities.slice(0, 5).map((act: any) => (
+                  {activities.slice(0, 5).map((act: { id: string; title: string; created_at: string }) => (
                     <div key={act.id} className="flex items-start gap-2 text-[11px]">
                       <Calendar className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground" />
                       <div className="min-w-0">
@@ -184,7 +184,7 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
                 <div className="space-y-1.5">
                   {linkItems.slice(0, 20).map(m => (
                     <div key={m.id}>
-                      {(m as any).links.map((url: string, i: number) => (
+                      {(m as { links: string[] }).links.map((url: string, i: number) => (
                         <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
                           <Link2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="text-[10px] text-primary truncate">{url}</span>

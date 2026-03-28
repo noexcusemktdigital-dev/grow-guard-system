@@ -36,7 +36,7 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 };
 
 interface GoalCardProps {
-  goal: any;
+  goal: { metric: string; scope: string; priority: string; title: string; target_value: number; period_start?: string; period_end?: string };
   progress?: { currentValue: number; percent: number; status: string; pacePerDay: number; requiredPacePerDay: number; remaining: number; daysLeft: number };
   onEdit?: () => void;
   onArchive?: () => void;

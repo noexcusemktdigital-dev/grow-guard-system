@@ -33,7 +33,7 @@ export function ChatQuickReplies({ onSelect }: Props) {
     queryFn: async () => {
       if (!orgId) return [];
       const { data, error } = await supabase
-        .from("quick_reply_templates" as any)
+        .from("quick_reply_templates" as unknown as "quick_reply_templates")
         .select("*")
         .eq("organization_id", orgId)
         .order("position", { ascending: true });
@@ -47,8 +47,8 @@ export function ChatQuickReplies({ onSelect }: Props) {
     mutationFn: async ({ label, text }: { label: string; text: string }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("quick_reply_templates" as any)
-        .insert({ organization_id: orgId, label, text, position: templates.length } as any);
+        .from("quick_reply_templates" as unknown as "quick_reply_templates")
+        .insert({ organization_id: orgId, label, text, position: templates.length } as Record<string, unknown>);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -62,7 +62,7 @@ export function ChatQuickReplies({ onSelect }: Props) {
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("quick_reply_templates" as any)
+        .from("quick_reply_templates" as unknown as "quick_reply_templates")
         .delete()
         .eq("id", id);
       if (error) throw error;

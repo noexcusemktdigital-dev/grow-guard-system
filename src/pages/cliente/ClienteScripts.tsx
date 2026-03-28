@@ -88,7 +88,7 @@ export default function ClienteScripts() {
         { id: scriptId, content: data.content },
         { onSuccess: () => toast({ title: "Script melhorado com IA!" }) }
       );
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (isInsufficientCreditsError(e)) {
         setShowCreditsDialog(true);
       } else {

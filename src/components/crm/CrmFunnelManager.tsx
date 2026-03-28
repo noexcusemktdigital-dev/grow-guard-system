@@ -38,9 +38,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
 
   useEffect(() => {
     if (editingFunnel) {
-      const dbStages = editingFunnel.stages as any[];
+      const dbStages = editingFunnel.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>;
       if (Array.isArray(dbStages) && dbStages.length > 0) {
-        setLocalStages(dbStages.map((s: any) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_"), label: s.label || "Etapa", color: s.color || "blue", icon: s.icon || "circle-dot" })));
+        setLocalStages(dbStages.map((s) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_"), label: s.label || "Etapa", color: s.color || "blue", icon: s.icon || "circle-dot" })));
       } else {
         setLocalStages([...DEFAULT_STAGES]);
       }
@@ -58,7 +58,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
     setStageDialogOpen(true);
   };
 
-  const openEditFunnel = (funnel: any) => {
+  const openEditFunnel = (funnel: { id: string; name: string; description?: string; stages: unknown[] }) => {
     setEditingFunnel(funnel);
     setStageDialogOpen(true);
   };
@@ -132,7 +132,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                     {funnel.is_default && <Badge variant="secondary" className="text-[8px]"><Star className="w-2.5 h-2.5 mr-0.5" />Padrão</Badge>}
                   </p>
                   {funnel.description && <p className="text-[10px] text-muted-foreground">{funnel.description}</p>}
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{(funnel.stages as any[])?.length || 0} etapas</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{(funnel.stages as unknown[])?.length || 0} etapas</p>
                 </div>
                 <div className="flex gap-1">
                   {!funnel.is_default && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAsDefault(funnel.id)}>Tornar padrão</Button>}

@@ -95,7 +95,7 @@ export default function ClienteConteudos() {
       setGeneratedIds((res.dbRecords as any[]).map((r: any) => r.id));
       setIsResultScreen(true);
       toast({ title: `${res.conteudos.length} roteiros gerados com sucesso!` });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao gerar", description: err?.message, variant: "destructive" });
     } finally {
       clearInterval(interval);
@@ -109,7 +109,7 @@ export default function ClienteConteudos() {
     try {
       await approveMutation.mutateAsync(id);
       toast({ title: "Roteiro aprovado!", description: `${CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
     }
@@ -120,7 +120,7 @@ export default function ClienteConteudos() {
     try {
       await approveBatchMutation.mutateAsync(generatedIds);
       toast({ title: "Lote aprovado!", description: `${generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
       else toast({ title: "Erro", description: err?.message, variant: "destructive" });
     }

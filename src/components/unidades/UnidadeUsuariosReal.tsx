@@ -59,8 +59,8 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
       if (data?.error) throw new Error(data.error);
       queryClient.invalidateQueries({ queryKey: ["unit-members", unitOrgId] });
       setInviteSuccess(true);
-    } catch (e: any) {
-      const msg = e.message || "";
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("já está cadastrado") || msg.includes("already been registered")) {
         toast.error("Este e-mail já está cadastrado. O usuário deve acessar /acessofranquia e usar 'Esqueci minha senha' para redefinir o acesso.");
       } else if (msg.includes("Limite de")) {
@@ -92,7 +92,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
         { value: "cliente_user", label: "Usuário" },
       ];
 
-  function handleEditClick(m: any) {
+  function handleEditClick(m: { user_id: string; profiles?: { full_name?: string | null; job_title?: string | null }; role?: string }) {
     setEditMember({
       user_id: m.user_id,
       full_name: m.profiles?.full_name || null,
@@ -133,7 +133,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((m: any) => (
+              {members.map((m: { id: string; user_id: string; profiles?: { full_name?: string | null; avatar_url?: string | null }; role?: string; created_at: string }) => (
                 <TableRow key={m.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">

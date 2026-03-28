@@ -14,7 +14,7 @@ const statusLabels: Record<string, string> = {
 };
 
 interface Props {
-  dispatch: any | null;
+  dispatch: { id: string; title: string; channel: string; status: string; message?: string; image_url?: string; sent_at?: string; scheduled_at?: string; created_at: string; delay_seconds?: number; stats?: Record<string, number>; recipients?: string[] } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -22,7 +22,7 @@ interface Props {
 export function DisparoDetailSheet({ dispatch: d, open, onOpenChange }: Props) {
   if (!d) return null;
 
-  const stats = (d.stats as any) || {};
+  const stats = d.stats || {};
   const recipients = (d.recipients as string[]) || [];
 
   return (

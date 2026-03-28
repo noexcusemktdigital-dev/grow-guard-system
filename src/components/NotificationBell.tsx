@@ -68,7 +68,7 @@ export function NotificationBell() {
     prevCountRef.current = unread.length;
   }, [unread.length]);
 
-  const handleClick = (n: any) => {
+  const handleClick = (n: { id: string; is_read: boolean; action_url?: string | null }) => {
     if (!n.is_read) {
       markNotificationRead.mutate(n.id);
     }

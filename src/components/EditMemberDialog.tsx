@@ -58,8 +58,8 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
       qc.invalidateQueries({ queryKey: ["org-members"] });
       onSuccess?.();
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao atualizar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -78,8 +78,8 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
       qc.invalidateQueries({ queryKey: ["org-members"] });
       onSuccess?.();
       onOpenChange(false);
-    } catch (err: any) {
-      toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao remover", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setRemoving(false);
     }

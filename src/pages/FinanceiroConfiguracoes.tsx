@@ -45,7 +45,7 @@ export default function FinanceiroConfiguracoes() {
 
   const handleSave = () => {
     update.mutate(
-      { finance_settings: settings } as any,
+      { finance_settings: settings } as Record<string, unknown>,
       {
         onSuccess: () => toast({ title: "Configurações salvas com sucesso!" }),
         onError: () => toast({ title: "Erro ao salvar configurações", variant: "destructive" }),

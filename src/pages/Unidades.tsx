@@ -82,8 +82,8 @@ export default function Unidades() {
       setWizardStep(3); // success step
       qc.invalidateQueries({ queryKey: ["units"] });
       toast({ title: "Unidade provisionada com sucesso!" });
-    } catch (err: any) {
-      toast({ title: "Erro ao provisionar unidade", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao provisionar unidade", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setWizardLoading(false);
     }
@@ -142,8 +142,8 @@ export default function Unidades() {
                       await deleteUnit.mutateAsync(selected.id);
                       setSelectedId(null);
                       toast({ title: "Unidade excluída com sucesso" });
-                    } catch (err: any) {
-                      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+                    } catch (err: unknown) {
+                      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
                     } finally {
                       setDeleting(false);
                     }

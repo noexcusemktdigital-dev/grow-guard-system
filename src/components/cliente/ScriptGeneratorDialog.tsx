@@ -157,7 +157,7 @@ interface BriefingStepProps {
   setAdditionalContext: (v: string) => void;
   isGenerating: boolean;
   onBack: () => void;
-  onGenerate: (autoContext: any, orgId: string | null) => void;
+  onGenerate: (autoContext: Record<string, unknown>, orgId: string | null) => void;
 }
 
 function BriefingStep({
@@ -386,7 +386,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
     }
   }, [open, initialStage]);
 
-  const handleGenerate = async (autoContext: any, orgId: string | null) => {
+  const handleGenerate = async (autoContext: Record<string, unknown>, orgId: string | null) => {
     // Store context for regeneration
     setLastAutoContext(autoContext);
     setLastOrgId(orgId);
@@ -418,11 +418,11 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       setGeneratedTitle(data.title || "");
       setGeneratedTags(data.tags || []);
       setStep(3);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (isInsufficientCreditsError(e)) {
         setShowCreditsDialog(true);
       } else {
-        toast({ title: "Erro ao gerar script", description: e.message, variant: "destructive" });
+        toast({ title: "Erro ao gerar script", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
       }
     } finally {
       setIsGenerating(false);

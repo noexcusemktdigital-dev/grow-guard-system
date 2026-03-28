@@ -66,7 +66,7 @@ function parseCsvText(text: string): { headers: string[]; rows: ParsedRow[] } {
     }
     values.push(current.trim());
 
-    const row: any = { name: "", email: "", phone: "", company: "", position: "", source: "", tags: "", notes: "" };
+    const row: ParsedRow = { name: "", email: "", phone: "", company: "", position: "", source: "", tags: "", notes: "" };
     mappedHeaders.forEach((h, idx) => {
       if (row.hasOwnProperty(h)) row[h] = values[idx] || "";
     });
@@ -253,7 +253,7 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
                       <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
                       {DISPLAY_COLUMNS.map(col => (
                         <td key={col.key} className="px-2 py-1.5 truncate max-w-[120px]">
-                          {(row as any)[col.key] || <span className="text-muted-foreground/30">—</span>}
+                          {row[col.key as keyof ParsedRow] || <span className="text-muted-foreground/30">—</span>}
                         </td>
                       ))}
                     </tr>

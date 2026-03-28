@@ -96,7 +96,7 @@ export default function Marketing() {
 
   const categoryRootFolders = useMemo(() => {
     if (!folders || !activeCategory) return [];
-    return folders.filter((f) => (f as any).category === activeCategory && !f.parent_id);
+    return folders.filter((f) => (f as unknown as { category?: string }).category === activeCategory && !f.parent_id);
   }, [folders, activeCategory]);
 
   const childFolders = useMemo(() => {
@@ -231,10 +231,10 @@ export default function Marketing() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {categoryConfig.map((cat) => {
             const Icon = cat.icon;
-            const folderCount = (folders ?? []).filter((f) => (f as any).category === cat.id).length;
+            const folderCount = (folders ?? []).filter((f) => (f as unknown as { category?: string }).category === cat.id).length;
             const assetCount = (assets ?? []).filter((a) => {
               const folder = (folders ?? []).find((f) => f.id === a.folder_id);
-              return folder && (folder as any).category === cat.id;
+              return folder && (folder as unknown as { category?: string }).category === cat.id;
             }).length;
             return (
               <Card key={cat.id} className={`cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02] bg-gradient-to-br ${cat.gradient} border-0 group`} onClick={() => setActiveCategory(cat.id)}>

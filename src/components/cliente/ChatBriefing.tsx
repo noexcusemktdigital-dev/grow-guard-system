@@ -167,7 +167,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
   }, []);
 
   // Format user answer for display
-  const formatAnswer = (step: BriefingStep, value: any): string => {
+  const formatAnswer = (step: BriefingStep, value: unknown): string => {
     if (step.inputType === "multi-select") {
       const allOpts = step.dynamicOptions
         ? step.dynamicOptions(context, answers)
@@ -189,7 +189,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
   };
 
   // Advance to next step
-  const advanceStep = useCallback((answer?: any) => {
+  const advanceStep = useCallback((answer?: unknown) => {
     if (!currentStep) return;
 
     // Save answer
@@ -477,7 +477,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
               <p className="text-xs text-muted-foreground">Digite seu segmento ou opção personalizada:</p>
               <div className="flex gap-2">
                 <Input
-                  ref={inputRef as any}
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
                   value={textValue}
                   onChange={e => setTextValue(e.target.value)}
                   placeholder="Ex: Odontologia, Pet shop, Advocacia..."
@@ -571,7 +571,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
                   <p className="text-xs text-muted-foreground">Digite sua opção personalizada:</p>
                   <div className="flex gap-2">
                     <Input
-                      ref={inputRef as any}
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
                       value={textValue}
                       onChange={e => setTextValue(e.target.value)}
                       placeholder="Ex: Meu segmento personalizado..."
@@ -604,7 +604,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
           {currentStep.inputType === "text" && (
             <div className="flex gap-2">
               <Input
-                ref={inputRef as any}
+                ref={inputRef as React.RefObject<HTMLInputElement>}
                 value={textValue}
                 onChange={e => setTextValue(e.target.value)}
                 placeholder={currentStep.placeholder || "Digite aqui..."}
@@ -621,7 +621,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
           {currentStep.inputType === "textarea" && (
             <div className="space-y-2">
               <Textarea
-                ref={inputRef as any}
+                ref={inputRef as React.RefObject<HTMLInputElement>}
                 value={textValue}
                 onChange={e => setTextValue(e.target.value)}
                 placeholder={currentStep.placeholder || "Descreva aqui..."}

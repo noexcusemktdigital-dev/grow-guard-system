@@ -146,7 +146,7 @@ function TeamTab() {
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const roleLabels: Record<string, string> = {

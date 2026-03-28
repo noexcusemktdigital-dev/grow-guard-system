@@ -81,7 +81,7 @@ function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () =
   // Derive services, values, and duration from the proposal
   const proposalItems = selectedProposal ? (Array.isArray(selectedProposal.items) ? selectedProposal.items : []) : [];
   const proposalContent = selectedProposal?.content || {};
-  const proposalServicos = proposalItems.map((it: any) => `${it.name}: ${it.quantity || 1} unidade(s)`).join(";\n") || "";
+  const proposalServicos = proposalItems.map((it: Record<string, unknown>) => `${it.name}: ${it.quantity || 1} unidade(s)`).join(";\n") || "";
   const proposalPrazo = proposalContent.duration ? String(proposalContent.duration) : "";
   const proposalValorTotal = selectedProposal?.value ? Number(selectedProposal.value) : 0;
   const proposalPayment = proposalContent.payment_option || selectedProposal?.payment_terms || "";
@@ -204,7 +204,7 @@ function ServiceContractForm({ onSuccess, initialProposalId }: { onSuccess: () =
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Serviços</p>
                   <ul className="text-xs space-y-0.5 text-foreground">
-                    {proposalItems.map((it: any, i: number) => (
+                    {proposalItems.map((it: Record<string, unknown>, i: number) => (
                       <li key={i}>• {it.name} — {it.quantity || 1}x — {formatBRL(Number(it.total || 0))}</li>
                     ))}
                   </ul>
@@ -463,7 +463,7 @@ export default function ContratosGerador() {
 
   const allContracts = networkContracts ?? [];
   const filtered = useMemo(() => {
-    return allContracts.filter((c: any) => {
+    return allContracts.filter((c) => {
       if (search && !c.title?.toLowerCase().includes(search.toLowerCase()) && !c.signer_name?.toLowerCase().includes(search.toLowerCase()) && !c.org_name?.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterType !== "all" && c.contract_type !== filterType) return false;
       if (filterOwner !== "all" && c.owner_type !== filterOwner) return false;
@@ -472,12 +472,13 @@ export default function ContratosGerador() {
     });
   }, [allContracts, search, filterType, filterOwner, filterStatus]);
 
-  const totalMRR = filtered.filter((c: any) => c.status === "active" || c.status === "signed").reduce((s: number, c: any) => s + Number(c.monthly_value || 0), 0);
+  const totalMRR = filtered.filter((c) => c.status === "active" || c.status === "signed").reduce((s: number, c) => s + Number(c.monthly_value || 0), 0);
   const totalContracts = filtered.length;
-  const activeCount = filtered.filter((c: any) => c.status === "active" || c.status === "signed").length;
-  const expiringCount = filtered.filter((c: any) => { const d = daysUntilExpiry(c.end_date); return d !== null && d > 0 && d <= 30; }).length;
+  const activeCount = filtered.filter((c) => c.status === "active" || c.status === "signed").length;
+  const expiringCount = filtered.filter((c) => { const d = daysUntilExpiry(c.end_date); return d !== null && d > 0 && d <= 30; }).length;
 
-  const openEdit = (c: any) => {
+  type ContractItem = NonNullable<typeof networkContracts>[number];
+  const openEdit = (c: ContractItem) => {
     setEditingContract(c);
     setEditForm({ status: c.status, monthly_value: Number(c.monthly_value || 0), signer_name: c.signer_name || "", signer_email: c.signer_email || "", start_date: c.start_date || "", end_date: c.end_date || "" });
     setEditDialog(true);
@@ -510,7 +511,7 @@ export default function ContratosGerador() {
         <KpiCard label="Ativos" value={String(activeCount)} icon={FileSignature} delay={1} variant="accent" />
         <KpiCard label="MRR Rede" value={formatBRL(totalMRR)} icon={DollarSign} delay={2} />
         <KpiCard label="A Vencer (30d)" value={String(expiringCount)} icon={AlertTriangle} delay={3} />
-        <KpiCard label="Valor Total" value={formatBRL(filtered.reduce((s: number, c: any) => s + Number(c.total_value || 0), 0))} icon={DollarSign} delay={4} />
+        <KpiCard label="Valor Total" value={formatBRL(filtered.reduce((s: number, c) => s + Number(c.total_value || 0), 0))} icon={DollarSign} delay={4} />
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
@@ -587,7 +588,7 @@ export default function ContratosGerador() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((c: any) => {
+                  {filtered.map((c) => {
                     const days = daysUntilExpiry(c.end_date);
                     const isExpiring = days !== null && days > 0 && days <= 30;
                     const isExpired = days !== null && days <= 0;

@@ -60,8 +60,8 @@ export function ChatForwardDialog({ open, onOpenChange, message, contacts }: Pro
       onOpenChange(false);
       setSelected(new Set());
       setSearch("");
-    } catch (err: any) {
-      toast({ title: "Erro ao encaminhar", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao encaminhar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setSending(false);
     }

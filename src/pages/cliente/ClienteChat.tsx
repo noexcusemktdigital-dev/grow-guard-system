@@ -123,7 +123,7 @@ export default function ClienteChat() {
         await linkMutation.mutateAsync({ contactId: selectedContact.id, leadId: lead.id });
         toast({ title: "Lead criado e vinculado!" });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao criar lead", description: err.message, variant: "destructive" });
     }
   };

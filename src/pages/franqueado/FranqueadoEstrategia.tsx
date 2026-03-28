@@ -847,8 +847,8 @@ function UploadBriefingForm({
 
       toast.success("Briefing processado! Revise as respostas extraídas.");
       onExtracted(data.answers);
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao processar briefing");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e) || "Erro ao processar briefing");
     } finally {
       setLoading(false);
     }
@@ -930,8 +930,8 @@ function NovaEstrategiaTab() {
       setResult(s.result);
       setResultTitle(title);
       toast.success("Diagnóstico estratégico gerado com sucesso!");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar diagnóstico");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e) || "Erro ao gerar diagnóstico");
     }
   };
 
@@ -1147,8 +1147,8 @@ function MeusDiagnosticosTab() {
                     const updated = await regenerateMut.mutateAsync({ id: editingStrategy.id, title, answers });
                     setEditingStrategy(null);
                     if (updated.result) setSelected(updated);
-                  } catch (e: any) {
-                    toast.error(e.message || "Erro ao regenerar");
+                  } catch (e: unknown) {
+                    toast.error(e instanceof Error ? e.message : String(e) || "Erro ao regenerar");
                   }
                 }}
                 loading={regenerateMut.isPending}

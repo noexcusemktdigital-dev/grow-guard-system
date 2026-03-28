@@ -345,7 +345,7 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement) {
   else xBase = el.x;
 
   if (el.letterSpacing && el.letterSpacing > 0) {
-    (ctx as any).letterSpacing = `${el.letterSpacing}px`;
+    (ctx as unknown as { letterSpacing: string }).letterSpacing = `${el.letterSpacing}px`;
   }
 
   lines.forEach((line, i) => {

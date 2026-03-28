@@ -51,8 +51,8 @@ export function RefUploader({
       } else {
         toast({ title: "Não foi possível extrair a logo", description: "Tente enviar a logo manualmente.", variant: "destructive" });
       }
-    } catch (err: any) {
-      toast({ title: "Erro ao extrair logo", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao extrair logo", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setExtractingLogo(false);
     }

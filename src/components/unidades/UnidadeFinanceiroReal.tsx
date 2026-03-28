@@ -15,7 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 interface Props {
-  unit: any;
+  unit: { id: string; unit_org_id?: string | null; transfer_percent?: number; royalty_percent?: number; system_fee?: number; system_active?: boolean; financial_notes?: string; saas_commission_percent?: number };
   readOnly?: boolean;
 }
 
@@ -54,7 +54,7 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
           if (unit.unit_org_id) {
             await supabase
               .from("organizations")
-              .update({ saas_commission_percent: form.saas_commission_percent } as any)
+              .update({ saas_commission_percent: form.saas_commission_percent } as Record<string, unknown>)
               .eq("id", unit.unit_org_id);
           }
           toast.success("Configuração financeira salva!");
@@ -153,7 +153,7 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((p: any) => (
+                  {payments.map((p: { id: string; month: string; amount: number; billing_type?: string; status: string; paid_at?: string | null }) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.month}</TableCell>
                       <TableCell>R$ {Number(p.amount).toFixed(2)}</TableCell>

@@ -11,7 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
 import { FORMATOS, OBJETIVOS, PLATAFORMAS, DURACOES, loadingPhrases } from "./ContentTypes";
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, React.ElementType> = {
   Video, Monitor, Smartphone, Film,
 };
 
@@ -40,7 +40,7 @@ interface ContentWizardProps {
   creditBalance: number;
   costPerContent: number;
   hasStrategy: boolean;
-  strategy: any;
+  strategy: Record<string, unknown>;
   isGenerating: boolean;
   loadingIdx: number;
   quantidade: number;
@@ -210,7 +210,7 @@ export function ContentWizard({
           <div className="mb-2">
             <p className="text-xs text-muted-foreground mb-1.5">Seus pilares estratégicos:</p>
             <div className="flex flex-wrap gap-2">
-              {strategy.pilares.map((p: any, i: number) => {
+              {(strategy.pilares as Array<Record<string, unknown>>).map((p, i: number) => {
                 const name = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
                 return (
                   <button key={i} onClick={() => onTemaChange(name)}

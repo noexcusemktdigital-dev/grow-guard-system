@@ -27,11 +27,11 @@ const FRANQUEADO_STAGES = [
 ];
 
 interface CrmLeadDetailSheetProps {
-  lead: any;
+  lead: Record<string, unknown> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  activities?: any[];
-  notes?: any[];
+  activities?: Array<{ id: string; title: string; description?: string; created_at: string }>;
+  notes?: Array<{ id: string; content: string; created_at: string }>;
 }
 
 export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propActivities, notes = [] }: CrmLeadDetailSheetProps) {
@@ -47,7 +47,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
   const activities = propActivities ?? fetchedActivities ?? [];
   const leadProspections = (prospections ?? []).filter(p => p.lead_id === lead?.id);
   const leadStrategies = (strategies ?? []).filter(s => s.lead_id === lead?.id);
-  const leadProposals = (proposals ?? []).filter((p: any) => p.lead_id === lead?.id);
+  const leadProposals = (proposals ?? []).filter((p: { lead_id?: string }) => p.lead_id === lead?.id);
 
   if (!lead) return null;
 
@@ -157,7 +157,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
             {activities.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">Nenhuma atividade registrada</p>
             ) : (
-              activities.map((act: any) => (
+              activities.map((act) => (
                 <div key={act.id} className="flex items-start gap-2 text-xs">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
                   <div>
@@ -204,7 +204,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
                 </Button>
               </div>
             ) : (
-              leadProposals.map((p: any) => {
+              leadProposals.map((p: Record<string, unknown>) => {
                 const statusColors: Record<string, string> = {
                   draft: "bg-muted text-muted-foreground",
                   sent: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -237,7 +237,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
             {notes.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">Nenhuma nota adicionada</p>
             ) : (
-              notes.map((note: any) => (
+              notes.map((note) => (
                 <Card key={note.id} className="glass-card">
                   <CardContent className="p-2">
                     <p className="text-xs">{note.content}</p>

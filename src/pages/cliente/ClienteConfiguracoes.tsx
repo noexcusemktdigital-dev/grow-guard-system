@@ -48,7 +48,7 @@ function SetPasswordSection() {
       toast.success("Senha definida! Agora você pode fazer login por e-mail também.");
       setPassword("");
       setConfirm("");
-    } catch (err: any) { toast.error(err.message || "Erro ao definir senha"); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : String(err) || "Erro ao definir senha"); }
     finally { setSaving(false); }
   };
 
@@ -92,7 +92,7 @@ function ProfileTab() {
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
       update.mutate({ avatar_url: `${publicUrl}?t=${Date.now()}` });
-    } catch (err: any) { toast.error(err.message || "Erro ao enviar foto"); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : String(err) || "Erro ao enviar foto"); }
     finally { setUploading(false); }
   };
 
@@ -200,7 +200,7 @@ function UsersAndTeamsTab() {
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };

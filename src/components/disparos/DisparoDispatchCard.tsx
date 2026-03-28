@@ -21,16 +21,16 @@ const statusLabels: Record<string, string> = {
 };
 
 interface Props {
-  dispatch: any;
+  dispatch: { id: string; title: string; channel: string; status: string; message?: string; image_url?: string; sent_at?: string; scheduled_at?: string; created_at: string; stats?: Record<string, number>; recipients?: string[] };
   index: number;
-  onView?: (d: any) => void;
+  onView?: (d: Props["dispatch"]) => void;
   onDelete?: (id: string) => void;
   onResend?: (id: string) => void;
 }
 
 export const DisparoDispatchCard = memo(forwardRef<HTMLDivElement, Props>(
   ({ dispatch: d, index, onView, onDelete, onResend }, ref) => {
-    const stats = (d.stats as any) || {};
+    const stats = d.stats || {};
     const recipients = (d.recipients as string[]) || [];
     const canResend = d.status === "draft" || d.status === "partial";
 

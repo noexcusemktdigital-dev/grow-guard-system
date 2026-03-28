@@ -26,7 +26,7 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
   const popupAnnouncements = useMemo(() => {
     if (!announcements) return [];
     return announcements.filter(a =>
-      (a as any).show_popup === true &&
+      (a as unknown as { show_popup?: boolean }).show_popup === true &&
       a.published_at &&
       a.status === "active" &&
       !viewedIds.has(a.id)
@@ -41,9 +41,10 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
   }, [popupAnnouncements.length, enabled]);
 
   const current = popupAnnouncements[currentIndex];
+  const currentExt = current as unknown as typeof current & { require_confirmation?: boolean; attachment_url?: string };
   if (!current) return null;
 
-  const needsConfirmation = (current as any).require_confirmation === true;
+  const needsConfirmation = currentExt.require_confirmation === true;
   const isConfirmed = confirmedIds.has(current.id);
 
   const handleDismiss = () => {
@@ -95,15 +96,15 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
             {current.content || "Sem conteúdo."}
           </div>
 
-          {(current as any).attachment_url && (
+          {currentExt.attachment_url && (
             <a
-              href={(current as any).attachment_url}
+              href={currentExt.attachment_url}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-primary hover:underline p-3 rounded-lg border border-border bg-muted/30"
             >
               <Download className="w-4 h-4 shrink-0" />
-              <span className="truncate">{((current as any).attachment_url as string).split("/").pop()}</span>
+              <span className="truncate">{(currentExt.attachment_url as string).split("/").pop()}</span>
             </a>
           )}
 

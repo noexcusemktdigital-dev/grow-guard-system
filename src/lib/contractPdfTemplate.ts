@@ -75,7 +75,8 @@ export function formatContractHtml(content: string, logoBase64: string, title?: 
   `;
 }
 
-export async function downloadContractPdf(contract: any) {
+interface ContractForPdf { content?: string; contract_type?: string; title?: string; }
+export async function downloadContractPdf(contract: ContractForPdf) {
   const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
     import("html2canvas"),

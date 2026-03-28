@@ -136,7 +136,7 @@ export default function Atendimento() {
         ticket_id: selectedTicket.id,
         content: newMessage || (attachmentUrls.length > 0 ? "📎 Anexo" : ""),
         attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
-      } as any);
+      } as Record<string, unknown>);
       setNewMessage("");
       setMsgAttachments([]);
     } catch {
@@ -200,7 +200,7 @@ export default function Atendimento() {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "chamados" | "config")}>
         <TabsList>
           <TabsTrigger value="chamados" className="gap-1.5"><MessageSquare className="w-3.5 h-3.5" /> Chamados</TabsTrigger>
           <TabsTrigger value="config" className="gap-1.5"><Settings className="w-3.5 h-3.5" /> Configurações</TabsTrigger>
@@ -471,8 +471,8 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 
   if (isLoading) return <div className="flex-1 flex items-center justify-center p-8"><Skeleton className="h-8 w-32" /></div>;
 
-  const groupedByDate: Record<string, any[]> = {};
-  (messages ?? []).forEach((m: any) => {
+  const groupedByDate: Record<string, Array<NonNullable<typeof messages>[number]>> = {};
+  (messages ?? []).forEach((m) => {
     const dateKey = format(new Date(m.created_at), "yyyy-MM-dd");
     if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
     groupedByDate[dateKey].push(m);
@@ -496,7 +496,7 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
                 <div className="flex-1 h-px bg-border" />
               </div>
               <div className="space-y-3">
-                {msgs.map((m: any) => {
+                {msgs.map((m) => {
                   const isMine = m.user_id === userId;
                   const msgAtt = m.attachments as string[] | null;
                   return (

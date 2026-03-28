@@ -91,7 +91,7 @@ export default function Matriz() {
       setInviteRole("admin");
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao convidar", description: err.message, variant: "destructive" });
     } finally {
       setInviteLoading(false);
@@ -103,7 +103,7 @@ export default function Matriz() {
     try {
       await setUserTeams.mutateAsync({ userId: editingMember.user_id, teamIds: editTeamIds });
       toast({ title: "Times atualizados!" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao atualizar times", description: err.message, variant: "destructive" });
     }
   };

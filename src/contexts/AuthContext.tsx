@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const result = await withTimeout(fn(), 6000, null as any);
+            const result = await withTimeout(fn(), 6000, null as T);
             if (result !== null) return result;
           } catch {
             // retry
@@ -101,10 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Handle roles
-      const roleData = (roleResult as any)?.data;
+      const roleData = (roleResult as { data: { role: string }[] | null } | null)?.data;
 
       if (roleData && roleData.length > 0) {
-        const roles = roleData.map((r: any) => r.role as AppRole);
+        const roles = roleData.map((r: { role: string }) => r.role as AppRole);
 
         const saasRoles: AppRole[] = ["cliente_admin", "cliente_user"];
         const franchiseRoles: AppRole[] = ["super_admin", "admin", "franqueado"];
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   body: { user_id: currentUser.id, company_name: companyName },
                 }),
                 8000,
-                { error: { message: "timeout" } } as any
+                { error: { message: "timeout" } } as { error: { message: string } }
               );
 
               if (provResult?.error) {
@@ -165,11 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const { data: verifyRole } = await withTimeout(
                 supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
                 8000,
-                { data: null } as any
+                { data: null } as { data: { role: string }[] | null }
               );
 
               if (verifyRole && verifyRole.length > 0) {
-                const roles = verifyRole.map((r: any) => r.role as AppRole);
+                const roles = verifyRole.map((r: { role: string }) => r.role as AppRole);
                 const topRole = roles.find((r: AppRole) => r === "cliente_admin") || roles[0];
                 setRole(topRole);
                 provisioned = true;

@@ -91,8 +91,8 @@ const SaasAuth = () => {
       if (!check.allowed) {
         setLoading(false);
         await supabase.auth.signOut({ scope: 'local' });
-        toast.error((check as any).message || "Acesso negado.");
-        if ((check as any).redirect) navigate((check as any).redirect);
+        toast.error((check as unknown as { message?: string }).message || "Acesso negado.");
+        if ((check as unknown as { redirect?: string }).redirect) navigate((check as unknown as { redirect?: string }).redirect);
         return;
       }
     } catch (err) {
@@ -155,7 +155,7 @@ const SaasAuth = () => {
       setVerificationContext("new");
       // Save terms acceptance
       try {
-        await supabase.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as any).eq("id", data.user.id);
+        await supabase.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as Record<string, unknown>).eq("id", data.user.id);
       } catch {}
       // Provision org, subscription, wallet (with referral if present)
       try {

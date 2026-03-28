@@ -160,7 +160,7 @@ export function CrmAutomations() {
 
   const openNew = () => { reset(); setDialogOpen(true); };
 
-  const openEdit = (auto: any) => {
+  const openEdit = (auto: Record<string, unknown>) => {
     setEditingId(auto.id);
     setName(auto.name);
     setDescription(auto.description || "");
@@ -179,7 +179,7 @@ export function CrmAutomations() {
     if (isAiAction(actionType) && !selectedAgentId) {
       toast({ title: "Selecione um agente IA para esta automação", variant: "destructive" }); return;
     }
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       name, description, trigger_type: triggerType, action_type: actionType,
       action_config: actionConfig, trigger_config: triggerConfig,
       funnel_ids: selectedFunnels, team_ids: selectedTeams,
@@ -212,11 +212,11 @@ export function CrmAutomations() {
     updateAutomation.mutate({ id, is_active: !isActive });
   };
 
-  const isAiAction = (type: string) => ACTIONS.find(a => a.value === type && (a as any).ai);
+  const isAiAction = (type: string) => ACTIONS.find(a => a.value === type && (a as { value: string; label: string; ai?: boolean }).ai);
 
   const filteredAutomations = (automations || []).filter(a => {
     if (!filterFunnel) return true;
-    const fids = Array.isArray((a as any).funnel_ids) ? (a as any).funnel_ids : [];
+    const fids = Array.isArray((a as unknown as { funnel_ids?: string[] }).funnel_ids) ? (a as unknown as { funnel_ids?: string[] }).funnel_ids : [];
     return fids.length === 0 || fids.includes(filterFunnel);
   });
 
@@ -283,8 +283,8 @@ export function CrmAutomations() {
       ) : (
         <div className="space-y-2">
           {filteredAutomations.map(auto => {
-            const fids = Array.isArray((auto as any).funnel_ids) ? (auto as any).funnel_ids as string[] : [];
-            const execCount = (auto as any).execution_count || 0;
+            const fids = Array.isArray((auto as unknown as { funnel_ids?: string[] }).funnel_ids) ? (auto as unknown as { funnel_ids?: string[] }).funnel_ids as string[] : [];
+            const execCount = (auto as unknown as { execution_count?: number }).execution_count || 0;
             return (
               <Card key={auto.id} className={auto.is_active ? "" : "opacity-60"}>
                 <CardContent className="p-3 flex items-center justify-between">
@@ -295,7 +295,7 @@ export function CrmAutomations() {
                         {auto.name}
                         {isAiAction(auto.action_type) && <Badge className="text-[8px] bg-violet-500/10 text-violet-600 border-violet-200"><Bot className="w-2.5 h-2.5 mr-0.5" />IA</Badge>}
                       </p>
-                      {(auto as any).description && <p className="text-[10px] text-muted-foreground">{(auto as any).description}</p>}
+                      {(auto as unknown as { description?: string }).description && <p className="text-[10px] text-muted-foreground">{(auto as unknown as { description?: string }).description}</p>}
                       <AutomationFlowPreview triggerType={auto.trigger_type} actionType={auto.action_type} />
                       <div className="flex items-center gap-2 mt-1">
                         {fids.length > 0 && fids.map(fid => {
@@ -402,7 +402,7 @@ export function CrmAutomations() {
               <Label className="text-xs font-semibold">Então... (Ação)</Label>
               <Select value={actionType} onValueChange={setActionType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{ACTIONS.map(a => <SelectItem key={a.value} value={a.value}>{(a as any).ai && "🤖 "}{a.label}</SelectItem>)}</SelectContent>
+                <SelectContent>{ACTIONS.map(a => <SelectItem key={a.value} value={a.value}>{(a as { value: string; label: string; ai?: boolean }).ai && "🤖 "}{a.label}</SelectItem>)}</SelectContent>
               </Select>
 
               {actionType === "create_task" && (

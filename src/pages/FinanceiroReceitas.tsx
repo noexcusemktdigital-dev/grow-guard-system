@@ -38,7 +38,7 @@ export default function FinanceiroReceitas() {
     setDialogOpen(true);
   };
 
-  const openEdit = (r: any) => {
+  const openEdit = (r: { id: string; description?: string; amount?: number; category?: string; date?: string }) => {
     setEditingId(r.id);
     setDesc(r.description || "");
     setAmount(Number(r.amount));

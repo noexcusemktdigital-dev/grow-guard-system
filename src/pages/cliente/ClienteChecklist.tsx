@@ -90,8 +90,8 @@ function DailyChecklistTab() {
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["client-checklist"] });
       toast.success("Checklist gerado com sucesso!");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar checklist");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e) || "Erro ao gerar checklist");
     } finally {
       setGenerating(false);
     }

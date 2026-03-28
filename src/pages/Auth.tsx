@@ -59,8 +59,8 @@ const Auth = () => {
       if (!check.allowed) {
         setLoading(false);
         await supabase.auth.signOut({ scope: 'local' });
-        toast.error((check as any).message || "Acesso negado.");
-        if ((check as any).redirect) navigate((check as any).redirect);
+        toast.error((check as unknown as { message?: string }).message || "Acesso negado.");
+        if ((check as unknown as { redirect?: string }).redirect) navigate((check as unknown as { redirect?: string }).redirect);
         return;
       }
     } catch (err) {

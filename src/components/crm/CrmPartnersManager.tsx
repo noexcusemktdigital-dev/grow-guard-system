@@ -49,7 +49,7 @@ export function CrmPartnersManager() {
       updatePartner.mutate({ id: editing.id, ...payload });
       toast({ title: "Parceiro atualizado" });
     } else {
-      createPartner.mutate(payload as any);
+      createPartner.mutate(payload as Omit<CrmPartner, 'id' | 'organization_id' | 'created_at'>);
       toast({ title: "Parceiro criado" });
     }
     setShowForm(false); resetForm();

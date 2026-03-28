@@ -105,8 +105,8 @@ export default function ClienteDisparos() {
         toast({ title: "Disparo salvo como rascunho", description: "Conecte o WhatsApp para enviar." });
       }
       setWizardOpen(false);
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
   };
 
@@ -115,7 +115,7 @@ export default function ClienteDisparos() {
     try {
       await deleteDispatch.mutateAsync(deleteId);
       toast({ title: "Disparo excluído" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
     }
     setDeleteId(null);

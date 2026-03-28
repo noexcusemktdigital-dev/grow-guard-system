@@ -24,7 +24,7 @@ import { DEFAULT_STAGES, type FunnelStage } from "@/components/crm/CrmStageSyste
 
 const CONTACTS_PER_PAGE = 25;
 
-function ContactForm({ form, setForm }: { form: any; setForm: (f: any) => void }) {
+function ContactForm({ form, setForm }: { form: Record<string, string>; setForm: (f: Record<string, string>) => void }) {
   return (
     <div className="space-y-4">
       <div>
@@ -108,9 +108,9 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
     if (!selectedFunnelId) return [];
     const funnel = funnels.find(f => f.id === selectedFunnelId);
     if (!funnel) return DEFAULT_STAGES;
-    const dbStages = funnel.stages as any[];
+    const dbStages = funnel.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>;
     if (Array.isArray(dbStages) && dbStages.length > 0) {
-      return dbStages.map((s: any) => ({
+      return dbStages.map((s) => ({
         key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || "stage",
         label: s.label || "Etapa",
         color: s.color || "blue",
@@ -160,7 +160,7 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
 
   const leadsCountByContact = useMemo(() => {
     return (leads || []).reduce((acc, l) => {
-      const cid = (l as any).contact_id;
+      const cid = (l as unknown as { contact_id?: string }).contact_id;
       if (cid) acc[cid] = (acc[cid] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -224,7 +224,7 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
       notes: form.notes || null, tags, source: form.source || null,
       document: form.document || null, address: form.address || null,
       birth_date: form.birth_date || null,
-    } as any);
+    } as Record<string, unknown>);
     resetForm(); setNewOpen(false);
     toast({ title: "Contato criado" });
   };
@@ -247,8 +247,8 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
     setForm({
       name: c.name, email: c.email || "", phone: c.phone || "", company: c.company || "",
       position: c.position || "", notes: c.notes || "", tags: (c.tags || []).join(", "),
-      source: c.source || "", document: (c as any).document || "", address: (c as any).address || "",
-      birth_date: (c as any).birth_date || "",
+      source: c.source || "", document: (c as unknown as { document?: string }).document || "", address: (c as unknown as { address?: string }).address || "",
+      birth_date: (c as unknown as { birth_date?: string }).birth_date || "",
     });
     setEditContact(c);
   };
@@ -467,7 +467,7 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">Com leads vinculados</Label>
-                <Select value={filterHasLeads} onValueChange={v => setFilterHasLeads(v as any)}>
+                <Select value={filterHasLeads} onValueChange={v => setFilterHasLeads(v as "all" | "yes" | "no")}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all" className="text-xs">Todos</SelectItem>

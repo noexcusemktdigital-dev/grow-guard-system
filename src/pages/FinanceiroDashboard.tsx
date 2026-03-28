@@ -26,112 +26,12 @@ import { toast as sonnerToast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
-
-
-interface NetworkContract {
-  id: string;
-  title: string;
-  status: string;
-  organization_id: string;
-  signer_name: string | null;
-  monthly_value?: number;
-  payment_day?: number;
-  start_date?: string;
-  end_date?: string;
-  org_name?: string;
-  [key: string]: unknown;
-}
-
-interface RevenueRow {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  status: string;
-  category?: string;
-  payment_method?: string;
-  [key: string]: unknown;
-}
-
-interface ExpenseRow {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  status: string;
-  category?: string;
-  is_recurring?: boolean;
-  [key: string]: unknown;
-}
-
-interface UnitRow {
-  id: string;
-  name: string;
-  unit_org_id?: string;
-  system_fee?: number;
-  [key: string]: unknown;
-}
-
-interface ClosingRow {
-  id: string;
-  title: string;
-  month: number;
-  year: number;
-  status: string;
-  file_url?: string;
-  unit_id?: string;
-  [key: string]: unknown;
-}
-
-interface ChargeRow {
-  id: string;
-  month: string;
-  status: string;
-  total_amount: number;
-  royalty_amount: number;
-  system_fee: number;
-  asaas_payment_id?: string;
-  paid_at?: string;
-  franchisee_org?: { name: string } | null;
-  [key: string]: unknown;
-}
-
-interface MonthOption {
-  value: string;
-  label: string;
-}
-
-interface ChargeResult {
-  status: string;
-  [key: string]: unknown;
-}
-
-const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const expCategories = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
-const ASAAS_PAID_STATUSES = ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"];
-const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--muted-foreground))"];
-
-function getMonthOptions() {
-  const now = new Date();
-  const opts: { value: string; label: string }[] = [{ value: "all", label: "Todos os meses" }];
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    opts.push({ value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${months[d.getMonth()]} ${d.getFullYear()}` });
-  }
-  return opts;
-}
-
-function asaasStatusLabel(s: string): { label: string; cls: string } {
-  const map: Record<string, { label: string; cls: string }> = {
-    CONFIRMED: { label: "Confirmado", cls: "bg-emerald-500/15 text-emerald-600" },
-    RECEIVED: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
-    RECEIVED_IN_CASH: { label: "Recebido", cls: "bg-emerald-500/15 text-emerald-600" },
-    PENDING: { label: "Pendente", cls: "bg-yellow-500/15 text-yellow-600" },
-    OVERDUE: { label: "Vencido", cls: "bg-destructive/15 text-destructive" },
-    REFUNDED: { label: "Estornado", cls: "bg-muted text-muted-foreground" },
-  };
-  return map[s] || { label: s, cls: "bg-muted text-muted-foreground" };
-}
+import {
+  type NetworkContract, type RevenueRow, type ExpenseRow, type UnitRow, type ClosingRow,
+  type ChargeRow, type MonthOption, type ChargeResult,
+  months, expCategories, ASAAS_PAID_STATUSES, PIE_COLORS,
+  getMonthOptions, asaasStatusLabel, revCategories,
+} from "./FinanceiroDashboardTypes";
 
 /* ═══════════════════════════════════════════════════════════════════ */
 /* MAIN COMPONENT                                                     */
@@ -391,8 +291,6 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
 /* ═══════════════════════════════════════════════════════════════════ */
 /* RECEITAS TAB — Asaas + Manual                                      */
 /* ═══════════════════════════════════════════════════════════════════ */
-
-const revCategories = ["Serviço", "Consultoria", "Licença", "Comissão", "Outros"];
 
 function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, toast }: { asaasPayments: AsaasPayment[] | undefined; revenues: RevenueRow[] | undefined; selectedMonth: string; la: boolean; refetchAsaas: () => void; createRevenue: { mutate: (data: Record<string, unknown>) => void }; updateRevenue: { mutate: (data: Record<string, unknown>) => void }; deleteRevenue: { mutate: (id: string) => void }; toast: (opts: { title: string; variant?: string }) => void }) {
   const [search, setSearch] = useState("");

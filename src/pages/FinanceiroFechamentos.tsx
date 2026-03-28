@@ -43,7 +43,7 @@ export default function FinanceiroFechamentos() {
   // Build a map of unit_org_id -> system_fee from units table
   const unitFeeMap = useMemo(() => {
     const map: Record<string, number> = {};
-    (units ?? []).forEach((u: any) => {
+    (units ?? []).forEach((u) => {
       if (u.unit_org_id) map[u.unit_org_id] = Number(u.system_fee ?? 250);
     });
     return map;
@@ -52,9 +52,9 @@ export default function FinanceiroFechamentos() {
   // Group active contracts by org for consolidation
   const consolidation = useMemo(() => {
     if (!contracts) return [];
-    const activeContracts = contracts.filter((c: any) => c.status === "active" || c.status === "signed");
+    const activeContracts = contracts.filter((c) => c.status === "active" || c.status === "signed");
     const byOrg: Record<string, { orgName: string; orgId: string; contracts: number; mrr: number; royalty: number; systemFee: number }> = {};
-    activeContracts.forEach((c: any) => {
+    activeContracts.forEach((c) => {
       const key = c.org_name || c.organization_id;
       if (!byOrg[key]) {
         const fee = unitFeeMap[c.organization_id] ?? 250;
@@ -73,8 +73,8 @@ export default function FinanceiroFechamentos() {
 
   // Auto-fill title when unit/month changes
   const selectedUnitName = useMemo(() => {
-    const u = (units ?? []).find((u: any) => u.id === selectedUnitId);
-    return (u as any)?.name || "";
+    const u = (units ?? []).find((u) => u.id === selectedUnitId);
+    return u?.name || "";
   }, [units, selectedUnitId]);
 
   const openDialog = () => {
@@ -88,8 +88,8 @@ export default function FinanceiroFechamentos() {
   };
 
   const handleUnitOrMonthChange = (unitId: string, m: string, y: string) => {
-    const u = (units ?? []).find((u: any) => u.id === unitId);
-    const name = (u as any)?.name || "";
+    const u = (units ?? []).find((u) => u.id === unitId);
+    const name = u?.name || "";
     if (name) {
       setTitle(`DRE ${name} - ${MONTH_NAMES[Number(m) - 1]}/${y}`);
     }
@@ -131,8 +131,8 @@ export default function FinanceiroFechamentos() {
       qc.invalidateQueries({ queryKey: ["finance-closings"] });
       qc.invalidateQueries({ queryKey: ["unit-closings"] });
       setDialogOpen(false);
-    } catch (e: any) {
-      toast.error(`Erro: ${e.message}`);
+    } catch (e: unknown) {
+      toast.error(`Erro: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setSaving(false);
     }
@@ -205,7 +205,7 @@ export default function FinanceiroFechamentos() {
       {(closings ?? []).length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>
-          {closings?.map((cl: any) => (
+          {closings?.map((cl) => (
             <Card key={cl.id} className="glass-card">
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-4">
@@ -251,7 +251,7 @@ export default function FinanceiroFechamentos() {
               >
                 <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
                 <SelectContent>
-                  {(units ?? []).map((u: any) => (
+                  {(units ?? []).map((u) => (
                     <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
                   ))}
                 </SelectContent>

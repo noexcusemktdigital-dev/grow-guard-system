@@ -57,7 +57,7 @@ interface LeadRow {
 interface FunnelOption {
   id: string;
   name: string;
-  stages: any[];
+  stages: Array<{ key?: string; label?: string; color?: string; icon?: string }>;
 }
 
 interface CrmLeadDetailSheetProps {
@@ -126,7 +126,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [taskPriority, setTaskPriority] = useState("medium");
 
   const stage = stages.find(s => s.key === lead.stage);
-  const whatsappContactId = (lead as any).whatsapp_contact_id;
+  const whatsappContactId = lead.whatsapp_contact_id;
 
   const handleSave = () => {
     updateLead.mutate({
@@ -228,7 +228,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
                   onValueChange={(funnelId) => {
                     const targetFunnel = funnels.find(f => f.id === funnelId);
                     if (!targetFunnel) return;
-                    const targetStages = targetFunnel.stages as any[];
+                    const targetStages = targetFunnel.stages as Array<{ key?: string; label?: string }>;
                     const firstStageKey = Array.isArray(targetStages) && targetStages.length > 0
                       ? (targetStages[0].key || targetStages[0].label?.toLowerCase().replace(/\s+/g, "_") || "novo")
                       : "novo";
@@ -452,8 +452,8 @@ function LeadProductsTab({ leadId }: { leadId: string }) {
           setQty("1");
           setDiscount("0");
         },
-        onError: (err: any) => {
-          toast({ title: "Erro", description: err.message?.includes("duplicate") ? "Produto já vinculado a este lead" : err.message, variant: "destructive" });
+        onError: (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err); toast({ title: "Erro", description: msg.includes("duplicate") ? "Produto já vinculado a este lead" : msg, variant: "destructive" });
         },
       }
     );
@@ -621,8 +621,8 @@ function ProposalsTab({ leadId }: { leadId: string }) {
       toast({ title: "Proposta anexada" });
       setShowForm(false);
       resetForm();
-    } catch (err: any) {
-      toast({ title: "Erro ao anexar", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao anexar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -630,7 +630,7 @@ function ProposalsTab({ leadId }: { leadId: string }) {
 
   const handleStatusChange = (id: string, status: string) => {
     const now = new Date().toISOString();
-    const extra: Record<string, any> = { status };
+    const extra: Record<string, unknown> = { status };
     if (status === "sent") extra.sent_at = now;
     if (status === "accepted") extra.accepted_at = now;
     if (status === "rejected") extra.rejected_at = now;
@@ -744,7 +744,7 @@ function ProposalsTab({ leadId }: { leadId: string }) {
 function WhatsAppTab({ lead }: { lead: LeadRow }) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const whatsappContactId = (lead as any).whatsapp_contact_id;
+  const whatsappContactId = lead.whatsapp_contact_id;
   const { data: messages = [], isLoading } = useWhatsAppMessages(whatsappContactId || null);
   const sendMutation = useSendWhatsAppMessage();
   const [text, setText] = useState("");
@@ -760,8 +760,8 @@ function WhatsAppTab({ lead }: { lead: LeadRow }) {
       { contactId: whatsappContactId, contactPhone: lead.phone || "", message: text.trim() },
       {
         onSuccess: () => setText(""),
-        onError: (err: any) =>
-          toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" }),
+        onError: (err: unknown) =>
+          toast({ title: "Erro ao enviar", description: err instanceof Error ? err.message : String(err), variant: "destructive" }),
       }
     );
   };

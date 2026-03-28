@@ -6,16 +6,16 @@ interface RecordingTutorialProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   format: string;
-  script?: any;
+  script?: { titulo?: string; title?: string; conteudo_principal?: { hook?: string } };
 }
 
 const TUTORIALS: Record<string, {
   title: string;
-  icon: any;
+  icon: React.ElementType;
   orientation: string;
   duration: string;
   resolution: string;
-  steps: { title: string; desc: string; icon: any }[];
+  steps: { title: string; desc: string; icon: React.ElementType }[];
   tips: string[];
 }> = {
   stories: {

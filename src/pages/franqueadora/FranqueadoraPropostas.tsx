@@ -250,12 +250,12 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
     if (editingProposal) {
       updateProposal.mutate({ id: editingProposal.id, ...payload }, {
         onSuccess: () => { toast.success("Proposta atualizada!"); onEditComplete?.(); },
-        onError: (e: any) => toast.error(e.message || "Erro ao atualizar proposta"),
+        onError: (e: any) => toast.error(e instanceof Error ? e.message : String(e) || "Erro ao atualizar proposta"),
       });
     } else {
       createProposal.mutate(payload, {
         onSuccess: () => toast.success("Proposta salva com sucesso!"),
-        onError: (e: any) => toast.error(e.message || "Erro ao salvar proposta"),
+        onError: (e: any) => toast.error(e instanceof Error ? e.message : String(e) || "Erro ao salvar proposta"),
       });
     }
   };

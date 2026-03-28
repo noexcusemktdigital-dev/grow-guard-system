@@ -62,8 +62,8 @@ export function AdConnectionCards() {
         title: "Autorização iniciada",
         description: "Complete a autorização na nova aba. Ao finalizar, você será redirecionado de volta.",
       });
-    } catch (err: any) {
-      toast({ title: "Erro ao iniciar conexão", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao iniciar conexão", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       setConnectingPlatform(null);
     }
   };

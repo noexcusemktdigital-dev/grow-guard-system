@@ -132,9 +132,9 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
           // Ignore polling errors
         }
       }, 4000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIzitechLoading(false);
-      toast({ title: "Erro", description: err.message || "Falha ao criar instância", variant: "destructive" });
+      toast({ title: "Erro", description: (err instanceof Error ? err.message : String(err)) || "Falha ao criar instância", variant: "destructive" });
       setStep(2);
     }
   };
@@ -143,7 +143,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const handleConnect = async () => {
     setStep(3);
     try {
-      let res: any;
+      let res: Record<string, unknown>;
       if (provider === "evolution") {
         res = await setupMutation.mutateAsync({
           provider: "evolution",
@@ -164,8 +164,8 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
       setResult(res);
       refetch();
       toast({ title: "WhatsApp conectado!", description: "Webhooks configurados com sucesso." });
-    } catch (err: any) {
-      toast({ title: "Erro ao conectar", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao conectar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       setStep(2);
     }
   };

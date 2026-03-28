@@ -46,7 +46,7 @@ export function CrmTeamManager() {
     setDialogOpen(true);
   };
 
-  const openEditTeam = (team: any) => {
+  const openEditTeam = (team: { id: string; name: string; description?: string; members: string[]; funnel_ids: string[] }) => {
     setEditingTeam(team);
     setTeamName(team.name);
     setTeamDesc(team.description || "");
@@ -62,7 +62,7 @@ export function CrmTeamManager() {
       updateTeam.mutate({ id: editingTeam.id, ...payload });
       toast({ title: "Time atualizado" });
     } else {
-      createTeam.mutate(payload as any);
+      createTeam.mutate(payload as Record<string, unknown>);
       toast({ title: "Time criado" });
     }
     setDialogOpen(false);

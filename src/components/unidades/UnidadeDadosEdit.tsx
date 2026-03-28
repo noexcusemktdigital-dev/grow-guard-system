@@ -9,7 +9,7 @@ import { useUnitMutations } from "@/hooks/useUnits";
 import { toast } from "sonner";
 
 interface Props {
-  unit: any;
+  unit: { id: string; name: string; city: string; state: string; phone: string; email: string; manager_name: string; address: string; status: string; opened_at: string; asaas_wallet_id: string };
   readOnly?: boolean;
 }
 

@@ -17,9 +17,9 @@ import {
 interface PostResultProps {
   isGenerating: boolean;
   loadingPhraseIdx: number;
-  generatedResult: { post: PostItem; result_url: string | null; result_data: any } | null;
+  generatedResult: { post: PostItem; result_url: string | null; result_data: Record<string, unknown> | null } | null;
   /** Array of generated results for batch/carousel */
-  batchResults?: { post: PostItem; result_url: string | null; result_data: any }[];
+  batchResults?: { post: PostItem; result_url: string | null; result_data: Record<string, unknown> | null }[];
   postType: "art" | "video";
   videoDuration: string;
   onApprove: () => void;

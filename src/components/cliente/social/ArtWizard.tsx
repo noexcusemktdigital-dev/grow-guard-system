@@ -23,14 +23,14 @@ interface ArtWizardProps {
   orgId: string | undefined;
   visualIdentity: VisualIdentity | null | undefined;
   contentHistory: ContentItem[] | undefined;
-  contentData: any;
-  setContentData: (d: any) => void;
+  contentData: Record<string, unknown>;
+  setContentData: (d: Record<string, unknown>) => void;
   contentId: string | null;
   setContentId: (id: string | null) => void;
   briefingFilled: boolean;
   setBriefingFilled: (v: boolean) => void;
   onGenerate: (payload: ArtGeneratePayload) => void;
-  onFillWithAI: (briefingText: string, contentData: any) => Promise<ArtBriefingResult | null>;
+  onFillWithAI: (briefingText: string, contentData: Record<string, unknown>) => Promise<ArtBriefingResult | null>;
   isFillingAI: boolean;
   canAfford: boolean;
   creditCost: number;
@@ -592,7 +592,7 @@ export function ArtWizard({
                   input.type = "file";
                   input.accept = "image/*";
                   input.multiple = true;
-                  input.onchange = (ev) => handlePhotoUpload(ev as any);
+                  input.onchange = (ev) => handlePhotoUpload(ev as unknown as React.ChangeEvent<HTMLInputElement>);
                   input.click();
                 }}
                 disabled={uploadingPhotos}
@@ -885,7 +885,7 @@ export function ArtWizard({
                       <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
 
                       <span className="text-muted-foreground">Formato:</span>
-                      <span>{selectedFormat?.label} ({(selectedFormat as any)?.ratio || (selectedFormat as any)?.cm})</span>
+                      <span>{selectedFormat?.label} ({(selectedFormat as unknown as { ratio?: string; cm?: string })?.ratio || (selectedFormat as unknown as { ratio?: string; cm?: string })?.cm})</span>
 
                       {visualIdentity && <>
                         <span className="text-muted-foreground">Identidade:</span>
