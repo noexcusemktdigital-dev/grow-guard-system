@@ -1,131 +1,170 @@
 project_id = "gxrhdpbbxfipeopdyygn"
 
 [functions]
+  # --- Cron / internal triggers (use service_role or own auth) ---
   [functions.agent-followup-cron]
+    # Called by cron scheduler, not by authenticated users
     verify_jwt = false
+
+  # --- AI agent functions (require authenticated user session) ---
   [functions.ai-agent-reply]
-    verify_jwt = false
+    verify_jwt = true
   [functions.ai-agent-simulate]
-    verify_jwt = false
+    verify_jwt = true
   [functions.ai-generate-agent-config]
-    verify_jwt = false
+    verify_jwt = true
+
+  # --- Asaas payment functions (require authenticated user session) ---
   [functions.asaas-buy-credits]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-cancel-subscription]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-charge-client]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-charge-franchisee]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-charge-system-fee]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-create-charge]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-create-subscription]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-get-pix]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-list-payments]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-manage-payment]
-    verify_jwt = false
+    verify_jwt = true
   [functions.asaas-test-connection]
-    verify_jwt = false
+    verify_jwt = true
+
+  # --- Asaas external webhook (validates via Asaas signature, not JWT) ---
   [functions.asaas-webhook]
+    # External webhook from Asaas payment gateway, uses its own signature auth
     verify_jwt = false
+
+  # --- Supabase internal auth hook ---
   [functions.auth-email-hook]
+    # Called by Supabase Auth internally, not via user requests
     verify_jwt = false
+
+  # --- CRM functions (require authenticated user session) ---
   [functions.crm-lead-webhook]
+    # External webhook from lead capture forms, uses own secret validation
     verify_jwt = false
   [functions.crm-run-automations]
-    verify_jwt = false
+    verify_jwt = true
+
+  # --- AI generate functions (require authenticated user session) ---
   [functions.extract-strategy-answers]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-content]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-prospection]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-script]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-site]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-social-briefing]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-social-concepts]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-social-image]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-social-video-frames]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-strategy]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-template-layout]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-traffic-strategy]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-video-briefing]
-    verify_jwt = false
+    verify_jwt = true
+  [functions.generate-daily-checklist]
+    verify_jwt = true
+
+  # --- Utility functions (require auth) ---
   [functions.get-outbound-ip]
-    verify_jwt = false
+    verify_jwt = true
+  [functions.transcribe-video-audio]
+    verify_jwt = true
+
+  # --- Admin/management functions (require authenticated admin session) ---
   [functions.invite-user]
-    verify_jwt = false
+    verify_jwt = true
   [functions.process-email-queue]
     verify_jwt = true
   [functions.provision-unit]
-    verify_jwt = false
+    verify_jwt = true
   [functions.recharge-credits]
-    verify_jwt = false
+    verify_jwt = true
   [functions.seed-users]
-    verify_jwt = false
-  [functions.signup-saas]
-    verify_jwt = false
-  [functions.transcribe-video-audio]
-    verify_jwt = false
+    verify_jwt = true
+  [functions.seed-demo-data]
+    verify_jwt = true
   [functions.update-member]
-    verify_jwt = false
-  [functions.whatsapp-bulk-send]
-    verify_jwt = false
-  [functions.whatsapp-send]
-    verify_jwt = false
-  [functions.whatsapp-setup]
-    verify_jwt = false
-  [functions.whatsapp-typing]
-    verify_jwt = false
+    verify_jwt = true
   [functions.delete-unit]
-    verify_jwt = false
-  [functions.evolution-webhook]
-    verify_jwt = false
-  [functions.generate-daily-checklist]
-    verify_jwt = false
-  [functions.google-calendar-oauth]
-    verify_jwt = false
-  [functions.google-calendar-sync]
+    verify_jwt = true
+  [functions.send-transactional-email]
+    verify_jwt = true
+
+  # --- Public endpoints (no auth required) ---
+  [functions.signup-saas]
+    # Public signup form, no auth needed
     verify_jwt = false
   [functions.receive-candidate]
-    verify_jwt = false
-  [functions.seed-demo-data]
-    verify_jwt = false
-  [functions.send-transactional-email]
+    # Public franchise candidate form
     verify_jwt = false
   [functions.validate-coupon]
+    # Public coupon validation endpoint
     verify_jwt = false
   [functions.website-chat]
+    # Public website chat endpoint for visitors
     verify_jwt = false
   [functions.website-chat-widget]
+    # Public chat widget served to website visitors
     verify_jwt = false
+
+  # --- WhatsApp functions (require authenticated user session) ---
+  [functions.whatsapp-bulk-send]
+    verify_jwt = true
+  [functions.whatsapp-send]
+    verify_jwt = true
+  [functions.whatsapp-setup]
+    verify_jwt = true
+  [functions.whatsapp-typing]
+    verify_jwt = true
   [functions.whatsapp-load-history]
-    verify_jwt = false
+    verify_jwt = true
   [functions.whatsapp-sync-chats]
-    verify_jwt = false
+    verify_jwt = true
   [functions.whatsapp-sync-photos]
+    verify_jwt = true
+
+  # --- WhatsApp/Evolution external webhooks (use own secret validation) ---
+  [functions.evolution-webhook]
+    # External webhook from Evolution API, validates via webhook secret
     verify_jwt = false
   [functions.whatsapp-webhook]
+    # External webhook from WhatsApp provider, validates via webhook secret
     verify_jwt = false
+
+  # --- Google Calendar (require authenticated user session) ---
+  [functions.google-calendar-oauth]
+    verify_jwt = true
+  [functions.google-calendar-sync]
+    verify_jwt = true
+
+  # --- Ads platform functions (require authenticated user session) ---
   [functions.ads-oauth-callback]
+    # OAuth callback from ad platforms, cannot carry JWT
     verify_jwt = false
   [functions.ads-sync-metrics]
-    verify_jwt = false
+    verify_jwt = true
   [functions.ads-disconnect]
-    verify_jwt = false
+    verify_jwt = true
   [functions.ads-analyze]
-    verify_jwt = false
+    verify_jwt = true
