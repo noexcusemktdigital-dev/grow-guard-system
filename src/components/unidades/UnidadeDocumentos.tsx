@@ -82,7 +82,7 @@ export function UnidadeDocumentos({ docs, unidadeId, onUpdate }: Props) {
                 <TableCell>{d.visibilidade}</TableCell>
                 <TableCell className="max-w-[200px] truncate">{d.observacao || "—"}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleRemove(d.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleRemove(d.id)} aria-label="Excluir"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>
             ))}

@@ -87,8 +87,8 @@ export function UnidadeUsuarios({ users, unidadeId, onUpdate }: Props) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right space-x-1">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleRemove(u)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(u)} aria-label="Editar"><Pencil className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleRemove(u)} aria-label="Excluir"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>
             ))}

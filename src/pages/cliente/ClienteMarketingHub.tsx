@@ -77,11 +77,11 @@ export default function ClienteMarketingHub() {
 
       {/* Month selector */}
       <div className="flex items-center justify-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => setMonthOffset(p => p - 1)}>
+        <Button variant="ghost" size="icon" onClick={() => setMonthOffset(p => p - 1)} aria-label="Voltar">
           <ChevronLeft className="w-4 h-4" />
         </Button>
         <span className="text-sm font-semibold capitalize min-w-[140px] text-center">{monthLabel}</span>
-        <Button variant="ghost" size="icon" onClick={() => setMonthOffset(p => p + 1)} disabled={monthOffset >= 0}>
+        <Button variant="ghost" size="icon" onClick={() => setMonthOffset(p => p + 1)} disabled={monthOffset >= 0} aria-label="Avançar">
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

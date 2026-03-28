@@ -1,16 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 100;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -18,7 +13,7 @@ Deno.serve(async (req) => {
     if (!lovableApiKey) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -40,7 +35,7 @@ Deno.serve(async (req) => {
       if (!wallet || wallet.balance < CREDIT_COST) {
         return new Response(
           JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -117,7 +112,7 @@ Gere um system prompt detalhado e prático em português brasileiro.`;
       console.error("AI error:", errText);
       return new Response(JSON.stringify({ error: "AI generation failed" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -139,13 +134,13 @@ Gere um system prompt detalhado e prático em português brasileiro.`;
     }
 
     return new Response(JSON.stringify({ result }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("ai-generate-agent-config error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

@@ -1,14 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-evolution-secret",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -20,7 +15,7 @@ Deno.serve(async (req) => {
         console.warn("Evolution webhook: invalid secret received");
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
@@ -55,7 +50,7 @@ Deno.serve(async (req) => {
       if (!instanceName) {
         return new Response(JSON.stringify({ error: "org_id or instance name required" }), {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       const { data: found } = await adminClient
@@ -67,7 +62,7 @@ Deno.serve(async (req) => {
       if (!found) {
         return new Response(JSON.stringify({ error: `No instance found for name: ${instanceName}` }), {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       orgId = found.organization_id;
@@ -86,7 +81,7 @@ Deno.serve(async (req) => {
     if (!instances || instances.length === 0) {
       return new Response(JSON.stringify({ error: "No evolution instances found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -133,7 +128,7 @@ Deno.serve(async (req) => {
         .eq("id", instance.id);
 
       return new Response(JSON.stringify({ ok: true, connection: state, phone: updatePayload.phone_number || null }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -358,7 +353,7 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -402,19 +397,19 @@ Deno.serve(async (req) => {
         }
       }
       return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     // Unhandled event
     return new Response(JSON.stringify({ ok: true, event: event || "unknown" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("Evolution webhook error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

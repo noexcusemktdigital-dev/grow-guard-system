@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // Simple in-memory rate limiter (per isolate lifetime)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -24,7 +19,7 @@ function isRateLimited(ip: string): boolean {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   // Rate limit by IP
@@ -32,7 +27,7 @@ Deno.serve(async (req) => {
   if (isRateLimited(clientIp)) {
     return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
       status: 429,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -45,7 +40,7 @@ Deno.serve(async (req) => {
     const { action, api_key, session_id, content, visitor_name, visitor_email, page_url } = body;
 
     if (!api_key) {
-      return new Response(JSON.stringify({ error: "api_key required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "api_key required" }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     // Validate api_key → get org
@@ -56,7 +51,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (orgErr || !org) {
-      return new Response(JSON.stringify({ error: "Invalid api_key" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Invalid api_key" }), { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     const orgId = org.id;
@@ -96,14 +91,14 @@ Deno.serve(async (req) => {
       if (sessErr) throw sessErr;
 
       return new Response(JSON.stringify({ session_id: session.id, contact_id: contact.id }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     // ACTION: send — visitor sends a message
     if (action === "send") {
       if (!session_id || !sanitizedContent) {
-        return new Response(JSON.stringify({ error: "session_id and content required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "session_id and content required" }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
 
       const { data: session } = await adminClient
@@ -113,7 +108,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (!session) {
-        return new Response(JSON.stringify({ error: "Session not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Session not found" }), { status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
 
       await adminClient.from("website_chat_messages").insert({
@@ -147,14 +142,14 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     // ACTION: poll — get new messages for a session
     if (action === "poll") {
       if (!session_id) {
-        return new Response(JSON.stringify({ error: "session_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "session_id required" }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
 
       const since = body.since || new Date(0).toISOString();
@@ -168,12 +163,12 @@ Deno.serve(async (req) => {
         .limit(50);
 
       return new Response(JSON.stringify({ messages: messages || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
   }
 });

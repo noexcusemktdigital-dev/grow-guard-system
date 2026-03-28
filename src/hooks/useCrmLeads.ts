@@ -144,7 +144,7 @@ export function useCrmLeadMutations() {
           }
         }
       } catch (e) {
-        console.warn("Roulette assignment failed:", e);
+        // Roulette assignment failed
       }
 
       return data;

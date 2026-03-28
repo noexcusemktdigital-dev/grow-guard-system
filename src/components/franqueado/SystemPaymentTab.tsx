@@ -196,7 +196,7 @@ export function SystemPaymentTab() {
                         <code className="flex-1 text-xs bg-muted p-2 rounded break-all max-h-20 overflow-auto">
                           {paymentResult.pix_copy_paste}
                         </code>
-                        <Button size="icon" variant="outline" onClick={() => copyToClipboard(paymentResult.pix_copy_paste)}>
+                        <Button size="icon" variant="outline" onClick={() => copyToClipboard(paymentResult.pix_copy_paste)} aria-label="Copiar">
                           <Copy className="w-4 h-4" />
                         </Button>
                       </div>

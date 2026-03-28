@@ -113,7 +113,7 @@ function ScriptCardComponent({ script }: { script: ScriptCard }) {
               variant="ghost" size="icon"
               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => copyToClipboard(script.scriptCurto, `curto-${script.id}`)}
-            >
+             aria-label="Copiar">
               {copiedField === `curto-${script.id}` ? (
                 <Check className="w-3 h-3 text-green-500" />
               ) : (
@@ -136,7 +136,7 @@ function ScriptCardComponent({ script }: { script: ScriptCard }) {
                   variant="ghost" size="icon"
                   className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => copyToClipboard(script.scriptCompleto, `completo-${script.id}`)}
-                >
+                 aria-label="Copiar">
                   {copiedField === `completo-${script.id}` ? (
                     <Check className="w-3 h-3 text-green-500" />
                   ) : (

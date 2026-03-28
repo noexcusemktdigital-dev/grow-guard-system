@@ -96,7 +96,7 @@ const SaasAuth = () => {
         return;
       }
     } catch (err) {
-      console.warn("[Login] Portal validation failed, proceeding:", err);
+      // Portal validation failed, proceeding
     }
     setLoading(false);
     navigate("/cliente/inicio");

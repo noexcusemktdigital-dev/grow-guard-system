@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (attempt < 1) await new Promise(r => setTimeout(r, 300));
         }
-        console.warn(`[Auth] ${label} failed after retries`);
+        // failed after retries
         return null;
       };
 
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Check if this was a timeout (null result) vs genuine "no roles"
         if (roleResult === null) {
           // On timeout, use cached role if available — don't guess
-          console.warn("[Auth] Role fetch timed out, checking cached role");
+          // Role fetch timed out, checking cached role
           const cached = localStorage.getItem("noe-cached-role") as AppRole | null;
           if (cached) {
             console.log("[Auth] Using cached role:", cached);
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               );
 
               if (provResult?.error) {
-                console.warn("[Auth] Provisioning error:", provResult.error);
+                // Provisioning error, retrying
                 continue;
               }
 
@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             lastFetchedUserRef.current = currentUser.id;
           }
         } else {
-          console.warn("[Auth] No roles found and not a SaaS signup, role remains null");
+          // No roles found and not a SaaS signup, role remains null
         }
       }
     } catch (err) {

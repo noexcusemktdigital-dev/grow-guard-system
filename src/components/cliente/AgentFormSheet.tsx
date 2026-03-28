@@ -587,7 +587,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               <Label className="flex items-center gap-1.5"><Link className="w-3.5 h-3.5" /> Links / URLs</Label>
               <div className="flex gap-2">
                 <Input value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://exemplo.com/pagina" onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKbUrl())} />
-                <Button type="button" size="icon" variant="outline" onClick={addKbUrl}><Plus className="w-4 h-4" /></Button>
+                <Button type="button" size="icon" variant="outline" onClick={addKbUrl} aria-label="Adicionar"><Plus className="w-4 h-4" /></Button>
               </div>
             </div>
 
@@ -620,7 +620,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
                     <span className="flex-1 truncate text-xs">
                       {typeof entry === "string" ? entry : entry.name || entry.content}
                     </span>
-                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeKbEntry(idx)}>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeKbEntry(idx)} aria-label="Fechar">
                       <X className="w-3 h-3" />
                     </Button>
                   </div>
@@ -778,7 +778,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
               <p className="text-xs text-muted-foreground">Ensine o agente a contra-argumentar objeções frequentes.</p>
               {objectionsConfig.map((obj: any, idx: number) => (
                 <div key={idx} className="space-y-1.5 bg-muted/30 rounded-md p-3 relative">
-                  <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeObjection(idx)}>
+                  <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => removeObjection(idx)} aria-label="Fechar">
                     <X className="w-3 h-3" />
                   </Button>
                   <Input placeholder='Ex: "Está caro demais"' value={obj.objection} onChange={(e) => updateObjection(idx, "objection", e.target.value)} className="text-xs" />
@@ -827,7 +827,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
 
               <div className="flex gap-2 p-3 border-t">
                 <Input value={simInput} onChange={(e) => setSimInput(e.target.value)} placeholder="Digite uma mensagem de teste..." onKeyDown={(e) => e.key === "Enter" && handleSimulate()} disabled={simLoading} />
-                <Button size="icon" onClick={handleSimulate} disabled={simLoading || !simInput.trim()}>
+                <Button size="icon" onClick={handleSimulate} disabled={simLoading || !simInput.trim()} aria-label="Enviar">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>

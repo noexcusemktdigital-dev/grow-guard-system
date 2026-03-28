@@ -390,11 +390,11 @@ export default function Agenda() {
           {/* Navigation + View Toggle */}
           <div className="flex items-center justify-between gap-2 mb-4">
             <div className="flex items-center gap-2">
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigatePrev}>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigatePrev} aria-label="Voltar">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setCurrentDate(new Date())}>Hoje</Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigateNext}>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={navigateNext} aria-label="Avançar">
                 <ChevronRight className="w-4 h-4" />
               </Button>
               <span className="text-sm font-semibold capitalize ml-1">{getDateLabel()}</span>

@@ -350,10 +350,10 @@ export default function Marketing() {
                 </div>
               </CardContent>
               <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setRenameFolder({ id: folder.id, name: folder.name }); }}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setRenameFolder({ id: folder.id, name: folder.name }); }} aria-label="Editar">
                   <Pencil className="w-3 h-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ type: "folder", id: folder.id, label: folder.name }); }}>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ type: "folder", id: folder.id, label: folder.name }); }} aria-label="Excluir">
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -406,7 +406,7 @@ export default function Marketing() {
                     <Button variant="outline" size="sm" className="text-xs flex-1" onClick={() => asset.url && window.open(asset.url, "_blank")}>
                       <Download className="w-3.5 h-3.5 mr-1" /> Baixar
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => setRenameAssetTarget({ id: asset.id, name: asset.name })}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => setRenameAssetTarget({ id: asset.id, name: asset.name })} aria-label="Editar">
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                   </div>

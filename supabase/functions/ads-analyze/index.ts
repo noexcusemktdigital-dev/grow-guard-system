@@ -1,14 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -21,7 +17,7 @@ serve(async (req) => {
 
     if (!organization_id) {
       return new Response(JSON.stringify({ error: "Missing organization_id" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -36,7 +32,7 @@ serve(async (req) => {
     if (debitError) {
       const status = debitError.message?.includes("INSUFFICIENT") ? 402 : 500;
       return new Response(JSON.stringify({ error: debitError.message }), {
-        status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -51,7 +47,7 @@ serve(async (req) => {
 
     if (metricsError) {
       return new Response(JSON.stringify({ error: "Failed to fetch metrics" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -60,7 +56,7 @@ serve(async (req) => {
         analysis: "Nenhuma métrica encontrada para análise. Sincronize as contas de anúncio primeiro.",
         insights: [],
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -116,7 +112,7 @@ Retorne um JSON com a seguinte estrutura:
 
     if (!lovableKey) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -137,7 +133,7 @@ Retorne um JSON com a seguinte estrutura:
       const errText = await aiRes.text();
       console.error("AI API error:", errText);
       return new Response(JSON.stringify({ error: "AI analysis failed" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -163,12 +159,12 @@ Retorne um JSON com a seguinte estrutura:
         total_conversions: summary.total_conversions,
       },
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("ads-analyze error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

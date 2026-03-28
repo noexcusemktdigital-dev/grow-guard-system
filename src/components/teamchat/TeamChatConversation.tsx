@@ -164,7 +164,7 @@ export function TeamChatConversation({
             <FileText className="h-4 w-4 text-muted-foreground" />
           )}
           <span className="text-sm text-foreground truncate flex-1">{pendingFile.name}</span>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingFile(null)}>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPendingFile(null)} aria-label="Fechar">
             <X className="h-3 w-3" />
           </Button>
         </div>
@@ -194,7 +194,7 @@ export function TeamChatConversation({
                 size="icon"
                 className="shrink-0"
                 onClick={() => fileInputRef.current?.click()}
-              >
+               aria-label="Anexar">
                 <Paperclip className="h-4 w-4" />
               </Button>
             </>
@@ -206,7 +206,7 @@ export function TeamChatConversation({
             className="flex-1"
             autoFocus
           />
-          <Button type="submit" size="icon" disabled={!text.trim() && !pendingFile}>
+          <Button type="submit" size="icon" disabled={!text.trim() && !pendingFile} aria-label="Enviar">
             <Send className="h-4 w-4" />
           </Button>
         </form>

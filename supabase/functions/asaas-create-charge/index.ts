@@ -1,18 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOrCreateAsaasCustomer, fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -28,7 +23,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       console.error("[asaas-create-charge] No auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -38,7 +33,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       console.error("[asaas-create-charge] Auth failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -46,7 +41,7 @@ Deno.serve(async (req) => {
 
     if (!organization_id || !charge_type || !billing_type) {
       return new Response(JSON.stringify({ error: "organization_id, charge_type and billing_type required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -64,7 +59,7 @@ Deno.serve(async (req) => {
       const pack = packs[pack_id];
       if (!pack) {
         return new Response(JSON.stringify({ error: "Invalid pack_id" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       amount = pack.price;
@@ -75,7 +70,7 @@ Deno.serve(async (req) => {
       description = "Usuário adicional — NOE";
     } else {
       return new Response(JSON.stringify({ error: "Invalid charge_type" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -88,7 +83,7 @@ Deno.serve(async (req) => {
 
     if (orgError || !org) {
       return new Response(JSON.stringify({ error: "Organization not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -121,7 +116,7 @@ Deno.serve(async (req) => {
     if (!paymentRes.ok) {
       console.error("Asaas charge creation failed:", paymentData);
       return new Response(JSON.stringify({ error: "Failed to create charge", details: paymentData }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -149,12 +144,12 @@ Deno.serve(async (req) => {
         credit_amount: creditAmount,
         billing_type,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err: any) {
     console.error("asaas-create-charge error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

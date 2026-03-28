@@ -1,18 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOrCreateAsaasCustomer, fetchPixQrCode, buildSplitConfig } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -28,7 +23,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       console.error("[asaas-charge-client] No auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -38,7 +33,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       console.error("[asaas-charge-client] Auth failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -46,7 +41,7 @@ Deno.serve(async (req) => {
 
     if (!organization_id || !contract_id) {
       return new Response(JSON.stringify({ error: "organization_id and contract_id are required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -65,7 +60,7 @@ Deno.serve(async (req) => {
 
     if (existing && existing.status === "paid") {
       return new Response(JSON.stringify({ error: "already_paid", message: "Já pago neste mês" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -81,7 +76,7 @@ Deno.serve(async (req) => {
         invoice_url: existing.invoice_url,
         pix_qr_code: pixData.encodedImage,
         pix_copy_paste: pixData.payload,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     // Get contract details
@@ -93,7 +88,7 @@ Deno.serve(async (req) => {
 
     if (!contract) {
       return new Response(JSON.stringify({ error: "Contract not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -102,7 +97,7 @@ Deno.serve(async (req) => {
     const amount = baseValue + surplusValue;
     if (amount <= 0) {
       return new Response(JSON.stringify({ error: "Contract has no monthly value" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -111,7 +106,7 @@ Deno.serve(async (req) => {
     if (!clientDoc || clientDoc.length < 11) {
       return new Response(JSON.stringify({
         error: "CPF/CNPJ do cliente é obrigatório. Atualize o contrato com o documento antes de gerar cobrança.",
-      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
     }
 
     // Use unit_org_id or a contract-based reference to avoid mixing client customers with org customers
@@ -146,7 +141,7 @@ Deno.serve(async (req) => {
       if (!createRes.ok) {
         console.error("Asaas client customer creation failed:", createData);
         return new Response(JSON.stringify({ error: "Failed to create Asaas client customer", details: createData }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       clientCustomerId = createData.id;
@@ -185,7 +180,7 @@ Deno.serve(async (req) => {
     if (!chargeRes.ok) {
       console.error("Asaas charge failed:", chargeData);
       return new Response(JSON.stringify({ error: "Failed to create charge", details: chargeData }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -245,11 +240,11 @@ Deno.serve(async (req) => {
       surplus_amount: surplusValue,
       franqueadora_share: franqueadoraShare,
       franchisee_share: franchiseeShare,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("asaas-charge-client error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

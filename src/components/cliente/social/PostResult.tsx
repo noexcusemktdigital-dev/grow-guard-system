@@ -44,7 +44,7 @@ export function PostResult({
         title="Resultado"
         subtitle={isGenerating ? "Gerando…" : `${allResults.length} peça(s) gerada(s)`}
         icon={<Sparkles className="w-5 h-5 text-primary" />}
-        backButton={!isGenerating ? <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="w-4 h-4" /></Button> : undefined}
+        backButton={!isGenerating ? <Button variant="ghost" size="icon" onClick={onBack} aria-label="Voltar"><ArrowLeft className="w-4 h-4" /></Button> : undefined}
       />
 
       {isGenerating ? (

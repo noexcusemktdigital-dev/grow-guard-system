@@ -442,15 +442,15 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {entry.source === "asaas" && (entry.invoiceUrl || entry.bankSlipUrl) && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")} aria-label="Abrir em nova aba"><ExternalLink className="w-3.5 h-3.5" /></Button>
                         )}
                         {entry.source === "manual" && (
                           <>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
                               const rev = (revenues ?? []).find((r: any) => r.id === entry.id);
                               if (rev) openEditRev(rev);
-                            }}><Pencil className="w-3.5 h-3.5" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(entry.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                            }} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(entry.id)} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                           </>
                         )}
                       </div>
@@ -610,8 +610,8 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
                   <td className="py-3 px-4 text-muted-foreground">{e.date ? new Date(e.date + "T00:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditExp(e)}><Pencil className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(e.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditExp(e)} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(e.id)} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -1296,16 +1296,16 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
                                 <div className="flex items-center justify-center gap-1">
                                   {canManage && (
                                     <>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar cobrança" onClick={() => openEditDialog(p)}>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar cobrança" onClick={() => openEditDialog(p)} aria-label="Editar">
                                         <Pencil className="w-3.5 h-3.5" />
                                       </Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Cancelar cobrança" onClick={() => setCancelPaymentId(p.id)}>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" title="Cancelar cobrança" onClick={() => setCancelPaymentId(p.id)} aria-label="Excluir">
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </Button>
                                     </>
                                   )}
                                   {(p.invoiceUrl || p.bankSlipUrl) && (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")}><ExternalLink className="w-3.5 h-3.5" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(p.invoiceUrl || p.bankSlipUrl!, "_blank")} aria-label="Abrir em nova aba"><ExternalLink className="w-3.5 h-3.5" /></Button>
                                   )}
                                 </div>
                               </td>
@@ -1360,7 +1360,7 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
                       <Label className="text-xs text-muted-foreground">Código Copia e Cola</Label>
                       <div className="flex gap-2 mt-1">
                         <Input readOnly value={chargeResult.pix_copy_paste} className="text-xs font-mono" />
-                        <Button variant="outline" size="icon" onClick={() => copyPixCode(chargeResult.pix_copy_paste)}><Copy className="w-4 h-4" /></Button>
+                        <Button variant="outline" size="icon" onClick={() => copyPixCode(chargeResult.pix_copy_paste)} aria-label="Copiar"><Copy className="w-4 h-4" /></Button>
                       </div>
                     </div>
                   )}

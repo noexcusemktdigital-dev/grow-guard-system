@@ -80,7 +80,7 @@ export function DisparoWizardStep1({ data, onChange }: Props) {
               variant="destructive"
               className="absolute -top-2 -right-2 h-6 w-6"
               onClick={() => onChange({ ...data, imageUrl: "" })}
-            >
+             aria-label="Remover imagem">
               <X className="w-3 h-3" />
             </Button>
           </div>

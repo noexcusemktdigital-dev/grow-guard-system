@@ -115,12 +115,12 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
                     </TableCell>
                     <TableCell className="text-right space-x-1">
                       {d.file_url && (
-                        <Button variant="ghost" size="icon" asChild>
+                        <Button variant="ghost" size="icon" asChild aria-label="Baixar">
                           <a href={d.file_url} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4" /></a>
                         </Button>
                       )}
                       {canDelete && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)} disabled={deleteDoc.isPending}>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)} disabled={deleteDoc.isPending} aria-label="Excluir">
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       )}

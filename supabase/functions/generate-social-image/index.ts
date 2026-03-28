@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 25;
 
@@ -619,7 +615,7 @@ Generate this image now.`;
 // --- Main handler ---
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const body = await req.json();
@@ -653,7 +649,7 @@ serve(async (req) => {
       }
       if (refB64s.length === 0) {
         return new Response(JSON.stringify({ error: "Could not load reference images" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -687,7 +683,7 @@ Output ONLY the extracted logo image.`,
       if (!extractResponse.ok) {
         console.error("Logo extraction failed:", extractResponse.status);
         return new Response(JSON.stringify({ error: "Logo extraction failed" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -695,7 +691,7 @@ Output ONLY the extracted logo image.`,
       const extractedImage = extractData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (!extractedImage) {
         return new Response(JSON.stringify({ error: "No logo found in references" }), {
-          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -711,7 +707,7 @@ Output ONLY the extracted logo image.`,
 
       console.log("✅ Logo extracted and uploaded:", logoUrlData.publicUrl);
       return new Response(JSON.stringify({ logo_url: logoUrlData.publicUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -728,7 +724,7 @@ Output ONLY the extracted logo image.`,
         const isInsufficient = debitError.message?.includes("INSUFFICIENT_CREDITS") || debitError.message?.includes("WALLET_NOT_FOUND");
         return new Response(
           JSON.stringify({ error: isInsufficient ? "INSUFFICIENT_CREDITS" : debitError.message }),
-          { status: isInsufficient ? 402 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: isInsufficient ? 402 : 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       console.log(`✅ Debited ${CREDIT_COST} credits from org ${organization_id}`);
@@ -897,12 +893,12 @@ MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic
       console.error("AI image gateway error:", response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Aguarde um momento." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI image gateway error: ${response.status}`);
@@ -994,12 +990,12 @@ OUTPUT: The same design with the real brand logo composited in.`,
     console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
     return new Response(JSON.stringify({ url: urlData.publicUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-social-image error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

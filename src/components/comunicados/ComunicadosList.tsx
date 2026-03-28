@@ -201,11 +201,11 @@ export default function ComunicadosList({ comunicados, onView, onEdit, onDuplica
                   <TableCell className="text-center text-sm">{getViewCount(c.id)}</TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onView(c.id)}><Eye className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(c.id)}><Edit className="w-3.5 h-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDuplicate(c.id)}><Copy className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onView(c.id)} aria-label="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(c.id)} aria-label="Editar"><Edit className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDuplicate(c.id)} aria-label="Copiar"><Copy className="w-3.5 h-3.5" /></Button>
                       {c.status !== "Arquivado" && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onArchive(c.id)}><Archive className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onArchive(c.id)} aria-label="Arquivar"><Archive className="w-3.5 h-3.5" /></Button>
                       )}
                     </div>
                   </TableCell>

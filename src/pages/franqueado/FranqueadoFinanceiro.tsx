@@ -25,6 +25,51 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const FRANCHISEE_SHARE_PERCENT = 0.2; // 20% participation
 
+interface ContractRow {
+  id: string;
+  title: string;
+  signer_name: string | null;
+  status: string;
+  monthly_value?: number;
+  start_date?: string;
+  end_date?: string;
+  payment_day?: number;
+}
+
+interface PaymentRow {
+  id: string;
+  contractId: string;
+  title: string;
+  client: string;
+  value: number;
+  participacao: number;
+  payDay: number;
+  status: string;
+  invoiceUrl: string | null;
+  asaasPaymentId: string | null;
+  hasCharge: boolean;
+}
+
+interface SaasClientRow {
+  org_id: string;
+  org_name: string;
+  plan: string;
+  plan_status: string;
+  credits_balance: number;
+  discount_percent: number;
+  created_at: string | null;
+}
+
+interface SaasCommissionRow {
+  id: string;
+  client_name: string;
+  payment_value: number;
+  commission_percent: number;
+  commission_value: number;
+  month: string | null;
+  status: string;
+}
+
 export default function FranqueadoFinanceiro() {
   const { data: contracts, isLoading: loadingCon } = useContracts();
   const { data: closings, isLoading: loadingCl } = useFinanceClosings();
@@ -43,7 +88,7 @@ export default function FranqueadoFinanceiro() {
   const activeContracts = useMemo(() => (contracts ?? []).filter(c => c.status === "active"), [contracts]);
 
   // KPIs
-  const mrr = useMemo(() => activeContracts.reduce((s, c) => s + Number((c as any).monthly_value || 0), 0), [activeContracts]);
+  const mrr = useMemo(() => activeContracts.reduce((s, c) => s + Number((c as unknown as ContractRow).monthly_value || 0), 0), [activeContracts]);
   const participacao20 = mrr * FRANCHISEE_SHARE_PERCENT;
   const ticketMedio = activeContracts.length > 0 ? mrr / activeContracts.length : 0;
   const previsao3m = mrr * 3;
@@ -55,9 +100,9 @@ export default function FranqueadoFinanceiro() {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const m = d.getMonth(); const y = d.getFullYear();
       const monthMrr = activeContracts.reduce((s, c) => {
-        const start = (c as any).start_date ? new Date((c as any).start_date) : null;
-        const end = (c as any).end_date ? new Date((c as any).end_date) : null;
-        if (start && start <= new Date(y, m + 1, 0) && (!end || end >= new Date(y, m, 1))) return s + Number((c as any).monthly_value || 0);
+        const start = (c as unknown as ContractRow).start_date ? new Date((c as unknown as ContractRow).start_date) : null;
+        const end = (c as unknown as ContractRow).end_date ? new Date((c as unknown as ContractRow).end_date) : null;
+        if (start && start <= new Date(y, m + 1, 0) && (!end || end >= new Date(y, m, 1))) return s + Number((c as unknown as ContractRow).monthly_value || 0);
         return s;
       }, 0);
       return { name: `${monthNames[m]}/${String(y).slice(2)}`, Receita: monthMrr, Participação: monthMrr * FRANCHISEE_SHARE_PERCENT };
@@ -70,9 +115,9 @@ export default function FranqueadoFinanceiro() {
     const paymentsMap = new Map((clientPayments ?? []).map(p => [p.contract_id, p]));
 
     return activeContracts.map(c => {
-      const payDay = (c as any).payment_day || 10;
-      const startDate = (c as any).start_date ? new Date((c as any).start_date) : null;
-      const endDate = (c as any).end_date ? new Date((c as any).end_date) : null;
+      const payDay = (c as unknown as ContractRow).payment_day || 10;
+      const startDate = (c as unknown as ContractRow).start_date ? new Date((c as unknown as ContractRow).start_date) : null;
+      const endDate = (c as unknown as ContractRow).end_date ? new Date((c as unknown as ContractRow).end_date) : null;
       if (startDate && startDate > new Date(year, month, 0)) return null;
       if (endDate && endDate < new Date(year, month - 1, 1)) return null;
 
@@ -93,7 +138,7 @@ export default function FranqueadoFinanceiro() {
         status = "sem_cobranca";
       }
 
-      const value = Number((c as any).monthly_value || 0);
+      const value = Number((c as unknown as ContractRow).monthly_value || 0);
       return {
         id: `${c.id}-${paymentMonth}`,
         contractId: c.id,
@@ -107,7 +152,7 @@ export default function FranqueadoFinanceiro() {
         asaasPaymentId,
         hasCharge: !!realPayment,
       };
-    }).filter(Boolean) as any[];
+    }).filter((x): x is PaymentRow => x !== null);
   }, [activeContracts, paymentMonth, clientPayments]);
 
   const filteredPayments = paymentStatusFilter === "all" ? payments : payments.filter(p => p.status === paymentStatusFilter);
@@ -169,11 +214,11 @@ export default function FranqueadoFinanceiro() {
                       <TableRow key={c.id}>
                         <TableCell className="font-medium">{c.signer_name || "—"}</TableCell>
                         <TableCell>{c.title}</TableCell>
-                        <TableCell className="font-semibold text-primary">R$ {Number((c as any).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell className="font-semibold text-emerald-600">R$ {(Number((c as any).monthly_value || 0) * FRANCHISEE_SHARE_PERCENT).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell><Badge variant="outline">Dia {(c as any).payment_day || "—"}</Badge></TableCell>
+                        <TableCell className="font-semibold text-primary">R$ {Number((c as unknown as ContractRow).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
+                        <TableCell className="font-semibold text-emerald-600">R$ {(Number((c as unknown as ContractRow).monthly_value || 0) * FRANCHISEE_SHARE_PERCENT).toLocaleString("pt-BR")}</TableCell>
+                        <TableCell><Badge variant="outline">Dia {(c as unknown as ContractRow).payment_day || "—"}</Badge></TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {(c as any).start_date ? new Date((c as any).start_date).toLocaleDateString("pt-BR") : "—"} — {(c as any).end_date ? new Date((c as any).end_date).toLocaleDateString("pt-BR") : "—"}
+                          {(c as unknown as ContractRow).start_date ? new Date((c as unknown as ContractRow).start_date).toLocaleDateString("pt-BR") : "—"} — {(c as unknown as ContractRow).end_date ? new Date((c as unknown as ContractRow).end_date).toLocaleDateString("pt-BR") : "—"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -217,8 +262,8 @@ export default function FranqueadoFinanceiro() {
               ))}
             </div>
             <div className="ml-auto flex gap-4 text-sm font-semibold">
-              <span className="text-primary">Total: R$ {filteredPayments.reduce((s: number, p: any) => s + p.value, 0).toLocaleString("pt-BR")}</span>
-              <span className="text-emerald-600">Part.: R$ {filteredPayments.reduce((s: number, p: any) => s + p.participacao, 0).toLocaleString("pt-BR")}</span>
+              <span className="text-primary">Total: R$ {filteredPayments.reduce((s: number, p: PaymentRow) => s + p.value, 0).toLocaleString("pt-BR")}</span>
+              <span className="text-emerald-600">Part.: R$ {filteredPayments.reduce((s: number, p: PaymentRow) => s + p.participacao, 0).toLocaleString("pt-BR")}</span>
             </div>
           </div>
 
@@ -239,7 +284,7 @@ export default function FranqueadoFinanceiro() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((p: any) => (
+                  {filteredPayments.map((p: PaymentRow) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.client}</TableCell>
                       <TableCell>{p.title}</TableCell>
@@ -319,7 +364,7 @@ function SaasClientsTab() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ["saas-clients", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_saas_clients_for_org", { _org_id: orgId! });
+      const { data, error } = await supabase.rpc("get_saas_clients_for_org", { _org_id: orgId ?? "" });
       if (error) throw error;
       return data ?? [];
     },
@@ -358,7 +403,7 @@ function SaasClientsTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {clients.map((c: any) => (
+            {clients.map((c: SaasClientRow) => (
               <TableRow key={c.org_id}>
                 <TableCell className="font-medium">{c.org_name}</TableCell>
                 <TableCell><Badge variant="outline">{planLabels[c.plan] || c.plan || "—"}</Badge></TableCell>
@@ -388,7 +433,7 @@ function SaasCommissionsTab() {
   const { data: commissions, isLoading } = useQuery({
     queryKey: ["saas-commissions", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_saas_commissions_for_org", { _org_id: orgId! });
+      const { data, error } = await supabase.rpc("get_saas_commissions_for_org", { _org_id: orgId ?? "" });
       if (error) throw error;
       return data ?? [];
     },
@@ -397,7 +442,7 @@ function SaasCommissionsTab() {
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 
-  const totalCommission = (commissions ?? []).reduce((s: number, c: any) => s + Number(c.commission_value), 0);
+  const totalCommission = (commissions ?? []).reduce((s: number, c: SaasCommissionRow) => s + Number(c.commission_value), 0);
 
   if (!commissions || commissions.length === 0) {
     return (
@@ -428,7 +473,7 @@ function SaasCommissionsTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {commissions.map((c: any) => (
+            {commissions.map((c: SaasCommissionRow) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.client_name}</TableCell>
                 <TableCell>R$ {Number(c.payment_value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>

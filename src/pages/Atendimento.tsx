@@ -391,7 +391,7 @@ export default function Atendimento() {
                     className="text-sm"
                     onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
                   />
-                  <Button size="icon" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)}>
+                  <Button size="icon" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>

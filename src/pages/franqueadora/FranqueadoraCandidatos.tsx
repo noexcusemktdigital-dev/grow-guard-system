@@ -226,7 +226,7 @@ export default function FranqueadoraCandidatos() {
                           variant="ghost"
                           onClick={(e) => { e.stopPropagation(); openDetail(c); }}
                           title="Ver detalhes"
-                        >
+                         aria-label="Visualizar">
                           <Eye className="w-4 h-4" />
                         </Button>
                         <Button
@@ -234,7 +234,7 @@ export default function FranqueadoraCandidatos() {
                           variant="ghost"
                           onClick={(e) => { e.stopPropagation(); downloadCandidatePdf(c); }}
                           title="Baixar ficha PDF"
-                        >
+                         aria-label="Baixar">
                           <Download className="w-4 h-4" />
                         </Button>
                       </div>

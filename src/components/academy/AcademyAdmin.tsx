@@ -243,17 +243,17 @@ function AcademyAdminInner({
                     <TableCell>{mod.sort_order}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditModule(mod)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditModule(mod)} aria-label="Editar">
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
                           mutations.updateModule.mutate({ id: mod.id, is_published: !mod.is_published }, {
                             onSuccess: () => toast({ title: mod.is_published ? "Despublicado" : "Publicado" }),
                           });
-                        }}>
+                        }} aria-label={mod.is_published ? "Ocultar" : "Visualizar"}>
                           {mod.is_published ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "module", id: mod.id, label: mod.title })}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "module", id: mod.id, label: mod.title })} aria-label="Excluir">
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
@@ -298,10 +298,10 @@ function AcademyAdminInner({
                     <TableCell className="text-xs text-muted-foreground truncate max-w-[200px]">{les.video_url}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLesson(les)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLesson(les)} aria-label="Editar">
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "lesson", id: les.id, label: les.title })}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "lesson", id: les.id, label: les.title })} aria-label="Excluir">
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
@@ -365,10 +365,10 @@ function AcademyAdminInner({
                           <Badge variant="secondary" className="text-[10px] mt-1">{options.length === 2 ? "V/F" : "Múltipla Escolha"}</Badge>
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditQuestion(q)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditQuestion(q)} aria-label="Editar">
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "question", id: q.id, label: q.question })}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "question", id: q.id, label: q.question })} aria-label="Excluir">
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>

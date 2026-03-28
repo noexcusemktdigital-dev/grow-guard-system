@@ -157,7 +157,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
                   </TableCell>
                   {!isFranqueadoView && (
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(m)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditClick(m)} aria-label="Editar">
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                     </TableCell>

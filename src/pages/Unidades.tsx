@@ -105,7 +105,7 @@ export default function Unidades() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           {selected && (
-            <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)}>
+            <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)} aria-label="Voltar">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}

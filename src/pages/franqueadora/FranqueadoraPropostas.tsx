@@ -373,16 +373,16 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: any) => void;
                   <TableCell className="text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onView(p)} title="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
-                      {p.status === "draft" && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(p)} title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateProposal.mutate(p)} title="Duplicar"><Copy className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onView(p)} title="Visualizar" aria-label="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
+                      {p.status === "draft" && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(p)} title="Editar" aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateProposal.mutate(p)} title="Duplicar" aria-label="Copiar"><Copy className="w-3.5 h-3.5" /></Button>
                       {p.status === "draft" && (
                         <Button variant="ghost" size="icon" className="h-7 w-7"
-                          onClick={() => updateProposal.mutate({ id: p.id, status: "sent", sent_at: new Date().toISOString() })} title="Marcar como enviada">
+                          onClick={() => updateProposal.mutate({ id: p.id, status: "sent", sent_at: new Date().toISOString() })} title="Marcar como enviada" aria-label="Enviar">
                           <Send className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProposal.mutate(p.id)} title="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProposal.mutate(p.id)} title="Excluir" aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

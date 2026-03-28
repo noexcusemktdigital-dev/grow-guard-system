@@ -153,9 +153,9 @@ export function ContentWizard({
                 {Icon && <Icon className="w-5 h-5 text-muted-foreground shrink-0" />}
                 <span className="text-sm font-medium flex-1">{f.label}</span>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, Math.max(0, val - 1))} disabled={val <= 0}>-</Button>
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, Math.max(0, val - 1))} disabled={val <= 0} aria-label="Diminuir">-</Button>
                   <span className="w-6 text-center font-bold">{val}</span>
-                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, val + 1)} disabled={formatTotal >= quantidade}>+</Button>
+                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, val + 1)} disabled={formatTotal >= quantidade} aria-label="Aumentar">+</Button>
                 </div>
               </div>
             );

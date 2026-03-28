@@ -39,7 +39,7 @@ export function ImageLightbox({ images, currentIndex, onClose, onNavigate }: Pro
         size="icon"
         className="absolute top-4 right-4 z-10 text-white hover:bg-white/20 h-10 w-10 rounded-full"
         onClick={onClose}
-      >
+       aria-label="Fechar">
         <X className="w-6 h-6" />
       </Button>
 
@@ -49,7 +49,7 @@ export function ImageLightbox({ images, currentIndex, onClose, onNavigate }: Pro
           size="icon"
           className="absolute left-4 z-10 text-white hover:bg-white/20 h-10 w-10 rounded-full"
           onClick={(e) => { e.stopPropagation(); onNavigate(currentIndex - 1); }}
-        >
+         aria-label="Voltar">
           <ChevronLeft className="w-6 h-6" />
         </Button>
       )}
@@ -60,7 +60,7 @@ export function ImageLightbox({ images, currentIndex, onClose, onNavigate }: Pro
           size="icon"
           className="absolute right-4 z-10 text-white hover:bg-white/20 h-10 w-10 rounded-full"
           onClick={(e) => { e.stopPropagation(); onNavigate(currentIndex + 1); }}
-        >
+         aria-label="Avançar">
           <ChevronRight className="w-6 h-6" />
         </Button>
       )}

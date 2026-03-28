@@ -1,17 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -27,7 +22,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       console.error("[asaas-cancel-subscription] No auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -37,14 +32,14 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       console.error("[asaas-cancel-subscription] Auth failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     const { organization_id } = await req.json();
     if (!organization_id) {
       return new Response(JSON.stringify({ error: "organization_id is required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -57,7 +52,7 @@ Deno.serve(async (req) => {
 
     if (subError || !sub) {
       return new Response(JSON.stringify({ error: "Subscription not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -74,7 +69,7 @@ Deno.serve(async (req) => {
         // If 404 it's already deleted, proceed
         if (cancelRes.status !== 404) {
           return new Response(JSON.stringify({ error: "Failed to cancel on Asaas", details: errData }), {
-            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           });
         }
       }
@@ -90,12 +85,12 @@ Deno.serve(async (req) => {
     console.log(`Subscription cancelled for org ${organization_id}`);
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("asaas-cancel-subscription error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

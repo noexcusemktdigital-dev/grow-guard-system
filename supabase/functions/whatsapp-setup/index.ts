@@ -1,14 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -16,7 +11,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -32,7 +27,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized", detail: userError?.message }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userId = user.id;
@@ -43,7 +38,7 @@ Deno.serve(async (req) => {
     if (!orgId) {
       return new Response(JSON.stringify({ error: "User has no organization" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -65,7 +60,7 @@ Deno.serve(async (req) => {
       if (!inst) {
         return new Response(JSON.stringify({ error: "Evolution instance not found in database" }), {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -91,7 +86,7 @@ Deno.serve(async (req) => {
           if (isOpen) {
             await adminClient.from("whatsapp_instances").update({ status: "connected" }).eq("id", inst.id);
             return new Response(JSON.stringify({ status: "connected", message: "Instance is already connected" }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
             });
           }
         }
@@ -127,7 +122,7 @@ Deno.serve(async (req) => {
           const pairingFromCreate = createData?.qrcode?.pairingCode || createData?.pairingCode || null;
           if (qrFromCreate) {
             return new Response(JSON.stringify({ status: "qr_ready", qr_code: qrFromCreate, pairing_code: pairingFromCreate }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
             });
           }
         } catch (err) {
@@ -150,18 +145,18 @@ Deno.serve(async (req) => {
 
         if (qrBase64) {
           return new Response(JSON.stringify({ status: "qr_ready", qr_code: qrBase64, pairing_code: pairingCode }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           });
         } else {
           return new Response(JSON.stringify({ status: "no_qr", detail: qrData }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           });
         }
       } catch (err) {
         console.error("[get-qr] Error fetching QR:", err);
         return new Response(JSON.stringify({ error: "Failed to fetch QR code", detail: String(err) }), {
           status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
@@ -174,7 +169,7 @@ Deno.serve(async (req) => {
         await adminClient.from("whatsapp_instances").delete().eq("organization_id", orgId);
       }
       return new Response(JSON.stringify({ success: true, status: "disconnected" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -191,7 +186,7 @@ Deno.serve(async (req) => {
 
       if (instances.length === 0) {
         return new Response(JSON.stringify({ status: "not_configured", results: [] }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -358,7 +353,7 @@ Deno.serve(async (req) => {
         phone: results[0]?.phone,
         results,
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -375,7 +370,7 @@ Deno.serve(async (req) => {
       if (!inst) {
         return new Response(JSON.stringify({ error: "Evolution instance not found in database" }), {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -442,7 +437,7 @@ Deno.serve(async (req) => {
           detail: lastSetBody,
         }), {
           status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -466,7 +461,7 @@ Deno.serve(async (req) => {
         webhookUrl: webhookUrlEv,
         currentWebhook,
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -483,7 +478,7 @@ Deno.serve(async (req) => {
       if (!inst) {
         return new Response(JSON.stringify({ error: "Evolution instance not found" }), {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -510,7 +505,7 @@ Deno.serve(async (req) => {
         isCorrect,
         currentWebhook,
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -520,7 +515,7 @@ Deno.serve(async (req) => {
       if (!instanceName) {
         return new Response(JSON.stringify({ error: "instanceName is required for Evolution" }), {
           status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -737,7 +732,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, status: connStatus, phone: phoneNumber, webhookUrl }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -745,7 +740,7 @@ Deno.serve(async (req) => {
     if (!instanceId || !instanceToken || !clientToken) {
       return new Response(JSON.stringify({ error: "instanceId, instanceToken, and clientToken are required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -830,12 +825,12 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, status: connStatus, phone: phoneNumber, webhookUrl }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

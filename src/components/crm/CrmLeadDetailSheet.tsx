@@ -825,7 +825,7 @@ function WhatsAppTab({ lead }: { lead: LeadRow }) {
           size="icon"
           className="h-9 w-9 rounded-full shrink-0 bg-[#25d366] hover:bg-[#1ebe57] text-white"
           disabled={!text.trim() || sendMutation.isPending}
-        >
+         aria-label="Enviar">
           {sendMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </Button>
       </form>

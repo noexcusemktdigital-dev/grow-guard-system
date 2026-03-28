@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { TrendingUp, TrendingDown, Minus, LucideIcon } from "lucide-react";
 
 export interface KpiCardProps {
@@ -11,7 +12,7 @@ export interface KpiCardProps {
   variant?: "default" | "accent";
 }
 
-export function KpiCard({ label, value, sublabel, trend, accent, icon: Icon, delay = 0, variant }: KpiCardProps) {
+export const KpiCard = memo(function KpiCard({ label, value, sublabel, trend, accent, icon: Icon, delay = 0, variant }: KpiCardProps) {
   const isAccent = accent || variant === "accent";
   return (
     <div
@@ -52,4 +53,4 @@ export function KpiCard({ label, value, sublabel, trend, accent, icon: Icon, del
       {sublabel && <span className="text-[11px] text-muted-foreground mt-0.5 relative">{sublabel}</span>}
     </div>
   );
-}
+});

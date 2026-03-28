@@ -1,21 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 5;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: getCorsHeaders(req) });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -29,7 +25,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await anonClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: getCorsHeaders(req) });
     }
 
     const userId = user.id;
@@ -42,7 +38,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!orgData) {
-      return new Response(JSON.stringify({ error: "No organization found" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "No organization found" }), { status: 400, headers: getCorsHeaders(req) });
     }
 
     const orgId = orgData.organization_id;
@@ -59,7 +55,7 @@ Deno.serve(async (req) => {
 
     if (existing && existing.length > 0) {
       return new Response(JSON.stringify({ message: "Already generated", created: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -349,13 +345,13 @@ Gere o checklist diário personalizado.`;
     }
 
     return new Response(JSON.stringify({ message: "OK", created: inserts.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error(err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

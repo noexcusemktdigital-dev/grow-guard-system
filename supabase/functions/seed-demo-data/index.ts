@@ -1,12 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -16,13 +12,13 @@ Deno.serve(async (req) => {
     // 1. Find user
     const { data: users } = await sb.auth.admin.listUsers();
     const user = users?.users?.find((u: any) => u.email === "franqueado.teste@noexcuse.com");
-    if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: corsHeaders });
+    if (!user) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: getCorsHeaders(req) });
 
     const userId = user.id;
 
     // 2. Find org
     const { data: membership } = await sb.from("organization_memberships").select("organization_id").eq("user_id", userId).single();
-    if (!membership) return new Response(JSON.stringify({ error: "No org found" }), { status: 404, headers: corsHeaders });
+    if (!membership) return new Response(JSON.stringify({ error: "No org found" }), { status: 404, headers: getCorsHeaders(req) });
 
     const orgId = membership.organization_id;
 
@@ -127,7 +123,7 @@ Deno.serve(async (req) => {
     ).select("id, name");
 
     if (!leads || leads.length === 0) {
-      return new Response(JSON.stringify({ error: "Failed to insert leads" }), { status: 500, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Failed to insert leads" }), { status: 500, headers: getCorsHeaders(req) });
     }
 
     const leadMap: Record<string, string> = {};
@@ -316,9 +312,9 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, leads_created: leads.length, org_id: orgId }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: getCorsHeaders(req) });
   }
 });

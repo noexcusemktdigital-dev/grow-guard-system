@@ -1,16 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: getCorsHeaders(req) });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -19,25 +15,25 @@ Deno.serve(async (req) => {
     // Get caller identity
     const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user: caller }, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+    if (authErr || !caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: getCorsHeaders(req) });
 
     const { user_id, organization_id, action = "update", role, full_name, job_title } = await req.json();
-    if (!user_id || !organization_id) return new Response(JSON.stringify({ error: "user_id and organization_id required" }), { status: 400, headers: corsHeaders });
+    if (!user_id || !organization_id) return new Response(JSON.stringify({ error: "user_id and organization_id required" }), { status: 400, headers: getCorsHeaders(req) });
 
     const admin = createClient(supabaseUrl, serviceKey);
 
     // Validate caller is member or parent admin
     const { data: isMember } = await admin.rpc("is_member_or_parent_of_org", { _user_id: caller.id, _org_id: organization_id });
-    if (!isMember) return new Response(JSON.stringify({ error: "Sem permissão para gerenciar esta organização" }), { status: 403, headers: corsHeaders });
+    if (!isMember) return new Response(JSON.stringify({ error: "Sem permissão para gerenciar esta organização" }), { status: 403, headers: getCorsHeaders(req) });
 
     // Validate caller has admin role
     const { data: callerRole } = await admin.rpc("get_user_role", { _user_id: caller.id });
     const adminRoles = ["super_admin", "admin", "franqueado", "cliente_admin"];
-    if (!adminRoles.includes(callerRole)) return new Response(JSON.stringify({ error: "Apenas administradores podem gerenciar membros" }), { status: 403, headers: corsHeaders });
+    if (!adminRoles.includes(callerRole)) return new Response(JSON.stringify({ error: "Apenas administradores podem gerenciar membros" }), { status: 403, headers: getCorsHeaders(req) });
 
     // Cannot modify self on remove
     if (action === "remove" && user_id === caller.id) {
-      return new Response(JSON.stringify({ error: "Você não pode remover a si mesmo" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Você não pode remover a si mesmo" }), { status: 400, headers: getCorsHeaders(req) });
     }
 
     if (action === "remove") {
@@ -70,7 +66,7 @@ Deno.serve(async (req) => {
         await admin.from("user_roles").delete().eq("user_id", user_id);
       }
 
-      return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+      return new Response(JSON.stringify({ success: true }), { headers: getCorsHeaders(req) });
     }
 
     // action === "update"
@@ -103,7 +99,7 @@ Deno.serve(async (req) => {
 
           const otherSuperAdmins = (superAdminRoles ?? []).filter((r: any) => r.user_id !== user_id);
           if (otherSuperAdmins.length === 0) {
-            return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin desta organização" }), { status: 400, headers: corsHeaders });
+            return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin desta organização" }), { status: 400, headers: getCorsHeaders(req) });
           }
         }
       }
@@ -117,8 +113,8 @@ Deno.serve(async (req) => {
     }
 
     await Promise.all(updates);
-    return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ success: true }), { headers: getCorsHeaders(req) });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: getCorsHeaders(req) });
   }
 });

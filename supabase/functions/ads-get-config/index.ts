@@ -1,14 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID") || "";
@@ -16,6 +11,6 @@ serve(async (req) => {
 
   return new Response(
     JSON.stringify({ google_client_id: clientId, meta_app_id: metaAppId }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
   );
 });

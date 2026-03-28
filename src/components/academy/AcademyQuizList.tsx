@@ -144,7 +144,7 @@ export function AcademyQuizList({ onStartQuiz }: Props) {
                   </Button>
                 )}
                 {quizAttempts.length > 0 && (
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setExpandedModule(isExpanded ? null : mod.id)}>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setExpandedModule(isExpanded ? null : mod.id)} aria-label="Recolher">
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </Button>
                 )}

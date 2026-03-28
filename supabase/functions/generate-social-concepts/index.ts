@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 25;
 
@@ -77,7 +73,7 @@ function getNivelInstructions(nivel: string): string {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images, incluir_video, art_style, video_style } = await req.json();
@@ -100,7 +96,7 @@ serve(async (req) => {
       if (!wallet || wallet.balance < CREDIT_COST) {
         return new Response(
           JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -124,7 +120,6 @@ serve(async (req) => {
         }
       }
     }
-
 
     const tipoGuide = getVisualGuideByType(tipo_post || "institucional");
     const nivelGuide = getNivelInstructions(nivel || "simples");
@@ -354,12 +349,12 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
       console.error("AI gateway error:", response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes para gerar conteúdo." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI gateway error: ${response.status}`);
@@ -386,12 +381,12 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
     }
 
     return new Response(JSON.stringify(concepts), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-social-concepts error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

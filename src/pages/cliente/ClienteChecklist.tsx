@@ -462,10 +462,10 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setEditingTask(task)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => setEditingTask(task)} aria-label="Editar">
                         <Edit2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeletingId(task.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setDeletingId(task.id)} aria-label="Excluir">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>

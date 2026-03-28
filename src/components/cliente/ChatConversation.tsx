@@ -176,10 +176,10 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     try {
       markWhatsAppRead.mutate(
         { contactId: contact.id, contactPhone: contact.phone },
-        { onError: (err) => console.warn("[chat] Mark read error (ignored):", err) }
+        { onError: () => { /* mark read error ignored */ } }
       );
     } catch (e) {
-      console.warn("[chat] Mark read exception (ignored):", e);
+      // Mark read exception ignored
     }
   }, [contact?.id]);
 
@@ -631,7 +631,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       {/* WhatsApp-style Header */}
       <div className="flex items-center gap-2 px-3 md:px-4 py-3 wa-header shrink-0">
         {onBack && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/10 md:hidden shrink-0" onClick={onBack}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white hover:bg-white/10 md:hidden shrink-0" onClick={onBack} aria-label="Voltar">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         )}
@@ -878,7 +878,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
         {isRecording ? (
           <div className="flex items-center gap-3">
-            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-destructive hover:bg-destructive/10" onClick={() => stopRecording(true)}>
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-destructive hover:bg-destructive/10" onClick={() => stopRecording(true)} aria-label="Excluir">
               <Trash2 className="w-4 h-4" />
             </Button>
             <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-2xl px-4 py-2">
@@ -886,7 +886,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
               <span className="text-sm font-mono text-foreground">{formatRecordingTime(recordingTime)}</span>
               <span className="text-xs text-muted-foreground">Gravando...</span>
             </div>
-            <Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => stopRecording(false)}>
+            <Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => stopRecording(false)} aria-label="Enviar">
               <Send className="w-4 h-4" />
             </Button>
           </div>
@@ -896,7 +896,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground">
+                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" aria-label="Emoji">
                   <Smile className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
@@ -922,7 +922,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
               </PopoverContent>
             </Popover>
 
-            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" onClick={() => fileInputRef.current?.click()} disabled={uploading} aria-label="Carregando">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
             </Button>
             <div className="flex-1 relative">
@@ -939,11 +939,11 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
             </div>
 
             {text.trim() ? (
-              <Button type="submit" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendMutation.isPending}>
+              <Button type="submit" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendMutation.isPending} aria-label="Carregando">
                 {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             ) : (
-              <Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={startRecording} disabled={sendingAudio}>
+              <Button type="button" size="icon" className="rounded-full h-9 w-9 shrink-0 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={startRecording} disabled={sendingAudio} aria-label="Carregando">
                 {sendingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
               </Button>
             )}

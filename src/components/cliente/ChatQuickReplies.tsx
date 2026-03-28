@@ -80,7 +80,7 @@ export function ChatQuickReplies({ onSelect }: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" title="Respostas rápidas">
+        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full text-muted-foreground" title="Respostas rápidas" aria-label="Respostas rápidas">
           <MessageSquareText className="w-4 h-4" />
         </Button>
       </PopoverTrigger>

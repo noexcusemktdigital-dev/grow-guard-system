@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const rolePrompts: Record<string, string> = {
   sdr: `Você atua como SDR (Sales Development Representative) altamente qualificado. Seu foco EXCLUSIVO é qualificar leads e enviá-los preparados para os vendedores.
@@ -120,7 +115,7 @@ async function executeHandoff(adminClient: any, orgId: string, contactId: string
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -133,7 +128,7 @@ Deno.serve(async (req) => {
       console.error("LOVABLE_API_KEY not configured");
       return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -144,7 +139,7 @@ Deno.serve(async (req) => {
       const isGroupOrBroadcast = contact_phone.endsWith("-group") || contact_phone.includes("@broadcast");
       if (isGroupOrBroadcast) {
         return new Response(JSON.stringify({ skipped: true, reason: "group_or_broadcast" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
@@ -152,7 +147,7 @@ Deno.serve(async (req) => {
     if (!organization_id || !contact_id || (!message_text && !media_url)) {
       return new Response(JSON.stringify({ error: "Missing params" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -165,7 +160,7 @@ Deno.serve(async (req) => {
 
     if (wallet && wallet.balance <= 0) {
       return new Response(JSON.stringify({ skipped: true, reason: "no_credits" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -179,7 +174,7 @@ Deno.serve(async (req) => {
 
     if (!contact || contact.attending_mode === "human") {
       return new Response(JSON.stringify({ skipped: true, reason: "not in ai mode" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -240,7 +235,7 @@ Deno.serve(async (req) => {
         }
       }
       return new Response(JSON.stringify({ skipped: true, reason: "no active agent, contact moved to human" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -254,7 +249,7 @@ Deno.serve(async (req) => {
         .single();
       if (instance && !instanceIds.includes(instance.id)) {
         return new Response(JSON.stringify({ skipped: true, reason: "agent not assigned to this instance" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
@@ -270,7 +265,7 @@ Deno.serve(async (req) => {
     // ─── CHECK 2: Working hours ───
     if (!isWithinWorkingHours(engagementRules.working_hours)) {
       return new Response(JSON.stringify({ skipped: true, reason: "outside_working_hours" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -288,7 +283,7 @@ Deno.serve(async (req) => {
         await executeHandoff(adminClient, organization_id, contact_id, agent.name, `Limite de ${maxMessages} mensagens atingido`);
       }
       return new Response(JSON.stringify({ skipped: true, reason: "message_limit_reached", action: limitAction }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -311,12 +306,12 @@ Deno.serve(async (req) => {
         if (timeoutAction === "handoff") {
           await executeHandoff(adminClient, organization_id, contact_id, agent.name, `Contato retornou após ${timeoutHours}h de inatividade`);
           return new Response(JSON.stringify({ skipped: true, reason: "inactivity_timeout", action: "handoff" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           });
         }
         if (timeoutAction === "ignore") {
           return new Response(JSON.stringify({ skipped: true, reason: "inactivity_timeout", action: "ignore" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           });
         }
         // "restart" — continue normally (reset context effectively by limiting history)
@@ -573,7 +568,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
       });
       return new Response(JSON.stringify({ error: "AI gateway error", status }), {
         status: status === 402 ? status : 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -583,7 +578,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
 
     if (!replyText) {
       return new Response(JSON.stringify({ skipped: true, reason: "empty ai response" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -718,7 +713,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
     if (!instance) {
       return new Response(JSON.stringify({ error: "WhatsApp not connected" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -788,12 +783,12 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     await debitCredits(adminClient, organization_id, tokensUsed, agent.name);
 
     return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("ai-agent-reply error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

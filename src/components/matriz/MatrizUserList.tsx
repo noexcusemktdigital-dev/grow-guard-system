@@ -121,8 +121,8 @@ export function MatrizUserList({ users, onViewUser, onEditUser }: Props) {
                     <TableCell className="text-sm">{perfil?.nome || "Personalizado"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        <Button variant="ghost" size="icon" onClick={() => onViewUser(user.id)}><Eye className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => onEditUser(user.id)}><Pencil className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => onViewUser(user.id)} aria-label="Visualizar"><Eye className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => onEditUser(user.id)} aria-label="Editar"><Pencil className="w-4 h-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -1113,15 +1113,15 @@ function MeusDiagnosticosTab() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(s.title); setEditingId(s.id); }}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(s.title); setEditingId(s.id); }} aria-label="Editar">
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
                       {s.lead_id && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: s.id, lead_id: null })}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: s.id, lead_id: null })} aria-label="Desvincular">
                           <Unlink className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMut.mutate(s.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMut.mutate(s.id)} aria-label="Excluir">
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>

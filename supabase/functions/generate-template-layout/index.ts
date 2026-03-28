@@ -1,12 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const { titulo, subtitulo, cta, format, estilo, identidade_visual, background_image_url } = await req.json();
@@ -171,12 +167,12 @@ The background.imageUrl will be set separately - just define the mask and overla
       console.error("AI gateway error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI gateway error: ${response.status}`);
@@ -188,7 +184,7 @@ The background.imageUrl will be set separately - just define the mask and overla
     if (!toolCall?.function?.arguments) {
       console.error("No tool call in AI response");
       return new Response(JSON.stringify({ error: "AI did not return layout", fallback: true }), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -215,12 +211,12 @@ The background.imageUrl will be set separately - just define the mask and overla
     console.log(`✅ Template layout generated: ${layout.elements.length} elements`);
 
     return new Response(JSON.stringify({ templateConfig }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-template-layout error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error", fallback: true }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

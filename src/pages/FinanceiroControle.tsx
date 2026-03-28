@@ -326,14 +326,14 @@ export default function FinanceiroControle() {
                         <td className="py-3 px-4 text-center">
                           {isAsaas ? (
                             (entry.invoiceUrl || entry.bankSlipUrl) ? (
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(entry.invoiceUrl || entry.bankSlipUrl!, "_blank")} aria-label="Abrir em nova aba">
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </Button>
                             ) : <span className="text-xs text-muted-foreground">—</span>
                           ) : (
                             <div className="flex items-center justify-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRev(entry.raw)}><Pencil className="w-3.5 h-3.5" /></Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "rev", id: entry.id })}><Trash2 className="w-3.5 h-3.5" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRev(entry.raw)} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "rev", id: entry.id })} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                             </div>
                           )}
                         </td>
@@ -381,8 +381,8 @@ export default function FinanceiroControle() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditExp(e)}><Pencil className="w-3.5 h-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "exp", id: e.id })}><Trash2 className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditExp(e)} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ type: "exp", id: e.id })} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -492,7 +492,7 @@ export default function FinanceiroControle() {
                       <Label className="text-xs text-muted-foreground">Código Copia e Cola</Label>
                       <div className="flex gap-2 mt-1">
                         <Input readOnly value={chargeResult.pix_copy_paste} className="text-xs font-mono" />
-                        <Button variant="outline" size="icon" onClick={() => copyPixCode(chargeResult.pix_copy_paste)}>
+                        <Button variant="outline" size="icon" onClick={() => copyPixCode(chargeResult.pix_copy_paste)} aria-label="Copiar">
                           <Copy className="w-4 h-4" />
                         </Button>
                       </div>

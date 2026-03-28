@@ -932,7 +932,7 @@ export function ArtWizard({
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 mb-2">
-        <Button variant="ghost" size="icon" onClick={goBack}><ArrowLeft className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="icon" onClick={goBack} aria-label="Voltar"><ArrowLeft className="w-4 h-4" /></Button>
         <div>
           <h2 className="text-lg font-bold">Criar Arte</h2>
           <p className="text-xs text-muted-foreground">Passo {step} de {TOTAL_STEPS}</p>

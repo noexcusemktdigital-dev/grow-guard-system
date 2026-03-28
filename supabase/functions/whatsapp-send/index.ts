@@ -1,14 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -16,7 +11,7 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -32,7 +27,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized", detail: userError?.message }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userId = user.id;
@@ -43,7 +38,7 @@ Deno.serve(async (req) => {
     if (!orgId) {
       return new Response(JSON.stringify({ error: "User has no organization" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -70,7 +65,7 @@ Deno.serve(async (req) => {
     if (action === "read") {
       if (!contactPhone && !contactId) {
         return new Response(JSON.stringify({ error: "contactPhone or contactId required for read action" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -81,14 +76,14 @@ Deno.serve(async (req) => {
       }
       if (!readPhone) {
         return new Response(JSON.stringify({ error: "Could not resolve phone" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
       const readInstance = await resolveInstance(contactId);
       if (!readInstance) {
         return new Response(JSON.stringify({ error: "No connected instance" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -97,7 +92,7 @@ Deno.serve(async (req) => {
       if (readInstance.provider === "evolution") {
         // Evolution doesn't have a direct read-message endpoint commonly — skip gracefully
         return new Response(JSON.stringify({ success: true, zapi: { note: "read not supported on Evolution" } }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -111,14 +106,14 @@ Deno.serve(async (req) => {
       const readData = await readRes.json().catch(() => ({}));
 
       return new Response(JSON.stringify({ success: true, zapi: readData }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     // ─── Validate send params ───
     if ((!message && !mediaUrl) || (!contactPhone && !contactId)) {
       return new Response(JSON.stringify({ error: "message or mediaUrl, and contactPhone or contactId required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -126,7 +121,7 @@ Deno.serve(async (req) => {
     const instance = await resolveInstance(contactId);
     if (!instance || instance.status !== "connected") {
       return new Response(JSON.stringify({ error: "No connected WhatsApp instance" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -262,17 +257,17 @@ Deno.serve(async (req) => {
     if (!apiRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to send message", details: apiData }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 502, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(JSON.stringify({ success: true, message: savedMsg, zapi: apiData }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

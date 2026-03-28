@@ -102,7 +102,7 @@ async function loadFont(family: string): Promise<void> {
     }
     loadedFonts.add(family);
   } catch (err) {
-    console.warn(`Failed to load font ${family}, using fallback:`, err);
+    // Failed to load font, using fallback
     loadedFonts.add(family);
   }
 }
@@ -370,7 +370,7 @@ async function drawImageElement(ctx: CanvasRenderingContext2D, el: ImageElement)
     ctx.drawImage(img, el.x, el.y, el.width, el.height);
     ctx.restore();
   } catch (err) {
-    console.warn('Failed to draw image element:', err);
+    // Failed to draw image element
   }
 }
 
@@ -391,7 +391,7 @@ export async function renderTemplate(config: TemplateConfig): Promise<Blob> {
     try {
       bgImage = await loadImage(config.background.imageUrl);
     } catch (err) {
-      console.warn('Background image failed, using fallback:', err);
+      // Background image failed, using fallback
     }
   }
 

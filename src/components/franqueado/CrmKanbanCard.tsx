@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, DollarSign, Phone, CheckCircle2 } from "lucide-react";
@@ -20,7 +21,7 @@ interface CrmKanbanCardProps {
   onClick: () => void;
 }
 
-export function CrmKanbanCard({
+export const CrmKanbanCard = memo(function CrmKanbanCard({
   lead, hasProspection, hasStrategy, hasProposal, proposalAccepted, onClick,
 }: CrmKanbanCardProps) {
   return (
@@ -79,4 +80,4 @@ export function CrmKanbanCard({
       </CardContent>
     </Card>
   );
-}
+});

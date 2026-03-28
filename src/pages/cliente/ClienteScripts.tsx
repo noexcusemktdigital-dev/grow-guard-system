@@ -192,7 +192,7 @@ export default function ClienteScripts() {
                         <Button
                           variant="ghost" size="icon" className="h-7 w-7"
                           onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(s.content || ""); toast({ title: "Copiado!" }); }}
-                        >
+                         aria-label="Copiar">
                           <Copy className="w-3 h-3" />
                         </Button>
                         {expandedId === s.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}

@@ -314,14 +314,14 @@ function ProspectionResultCards({ result }: { result: ProspectionResult }) {
             <div className="bg-muted/50 rounded-md p-3 relative">
               <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">📞 Script Telefone</p>
               <p className="text-sm whitespace-pre-line">{result.roteiro_contato.script_telefone}</p>
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(result.roteiro_contato.script_telefone)}>
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(result.roteiro_contato.script_telefone)} aria-label="Copiar">
                 <Copy className="w-3.5 h-3.5" />
               </Button>
             </div>
             <div className="bg-muted/50 rounded-md p-3 relative">
               <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">💬 Script WhatsApp</p>
               <p className="text-sm whitespace-pre-line">{result.roteiro_contato.script_whatsapp}</p>
-              <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(result.roteiro_contato.script_whatsapp)}>
+              <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(result.roteiro_contato.script_whatsapp)} aria-label="Copiar">
                 <Copy className="w-3.5 h-3.5" />
               </Button>
             </div>
@@ -437,15 +437,15 @@ function HistoricoTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(p.title); setEditingId(p.id); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(p.title); setEditingId(p.id); }} aria-label="Editar">
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     {p.lead_id ? (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: p.id, lead_id: null })}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: p.id, lead_id: null })} aria-label="Desvincular">
                         <Unlink className="w-3.5 h-3.5" />
                       </Button>
                     ) : null}
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMut.mutate(p.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMut.mutate(p.id)} aria-label="Excluir">
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -591,7 +591,7 @@ function PlaybooksTab() {
 
                   {secao.script && (
                     <div className="bg-muted/50 rounded-md p-3 relative">
-                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(secao.script!)}>
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => copyToClipboard(secao.script!)} aria-label="Copiar">
                         <Copy className="w-3.5 h-3.5" />
                       </Button>
                       <p className="text-sm whitespace-pre-line pr-10">{secao.script}</p>

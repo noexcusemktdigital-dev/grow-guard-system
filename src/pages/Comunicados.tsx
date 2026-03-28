@@ -137,7 +137,7 @@ export default function Comunicados() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {view !== "list" && (
-            <Button variant="ghost" size="icon" onClick={() => { setView("list"); setSelectedId(null); }}>
+            <Button variant="ghost" size="icon" onClick={() => { setView("list"); setSelectedId(null); }} aria-label="Voltar">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           )}

@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 async function refreshGoogleToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
   const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID")!;
@@ -210,7 +206,7 @@ async function syncMetaAds(connection: any, supabase: any) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -221,7 +217,7 @@ serve(async (req) => {
     const { connection_id } = await req.json();
     if (!connection_id) {
       return new Response(JSON.stringify({ error: "Missing connection_id" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -233,13 +229,13 @@ serve(async (req) => {
 
     if (connError || !connection) {
       return new Response(JSON.stringify({ error: "Connection not found" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
     if (connection.status !== "active") {
       return new Response(JSON.stringify({ error: "Connection is not active", status: connection.status }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -250,7 +246,7 @@ serve(async (req) => {
       metrics = await syncMetaAds(connection, supabase);
     } else {
       return new Response(JSON.stringify({ error: "Unknown platform" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -269,12 +265,12 @@ serve(async (req) => {
       .eq("id", connection_id);
 
     return new Response(JSON.stringify({ success: true, synced: metrics.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("ads-sync-metrics error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

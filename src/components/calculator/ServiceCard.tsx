@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ interface ServiceCardProps {
   onUpdateYoutubeMinutes: (minutes: number) => void;
 }
 
-export const ServiceCard = ({
+export const ServiceCard = memo(function ServiceCard({
   service,
   isSelected,
   selection,
@@ -24,7 +25,7 @@ export const ServiceCard = ({
   onUpdateQuantity,
   onUpdatePackage,
   onUpdateYoutubeMinutes,
-}: ServiceCardProps) => {
+}: ServiceCardProps) {
   const formatPrice = (price: number) => {
     return price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -185,4 +186,4 @@ export const ServiceCard = ({
       )}
     </div>
   );
-};
+});

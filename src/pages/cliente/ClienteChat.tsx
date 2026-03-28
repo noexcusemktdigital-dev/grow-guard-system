@@ -260,6 +260,7 @@ export default function ClienteChat() {
               size="icon"
               className="absolute top-3 right-3 h-8 w-8 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-sm z-10"
               onClick={() => setLeadPanelOpen(!leadPanelOpen)}
+              aria-label="Painel lateral"
             >
               {leadPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
             </Button>

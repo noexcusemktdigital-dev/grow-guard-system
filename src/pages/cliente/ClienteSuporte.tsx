@@ -219,7 +219,7 @@ export default function ClienteSuporte() {
                     className="text-sm"
                     onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
                   />
-                  <Button size="icon" onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                  <Button size="icon" onClick={handleSendMessage} disabled={!newMessage.trim()} aria-label="Enviar">
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>

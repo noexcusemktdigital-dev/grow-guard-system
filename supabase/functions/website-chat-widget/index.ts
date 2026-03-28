@@ -1,8 +1,4 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/javascript; charset=utf-8",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const WIDGET_JS = `
 (function() {
@@ -131,8 +127,8 @@ const WIDGET_JS = `
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
-  return new Response(WIDGET_JS, { headers: corsHeaders });
+  return new Response(WIDGET_JS, { headers: getCorsHeaders(req) });
 });

@@ -1,12 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 50;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
 
 const TOOL_SCHEMA = {
   type: "function",
@@ -373,14 +368,14 @@ Use a ferramenta generate_strategy para retornar.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -394,7 +389,7 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const userId = user.id;
@@ -403,7 +398,7 @@ Deno.serve(async (req) => {
     if (!answers) {
       return new Response(
         JSON.stringify({ error: "Respostas do briefing são obrigatórias" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -411,7 +406,7 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ error: "AI not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -427,7 +422,7 @@ Deno.serve(async (req) => {
       if (!wallet || wallet.balance < CREDIT_COST) {
         return new Response(
           JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos para gerar a estratégia." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
     }
@@ -490,20 +485,20 @@ Use a ferramenta generate_strategy para retornar.`;
       if (aiResponse.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       if (aiResponse.status === 402) {
         return new Response(
           JSON.stringify({ error: "Créditos insuficientes. Faça upgrade do seu plano." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
       const errText = await aiResponse.text();
       console.error("AI gateway error:", aiResponse.status, errText);
       return new Response(
         JSON.stringify({ error: "Erro ao gerar estratégia" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -541,7 +536,7 @@ Use a ferramenta generate_strategy para retornar.`;
       console.error("Full AI response:", JSON.stringify(aiData).substring(0, 1000));
       return new Response(
         JSON.stringify({ error: "Falha ao estruturar resposta da IA. Tente novamente." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -562,13 +557,13 @@ Use a ferramenta generate_strategy para retornar.`;
 
     return new Response(
       JSON.stringify({ result, tokens_used: tokensUsed }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err: any) {
     console.error("Strategy generation error:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Erro interno" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

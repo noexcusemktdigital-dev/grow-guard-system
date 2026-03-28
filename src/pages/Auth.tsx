@@ -64,7 +64,7 @@ const Auth = () => {
         return;
       }
     } catch (err) {
-      console.warn("[Login] Portal validation failed, proceeding:", err);
+      // Portal validation failed, proceeding
     }
     // Determine redirect based on user role
     let destination = "/franqueado/inicio";
@@ -80,7 +80,7 @@ const Auth = () => {
         }
       }
     } catch (err) {
-      console.warn("[Login] Role fetch failed, using default redirect:", err);
+      // Role fetch failed, using default redirect
     }
     setLoading(false);
     navigate(destination);

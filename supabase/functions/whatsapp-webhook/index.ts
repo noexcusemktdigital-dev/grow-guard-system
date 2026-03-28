@@ -1,14 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, client-token",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -24,7 +19,7 @@ Deno.serve(async (req) => {
     if (!orgId || orgId === "whatsapp-webhook") {
       return new Response(JSON.stringify({ error: "org_id required in path" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -40,7 +35,7 @@ Deno.serve(async (req) => {
     if (!instances || instances.length === 0) {
       return new Response(JSON.stringify({ error: "No instances found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -53,7 +48,7 @@ Deno.serve(async (req) => {
       } else {
         return new Response(JSON.stringify({ error: "Invalid client token" }), {
           status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
     }
@@ -75,7 +70,7 @@ Deno.serve(async (req) => {
         adminClient.removeChannel(channel);
       }
       return new Response(JSON.stringify({ ok: true, typing: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -91,7 +86,7 @@ Deno.serve(async (req) => {
         adminClient.removeChannel(channel);
       }
       return new Response(JSON.stringify({ ok: true, typing: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -110,7 +105,7 @@ Deno.serve(async (req) => {
           .eq("organization_id", orgId);
       }
       return new Response(JSON.stringify({ ok: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -128,7 +123,7 @@ Deno.serve(async (req) => {
     
     if (!phone) {
       return new Response(JSON.stringify({ ok: true, skipped: "no phone" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -140,7 +135,7 @@ Deno.serve(async (req) => {
       rawChatId.includes("status@broadcast")
     ) {
       return new Response(JSON.stringify({ ok: true, skipped: "broadcast_or_status" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     
@@ -305,13 +300,13 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ ok: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("Webhook error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });
