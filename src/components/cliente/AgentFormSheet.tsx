@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Bot, Brain, BookOpen, Cog, Play, History, Lock } from "lucide-react";
 import { useAgentStats } from "@/hooks/useClienteAgents";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
 import { useQueryClient } from "@tanstack/react-query";
@@ -176,7 +177,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     try {
       const path = `${orgId}/avatars/${Date.now()}_${file.name}`;
       const { error } = await supabase.storage.from("agent-knowledge").upload(path, file);
-      if (error) { console.error("Avatar upload error:", error); return; }
+      if (error) { logger.error("Avatar upload error:", error, "AgentFormSheet"); return; }
       const { data: urlData } = supabase.storage.from("agent-knowledge").getPublicUrl(path);
       setForm((f) => ({ ...f, avatar_url: urlData.publicUrl }));
     } finally {
@@ -208,7 +209,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
         const agentId = agent?.id || "new";
         const path = `${orgId}/${agentId}/${Date.now()}_${file.name}`;
         const { data, error } = await supabase.storage.from("agent-knowledge").upload(path, file);
-        if (error) { console.error("Upload error:", error); continue; }
+        if (error) { logger.error("Upload error:", error, "AgentFormSheet"); continue; }
         const { data: urlData } = supabase.storage.from("agent-knowledge").getPublicUrl(path);
         const entry: KBEntry = { type: "file", content: urlData.publicUrl, name: file.name, url: urlData.publicUrl, size: file.size };
         setForm((f) => ({ ...f, knowledge_base: [...(f.knowledge_base as KBEntry[] ?? []), entry] }));

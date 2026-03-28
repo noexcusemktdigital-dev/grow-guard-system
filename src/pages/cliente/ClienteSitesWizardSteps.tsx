@@ -1,3 +1,4 @@
+import React from "react";
 import { Check, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,16 +7,16 @@ import { Badge } from "@/components/ui/badge";
 // ─── Re-exported constants ─────────────────────────────────────────────────
 
 export const STEPS = [
-  { id: "empresa", label: "Empresa", icon: null as any },
-  { id: "objetivo", label: "Objetivo", icon: null as any },
-  { id: "publico", label: "Público-alvo", icon: null as any },
-  { id: "servicos", label: "Serviços & Diferenciais", icon: null as any },
-  { id: "provas", label: "Prova Social", icon: null as any },
-  { id: "contato", label: "Contato", icon: null as any },
-  { id: "cta", label: "CTA", icon: null as any },
-  { id: "paginas", label: "Páginas", icon: null as any },
-  { id: "estilo", label: "Estilo & Tom", icon: null as any },
-  { id: "revisao", label: "Revisão", icon: null as any },
+  { id: "empresa", label: "Empresa", icon: null as React.ElementType | null },
+  { id: "objetivo", label: "Objetivo", icon: null as React.ElementType | null },
+  { id: "publico", label: "Público-alvo", icon: null as React.ElementType | null },
+  { id: "servicos", label: "Serviços & Diferenciais", icon: null as React.ElementType | null },
+  { id: "provas", label: "Prova Social", icon: null as React.ElementType | null },
+  { id: "contato", label: "Contato", icon: null as React.ElementType | null },
+  { id: "cta", label: "CTA", icon: null as React.ElementType | null },
+  { id: "paginas", label: "Páginas", icon: null as React.ElementType | null },
+  { id: "estilo", label: "Estilo & Tom", icon: null as React.ElementType | null },
+  { id: "revisao", label: "Revisão", icon: null as React.ElementType | null },
 ] as const;
 
 export const SEGMENTO_OPTIONS = [
