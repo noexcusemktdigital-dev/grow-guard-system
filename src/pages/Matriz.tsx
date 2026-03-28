@@ -108,7 +108,7 @@ export default function Matriz() {
     }
   };
 
-  const openEditMember = (m: any) => {
+  const openEditMember = (m: Record<string, unknown>) => {
     const current = getUserTeams(m.user_id).map((t) => t.id);
     setEditTeamIds(current);
     setEditingMember(m);

@@ -96,7 +96,7 @@ export default function ClienteInicio() {
   const { toggleChecklistItem } = useClienteContentMutations();
 
   useEffect(() => {
-    if (!orgLoading && orgData && (orgData as any).onboarding_completed === false) {
+    if (!orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed === false) {
       navigate("/cliente/onboarding", { replace: true });
     }
   }, [orgData, orgLoading, navigate]);
@@ -116,7 +116,7 @@ export default function ClienteInicio() {
   const allLeads = leads ?? [];
 
   // Gamification data
-  const xp = (gamification as any)?.xp ?? 0;
+  const xp = (gamification as unknown as { xp?: number } | null)?.xp ?? 0;
   const streakDays = gamification?.streak_days ?? 0;
   const levelInfo = getLevelInfo(xp);
 
@@ -169,8 +169,8 @@ export default function ClienteInicio() {
   // Unread announcements for inline display
   const unreadAnnouncements = useMemo(() => {
     if (!announcements || !announcementViews) return [];
-    const viewedIds = new Set((announcementViews as any[]).map((v: any) => v.announcement_id));
-    return (announcements as any[]).filter((a: any) =>
+    const viewedIds = new Set((announcementViews as { announcement_id: string }[]).map((v) => v.announcement_id));
+    return (announcements as { id: string; priority?: string; published_at?: string }[]).filter((a) =>
       a.status === "active" && a.published_at && !viewedIds.has(a.id)
     ).slice(0, 3);
   }, [announcements, announcementViews]);
@@ -369,7 +369,7 @@ export default function ClienteInicio() {
       {/* Announcement alerts */}
       {unreadAnnouncements.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-2">
-          {unreadAnnouncements.map((ann: any) => (
+          {unreadAnnouncements.map((ann) => (
             <Card key={ann.id} className={`border-l-4 ${ann.priority === "critical" ? "border-l-destructive bg-destructive/5" : ann.priority === "high" ? "border-l-amber-500 bg-amber-500/5" : "border-l-primary bg-primary/5"}`}>
               <CardContent className="py-3 px-4 flex items-center gap-3">
                 <Megaphone className={`w-4 h-4 shrink-0 ${ann.priority === "critical" ? "text-destructive" : ann.priority === "high" ? "text-amber-500" : "text-primary"}`} />

@@ -77,8 +77,8 @@ export default function ClienteRedesSociais() {
   const [contentId, setContentId] = useState<string | null>(null);
   const [contentData, setContentData] = useState<any>(null);
   const [briefingFilled, setBriefingFilled] = useState(false);
-  const [generatedResult, setGeneratedResult] = useState<{ post: PostItem; result_url: string | null; result_data: any } | null>(null);
-  const [batchResults, setBatchResults] = useState<{ post: PostItem; result_url: string | null; result_data: any }[]>([]);
+  const [generatedResult, setGeneratedResult] = useState<{ post: PostItem; result_url: string | null; result_data: Record<string, unknown> } | null>(null);
+  const [batchResults, setBatchResults] = useState<{ post: PostItem; result_url: string | null; result_data: Record<string, unknown> }[]>([]);
   const [loadingPhraseIdx, setLoadingPhraseIdx] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
@@ -99,7 +99,7 @@ export default function ClienteRedesSociais() {
   const loadContentData = async (id: string) => {
     try {
       const { data, error } = await supabase
-        .from("client_content" as any)
+        .from("client_content" as unknown as "client_content")
         .select("*")
         .eq("id", id)
         .single();
@@ -139,7 +139,7 @@ export default function ClienteRedesSociais() {
       const selectedLayout = payload.layoutTypes.length > 0 ? payload.layoutTypes[0] : "hero_central";
       const isCarousel = payload.tipoPostagem === "carrossel";
       const totalPieces = isCarousel ? payload.carouselSlides : payload.quantity;
-      const results: { post: PostItem; result_url: string | null; result_data: any }[] = [];
+      const results: { post: PostItem; result_url: string | null; result_data: Record<string, unknown> }[] = [];
       const formats = payload.formats && payload.formats.length === totalPieces ? payload.formats : [];
 
       const slideContents = isCarousel ? buildCarouselSlideContents(
@@ -229,7 +229,7 @@ export default function ClienteRedesSociais() {
     }
   };
 
-  const handleArtFillWithAI = async (briefingText: string, cd: any): Promise<ArtBriefingResult | null> => {
+  const handleArtFillWithAI = async (briefingText: string, cd: Record<string, unknown>): Promise<ArtBriefingResult | null> => {
     if (!briefingText.trim() && !cd) {
       toast({ title: "Escreva um briefing ou vincule um conteúdo", variant: "destructive" });
       return null;

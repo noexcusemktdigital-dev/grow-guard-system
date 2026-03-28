@@ -29,7 +29,7 @@ import { ProposalGenerator } from "@/components/calculator/ProposalGenerator";
 import { SummaryDrawer } from "@/components/calculator/SummaryDrawer";
 
 // ── Proposal Viewer Sheet ───────────────────────────────────────
-function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open: boolean; onClose: () => void }) {
+function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<string, unknown>; open: boolean; onClose: () => void }) {
   const { data: leads } = useCrmLeads();
   const { updateProposal } = useCrmProposalMutations();
   const navigate = useNavigate();
@@ -120,7 +120,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open:
               <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um lead" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem vínculo</SelectItem>
-                {(leads ?? []).map((l: any) => (
+                {(leads ?? []).map((l) => (
                   <SelectItem key={l.id} value={l.id}>{l.name} {l.company ? `- ${l.company}` : ""}</SelectItem>
                 ))}
               </SelectContent>
@@ -155,7 +155,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open:
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item: any, i: number) => (
+                  {items.map((item: Record<string, unknown>, i: number) => (
                     <tr key={item.id ?? `${item.name}-${i}`} className="border-b border-gray-100">
                       <td className="py-2 text-gray-800">{item.name}</td>
                       <td className="py-2 text-center text-gray-600">{item.quantity || 1}</td>
@@ -198,7 +198,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: any; open:
 
 // ── Calculator Tab ──────────────────────────────────────────────
 
-function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?: any; onEditComplete?: () => void }) {
+function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?: Record<string, unknown>; onEditComplete?: () => void }) {
   const [searchParams] = useSearchParams();
   const leadIdFromUrl = searchParams.get("lead_id");
   const { data: leads } = useCrmLeads();
@@ -245,17 +245,17 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
     const payload = {
       title, value: totals.totalPeriod, status: "draft" as const,
       lead_id: leadId || null, items, payment_terms: paymentOption,
-      content: { client_name: clientName, duration, payment_option: paymentOption, services: selectedServices } as any,
+      content: { client_name: clientName, duration, payment_option: paymentOption, services: selectedServices } as Record<string, unknown>,
     };
     if (editingProposal) {
       updateProposal.mutate({ id: editingProposal.id, ...payload }, {
         onSuccess: () => { toast.success("Proposta atualizada!"); onEditComplete?.(); },
-        onError: (e: any) => toast.error(e instanceof Error ? e.message : String(e) || "Erro ao atualizar proposta"),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : String(e) || "Erro ao atualizar proposta"),
       });
     } else {
       createProposal.mutate(payload, {
         onSuccess: () => toast.success("Proposta salva com sucesso!"),
-        onError: (e: any) => toast.error(e instanceof Error ? e.message : String(e) || "Erro ao salvar proposta"),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : String(e) || "Erro ao salvar proposta"),
       });
     }
   };
@@ -270,7 +270,7 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
           <SelectTrigger className="h-9 max-w-sm"><SelectValue placeholder="Sem vínculo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Sem vínculo</SelectItem>
-            {(leads ?? []).map((l: any) => (
+            {(leads ?? []).map((l) => (
               <SelectItem key={l.id} value={l.id}>{l.name} {l.company ? `- ${l.company}` : ""}</SelectItem>
             ))}
           </SelectContent>
@@ -323,7 +323,7 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
 
 // ── Proposals List Tab ──────────────────────────────────────────
 
-function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: any) => void; onView: (proposal: any) => void }) {
+function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string, unknown>) => void; onView: (proposal: Record<string, unknown>) => void }) {
   const { data: proposals, isLoading } = useCrmProposals();
   const { deleteProposal, duplicateProposal, updateProposal } = useCrmProposalMutations();
 
@@ -404,7 +404,7 @@ export default function FranqueadoraPropostas() {
   const [editingProposal, setEditingProposal] = useState<any>(null);
   const [viewingProposal, setViewingProposal] = useState<any>(null);
 
-  const handleEditProposal = (proposal: any) => { setEditingProposal(proposal); setActiveTab("calculadora"); };
+  const handleEditProposal = (proposal: Record<string, unknown>) => { setEditingProposal(proposal); setActiveTab("calculadora"); };
 
   return (
     <div className="w-full space-y-6">

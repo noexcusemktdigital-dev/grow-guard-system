@@ -24,21 +24,21 @@ export default function Comunicados() {
     id: a.id,
     titulo: a.title,
     conteudo: a.content || "",
-    tipo: (a.type || "Informativo") as any,
-    prioridade: (a.priority || "Normal") as any,
+    tipo: (a.type || "Informativo") as string,
+    prioridade: (a.priority || "Normal") as string,
     publico: (a.target_roles || []) as PublicoAlvo[],
     unidadesEspecificas: (a.target_unit_ids || []) as string[],
-    mostrarDashboard: (a as any).show_dashboard ?? true,
-    mostrarPopup: (a as any).show_popup ?? false,
-    exigirConfirmacao: (a as any).require_confirmation ?? false,
+    mostrarDashboard: (a as unknown as Record<string, unknown>).show_dashboard ?? true,
+    mostrarPopup: (a as unknown as Record<string, unknown>).show_popup ?? false,
+    exigirConfirmacao: (a as unknown as Record<string, unknown>).require_confirmation ?? false,
     dataProgramada: undefined,
     dataExpiracao: a.expires_at || undefined,
-    status: (a as any).status === "archived" ? "Arquivado" : a.published_at ? "Ativo" : "Rascunho",
+    status: (a as unknown as Record<string, unknown>).status === "archived" ? "Arquivado" : a.published_at ? "Ativo" : "Rascunho",
     autorId: a.created_by || "",
     autorNome: "Admin",
     criadoEm: a.created_at,
     atualizadoEm: a.updated_at,
-    attachmentUrl: (a as any).attachment_url || undefined,
+    attachmentUrl: (a as unknown as Record<string, unknown>).attachment_url || undefined,
   }));
 
   const selected = selectedId ? comunicados.find((c) => c.id === selectedId) : null;
@@ -75,7 +75,7 @@ export default function Comunicados() {
   };
 
   const handlePublish = (data: Partial<Comunicado> & { attachmentUrl?: string }) => {
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       title: data.titulo,
       content: data.conteudo,
       type: data.tipo,
@@ -101,7 +101,7 @@ export default function Comunicados() {
   };
 
   const handleSaveDraft = (data: Partial<Comunicado> & { attachmentUrl?: string }) => {
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       title: data.titulo || "Sem título",
       content: data.conteudo || "",
       type: data.tipo || "Informativo",

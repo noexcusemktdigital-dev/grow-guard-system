@@ -100,7 +100,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                 {(() => {
                   const temps = ["Frio", "Morno", "Quente"] as const;
                   const current = lead.temperature || "Morno";
-                  const idx = temps.indexOf(current as any);
+                  const idx = temps.indexOf(current as unknown as string);
                   const next = temps[(idx + 1) % temps.length];
                   const cfg: Record<string, { bg: string; icon: React.ReactNode }> = {
                     Frio: { bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400", icon: <Snowflake className="w-3 h-3" /> },
@@ -176,9 +176,9 @@ export default function CrmExpansao() {
 
   const stages: FunnelStage[] = useMemo(() => {
     if (selectedFunnel) {
-      const dbStages = selectedFunnel.stages as any[];
+      const dbStages = selectedFunnel.stages as { key?: string; label?: string; color?: string; icon?: string }[];
       if (Array.isArray(dbStages) && dbStages.length > 0) {
-        return dbStages.map((s: any) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_"), label: s.label || "Etapa", color: s.color || "blue", icon: s.icon || "circle-dot" }));
+        return dbStages.map((s) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_"), label: s.label || "Etapa", color: s.color || "blue", icon: s.icon || "circle-dot" }));
       }
     }
     return DEFAULT_STAGES;

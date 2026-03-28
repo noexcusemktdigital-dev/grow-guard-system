@@ -79,14 +79,14 @@ export default function ClienteOnboardingCompany() {
     setForm(prev => ({
       ...prev,
       name: (org.name && !org.name.includes("'s Company") && !org.name.includes("'s Company")) ? org.name : "",
-      cnpj: (org as any).cnpj || prev.cnpj,
-      phone: (org as any).phone || prev.phone,
-      city: (org as any).city || prev.city,
-      state: (org as any).state || prev.state,
-      segment: (org as any).segment || prev.segment,
-      product_types: Array.isArray((org as any).product_types) ? (org as any).product_types.join(", ") : prev.product_types,
-      employee_count: (org as any).employee_count || prev.employee_count,
-      website: (org as any).website || prev.website,
+      cnpj: (org as unknown as Record<string, unknown>).cnpj || prev.cnpj,
+      phone: (org as unknown as Record<string, unknown>).phone || prev.phone,
+      city: (org as unknown as Record<string, unknown>).city || prev.city,
+      state: (org as unknown as Record<string, unknown>).state || prev.state,
+      segment: (org as unknown as Record<string, unknown>).segment || prev.segment,
+      product_types: Array.isArray((org as unknown as Record<string, unknown>).product_types) ? (org as unknown as Record<string, unknown>).product_types.join(", ") : prev.product_types,
+      employee_count: (org as unknown as Record<string, unknown>).employee_count || prev.employee_count,
+      website: (org as unknown as Record<string, unknown>).website || prev.website,
     }));
     setPrefilled(true);
   }
@@ -119,7 +119,7 @@ export default function ClienteOnboardingCompany() {
         employee_count: form.employee_count,
         website: form.website || undefined,
         onboarding_completed: true,
-      } as any);
+      } as Record<string, unknown>);
       
       toast.success("Dados salvos! Vamos montar seu plano comercial.");
       navigate("/cliente/plano-vendas");
@@ -135,7 +135,7 @@ export default function ClienteOnboardingCompany() {
 
   // Redirect if onboarding already completed
   useEffect(() => {
-    if (!isLoading && org && (org as any).onboarding_completed === true) {
+    if (!isLoading && org && (org as unknown as { onboarding_completed?: boolean }).onboarding_completed === true) {
       navigate("/cliente/inicio", { replace: true });
     }
   }, [org, isLoading, navigate]);

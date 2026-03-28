@@ -150,7 +150,7 @@ function NovaProspeccaoTab() {
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Nível de Contato</label>
-              <Select value={inputs.nivel_contato || "frio"} onValueChange={(v) => setInputs((p) => ({ ...p, nivel_contato: v as any }))}>
+              <Select value={inputs.nivel_contato || "frio"} onValueChange={(v) => setInputs((p) => ({ ...p, nivel_contato: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="frio">🧊 Frio - Nunca falou</SelectItem>
@@ -216,7 +216,7 @@ function NovaProspeccaoTab() {
                     <SelectValue placeholder="Vincular ao Lead..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {(leads ?? []).map((l: any) => (
+                    {(leads ?? []).map((l) => (
                       <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -385,13 +385,13 @@ function HistoricoTab() {
   const filtered = (prospections ?? []).filter(
     (p) =>
       p.title.toLowerCase().includes(search.toLowerCase()) ||
-      (p.inputs as any)?.nicho?.toLowerCase().includes(search.toLowerCase())
+      ((p.inputs as Record<string, unknown> | null)?.nicho as string | undefined)?.toLowerCase().includes(search.toLowerCase())
   );
 
   const getLeadName = (leadId: string | null) => {
     if (!leadId) return null;
-    const lead = (leads ?? []).find((l: any) => l.id === leadId);
-    return lead ? (lead as any).name : null;
+    const lead = (leads ?? []).find((l) => l.id === leadId);
+    return lead ? (lead as unknown as { name?: string }).name : null;
   };
 
   return (

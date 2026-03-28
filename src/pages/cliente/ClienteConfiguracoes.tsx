@@ -200,7 +200,7 @@ function UsersAndTeamsTab() {
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
-    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };
@@ -398,7 +398,7 @@ function NotificationsTab() {
 
   useEffect(() => {
     if (profile && !loaded) {
-      const prefs = (profile as any).notification_preferences;
+      const prefs = (profile as unknown as { notification_preferences?: Record<string, boolean> }).notification_preferences;
       if (prefs && typeof prefs === "object") setNotifications(prev => ({ ...prev, ...prefs }));
       setLoaded(true);
     }
@@ -408,7 +408,7 @@ function NotificationsTab() {
     const updated = { ...notifications, [key]: value };
     setNotifications(updated);
     try {
-      const { error } = await supabase.from("profiles").update({ notification_preferences: updated } as any).eq("id", user?.id ?? "");
+      const { error } = await supabase.from("profiles").update({ notification_preferences: updated } as Record<string, unknown>).eq("id", user?.id ?? "");
       if (error) throw error;
       toast.success(`${value ? "Ativado" : "Desativado"}`);
     } catch { toast.error("Erro ao salvar preferência"); }

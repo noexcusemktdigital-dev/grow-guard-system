@@ -65,7 +65,7 @@ export default function ContratosGerenciamento() {
   const activeCount = filtered.filter(c => c.status === "active" || c.status === "signed").length;
   const expiringCount = filtered.filter(c => { const d = daysUntilExpiry(c.end_date); return d !== null && d > 0 && d <= 30; }).length;
 
-  const openEdit = (c: any) => {
+  const openEdit = (c: Record<string, unknown>) => {
     setEditingContract(c);
     setEditForm({ status: c.status, monthly_value: Number(c.monthly_value || 0), signer_name: c.signer_name || "", signer_email: c.signer_email || "", start_date: c.start_date || "", end_date: c.end_date || "" });
     setEditDialog(true);
@@ -152,7 +152,7 @@ export default function ContratosGerenciamento() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c: any) => {
+              {filtered.map((c: Record<string, unknown>) => {
                 const days = daysUntilExpiry(c.end_date);
                 const isExpiring = days !== null && days > 0 && days <= 30;
                 const isExpired = days !== null && days <= 0;

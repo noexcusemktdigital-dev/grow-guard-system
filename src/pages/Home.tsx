@@ -255,7 +255,7 @@ export default function Home() {
               </div>
               {(goals ?? []).length > 0 ? (
                 <div className="space-y-4">
-                  {(goals ?? []).slice(0, 3).map((goal: any) => {
+                  {(goals ?? []).slice(0, 3).map((goal) => {
                     const progress = goalProgress?.[goal.id];
                     const percent = Math.min(progress?.percent ?? 0, 100);
                     return (

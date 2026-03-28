@@ -233,7 +233,7 @@ export default function FranqueadoContratos() {
   const items = contracts ?? [];
   const filtered = statusFilter === "all" ? items : items.filter(c => c.status === statusFilter);
   const ativos = items.filter(c => c.status === "active").length;
-  const totalMensal = items.filter(c => c.status === "active").reduce((s, c) => s + Number((c as any).monthly_value || 0), 0);
+  const totalMensal = items.filter(c => c.status === "active").reduce((s, c) => s + Number((c as unknown as Record<string, unknown>).monthly_value || 0), 0);
   const leadsMap = new Map((leads ?? []).map(l => [l.id, l]));
 
   return (
@@ -244,7 +244,7 @@ export default function FranqueadoContratos() {
         <KpiCard label="Contratos Ativos" value={String(ativos)} icon={FileSignature} delay={0} variant="accent" />
         <KpiCard label="Total Contratos" value={String(items.length)} icon={FileSignature} delay={1} />
         <KpiCard label="Receita Mensal" value={`R$ ${totalMensal.toLocaleString("pt-BR")}`} icon={DollarSign} delay={2} />
-        <KpiCard label="Vinculados CRM" value={String(items.filter(c => (c as any).lead_id).length)} icon={Link2} delay={3} />
+        <KpiCard label="Vinculados CRM" value={String(items.filter(c => (c as unknown as Record<string, unknown>).lead_id).length)} icon={Link2} delay={3} />
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-4">
@@ -286,17 +286,17 @@ export default function FranqueadoContratos() {
                 <TableBody>
                   {filtered.map(c => {
                     const st = statusLabels[c.status] || { label: c.status, variant: "secondary" as const };
-                    const linkedLead = (c as any).lead_id ? leadsMap.get((c as any).lead_id) : null;
-                    const isSigned = !!(c as any).signed_at;
-                    const endDateContract = (c as any).end_date ? new Date((c as any).end_date) : null;
+                    const linkedLead = (c as unknown as Record<string, unknown>).lead_id ? leadsMap.get((c as unknown as Record<string, unknown>).lead_id) : null;
+                    const isSigned = !!(c as unknown as Record<string, unknown>).signed_at;
+                    const endDateContract = (c as unknown as Record<string, unknown>).end_date ? new Date((c as unknown as Record<string, unknown>).end_date) : null;
                     const daysToEnd = endDateContract ? differenceInDays(endDateContract, new Date()) : null;
 
                     return (
                       <TableRow key={c.id}>
                         <TableCell className="font-medium">{c.title}</TableCell>
                         <TableCell>{c.signer_name || "—"}</TableCell>
-                        <TableCell className="font-semibold">R$ {Number((c as any).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell>{(c as any).payment_day ? `Dia ${(c as any).payment_day}` : "—"}</TableCell>
+                        <TableCell className="font-semibold">R$ {Number((c as unknown as Record<string, unknown>).monthly_value || 0).toLocaleString("pt-BR")}</TableCell>
+                        <TableCell>{(c as unknown as Record<string, unknown>).payment_day ? `Dia ${(c as unknown as Record<string, unknown>).payment_day}` : "—"}</TableCell>
                         <TableCell><Badge variant={st.variant}>{st.label}</Badge></TableCell>
                         <TableCell>
                           {isSigned ? (

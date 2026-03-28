@@ -42,7 +42,7 @@ export default function ClienteDisparos() {
   const [step, setStep] = useState(0);
 
   // Detail sheet
-  const [detailDispatch, setDetailDispatch] = useState<any>(null);
+  const [detailDispatch, setDetailDispatch] = useState<Record<string, unknown> | null>(null);
 
   // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -86,13 +86,13 @@ export default function ClienteDisparos() {
 
       if (isConnected && result?.id) {
         triggerBulkSend.mutate(result.id, {
-          onSuccess: (data: any) => {
+          onSuccess: (data: Record<string, unknown>) => {
             toast({
               title: "Disparo concluído!",
               description: `${data?.stats?.sent || 0} mensagens enviadas.`,
             });
           },
-          onError: (err: any) => {
+          onError: (err: unknown) => {
             toast({
               title: "Erro no envio",
               description: err.message,
@@ -127,10 +127,10 @@ export default function ClienteDisparos() {
       return;
     }
     triggerBulkSend.mutate(id, {
-      onSuccess: (data: any) => {
+      onSuccess: (data: Record<string, unknown>) => {
         toast({ title: "Disparo enviado!", description: `${data?.stats?.sent || 0} mensagens enviadas.` });
       },
-      onError: (err: any) => {
+      onError: (err: unknown) => {
         toast({ title: "Erro no envio", description: err.message, variant: "destructive" });
       },
     });
@@ -140,7 +140,7 @@ export default function ClienteDisparos() {
   // KPI calculations
   const totalSent = allDispatches
     .filter((d) => d.stats)
-    .reduce((acc, d) => acc + ((d.stats as any)?.sent || 0), 0);
+    .reduce((acc, d) => acc + (((d.stats as Record<string, unknown> | null)?.sent as number || 0) && 0 || ((d.stats as Record<string, unknown> | null)?.sent as number || 0), 0);
 
   if (isLoading) {
     return (

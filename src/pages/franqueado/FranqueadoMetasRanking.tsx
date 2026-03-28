@@ -44,20 +44,20 @@ export default function FranqueadoMetasRanking() {
   const ClassIcon = config.icon;
 
   const { data: goals, isLoading: loadingGoals } = useActiveGoals();
-  const activeGoals = (goals ?? []).filter((g: any) => g.status === "active");
+  const activeGoals = (goals ?? []).filter((g) => g.status === "active");
   const { data: goalProgress, isLoading: loadingProgress } = useGoalProgress(activeGoals.length > 0 ? activeGoals : undefined);
   const { data: trophies, isLoading: loadingTrophies } = useTrophyProgress(goalProgress ?? undefined);
 
   const isLoading = loadingGoals || loadingProgress;
 
   // KPIs for overview
-  const metasAtingidas = activeGoals.filter((g: any) => {
+  const metasAtingidas = activeGoals.filter((g) => {
     const gp = goalProgress?.[g.id];
     return gp && gp.percent >= 100;
   }).length;
 
   const avgProgress = activeGoals.length > 0
-    ? Math.round(activeGoals.reduce((sum: number, g: any) => {
+    ? Math.round(activeGoals.reduce((sum: number, g) => {
         const gp = goalProgress?.[g.id];
         return sum + Math.min(100, gp?.percent ?? 0);
       }, 0) / activeGoals.length)
@@ -65,7 +65,7 @@ export default function FranqueadoMetasRanking() {
 
   const unlockedTrophies = trophies ? Object.values(trophies).filter(t => t.unlocked).length : 0;
 
-  const maxDaysLeft = activeGoals.reduce((max: number, g: any) => {
+  const maxDaysLeft = activeGoals.reduce((max: number, g) => {
     const gp = goalProgress?.[g.id];
     return Math.max(max, gp?.daysLeft ?? 0);
   }, 0);
@@ -149,7 +149,7 @@ export default function FranqueadoMetasRanking() {
                     <CardTitle className="text-sm">Progresso das Metas</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {activeGoals.map((goal: any) => {
+                    {activeGoals.map((goal) => {
                       const gp = goalProgress?.[goal.id];
                       const pct = gp ? Math.min(100, Math.round(gp.percent)) : 0;
                       const reached = pct >= 100;
@@ -182,7 +182,7 @@ export default function FranqueadoMetasRanking() {
             <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">Nenhuma meta definida para este período.</CardContent></Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
-              {activeGoals.map((goal: any) => {
+              {activeGoals.map((goal) => {
                 const gp = goalProgress?.[goal.id];
                 const currentValue = gp?.currentValue ?? 0;
                 const pct = gp ? Math.min(100, Math.round(gp.percent)) : 0;

@@ -126,7 +126,7 @@ function TransactionHistoryCard() {
       <CardContent>
         {isLoading ? <Skeleton className="h-16 w-full" /> : transactions && transactions.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {transactions.map((tx: any) => {
+            {transactions.map((tx: Record<string, unknown>) => {
               const info = typeLabels[tx.type] || { label: tx.type, color: "text-foreground" };
               return (
                 <div key={tx.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
@@ -188,7 +188,7 @@ function InvoicesCard() {
       <CardContent>
         {isLoading ? <Skeleton className="h-16 w-full" /> : data && data.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {data.map((p: any) => {
+            {data.map((p: Record<string, unknown>) => {
               const st = statusMap[p.status] || { label: p.status, variant: "outline" as const };
               return (
                 <div key={p.id} className="flex items-center justify-between text-sm py-2.5 border-b last:border-0">
@@ -218,7 +218,7 @@ function InvoicesCard() {
 }
 
 /* ── Inline Payment View ── */
-function InlinePaymentView({ result, billingType, onClose }: { result: any; billingType: string; onClose: () => void }) {
+function InlinePaymentView({ result, billingType, onClose }: { result: Record<string, unknown>; billingType: string; onClose: () => void }) {
   const copyPixCode = () => {
     if (result.pix_copy_paste) {
       navigator.clipboard.writeText(result.pix_copy_paste);
@@ -392,7 +392,7 @@ function SubscriptionDialog({
       qc.invalidateQueries({ queryKey: ["credit-wallet"] });
       setPaymentResult(data);
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       const msg = err?.message || "Erro desconhecido";
       if (msg.includes("Unauthorized") || msg.includes("401")) {
         toast.error("Sessão expirada. Recarregue a página e tente novamente.");
@@ -537,7 +537,7 @@ function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | nul
       setPaymentResult(data);
       qc.invalidateQueries({ queryKey: ["asaas-payments"] });
     },
-    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   if (!pack) return null;

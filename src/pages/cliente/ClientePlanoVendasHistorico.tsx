@@ -13,7 +13,7 @@ import { getNivel } from "./ClientePlanoVendasData";
 import { computeScores, generateInsights, generateActionPlan } from "./ClientePlanoVendasScoring";
 
 export interface ClientePlanoVendasHistoricoProps {
-  planHistory: any[] | undefined;
+  planHistory: Record<string, unknown>[] | undefined;
   historyLoading: boolean;
 }
 

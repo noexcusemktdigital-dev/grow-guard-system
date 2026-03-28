@@ -20,7 +20,7 @@ export interface MetaFormState {
 export interface ClientePlanoVendasMetaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  editingGoal: any;
+  editingGoal: Record<string, unknown>;
   novaMeta: MetaFormState;
   setNovaMeta: React.Dispatch<React.SetStateAction<MetaFormState>>;
   targetDisplay: string;
@@ -30,8 +30,8 @@ export interface ClientePlanoVendasMetaDialogProps {
   isCreating: boolean;
   isUpdating: boolean;
   isMonetaryMetric: (m: string) => boolean;
-  teams: any[] | undefined;
-  members: any[] | undefined;
+  teams: Record<string, unknown>[] | undefined;
+  members: Record<string, unknown>[] | undefined;
 }
 
 export function ClientePlanoVendasMetaDialog({

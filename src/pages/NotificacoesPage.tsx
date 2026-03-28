@@ -58,7 +58,7 @@ export default function NotificacoesPage() {
     [isFetchingNextPage, hasNextPage, fetchNextPage]
   );
 
-  const handleClick = (n: any) => {
+  const handleClick = (n: Record<string, unknown>) => {
     if (!n.is_read) {
       markNotificationRead.mutate(n.id);
     }

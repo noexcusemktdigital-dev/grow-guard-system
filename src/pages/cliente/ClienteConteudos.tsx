@@ -92,7 +92,7 @@ export default function ClienteConteudos() {
         estrategia: strategyPayload,
       });
       setGeneratedContents(res.conteudos);
-      setGeneratedIds((res.dbRecords as any[]).map((r: any) => r.id));
+      setGeneratedIds(((res.dbRecords as { id: string }[]) || []).map((r) => r.id));
       setIsResultScreen(true);
       toast({ title: `${res.conteudos.length} roteiros gerados com sucesso!` });
     } catch (err: unknown) {
@@ -135,14 +135,14 @@ export default function ClienteConteudos() {
         setGeneratedIds(prev => prev.filter((_, i) => i !== idx));
         toast({ title: "Roteiro removido." });
       },
-      onError: (err: any) => toast({ title: "Erro", description: err?.message, variant: "destructive" }),
+      onError: (err: unknown) => toast({ title: "Erro", description: err instanceof Error ? err.message : String(err), variant: "destructive" }),
     });
   };
 
   const handleDeleteHistory = (id: string) => {
     deleteMutation.mutate(id, {
       onSuccess: () => toast({ title: "Roteiro removido." }),
-      onError: (err: any) => toast({ title: "Erro", description: err?.message, variant: "destructive" }),
+      onError: (err: unknown) => toast({ title: "Erro", description: err instanceof Error ? err.message : String(err), variant: "destructive" }),
     });
   };
 
@@ -157,7 +157,7 @@ export default function ClienteConteudos() {
     setGeneratedIds([]);
   };
 
-  const copyContent = (c: any) => {
+  const copyContent = (c: Record<string, unknown>) => {
     let text = c.titulo + "\n\n";
     if (c.legenda) text += c.legenda + "\n\n";
     const parsed = c.conteudo_principal;
@@ -173,7 +173,7 @@ export default function ClienteConteudos() {
     toast({ title: "Roteiro copiado!" });
   };
 
-  const downloadPdf = async (c: any, idx: number) => {
+  const downloadPdf = async (c: Record<string, unknown>, idx: number) => {
     try {
       const el = document.getElementById(`content-card-${idx}`);
       if (!el) return;
@@ -279,7 +279,7 @@ export default function ClienteConteudos() {
                     onExpand={() => setExpandedContent(c)}
                     onRecord={() => setRecordingScript({ ...c, plataforma })}
                     approving={approveMutation.isPending}
-                    isApproved={c.status === "approved" || (history || []).find((h: any) => h.id === generatedIds[i])?.status === "approved"}
+                    isApproved={c.status === "approved" || (history || []).find((h: { id?: string; status?: string }) => h.id === generatedIds[i])?.status === "approved"}
                     showContext={contextInfo}
                   />
                 ))}

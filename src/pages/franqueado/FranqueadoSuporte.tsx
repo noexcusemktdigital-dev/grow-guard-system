@@ -126,7 +126,7 @@ export default function FranqueadoSuporte() {
         subcategory: novaSubcategoria || undefined,
         priority: novaPrioridade,
         attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
-      } as any);
+      } as Record<string, unknown>);
       setCreateDialog(false);
       setNovoTitulo("");
       setNovaDescricao("");
@@ -152,7 +152,7 @@ export default function FranqueadoSuporte() {
         ticket_id: selectedTicket.id,
         content: newMessage || (attachmentUrls.length > 0 ? "📎 Anexo" : ""),
         attachments: attachmentUrls.length > 0 ? attachmentUrls : undefined,
-      } as any);
+      } as Record<string, unknown>);
       setNewMessage("");
       setMsgAttachments([]);
     } catch (err) {
@@ -423,7 +423,7 @@ export default function FranqueadoSuporte() {
 }
 
 /* ── Kanban View ─────────────────────────────────────────────── */
-function KanbanView({ tickets, onSelect, selectedId }: { tickets: any[]; onSelect: (t: any) => void; selectedId?: string }) {
+function KanbanView({ tickets, onSelect, selectedId }: { tickets: Record<string, unknown>[]; onSelect: (t: Record<string, unknown>) => void; selectedId?: string }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {KANBAN_COLUMNS.map(status => {
@@ -455,7 +455,7 @@ function KanbanView({ tickets, onSelect, selectedId }: { tickets: any[]; onSelec
 }
 
 /* ── List View ───────────────────────────────────────────────── */
-function ListView({ tickets, onSelect, selectedId }: { tickets: any[]; onSelect: (t: any) => void; selectedId?: string }) {
+function ListView({ tickets, onSelect, selectedId }: { tickets: Record<string, unknown>[]; onSelect: (t: Record<string, unknown>) => void; selectedId?: string }) {
   if (tickets.length === 0) {
     return (
       <div className="text-center py-16">
@@ -498,7 +498,7 @@ function ListView({ tickets, onSelect, selectedId }: { tickets: any[]; onSelect:
 }
 
 /* ── Ticket Card (for Kanban) ────────────────────────────────── */
-function TicketCard({ ticket: t, onClick, isSelected }: { ticket: any; onClick: () => void; isSelected: boolean }) {
+function TicketCard({ ticket: t, onClick, isSelected }: { ticket: Record<string, unknown>; onClick: () => void; isSelected: boolean }) {
   return (
     <Card
       className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-primary" : ""}`}
@@ -569,7 +569,7 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 
   // Group messages by date
   const groupedByDate: Record<string, any[]> = {};
-  (messages ?? []).forEach((m: any) => {
+  (messages ?? []).forEach((m) => {
     const dateKey = format(new Date(m.created_at), "yyyy-MM-dd");
     if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
     groupedByDate[dateKey].push(m);
@@ -596,7 +596,7 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 
               {/* Messages as documented cards */}
               <div className="space-y-3">
-                {msgs.map((m: any) => {
+                {msgs.map((m) => {
                   const isMine = m.user_id === userId;
                   const msgAttachments = m.attachments as string[] | null;
                   return (

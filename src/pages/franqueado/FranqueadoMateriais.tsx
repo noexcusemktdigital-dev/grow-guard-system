@@ -83,7 +83,7 @@ export default function FranqueadoMateriais() {
   // Root folders of selected category
   const categoryRootFolders = useMemo(() => {
     if (!folders || !activeCategory) return [];
-    return folders.filter((f) => (f as any).category === activeCategory && !f.parent_id);
+    return folders.filter((f) => (f as unknown as { category?: string }).category === activeCategory && !f.parent_id);
   }, [folders, activeCategory]);
 
   // Child folders of current folder
@@ -178,10 +178,10 @@ export default function FranqueadoMateriais() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {categoryConfig.map((cat) => {
             const Icon = cat.icon;
-            const folderCount = (folders ?? []).filter((f) => (f as any).category === cat.id).length;
+            const folderCount = (folders ?? []).filter((f) => (f as unknown as { category?: string }).category === cat.id).length;
             const assetCount = (assets ?? []).filter((a) => {
               const folder = (folders ?? []).find((f) => f.id === a.folder_id);
-              return folder && (folder as any).category === cat.id;
+              return folder && (folder as unknown as { category?: string }).category === cat.id;
             }).length;
             return (
               <Card

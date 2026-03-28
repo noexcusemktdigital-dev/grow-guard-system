@@ -48,7 +48,7 @@ function EditInstanceDialog({ instance, open, onOpenChange, onSave, isPending }:
   instance: WhatsAppInstance | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSave: (data: any) => void;
+  onSave: (data: Record<string, unknown>) => void;
   isPending: boolean;
 }) {
   const [label, setLabel] = useState("");
@@ -163,7 +163,7 @@ function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation, refet
           apiKey: inst.client_token || undefined,
           instanceName: inst.instance_id || undefined,
         });
-        const foundResult = res?.results?.find((r: any) => r.instance_id === inst.instance_id) || res;
+        const foundResult = res?.results?.find((r: Record<string, unknown>) => r.instance_id === inst.instance_id) || res;
         newResults[inst.id] = { status: foundResult?.status || res?.status || "unknown", checking: false };
       } catch (err: unknown) {
         newResults[inst.id] = { status: "error", checking: false, error: err.message };
@@ -436,7 +436,7 @@ export default function ClienteIntegracoes() {
 
   useEffect(() => {
     if (settings) {
-      const stored = (settings as any).outbound_webhooks;
+      const stored = (settings as unknown as { outbound_webhooks?: unknown }).outbound_webhooks;
       if (Array.isArray(stored)) setWebhooks(stored);
     }
   }, [settings]);
@@ -452,7 +452,7 @@ export default function ClienteIntegracoes() {
       navigator.clipboard.writeText(key);
       toast.success("API Key gerada e copiada!");
     },
-    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const handleCheckStatus = async (instance: WhatsAppInstance) => {
@@ -484,7 +484,7 @@ export default function ClienteIntegracoes() {
     }
   };
 
-  const handleEditSave = async (data: any) => {
+  const handleEditSave = async (data: Record<string, unknown>) => {
     try {
       const res = await setupMutation.mutateAsync(data);
       refetch();

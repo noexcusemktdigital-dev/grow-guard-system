@@ -50,7 +50,7 @@ export default function FranqueadoComunicados() {
     return (announcements ?? []).filter(a => a.priority === "Crítica" && !confirmedIds.has(a.id));
   }, [announcements, confirmedIds]);
 
-  function openDetail(item: any) {
+  function openDetail(item: Record<string, unknown>) {
     setDetailItem(item);
     if (!viewedIds.has(item.id)) {
       markViewed.mutate(item.id);
@@ -224,7 +224,7 @@ export default function FranqueadoComunicados() {
   );
 }
 
-function ComunicadoCard({ item, viewedIds, confirmedIds, onClick }: { item: any; viewedIds: Set<string>; confirmedIds: Set<string>; onClick: () => void }) {
+function ComunicadoCard({ item, viewedIds, confirmedIds, onClick }: { item: Record<string, unknown>; viewedIds: Set<string>; confirmedIds: Set<string>; onClick: () => void }) {
   const isViewed = viewedIds.has(item.id);
   const isConfirmed = confirmedIds.has(item.id);
   return (

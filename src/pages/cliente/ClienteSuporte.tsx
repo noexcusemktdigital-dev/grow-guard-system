@@ -76,7 +76,7 @@ export default function ClienteSuporte() {
         description: novaDescricao,
         category: novaCategoria,
         priority: novaPrioridade,
-      } as any);
+      } as Record<string, unknown>);
       setCreateDialog(false);
       setNovoTitulo("");
       setNovaDescricao("");

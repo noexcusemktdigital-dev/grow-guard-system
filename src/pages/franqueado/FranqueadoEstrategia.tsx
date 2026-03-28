@@ -49,6 +49,9 @@ import {
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
+import { DiagnosticForm } from "./FranqueadoEstrategiaDiagnosticForm";
+import { StrategyResultView } from "./FranqueadoEstrategiaResultViews";
+import type { DiagSection } from "./FranqueadoEstrategiaData";
 import {
   useStrategies,
   useCreateStrategy,
@@ -72,27 +75,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/lib/supabase";
 
-// ── Field types ─────────────────────────────────────────────────
-
-interface DiagField {
-  key: string;
-  label: string;
-  type: "text" | "select" | "textarea" | "checkbox-group" | "conditional-text" | "slider";
-  placeholder?: string;
-  options?: string[];
-  conditionKey?: string;
-  conditionValues?: string[];
-  subFields?: DiagField[];
-  min?: number;
-  max?: number;
-}
-
-interface DiagSection {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  fields: DiagField[];
-}
+// DiagField and DiagSection types imported from ./FranqueadoEstrategiaData
 
 // ── 8-Block SPIN + NOEXCUSE Diagnostic ──────────────────────────
 
@@ -1049,7 +1032,7 @@ function MeusDiagnosticosTab() {
 
   const getLeadName = (leadId: string | null) => {
     if (!leadId) return null;
-    return ((leads ?? []) as any[]).find((l) => l.id === leadId)?.name || null;
+    return ((leads ?? []) as { id: string; name?: string }[]).find((l) => l.id === leadId)?.name || null;
   };
 
   const getMaturityInfo = (s: Strategy) => {

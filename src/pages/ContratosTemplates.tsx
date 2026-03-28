@@ -41,7 +41,7 @@ export default function ContratosTemplates() {
     setDialogOpen(true);
   };
 
-  const openEdit = (t: any) => {
+  const openEdit = (t: Record<string, unknown>) => {
     setEditingId(t.id); setName(t.name); setDescription(t.description || ""); setTemplateType(t.template_type || "assessoria"); setContent(t.content || "");
     setEditorTab("editor");
     setDialogOpen(true);
@@ -146,14 +146,14 @@ export default function ContratosTemplates() {
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{t.name}</h3>
-                    <Badge variant="outline" className="text-[10px] capitalize">{(t as any).template_type || "assessoria"}</Badge>
+                    <Badge variant="outline" className="text-[10px] capitalize">{(t as unknown as { template_type?: string }).template_type || "assessoria"}</Badge>
                     {t.is_active ? (
                       <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-[10px]"><CheckCircle2 className="w-3 h-3 mr-0.5" />Ativo</Badge>
                     ) : (
                       <Badge variant="secondary" className="text-[10px]"><Clock className="w-3 h-3 mr-0.5" />Inativo</Badge>
                     )}
                   </div>
-                  {(t as any).description && <p className="text-xs text-muted-foreground">{(t as any).description}</p>}
+                  {(t as unknown as { description?: string }).description && <p className="text-xs text-muted-foreground">{(t as unknown as { description?: string }).description}</p>}
                   <p className="text-xs text-muted-foreground">Criado em {new Date(t.created_at).toLocaleDateString("pt-BR")}</p>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => openEdit(t)}><Pencil className="w-4 h-4" /></Button>

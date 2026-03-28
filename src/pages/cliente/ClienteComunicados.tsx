@@ -39,10 +39,10 @@ export default function ClienteComunicados() {
   const read = useMemo(() => all.filter(a => viewedIds.has(a.id)), [all, viewedIds]);
 
   const criticalPending = useMemo(() => {
-    return (announcements ?? []).filter(a => ((a as any).require_confirmation || a.priority === "Crítica") && !confirmedIds.has(a.id));
+    return (announcements ?? []).filter(a => ((a as unknown as { require_confirmation?: boolean }).require_confirmation || a.priority === "Crítica") && !confirmedIds.has(a.id));
   }, [announcements, confirmedIds]);
 
-  function openDetail(item: any) {
+  function openDetail(item: Record<string, unknown>) {
     setDetailItem(item);
     if (!viewedIds.has(item.id)) {
       markViewed.mutate(item.id);
@@ -178,12 +178,12 @@ export default function ClienteComunicados() {
   );
 }
 
-function AnnouncementCard({ item, viewedIds, confirmedIds, onClick }: { item: any; viewedIds: Set<string>; confirmedIds: Set<string>; onClick: () => void }) {
+function AnnouncementCard({ item, viewedIds, confirmedIds, onClick }: { item: Record<string, unknown>; viewedIds: Set<string>; confirmedIds: Set<string>; onClick: () => void }) {
   const isViewed = viewedIds.has(item.id);
   const isConfirmed = confirmedIds.has(item.id);
   return (
     <Card
-      className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${(item.priority === "Crítica" || (item as any).require_confirmation) && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
+      className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${(item.priority === "Crítica" || (item as unknown as { require_confirmation?: boolean }).require_confirmation) && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
       onClick={onClick}
     >
       <CardContent className="p-5">
@@ -194,7 +194,7 @@ function AnnouncementCard({ item, viewedIds, confirmedIds, onClick }: { item: an
               <Badge variant={PRIORITY_VARIANTS[item.priority] || "secondary"} className="text-[10px]">
                 {PRIORITY_LABELS[item.priority] || item.priority}
               </Badge>
-              {((item as any).require_confirmation || item.priority === "Crítica") && !isConfirmed && (
+              {((item as unknown as { require_confirmation?: boolean }).require_confirmation || item.priority === "Crítica") && !isConfirmed && (
                 <Badge variant="destructive" className="text-[10px] animate-pulse">
                   <AlertTriangle className="w-3 h-3 mr-1" /> Requer confirmação
                 </Badge>

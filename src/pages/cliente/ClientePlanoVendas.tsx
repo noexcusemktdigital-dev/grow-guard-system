@@ -268,7 +268,7 @@ export default function ClientePlanoVendas() {
     });
   };
 
-  const openEditGoal = (goal: any) => {
+  const openEditGoal = (goal: Record<string, unknown>) => {
     const g = goal as Record<string, unknown>;
     const mesRef = g.period_start ? (g.period_start as string).slice(0, 7) : "";
     setNovaMeta({

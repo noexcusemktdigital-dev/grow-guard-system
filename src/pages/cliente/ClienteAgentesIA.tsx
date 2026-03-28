@@ -50,7 +50,7 @@ export default function ClienteAgentesIA() {
 
   const handleToggleStatus = (agent: AiAgent) => {
     const newStatus = agent.status === "active" ? "paused" : "active";
-    updateAgent.mutate({ id: agent.id, status: newStatus } as any, {
+    updateAgent.mutate({ id: agent.id, status: newStatus } as Record<string, unknown>, {
       onSuccess: () => {
         toast({ title: newStatus === "active" ? "Agente ativado!" : "Agente pausado!" });
         // When activating, offer to reassociate contacts

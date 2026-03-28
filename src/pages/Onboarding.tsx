@@ -71,7 +71,7 @@ export default function Onboarding() {
   };
 
   // Filter out units that already have an active onboarding
-  const existingUnitOrgIds = new Set((units ?? []).map(u => (u as any).unit_org_id).filter(Boolean));
+  const existingUnitOrgIds = new Set((units ?? []).map(u => (u as unknown as { unit_org_id?: string }).unit_org_id).filter(Boolean));
   const availableUnits = (dbUnits ?? []).filter(u => !existingUnitOrgIds.has(u.id));
 
   const getDaysRemaining = (targetDate: string | null) => {
@@ -83,7 +83,7 @@ export default function Onboarding() {
   const handleCreateUnit = () => {
     if (!newUnitId) { toast.error("Selecione uma unidade"); return; }
     const unitName = selectedDbUnit?.name || "Implantação";
-    const responsible = (selectedDbUnit as any)?.manager_name || undefined;
+    const responsible = (selectedDbUnit as unknown as { manager_name?: string } | null)?.manager_name || undefined;
     const startDate = newStartDate || new Date().toISOString().slice(0, 10);
     const targetDate = new Date(new Date(startDate).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     createUnit.mutate({
@@ -165,8 +165,8 @@ export default function Onboarding() {
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     {u.start_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />Início: {new Date(u.start_date).toLocaleDateString("pt-BR")}</span>}
-                    {(u as any).target_date && (() => {
-                      const days = getDaysRemaining((u as any).target_date);
+                    {(u as unknown as { target_date?: string }).target_date && (() => {
+                      const days = getDaysRemaining((u as unknown as { target_date?: string }).target_date);
                       if (days === null) return null;
                       return (
                         <span className={`flex items-center gap-1 font-medium ${days < 0 ? "text-destructive" : days <= 7 ? "text-amber-600 dark:text-amber-400" : ""}`}>
@@ -175,7 +175,7 @@ export default function Onboarding() {
                         </span>
                       );
                     })()}
-                    {(u as any).responsible && <span>Resp: {(u as any).responsible}</span>}
+                    {(u as unknown as { responsible?: string }).responsible && <span>Resp: {(u as unknown as { responsible?: string }).responsible}</span>}
                   </div>
                 </Card>
               );
@@ -207,11 +207,11 @@ export default function Onboarding() {
             {selected.start_date && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar className="w-3 h-3" /> Início: {new Date(selected.start_date).toLocaleDateString("pt-BR")}
-                {(selected as any).target_date && (
+                {(selected as unknown as { target_date?: string }).target_date && (
                   <span className="ml-3">
-                    Prazo: {new Date((selected as any).target_date).toLocaleDateString("pt-BR")}
+                    Prazo: {new Date((selected as unknown as { target_date?: string }).target_date).toLocaleDateString("pt-BR")}
                     {(() => {
-                      const days = getDaysRemaining((selected as any).target_date);
+                      const days = getDaysRemaining((selected as unknown as { target_date?: string }).target_date);
                       if (days === null) return null;
                       return (
                         <span className={`ml-1 font-medium ${days < 0 ? "text-destructive" : days <= 7 ? "text-amber-600 dark:text-amber-400" : ""}`}>
@@ -344,10 +344,10 @@ export default function Onboarding() {
               <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-1">
                 <p className="text-xs text-muted-foreground">Nome da implantação:</p>
                 <p className="text-sm font-medium">{selectedDbUnit.name}</p>
-                {(selectedDbUnit as any)?.manager_name && (
+                {(selectedDbUnit as unknown as { manager_name?: string } | null)?.manager_name && (
                   <>
                     <p className="text-xs text-muted-foreground mt-1">Responsável:</p>
-                    <p className="text-sm">{(selectedDbUnit as any).manager_name}</p>
+                    <p className="text-sm">{(selectedDbUnit as unknown as { manager_name?: string }).manager_name}</p>
                   </>
                 )}
               </div>

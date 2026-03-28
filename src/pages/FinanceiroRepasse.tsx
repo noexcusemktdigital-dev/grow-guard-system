@@ -55,12 +55,12 @@ export default function FinanceiroRepasse() {
       return data;
     },
     onSuccess: (data) => {
-      const created = data.results?.filter((r: any) => r.status === "created").length || 0;
-      const skipped = data.results?.filter((r: any) => r.status === "skipped").length || 0;
+      const created = data.results?.filter((r: { status: string }) => r.status === "created").length || 0;
+      const skipped = data.results?.filter((r: { status: string }) => r.status === "skipped").length || 0;
       toast.success(`${created} cobranças geradas, ${skipped} ignoradas`);
       qc.invalidateQueries({ queryKey: ["franchisee-charges"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(`Erro ao gerar cobranças: ${err.message}`);
     },
   });
@@ -172,7 +172,7 @@ export default function FinanceiroRepasse() {
               <TableBody>
                 {charges.map((charge) => {
                   const st = statusConfig[charge.status] || statusConfig.pending;
-                  const franchiseeName = (charge as any).franchisee_org?.name || "—";
+                  const franchiseeName = (charge as unknown as { franchisee_org?: { name?: string } }).franchisee_org?.name || "—";
                   const canShowPix = charge.asaas_payment_id && charge.status === "pending";
                   return (
                     <TableRow key={charge.id}>

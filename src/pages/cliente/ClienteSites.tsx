@@ -202,7 +202,7 @@ export default function ClienteSites() {
     type: s.type || "lp",
     status: s.status as "Rascunho" | "Aprovado" | "Publicado",
     createdAt: s.created_at.split("T")[0],
-    html: (s.content as any)?.html || "",
+    html: (s.content as unknown as { html?: string } | null)?.html || "",
   }));
 
   // Wizard state
@@ -255,7 +255,7 @@ export default function ClienteSites() {
     referencia_url: "",
   });
 
-  const updateForm = (key: string, value: any) =>
+  const updateForm = (key: string, value: string | boolean | number) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
   const toggleArray = (key: string, value: string) =>
@@ -413,7 +413,7 @@ export default function ClienteSites() {
         html: data.html,
         strategy_id: activeStrategy?.id,
       }, {
-        onSuccess: (created: any) => {
+        onSuccess: (created: Record<string, unknown>) => {
           if (created?.id) setCurrentSiteId(created.id);
         },
       });

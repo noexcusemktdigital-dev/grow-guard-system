@@ -61,7 +61,7 @@ function DailyChecklistTab() {
 
   const streakDays = gamification?.streak_days ?? 0;
   const allItems = items ?? [];
-  const completed = allItems.filter((i: any) => i.is_completed).length;
+  const completed = allItems.filter((i) => i.is_completed).length;
   const total = allItems.length || 1;
   const progress = Math.round((completed / total) * 100);
   const progressColor = progress >= 70 ? "hsl(142, 71%, 45%)" : progress >= 30 ? "hsl(38, 92%, 50%)" : "hsl(0, 84%, 60%)";
@@ -97,8 +97,8 @@ function DailyChecklistTab() {
     }
   };
 
-  const pendingItems = allItems.filter((i: any) => !i.is_completed);
-  const doneItems = allItems.filter((i: any) => i.is_completed);
+  const pendingItems = allItems.filter((i) => !i.is_completed);
+  const doneItems = allItems.filter((i) => i.is_completed);
 
   if (isLoading || generating) {
     return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>;
@@ -158,7 +158,7 @@ function DailyChecklistTab() {
       ) : (
         <>
           <AnimatePresence mode="popLayout">
-            {pendingItems.map((item: any, idx: number) => (
+            {pendingItems.map((item, idx: number) => (
               <motion.div key={item.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ delay: idx * 0.03 }}>
                 <Card className="border bg-muted/5 hover:shadow-sm group">
                   <CardContent className="py-2.5 px-3 flex items-center gap-3">
@@ -176,7 +176,7 @@ function DailyChecklistTab() {
           {doneItems.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Concluídas ({doneItems.length})</p>
-              {doneItems.map((item: any) => (
+              {doneItems.map((item) => (
                 <Card key={item.id} className="opacity-50 cursor-pointer hover:opacity-70" onClick={() => handleToggle(item.id, item.is_completed)}>
                   <CardContent className="py-2 px-3 flex items-center gap-3">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
@@ -197,9 +197,9 @@ interface TaskFormProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   task?: ClientTask | null;
-  members?: any[];
+  members?: { id: string; full_name?: string }[];
   isAdmin: boolean;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   isPending: boolean;
 }
 
@@ -316,7 +316,7 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
   const overdue = pending.filter(t => t.due_date && isPast(parseISO(t.due_date)) && !isToday(parseISO(t.due_date)));
   const completedToday = done.filter(t => t.completed_at && isToday(parseISO(t.completed_at)));
 
-  const handleCreate = (data: any) => {
+  const handleCreate = (data: Record<string, unknown>) => {
     createTask.mutate({
       title: data.title,
       description: data.description || undefined,
@@ -333,7 +333,7 @@ function TasksTab({ filterMyTasks }: { filterMyTasks: boolean }) {
     });
   };
 
-  const handleEdit = (data: any) => {
+  const handleEdit = (data: Record<string, unknown>) => {
     if (!editingTask) return;
     updateTask.mutate({
       id: editingTask.id,

@@ -112,7 +112,7 @@ export default function ClienteChat() {
     if (!selectedContact) return;
     try {
       const defaultFunnel = funnelsData?.find(f => f.is_default) || funnelsData?.[0];
-      const dbStages = defaultFunnel?.stages as any[] | undefined;
+      const dbStages = defaultFunnel?.stages as { key?: string; label?: string; color?: string; icon?: string }[] | undefined;
       const firstStage = Array.isArray(dbStages) && dbStages.length > 0 ? (dbStages[0].key || "novo") : "novo";
       const lead = await createLead.mutateAsync({
         name: selectedContact.name || selectedContact.phone,
@@ -137,7 +137,7 @@ export default function ClienteChat() {
 
     const channel = supabase
       .channel(`whatsapp-realtime-${instance.organization_id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: any) => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: Record<string, unknown>) => {
         const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
         if (changedContactId && changedContactId === selectedContactIdRef.current) {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });

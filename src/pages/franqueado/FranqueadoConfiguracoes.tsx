@@ -85,13 +85,13 @@ function UnitDataTab() {
         </div>
 
         {/* Readonly financial fields */}
-        {(unit as any).cnpj && (
+        {(unit as unknown as { cnpj?: string }).cnpj && (
           <div className="pt-4 border-t border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Dados Financeiros (somente leitura)</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">CNPJ</Label>
-                <Input value={(unit as any).cnpj || ""} readOnly className="bg-muted" />
+                <Input value={(unit as unknown as { cnpj?: string }).cnpj || ""} readOnly className="bg-muted" />
               </div>
             </div>
           </div>
@@ -146,7 +146,7 @@ function TeamTab() {
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
-    onError: (err: any) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
   const roleLabels: Record<string, string> = {
@@ -366,12 +366,12 @@ function ReferralTab() {
     queryKey: ["referral-config", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("referral_discounts" as any)
+        .from("referral_discounts" as unknown as "referral_discounts")
         .select("*")
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
-      return data as any;
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
   });
@@ -400,7 +400,7 @@ function ReferralTab() {
     const code = editCode.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
     const { error } = await supabase
       .from("organizations")
-      .update({ referral_code: code } as any)
+      .update({ referral_code: code } as Record<string, unknown>)
       .eq("id", orgId);
     setSaving(false);
     if (error) {

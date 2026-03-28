@@ -166,7 +166,7 @@ export default function ClienteTrafegoPago() {
         setShowWizard(false);
         setStep(0);
       },
-      onError: (err: any) => {
+      onError: (err: unknown) => {
         if (err.code === "RATE_LIMIT") {
           toast({ title: "Limite de requisições", description: "Aguarde alguns minutos e tente novamente.", variant: "destructive" });
         } else {
@@ -179,7 +179,7 @@ export default function ClienteTrafegoPago() {
   const handleApprove = (id: string) => {
     approveMutation.mutate(id, {
       onSuccess: () => toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados." }),
-      onError: (err: any) => {
+      onError: (err: unknown) => {
         if (isInsufficientCreditsError(err)) {
           setShowCreditsDialog(true);
         } else {
@@ -189,8 +189,8 @@ export default function ClienteTrafegoPago() {
     });
   };
 
-  const sourceData = (activeStrategy?.source_data || {}) as any;
-  const platforms = (activeStrategy?.platforms || []) as any[];
+  const sourceData = (activeStrategy?.source_data || {}) as Record<string, unknown>;
+  const platforms = (activeStrategy?.platforms || []) as Record<string, unknown>[];
 
   // ── Wizard Steps Render ──
   const renderStep = () => {
@@ -462,7 +462,7 @@ export default function ClienteTrafegoPago() {
             </CardHeader>
             <CardContent className="py-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {sourceData.investment_plan.distribution.map((d: any) => (
+                {sourceData.investment_plan.distribution.map((d: Record<string, unknown>) => (
                   <div key={d.platform} className={`p-3 rounded-xl border ${platformColors[d.platform] || ""}`}>
                     <p className="text-xs font-bold">{d.platform}</p>
                     <p className="text-lg font-bold mt-1">{d.percentage}%</p>
@@ -510,7 +510,7 @@ export default function ClienteTrafegoPago() {
 
         {/* Platform Cards */}
         <div className="grid gap-4 md:grid-cols-2">
-          {platforms.map((p: any) => {
+          {platforms.map((p: Record<string, unknown>) => {
             const isOpen = expandedPlatforms[p.platform] ?? false;
             return (
               <Card key={p.platform} className={`border-l-4 ${platformColors[p.platform]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
@@ -605,10 +605,10 @@ export default function ClienteTrafegoPago() {
                       {p.campaign_structure?.campaigns?.length > 0 && (
                         <div>
                           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
-                          {p.campaign_structure.campaigns.map((c: any, ci: number) => (
+                          {p.campaign_structure.campaigns.map((c: Record<string, unknown>, ci: number) => (
                             <div key={ci} className="p-2.5 rounded-lg bg-muted/10 border mb-1.5">
                               <p className="text-xs font-bold">{c.name}</p>
-                              {c.ad_sets?.map((as_: any, ai: number) => (
+                              {c.ad_sets?.map((as_: Record<string, unknown>, ai: number) => (
                                 <div key={ai} className="ml-3 mt-1.5 pl-2 border-l-2 border-muted">
                                   <p className="text-[11px] font-medium">{as_.name}</p>
                                   <p className="text-[10px] text-muted-foreground">{as_.targeting}</p>
@@ -836,7 +836,7 @@ export default function ClienteTrafegoPago() {
                         Estratégia de {format(new Date(h.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {(h.platforms as any[])?.map((p: any) => p.platform).join(", ")}
+                        {((h.platforms as Record<string, unknown>[]) || []).map((p: Record<string, unknown>) => p.platform).join(", ")}
                       </p>
                     </div>
                     <Badge variant={h.status === "approved" ? "default" : "secondary"} className="text-[10px]">

@@ -50,7 +50,7 @@ function TrendIndicator({ current, previous }: { current: number; previous: numb
 
 function MemberEvolutionSheet({ member, evaluations, open, onOpenChange }: {
   member: { user_id: string; full_name: string; role: string };
-  evaluations: any[];
+  evaluations: Record<string, unknown>[];
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
@@ -343,7 +343,7 @@ export default function ClienteAvaliacoes() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-2 pl-7">
-                        {evals.map((ev: any) => {
+                        {evals.map((ev: Record<string, unknown>) => {
                           const member = (team ?? []).find((m) => m.user_id === ev.user_id);
                           const cats = (ev.categories || {}) as Record<string, number>;
                           const isSelfEval = ev.evaluator_id === ev.user_id;

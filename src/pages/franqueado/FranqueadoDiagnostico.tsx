@@ -95,13 +95,13 @@ export default function FranqueadoDiagnostico() {
     queryKey: ["client-diagnostics", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("client_diagnostics" as any)
+        .from("client_diagnostics" as unknown as "client_diagnostics")
         .select("*")
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return data as any[];
+      return data as Record<string, unknown>[];
     },
     enabled: !!orgId,
   });
@@ -129,14 +129,14 @@ export default function FranqueadoDiagnostico() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("client_diagnostics" as any).insert({
+      const { error } = await supabase.from("client_diagnostics" as unknown as "client_diagnostics").insert({
         organization_id: orgId,
         lead_id: selectedLeadId || null,
         created_by: (await supabase.auth.getUser()).data.user?.id,
         scores,
         total_score: totalScore,
         notes: notes || null,
-      } as any);
+      } as Record<string, unknown>);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -172,7 +172,7 @@ export default function FranqueadoDiagnostico() {
                     <SelectValue placeholder="Selecione um lead (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(leads ?? []).map((l: any) => (
+                    {(leads ?? []).map((l) => (
                       <SelectItem key={l.id} value={l.id}>{l.name} {l.company ? `— ${l.company}` : ""}</SelectItem>
                     ))}
                   </SelectContent>
@@ -306,7 +306,7 @@ export default function FranqueadoDiagnostico() {
                 <CardTitle className="text-sm font-semibold">Últimos Diagnósticos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {diagnostics?.slice(0, 5).map((d: any) => (
+                {diagnostics?.slice(0, 5).map((d: Record<string, unknown>) => (
                   <div key={d.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
                     <span className="text-xs text-muted-foreground">
                       {new Date(d.created_at).toLocaleDateString("pt-BR")}
