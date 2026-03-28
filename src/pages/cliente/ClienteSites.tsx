@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { logger } from "@/lib/logger";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Globe, Sparkles, ArrowLeft, ArrowRight, Loader2,
@@ -420,7 +421,7 @@ export default function ClienteSites() {
 
       toast({ title: "Site gerado com sucesso!", description: `${SITE_CREDIT_COST} créditos foram utilizados.` });
     } catch (err) {
-      console.error(err);
+      logger.error("Erro inesperado ao gerar site:", err);
       clearInterval(interval);
       toast({ title: "Erro inesperado", variant: "destructive" });
     } finally {

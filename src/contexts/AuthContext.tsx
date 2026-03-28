@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useRef, useCallback, Re
 import { supabase } from "@/lib/supabase";
 import { supabase as defaultClient } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 interface Profile {
   id: string;
@@ -176,12 +177,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 lastFetchedUserRef.current = currentUser.id;
               }
             } catch (err) {
-              console.error(`[Auth] Provisioning attempt ${attempt + 1} failed:`, err);
+              logger.error(`[Auth] Provisioning attempt ${attempt + 1} failed:`, err);
             }
           }
 
           if (!provisioned) {
-            console.error("[Auth] All provisioning attempts failed, using fallback role");
+            logger.error("[Auth] All provisioning attempts failed, using fallback role");
             setRole("cliente_admin");
             lastFetchedUserRef.current = currentUser.id;
           }
@@ -190,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
-      console.error("[Auth] fetchProfileAndRole failed:", err);
+      logger.error("[Auth] fetchProfileAndRole failed:", err);
       const path = window.location.pathname;
       if (path.startsWith("/cliente") || path.startsWith("/app")) {
         setRole("cliente_admin");
@@ -250,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         } catch (err) {
-          console.error("[Auth] OAuth session transfer failed:", err);
+          logger.error("[Auth] OAuth session transfer failed:", err);
         }
       }
       if (mounted) setLoading(false);

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { logger } from "@/lib/logger";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Target, Rocket, Activity, Lock, BarChart3, Clock,
@@ -129,7 +130,7 @@ export default function ClientePlanoVendas() {
           });
           toast({ title: "Funil CRM criado automaticamente!", description: `${funnelStages.length} etapas configuradas.` });
         } catch (e) {
-          console.error("Auto-funnel error:", e);
+          logger.error("Auto-funnel error:", e);
         }
       }
     }
@@ -165,7 +166,7 @@ export default function ClientePlanoVendas() {
               created++;
             }
           } catch (e) {
-            console.error(`Auto-script ${stage} error:`, e);
+            logger.error(`Auto-script ${stage} error:`, e);
           }
         }
         if (created > 0) {
@@ -183,7 +184,7 @@ export default function ClientePlanoVendas() {
           score: salesPlanData.score ?? 0,
         });
       } catch (e) {
-        console.error("Archive error:", e);
+        logger.error("Archive error:", e);
       }
     }
     setAnswers({}); setCompleted(false);

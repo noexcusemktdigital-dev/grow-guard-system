@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { logger } from "@/lib/logger";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ export default function FranqueadoSuporte() {
       setNovaSubcategoria("");
       toast.success("Chamado criado!");
     } catch (err) {
-      console.error("Erro ao criar chamado:", err);
+      logger.error("Erro ao criar chamado:", err);
       toast.error("Erro ao criar chamado");
     }
     setCreatingTicket(false);
@@ -156,7 +157,7 @@ export default function FranqueadoSuporte() {
       setNewMessage("");
       setMsgAttachments([]);
     } catch (err) {
-      console.error("Erro ao enviar mensagem:", err);
+      logger.error("Erro ao enviar mensagem:", err);
       toast.error("Erro ao enviar mensagem");
     }
     setUploadingMsg(false);

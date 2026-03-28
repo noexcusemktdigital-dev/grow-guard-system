@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { logger } from "@/lib/logger";
 import { MessageCircle, Settings2, PanelRightOpen, PanelRightClose, WifiOff } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,13 +70,13 @@ export default function ClienteChat() {
           body: { action: "check-status", instanceId: instance.instance_id },
         });
         if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
-      } catch (err) { console.error("Auto check-status failed:", err); }
+      } catch (err) { logger.error("Auto check-status failed:", err); }
       try {
         await supabase.functions.invoke("whatsapp-sync-chats", {
           body: { instanceId: instance.instance_id },
         });
         if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-      } catch (err) { console.error("Auto sync-chats failed:", err); }
+      } catch (err) { logger.error("Auto sync-chats failed:", err); }
       try {
         supabase.functions.invoke("whatsapp-sync-photos", { body: { limit: 30 } })
           .then(() => { if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }); })

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '@/lib/logger';
 import { modules, getYoutubePrice } from '@/data/services';
 
 export type Duration = 1 | 6 | 12;
@@ -26,7 +27,7 @@ const loadFromStorage = (): CalculatorState | null => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch (e) {
-    console.error('Error loading from localStorage:', e);
+    logger.error('Error loading from localStorage:', e);
   }
   return null;
 };
@@ -35,7 +36,7 @@ const saveToStorage = (state: CalculatorState) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
-    console.error('Error saving to localStorage:', e);
+    logger.error('Error saving to localStorage:', e);
   }
 };
 

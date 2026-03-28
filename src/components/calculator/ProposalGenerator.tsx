@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Download, Trash2 } from 'lucide-react';
@@ -51,7 +52,7 @@ export const ProposalGenerator = ({
         reader.onloadend = () => setLogoBase64(reader.result as string);
         reader.readAsDataURL(blob);
       } catch (error) {
-        console.error('Error loading logo:', error);
+        logger.error('Error loading logo:', error);
       }
     };
     loadLogo();
@@ -101,7 +102,7 @@ export const ProposalGenerator = ({
       }
       pdf.save(`proposta-noexcuse-${clientName || 'cliente'}-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
+      logger.error('Erro ao gerar PDF:', error);
     } finally {
       setIsExporting(false);
     }

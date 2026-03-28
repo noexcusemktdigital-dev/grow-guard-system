@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -338,7 +339,7 @@ export function useTeamChat() {
           file_name: fileName || null,
         });
       if (error) {
-        console.error("[TeamChat] sendMessage error:", error);
+        logger.error("[TeamChat] sendMessage error:", error);
         throw error;
       }
     },

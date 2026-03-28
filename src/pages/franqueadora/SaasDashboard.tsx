@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "@/lib/logger";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,7 +115,7 @@ function ErrosTab() {
       setResolveDialog(null);
       setResolveNote("");
     } catch (err) {
-      console.error("Erro ao resolver:", err);
+      logger.error("Erro ao resolver:", err);
       toast.error("Falha ao resolver erro");
     }
   };
@@ -126,7 +127,7 @@ function ErrosTab() {
       toast.success("Erro excluído");
       setDeleteTarget(null);
     } catch (err) {
-      console.error("Erro ao excluir:", err);
+      logger.error("Erro ao excluir:", err);
       toast.error("Falha ao excluir erro");
     }
   };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
@@ -167,7 +168,7 @@ const SaasAuth = () => {
           },
         });
       } catch (err) {
-        console.error("Provisioning error:", err);
+        logger.error("Provisioning error:", err);
       }
     }
     setLoading(false);

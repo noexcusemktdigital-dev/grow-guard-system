@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import {
   usePostHistory, useGeneratePost, useApprovePost, useDeletePost,
   useBulkDeletePosts, useBulkApprovePosts, useGenerateBriefing,
@@ -105,7 +106,7 @@ export default function ClienteRedesSociais() {
         .single();
       if (!error && data) setContentData(data);
     } catch (err) {
-      console.error("Erro ao carregar conteúdo:", err);
+      logger.error("Erro ao carregar conteúdo:", err);
       toast({ title: "Erro ao carregar conteúdo vinculado", variant: "destructive" });
     }
   };
@@ -204,7 +205,7 @@ export default function ClienteRedesSociais() {
             toast({ title: `Créditos insuficientes após slide ${results.length}`, variant: "destructive" });
             break;
           }
-          console.error(`Slide ${i + 1} failed:`, slideErr);
+          logger.error(`Slide ${i + 1} failed:`, slideErr);
           toast({ title: `Erro no slide ${i + 1}`, description: slideErr.message, variant: "destructive" });
         }
       }
@@ -273,7 +274,7 @@ export default function ClienteRedesSociais() {
     const results = batchResults.length > 0 ? batchResults : (generatedResult ? [generatedResult] : []);
     for (const r of results) {
       if (r.post.status !== "approved") {
-        try { await deletePost.mutateAsync(r.post.id); } catch (err) { console.error("Erro ao excluir rascunho:", err); }
+        try { await deletePost.mutateAsync(r.post.id); } catch (err) { logger.error("Erro ao excluir rascunho:", err); }
       }
     }
     setGeneratedResult(null);

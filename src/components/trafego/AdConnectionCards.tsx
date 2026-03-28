@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { logger } from "@/lib/logger";
 import { Globe, Users, RefreshCw, Unplug, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,7 @@ export function AdConnectionCards() {
         setPickerAccounts(accounts);
         setPickerOpen(true);
       } catch (e) {
-        console.error("Failed to parse ads_accounts:", e);
+        logger.error("Failed to parse ads_accounts:", e);
       }
       window.history.replaceState({}, "", window.location.pathname);
       setConnectingPlatform(null);
