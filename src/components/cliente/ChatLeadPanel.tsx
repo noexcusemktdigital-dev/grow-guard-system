@@ -35,7 +35,7 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
   const linkItems = useMemo(() => {
     const urlRegex = /(https?:\/\/[^\s<]+)/gi;
     return allMessages.filter(m => m.content && urlRegex.test(m.content)).map(m => {
-      const match = m.content!.match(urlRegex);
+      const match = m.content?.match(urlRegex);
       return { ...m, links: match || [] };
     });
   }, [allMessages]);
@@ -169,9 +169,9 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
               ) : (
                 <div className="space-y-1.5">
                   {docItems.slice(0, 20).map(m => (
-                    <a key={m.id} href={m.media_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                    <a key={m.id} href={m.media_url ?? "#"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
                       <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <span className="text-[11px] truncate">{m.media_url!.split("/").pop()}</span>
+                      <span className="text-[11px] truncate">{(m.media_url ?? "").split("/").pop()}</span>
                     </a>
                   ))}
                 </div>

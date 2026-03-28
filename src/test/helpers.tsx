@@ -10,9 +10,9 @@ export { screen, fireEvent, waitFor } from "@testing-library/dom";
 
 // Auth context mock type
 interface AuthOverrides {
-  user?: any;
-  session?: any;
-  profile?: any;
+  user?: Record<string, unknown> | null;
+  session?: Record<string, unknown> | null;
+  profile?: Record<string, unknown> | null;
   role?: "super_admin" | "admin" | "franqueado" | "cliente_admin" | "cliente_user" | null;
   loading?: boolean;
 }

@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Role fetch timed out, checking cached role
           const cached = localStorage.getItem("noe-cached-role") as AppRole | null;
           if (cached) {
-            console.log("[Auth] Using cached role:", cached);
+            // Using cached role as fallback
             setRole(cached);
           } else {
             // Last resort fallback

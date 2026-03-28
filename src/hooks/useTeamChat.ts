@@ -56,7 +56,7 @@ export function useTeamChat() {
       const { data: memberOf } = await supabase
         .from("team_chat_members")
         .select("channel_id")
-        .eq("user_id", user!.id);
+        .eq("user_id", user?.id ?? "");
 
       const channelIds = (memberOf || []).map((m) => m.channel_id);
 
