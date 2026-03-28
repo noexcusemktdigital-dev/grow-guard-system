@@ -27,6 +27,85 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 
+
+interface NetworkContract {
+  id: string;
+  title: string;
+  status: string;
+  organization_id: string;
+  signer_name: string | null;
+  monthly_value?: number;
+  payment_day?: number;
+  start_date?: string;
+  end_date?: string;
+  org_name?: string;
+  [key: string]: unknown;
+}
+
+interface RevenueRow {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  status: string;
+  category?: string;
+  payment_method?: string;
+  [key: string]: unknown;
+}
+
+interface ExpenseRow {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  status: string;
+  category?: string;
+  is_recurring?: boolean;
+  [key: string]: unknown;
+}
+
+interface UnitRow {
+  id: string;
+  name: string;
+  unit_org_id?: string;
+  system_fee?: number;
+  [key: string]: unknown;
+}
+
+interface ClosingRow {
+  id: string;
+  title: string;
+  month: number;
+  year: number;
+  status: string;
+  file_url?: string;
+  unit_id?: string;
+  [key: string]: unknown;
+}
+
+interface ChargeRow {
+  id: string;
+  month: string;
+  status: string;
+  total_amount: number;
+  royalty_amount: number;
+  system_fee: number;
+  asaas_payment_id?: string;
+  paid_at?: string;
+  franchisee_org?: { name: string } | null;
+  [key: string]: unknown;
+}
+
+interface MonthOption {
+  value: string;
+  label: string;
+}
+
+interface ChargeResult {
+  status: string;
+  [key: string]: unknown;
+}
+
 const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const expCategories = ["Pessoas", "Plataformas", "Estrutura", "Empréstimos", "Investimentos", "Eventos", "Treinamentos", "Impostos"];
 const ASAAS_PAID_STATUSES = ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"];
@@ -77,7 +156,7 @@ export default function FinanceiroDashboard() {
   const monthOptions = useMemo(getMonthOptions, []);
 
   const isLoading = le || lc || lr;
-  const activeContracts = useMemo(() => (contracts ?? []).filter((c: any) => c.status === "active" || c.status === "signed"), [contracts]);
+  const activeContracts = useMemo(() => (contracts ?? []).filter((c: Record<string, unknown>) => c.status === "active" || c.status === "signed"), [contracts]);
 
   const filteredExpenses = useMemo(() => {
     if (selectedMonth === "all") return expenses ?? [];
@@ -91,11 +170,11 @@ export default function FinanceiroDashboard() {
 
   const filteredRevenues = useMemo(() => {
     if (selectedMonth === "all") return revenues ?? [];
-    return (revenues ?? []).filter((r: any) => (r.date || "").startsWith(selectedMonth));
+    return (revenues ?? []).filter((r: RevenueRow) => (r.date || "").startsWith(selectedMonth));
   }, [revenues, selectedMonth]);
 
   const totalAsaasPaid = useMemo(() => filteredAsaas.filter(p => ASAAS_PAID_STATUSES.includes(p.status)).reduce((s, p) => s + p.value, 0), [filteredAsaas]);
-  const totalManualPaid = useMemo(() => filteredRevenues.filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount), 0), [filteredRevenues]);
+  const totalManualPaid = useMemo(() => filteredRevenues.filter((r: RevenueRow) => r.status === "paid").reduce((s: number, r: RevenueRow) => s + Number(r.amount), 0), [filteredRevenues]);
   const totalRevenue = totalAsaasPaid + totalManualPaid;
   const totalExpenses = filteredExpenses.reduce((s, e) => s + Number(e.amount), 0);
   const resultado = totalRevenue - totalExpenses;
@@ -230,30 +309,30 @@ export default function FinanceiroDashboard() {
 /* DASHBOARD TAB                                                      */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, revenues, expenses, activeContracts, selectedMonth, monthOptions, monthTotal, monthReceived, monthOverdue }: any) {
+function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, overdueCount, asaasPayments, revenues, expenses, activeContracts, selectedMonth, monthOptions, monthTotal, monthReceived, monthOverdue }: { totalRevenue: number; totalExpenses: number; resultado: number; networkMRR: number; overdueCount: number; asaasPayments: AsaasPayment[] | undefined; revenues: RevenueRow[] | undefined; expenses: ExpenseRow[] | undefined; activeContracts: NetworkContract[]; selectedMonth: string; monthOptions: MonthOption[]; monthTotal: number; monthReceived: number; monthOverdue: number }) {
   const chartData = useMemo(() => {
     const now = new Date();
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const asaasRec = (asaasPayments ?? [])
-        .filter((p: any) => (p.paymentDate || p.dueDate || "").startsWith(prefix) && ASAAS_PAID_STATUSES.includes(p.status))
-        .reduce((s: number, p: any) => s + p.value, 0);
+        .filter((p: AsaasPayment) => (p.paymentDate || p.dueDate || "").startsWith(prefix) && ASAAS_PAID_STATUSES.includes(p.status))
+        .reduce((s: number, p: AsaasPayment) => s + p.value, 0);
       const manualRec = (revenues ?? [])
-        .filter((r: any) => (r.date || "").startsWith(prefix) && r.status === "paid")
-        .reduce((s: number, r: any) => s + Number(r.amount), 0);
-      const desp = (expenses ?? []).filter((e: any) => (e.date || "").startsWith(prefix)).reduce((s: number, e: any) => s + Number(e.amount), 0);
+        .filter((r: RevenueRow) => (r.date || "").startsWith(prefix) && r.status === "paid")
+        .reduce((s: number, r: RevenueRow) => s + Number(r.amount), 0);
+      const desp = (expenses ?? []).filter((e: ExpenseRow) => (e.date || "").startsWith(prefix)).reduce((s: number, e: ExpenseRow) => s + Number(e.amount), 0);
       return { name: months[d.getMonth()], receitas: asaasRec + manualRec, despesas: desp };
     });
   }, [asaasPayments, revenues, expenses]);
 
   const pieData = useMemo(() => {
     const cats: Record<string, number> = { "Manual": 0 };
-    (asaasPayments ?? []).filter((p: any) => ASAAS_PAID_STATUSES.includes(p.status)).forEach((p: any) => {
+    (asaasPayments ?? []).filter((p: AsaasPayment) => ASAAS_PAID_STATUSES.includes(p.status)).forEach((p: AsaasPayment) => {
       const cat = p.billingType || "Outros";
       cats[cat] = (cats[cat] || 0) + p.value;
     });
-    const manualTotal = (revenues ?? []).filter((r: any) => r.status === "paid").reduce((s: number, r: any) => s + Number(r.amount), 0);
+    const manualTotal = (revenues ?? []).filter((r: RevenueRow) => r.status === "paid").reduce((s: number, r: RevenueRow) => s + Number(r.amount), 0);
     if (manualTotal > 0) cats["Manual"] = manualTotal;
     else delete cats["Manual"];
     return Object.entries(cats).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
@@ -266,7 +345,7 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
         <KpiCard label="Cobranças do Mês" value={formatBRL(monthTotal)} sublabel="total no período" />
         <KpiCard label="Recebidas" value={formatBRL(monthReceived)} trend="up" sublabel="confirmadas" />
         <KpiCard label="Atrasadas" value={formatBRL(monthOverdue)} sublabel={overdueCount > 0 ? `${overdueCount} cobranças` : "nenhuma"} />
-        <KpiCard label="Despesas" value={formatBRL(totalExpenses)} sublabel={selectedMonth !== "all" ? monthOptions.find((o: any) => o.value === selectedMonth)?.label : undefined} />
+        <KpiCard label="Despesas" value={formatBRL(totalExpenses)} sublabel={selectedMonth !== "all" ? monthOptions.find((o: MonthOption) => o.value === selectedMonth)?.label : undefined} />
         <KpiCard label="Resultado" value={formatBRL(resultado)} trend={resultado >= 0 ? "up" : "down"} />
       </div>
 
@@ -292,8 +371,8 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <RePieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {pieData.map((_: any, index: number) => (
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {pieData.map((_: { name: string; value: number }, index: number) => (
                     <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -315,12 +394,12 @@ function DashboardTab({ totalRevenue, totalExpenses, resultado, networkMRR, over
 
 const revCategories = ["Serviço", "Consultoria", "Licença", "Comissão", "Outros"];
 
-function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, toast }: any) {
+function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas, createRevenue, updateRevenue, deleteRevenue, toast }: { asaasPayments: AsaasPayment[] | undefined; revenues: RevenueRow[] | undefined; selectedMonth: string; la: boolean; refetchAsaas: () => void; createRevenue: { mutate: (data: Record<string, unknown>) => void }; updateRevenue: { mutate: (data: Record<string, unknown>) => void }; deleteRevenue: { mutate: (id: string) => void }; toast: (opts: { title: string; variant?: string }) => void }) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterSource, setFilterSource] = useState("all");
   const [revDialog, setRevDialog] = useState(false);
-  const [editingRev, setEditingRev] = useState<any>(null);
+  const [editingRev, setEditingRev] = useState<RevenueRow | null>(null);
   const [revForm, setRevForm] = useState({ description: "", amount: 0, category: "Serviço", status: "pending", date: "", payment_method: "" });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
@@ -333,7 +412,7 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
       date: p.dueDate || p.paymentDate || "", status: ASAAS_PAID_STATUSES.includes(p.status) ? "paid" : p.status === "OVERDUE" ? "overdue" : "pending",
       source: "asaas" as const, billingType: p.billingType, invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl, orgName: p.orgName, rawStatus: p.status,
     }));
-    const manualList: UnifiedEntry[] = ((revenues ?? []) as any[]).map(r => ({
+    const manualList: UnifiedEntry[] = ((revenues ?? []) as RevenueRow[]).map(r => ({
       id: r.id, description: r.description || "—", value: Number(r.amount),
       date: r.date || "", status: r.status || "pending",
       source: "manual" as const, category: r.category,
@@ -351,7 +430,7 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
   const totalOverdue = useMemo(() => unified.filter(e => e.status === "overdue").reduce((s, e) => s + e.value, 0), [unified]);
 
   const openNewRev = () => { setEditingRev(null); setRevForm({ description: "", amount: 0, category: "Serviço", status: "pending", date: "", payment_method: "" }); setRevDialog(true); };
-  const openEditRev = (r: any) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Serviço", status: r.status || "pending", date: r.date || "", payment_method: r.payment_method || "" }); setRevDialog(true); };
+  const openEditRev = (r: RevenueRow) => { setEditingRev(r); setRevForm({ description: r.description, amount: Number(r.amount), category: r.category || "Serviço", status: r.status || "pending", date: r.date || "", payment_method: r.payment_method || "" }); setRevDialog(true); };
 
   const saveRev = () => {
     if (!revForm.description.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
@@ -447,7 +526,7 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
                         {entry.source === "manual" && (
                           <>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                              const rev = (revenues ?? []).find((r: any) => r.id === entry.id);
+                              const rev = (revenues ?? []).find((r: RevenueRow) => r.id === entry.id);
                               if (rev) openEditRev(rev);
                             }} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(entry.id)} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -509,27 +588,27 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
 /* DESPESAS TAB                                                       */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, deleteExpense, toast }: any) {
+function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, deleteExpense, toast }: { expenses: ExpenseRow[] | undefined; selectedMonth: string; createExpense: { mutate: (data: Record<string, unknown>) => void }; updateExpense: { mutate: (data: Record<string, unknown>) => void }; deleteExpense: { mutate: (id: string) => void }; toast: (opts: { title: string; variant?: string }) => void }) {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [expDialog, setExpDialog] = useState(false);
-  const [editingExp, setEditingExp] = useState<any>(null);
+  const [editingExp, setEditingExp] = useState<ExpenseRow | null>(null);
   const [expForm, setExpForm] = useState({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    let list = (expenses ?? []).filter((e: any) => selectedMonth === "all" || (e.date || "").startsWith(selectedMonth));
-    if (search) list = list.filter((e: any) => e.description?.toLowerCase().includes(search.toLowerCase()));
-    if (filterCategory !== "all") list = list.filter((e: any) => e.category === filterCategory);
-    if (filterStatus !== "all") list = list.filter((e: any) => e.status === filterStatus);
-    if (filterType !== "all") list = list.filter((e: any) => filterType === "recurring" ? e.is_recurring : !e.is_recurring);
+    let list = (expenses ?? []).filter((e: ExpenseRow) => selectedMonth === "all" || (e.date || "").startsWith(selectedMonth));
+    if (search) list = list.filter((e: ExpenseRow) => e.description?.toLowerCase().includes(search.toLowerCase()));
+    if (filterCategory !== "all") list = list.filter((e: ExpenseRow) => e.category === filterCategory);
+    if (filterStatus !== "all") list = list.filter((e: ExpenseRow) => e.status === filterStatus);
+    if (filterType !== "all") list = list.filter((e: ExpenseRow) => filterType === "recurring" ? e.is_recurring : !e.is_recurring);
     return list;
   }, [expenses, selectedMonth, search, filterCategory, filterStatus, filterType]);
 
   const openNewExp = () => { setEditingExp(null); setExpForm({ description: "", amount: 0, category: "Plataformas", status: "pending", is_recurring: false, date: "" }); setExpDialog(true); };
-  const openEditExp = (e: any) => { setEditingExp(e); setExpForm({ description: e.description, amount: Number(e.amount), category: e.category || "Plataformas", status: e.status || "pending", is_recurring: !!e.is_recurring, date: e.date || "" }); setExpDialog(true); };
+  const openEditExp = (e: ExpenseRow) => { setEditingExp(e); setExpForm({ description: e.description, amount: Number(e.amount), category: e.category || "Plataformas", status: e.status || "pending", is_recurring: !!e.is_recurring, date: e.date || "" }); setExpDialog(true); };
 
   const saveExp = () => {
     if (!expForm.description.trim()) { toast({ title: "Informe a descrição", variant: "destructive" }); return; }
@@ -596,7 +675,7 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
               <th className="text-center py-3 px-4 font-medium">Ações</th>
             </tr></thead>
             <tbody>
-              {filtered.map((e: any) => (
+              {filtered.map((e: ExpenseRow) => (
                 <tr key={e.id} className="border-b hover:bg-muted/30">
                   <td className="py-3 px-4 font-medium">{e.description}</td>
                   <td className="py-3 px-4"><Badge variant="secondary" className="text-[10px]">{e.category || "—"}</Badge></td>
@@ -699,15 +778,15 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
 
   const repasseMonthOptions = useMemo(() => {
     const ms = new Set<string>();
-    (charges ?? []).forEach((c: any) => { if (c.month) ms.add(c.month); });
+    (charges ?? []).forEach((c: ChargeRow) => { if (c.month) ms.add(c.month); });
     return [...ms].sort().reverse();
   }, [charges]);
 
   const filteredCharges = useMemo(() => {
     let list = charges ?? [];
-    if (searchFranqueado) list = list.filter((c: any) => (c.franchisee_org?.name || "").toLowerCase().includes(searchFranqueado.toLowerCase()));
-    if (filterRepasseStatus !== "all") list = list.filter((c: any) => c.status === filterRepasseStatus);
-    if (filterRepasseMonth !== "all") list = list.filter((c: any) => c.month === filterRepasseMonth);
+    if (searchFranqueado) list = list.filter((c: ChargeRow) => (c.franchisee_org?.name || "").toLowerCase().includes(searchFranqueado.toLowerCase()));
+    if (filterRepasseStatus !== "all") list = list.filter((c: ChargeRow) => c.status === filterRepasseStatus);
+    if (filterRepasseMonth !== "all") list = list.filter((c: ChargeRow) => c.month === filterRepasseMonth);
     return list;
   }, [charges, searchFranqueado, filterRepasseStatus, filterRepasseMonth]);
 
@@ -724,12 +803,12 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
       return data;
     },
     onSuccess: (data) => {
-      const created = data.results?.filter((r: any) => r.status === "created").length || 0;
-      const skipped = data.results?.filter((r: any) => r.status === "skipped").length || 0;
+      const created = data.results?.filter((r: ChargeResult) => r.status === "created").length || 0;
+      const skipped = data.results?.filter((r: ChargeResult) => r.status === "skipped").length || 0;
       sonnerToast.success(`${created} cobranças geradas, ${skipped} ignoradas`);
       qc.invalidateQueries({ queryKey: ["franchisee-charges"] });
     },
-    onError: (err: any) => sonnerToast.error(`Erro: ${err.message}`),
+    onError: (err: unknown) => sonnerToast.error(`Erro: ${err instanceof Error ? err.message : String(err)}`),
   });
 
   const fetchPix = useQuery({
@@ -752,8 +831,8 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
 
   if (isLoading) return <div className="space-y-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
-  const totalPending = charges?.filter((c: any) => c.status === "pending").reduce((s: number, c: any) => s + Number(c.total_amount), 0) ?? 0;
-  const totalPaid = charges?.filter((c: any) => c.status === "paid").reduce((s: number, c: any) => s + Number(c.total_amount), 0) ?? 0;
+  const totalPending = charges?.filter((c: ChargeRow) => c.status === "pending").reduce((s: number, c: ChargeRow) => s + Number(c.total_amount), 0) ?? 0;
+  const totalPaid = charges?.filter((c: ChargeRow) => c.status === "paid").reduce((s: number, c: ChargeRow) => s + Number(c.total_amount), 0) ?? 0;
 
   const statusConfig: Record<string, { label: string; icon: React.ReactNode; variant: "default" | "secondary" | "destructive" | "outline" }> = {
     pending: { label: "Pendente", icon: <Clock className="w-3 h-3" />, variant: "outline" },
@@ -826,7 +905,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCharges.map((charge: any) => {
+                {filteredCharges.map((charge: ChargeRow) => {
                   const st = statusConfig[charge.status] || statusConfig.pending;
                   const franchiseeName = charge.franchisee_org?.name || "—";
                   const canShowPix = charge.asaas_payment_id && charge.status === "pending";
@@ -886,7 +965,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
 /* FECHAMENTOS TAB                                                    */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function FechamentosTab({ contracts, closings, units, orgId }: any) {
+function FechamentosTab({ contracts, closings, units, orgId }: { contracts: NetworkContract[] | undefined; closings: ClosingRow[] | undefined; units: UnitRow[] | undefined; orgId: string | null | undefined }) {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -903,15 +982,15 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 
   const unitFeeMap = useMemo(() => {
     const map: Record<string, number> = {};
-    (units ?? []).forEach((u: any) => { if (u.unit_org_id) map[u.unit_org_id] = Number(u.system_fee ?? 250); });
+    (units ?? []).forEach((u: UnitRow) => { if (u.unit_org_id) map[u.unit_org_id] = Number(u.system_fee ?? 250); });
     return map;
   }, [units]);
 
   const consolidation = useMemo(() => {
     if (!contracts) return [];
-    const active = contracts.filter((c: any) => c.status === "active" || c.status === "signed");
+    const active = contracts.filter((c: Record<string, unknown>) => c.status === "active" || c.status === "signed");
     const byOrg: Record<string, { orgName: string; orgId: string; contracts: number; mrr: number; royalty: number; systemFee: number }> = {};
-    active.forEach((c: any) => {
+    active.forEach((c: NetworkContract) => {
       const key = c.org_name || c.organization_id;
       if (!byOrg[key]) {
         const fee = unitFeeMap[c.organization_id] ?? 250;
@@ -929,13 +1008,13 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
   const totalSystemFees = consolidation.reduce((s, c) => s + c.systemFee, 0);
 
   const selectedUnitName = useMemo(() => {
-    const u = (units ?? []).find((u: any) => u.id === selectedUnitId);
-    return (u as any)?.name || "";
+    const u = (units ?? []).find((u: UnitRow) => u.id === selectedUnitId);
+    return (u as UnitRow | undefined)?.name || "";
   }, [units, selectedUnitId]);
 
   const handleUnitOrMonthChange = (unitId: string, m: string, y: string) => {
-    const u = (units ?? []).find((u: any) => u.id === unitId);
-    const name = (u as any)?.name || "";
+    const u = (units ?? []).find((u: UnitRow) => u.id === unitId);
+    const name = (u as UnitRow | undefined)?.name || "";
     if (name) setTitle(`DRE ${name} - ${MONTH_NAMES[Number(m) - 1]}/${y}`);
   };
 
@@ -961,8 +1040,8 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
       sonnerToast.success("Fechamento publicado com sucesso!");
       qc.invalidateQueries({ queryKey: ["finance-closings"] });
       setDialogOpen(false);
-    } catch (e: any) {
-      sonnerToast.error(`Erro: ${e.message}`);
+    } catch (e: unknown) {
+      sonnerToast.error(`Erro: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setSaving(false);
     }
@@ -970,15 +1049,15 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 
   const closingYears = useMemo(() => {
     const ys = new Set<string>();
-    (closings ?? []).forEach((cl: any) => { if (cl.year) ys.add(String(cl.year)); });
+    (closings ?? []).forEach((cl: ClosingRow) => { if (cl.year) ys.add(String(cl.year)); });
     return [...ys].sort().reverse();
   }, [closings]);
 
   const filteredClosings = useMemo(() => {
     let list = closings ?? [];
-    if (filterUnit !== "all") list = list.filter((cl: any) => cl.unit_id === filterUnit);
-    if (filterYear !== "all") list = list.filter((cl: any) => String(cl.year) === filterYear);
-    if (filterClosingStatus !== "all") list = list.filter((cl: any) => cl.status === filterClosingStatus);
+    if (filterUnit !== "all") list = list.filter((cl: ClosingRow) => cl.unit_id === filterUnit);
+    if (filterYear !== "all") list = list.filter((cl: ClosingRow) => String(cl.year) === filterYear);
+    if (filterClosingStatus !== "all") list = list.filter((cl: ClosingRow) => cl.status === filterClosingStatus);
     return list;
   }, [closings, filterUnit, filterYear, filterClosingStatus]);
 
@@ -990,7 +1069,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Unidade" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas Unidades</SelectItem>
-              {(units ?? []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+              {(units ?? []).map((u: UnitRow) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterYear} onValueChange={setFilterYear}>
@@ -1059,7 +1138,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
       {filteredClosings.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">Arquivos de Fechamento</h3>
-          {filteredClosings.map((cl: any) => (
+          {filteredClosings.map((cl: ClosingRow) => (
             <Card key={cl.id} className="glass-card">
               <CardContent className="flex items-center justify-between py-4">
                 <div className="flex items-center gap-4">
@@ -1085,7 +1164,7 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
               <Label>Unidade *</Label>
               <Select value={selectedUnitId} onValueChange={(v) => { setSelectedUnitId(v); handleUnitOrMonthChange(v, month, year); }}>
                 <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
-                <SelectContent>{(units ?? []).map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{(units ?? []).map((u: UnitRow) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1123,13 +1202,13 @@ function FechamentosTab({ contracts, closings, units, orgId }: any) {
 /* CLIENTES TAB                                                       */
 /* ═══════════════════════════════════════════════════════════════════ */
 
-function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMonth }: any) {
+function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMonth }: { asaasPayments: AsaasPayment[] | undefined; la: boolean; refetchAsaas: () => void; chargeClient: { mutate: (data: Record<string, unknown>, opts: Record<string, unknown>) => void; isPending: boolean }; selectedMonth: string }) {
   const [search, setSearch] = useState("");
   const [filterClientStatus, setFilterClientStatus] = useState("all");
   const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null);
-  const [chargeContract, setChargeContract] = useState<any>(null);
+  const [chargeContract, setChargeContract] = useState<NetworkContract | null>(null);
   const [chargeBillingType, setChargeBillingType] = useState("PIX");
-  const [chargeResult, setChargeResult] = useState<any>(null);
+  const [chargeResult, setChargeResult] = useState<Record<string, unknown> | null>(null);
 
   // Manage payment (cancel/edit)
   const managePayment = useManagePayment();
@@ -1173,7 +1252,7 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
     chargeClient.mutate(
       { contract_id: chargeContract.id, billing_type: chargeBillingType, organization_id: chargeContract.organization_id },
       {
-        onSuccess: (data: any) => { setChargeResult(data); refetchAsaas(); },
+        onSuccess: (data: Record<string, unknown>) => { setChargeResult(data); refetchAsaas(); },
         onError: () => {},
       }
     );
@@ -1198,7 +1277,7 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
 
   const handleEditSubmit = () => {
     if (!editPayment) return;
-    const params: any = { action: "update", payment_id: editPayment.id };
+    const params: Record<string, unknown> = { action: "update", payment_id: editPayment.id };
     const newVal = parseFloat(editValue);
     if (!isNaN(newVal) && newVal !== editPayment.value) params.value = newVal;
     if (editDueDate && editDueDate !== editPayment.dueDate) params.dueDate = editDueDate;
@@ -1444,7 +1523,7 @@ interface FinanceSettings {
 
 const DEFAULTS: FinanceSettings = { impostoPercent: 10, repasseFranqueado: 20, repasseParceiro: 10, capacidade: 30, runwayMinimo: 2, margemMinima: 15 };
 
-function ConfigTab({ org, loadingOrg, updateOrg, toast }: any) {
+function ConfigTab({ org, loadingOrg, updateOrg, toast }: { org: Record<string, unknown> | undefined; loadingOrg: boolean; updateOrg: { mutateAsync: (data: Record<string, unknown>) => Promise<unknown> }; toast: (opts: { title: string; variant?: string }) => void }) {
   const [settings, setSettings] = useState<FinanceSettings>(DEFAULTS);
 
   useMemo(() => {
@@ -1463,7 +1542,7 @@ function ConfigTab({ org, loadingOrg, updateOrg, toast }: any) {
 
   const handleSave = () => {
     updateOrg.mutate(
-      { finance_settings: settings } as any,
+      { finance_settings: settings } as Record<string, unknown>,
       {
         onSuccess: () => toast({ title: "Configurações salvas com sucesso!" }),
         onError: () => toast({ title: "Erro ao salvar configurações", variant: "destructive" }),

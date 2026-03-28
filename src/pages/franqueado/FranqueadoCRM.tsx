@@ -38,6 +38,43 @@ import { DEFAULT_STAGES, STAGE_ICONS, getColorStyle, type FunnelStage } from "@/
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Shuffle } from "lucide-react";
 
+
+interface CrmLead {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  company: string | null;
+  value: number | null;
+  stage: string;
+  source: string | null;
+  tags: string[] | null;
+  created_at: string;
+  won_at: string | null;
+  lost_at: string | null;
+  lost_reason: string | null;
+  assigned_to: string | null;
+  funnel_id: string | null;
+  temperature: string | null;
+  whatsapp_contact_id: string | null;
+  updated_at: string;
+}
+
+interface CrmFunnel {
+  id: string;
+  name: string;
+  is_default: boolean;
+  stages: FunnelStage[];
+  [key: string]: unknown;
+}
+
+interface FunnelStageRaw {
+  key?: string;
+  label?: string;
+  color?: string;
+  icon?: string;
+}
+
 const SOURCES = ["Indicação", "Site", "LinkedIn", "WhatsApp", "Meta Leads", "Eventos", "Orgânico"];
 
 function DroppableColumn({ stageKey, children }: { stageKey: string; children: React.ReactNode }) {
@@ -50,7 +87,7 @@ function DroppableColumn({ stageKey, children }: { stageKey: string; children: R
 }
 
 function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost, onDelete, onUpdateTemperature }: {
-  lead: any; onClick: () => void; stageColor: string;
+  lead: CrmLead; onClick: () => void; stageColor: string;
   onCopyPhone: () => void; onMarkLost: () => void; onDelete: () => void; onUpdateTemperature: (temp: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
@@ -91,7 +128,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
                 {(() => {
                   const temps = ["Frio", "Morno", "Quente"] as const;
                   const current = lead.temperature || "Morno";
-                  const idx = temps.indexOf(current as any);
+                  const idx = temps.indexOf(current as typeof temps[number]);
                   const next = temps[(idx + 1) % temps.length];
                   const cfg: Record<string, { bg: string; icon: React.ReactNode }> = {
                     Frio: { bg: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400", icon: <Snowflake className="w-3 h-3" /> },
@@ -130,18 +167,18 @@ export default function FranqueadoCRM() {
 
   useEffect(() => {
     if (!selectedFunnelId && accessibleFunnels.length > 0) {
-      const def = accessibleFunnels.find((f: any) => f.is_default) || accessibleFunnels[0];
+      const def = accessibleFunnels.find((f: CrmFunnel) => f.is_default) || accessibleFunnels[0];
       setSelectedFunnelId(def.id);
     }
   }, [accessibleFunnels, selectedFunnelId]);
 
-  const selectedFunnel = useMemo(() => funnelsData?.find((f: any) => f.id === selectedFunnelId) || null, [funnelsData, selectedFunnelId]);
+  const selectedFunnel = useMemo(() => funnelsData?.find((f: CrmFunnel) => f.id === selectedFunnelId) || null, [funnelsData, selectedFunnelId]);
 
   const stages: FunnelStage[] = useMemo(() => {
     if (selectedFunnel) {
-      const dbStages = (selectedFunnel as any).stages as any[];
+      const dbStages = (selectedFunnel as unknown as { stages: FunnelStageRaw[] }).stages;
       if (Array.isArray(dbStages) && dbStages.length > 0) {
-        return dbStages.map((s: any, idx: number) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || `stage_${idx}`, label: s.label || `Etapa ${idx + 1}`, color: s.color || "blue", icon: s.icon || "circle-dot" }));
+        return dbStages.map((s: FunnelStageRaw, idx: number) => ({ key: s.key || s.label?.toLowerCase().replace(/\s+/g, "_") || `stage_${idx}`, label: s.label || `Etapa ${idx + 1}`, color: s.color || "blue", icon: s.icon || "circle-dot" }));
       }
     }
     return DEFAULT_STAGES;
@@ -153,7 +190,7 @@ export default function FranqueadoCRM() {
   const [activeTab, setActiveTab] = useState<"pipeline" | "contatos">("pipeline");
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [search, setSearch] = useState("");
-  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [selectedLead, setSelectedLead] = useState<CrmLead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -177,38 +214,38 @@ export default function FranqueadoCRM() {
 
   const allLeads = leads ?? [];
   const isLoading = leadsLoading || funnelsLoading;
-  const allTags = useMemo(() => { const tags = new Set<string>(); allLeads.forEach((l: any) => l.tags?.forEach((t: string) => tags.add(t))); return Array.from(tags).sort(); }, [allLeads]);
+  const allTags = useMemo(() => { const tags = new Set<string>(); allLeads.forEach((l: CrmLead) => l.tags?.forEach((t: string) => tags.add(t))); return Array.from(tags).sort(); }, [allLeads]);
   const activeFilterCount = [filterSource, filterTag, filterAssigned, filterStatus, filterValueMin, filterValueMax, filterDateFrom, filterDateTo].filter(Boolean).length;
   const hasFilters = activeFilterCount > 0;
   const clearAllFilters = () => { setFilterSource(""); setFilterTag(""); setFilterAssigned(""); setFilterStatus(""); setFilterValueMin(""); setFilterValueMax(""); setFilterDateFrom(""); setFilterDateTo(""); };
 
   const filteredLeads = useMemo(() => {
     let result = allLeads;
-    if (search) { const q = search.toLowerCase(); result = result.filter((l: any) => l.name.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q) || l.phone?.includes(q) || l.company?.toLowerCase().includes(q)); }
-    if (filterSource) result = result.filter((l: any) => l.source === filterSource);
-    if (filterTag) result = result.filter((l: any) => l.tags?.includes(filterTag));
-    if (filterAssigned) result = result.filter((l: any) => l.assigned_to === filterAssigned);
-    if (filterStatus === "won") result = result.filter((l: any) => l.won_at);
-    else if (filterStatus === "lost") result = result.filter((l: any) => l.lost_at);
-    else if (filterStatus === "active") result = result.filter((l: any) => !l.won_at && !l.lost_at);
-    if (filterValueMin) result = result.filter((l: any) => (l.value || 0) >= parseFloat(filterValueMin));
-    if (filterValueMax) result = result.filter((l: any) => (l.value || 0) <= parseFloat(filterValueMax));
-    if (filterDateFrom) result = result.filter((l: any) => new Date(l.created_at) >= new Date(filterDateFrom));
-    if (filterDateTo) { const to = new Date(filterDateTo); to.setHours(23, 59, 59, 999); result = result.filter((l: any) => new Date(l.created_at) <= to); }
+    if (search) { const q = search.toLowerCase(); result = result.filter((l: CrmLead) => l.name.toLowerCase().includes(q) || l.email?.toLowerCase().includes(q) || l.phone?.includes(q) || l.company?.toLowerCase().includes(q)); }
+    if (filterSource) result = result.filter((l: CrmLead) => l.source === filterSource);
+    if (filterTag) result = result.filter((l: CrmLead) => l.tags?.includes(filterTag));
+    if (filterAssigned) result = result.filter((l: CrmLead) => l.assigned_to === filterAssigned);
+    if (filterStatus === "won") result = result.filter((l: CrmLead) => l.won_at);
+    else if (filterStatus === "lost") result = result.filter((l: CrmLead) => l.lost_at);
+    else if (filterStatus === "active") result = result.filter((l: CrmLead) => !l.won_at && !l.lost_at);
+    if (filterValueMin) result = result.filter((l: CrmLead) => (l.value || 0) >= parseFloat(filterValueMin));
+    if (filterValueMax) result = result.filter((l: CrmLead) => (l.value || 0) <= parseFloat(filterValueMax));
+    if (filterDateFrom) result = result.filter((l: CrmLead) => new Date(l.created_at) >= new Date(filterDateFrom));
+    if (filterDateTo) { const to = new Date(filterDateTo); to.setHours(23, 59, 59, 999); result = result.filter((l: CrmLead) => new Date(l.created_at) <= to); }
     return result;
   }, [allLeads, search, filterSource, filterTag, filterAssigned, filterStatus, filterValueMin, filterValueMax, filterDateFrom, filterDateTo]);
 
   const leadsByStage = useMemo(() => {
-    const map: Record<string, any[]> = {};
+    const map: Record<string, CrmLead[]> = {};
     stages.forEach(s => { map[s.key] = []; });
-    filteredLeads.forEach((l: any) => { if (map[l.stage]) map[l.stage].push(l); else if (stages.length > 0) map[stages[0].key]?.push(l); });
+    filteredLeads.forEach((l: CrmLead) => { if (map[l.stage]) map[l.stage].push(l); else if (stages.length > 0) map[stages[0].key]?.push(l); });
     return map;
   }, [filteredLeads, stages]);
 
   const pipelineSummary = useMemo(() => {
-    const activeLeads = filteredLeads.filter((l: any) => !l.won_at && !l.lost_at);
+    const activeLeads = filteredLeads.filter((l: CrmLead) => !l.won_at && !l.lost_at);
     const totalValue = activeLeads.reduce((s: number, l: any) => s + (l.value || 0), 0);
-    const wonLeads = filteredLeads.filter((l: any) => l.won_at);
+    const wonLeads = filteredLeads.filter((l: CrmLead) => l.won_at);
     const convRate = filteredLeads.length > 0 ? Math.round((wonLeads.length / filteredLeads.length) * 100) : 0;
     const avgValue = activeLeads.length > 0 ? Math.round(totalValue / activeLeads.length) : 0;
     return { totalLeads: activeLeads.length, totalValue, wonLeads: wonLeads.length, convRate, avgValue };
@@ -232,25 +269,25 @@ export default function FranqueadoCRM() {
     let newStage: string | null = null;
     if (validStageKeys.includes(overId)) newStage = overId;
     else {
-      const targetLead = allLeads.find((l: any) => l.id === overId);
+      const targetLead = allLeads.find((l: CrmLead) => l.id === overId);
       if (targetLead && validStageKeys.includes(targetLead.stage)) newStage = targetLead.stage;
     }
     if (!newStage) return;
-    const lead = allLeads.find((l: any) => l.id === leadId);
+    const lead = allLeads.find((l: CrmLead) => l.id === leadId);
     if (lead && lead.stage !== newStage) updateLead.mutate({ id: leadId, stage: newStage });
   };
 
   const someLeadsSelected = selectedLeadIds.size > 0;
   const toggleLeadSelection = (id: string) => { const next = new Set(selectedLeadIds); if (next.has(id)) next.delete(id); else next.add(id); setSelectedLeadIds(next); };
-  const toggleAllLeads = () => { if (filteredLeads.every((l: any) => selectedLeadIds.has(l.id))) setSelectedLeadIds(new Set()); else setSelectedLeadIds(new Set(filteredLeads.map((l: any) => l.id))); };
+  const toggleAllLeads = () => { if (filteredLeads.every((l: CrmLead) => selectedLeadIds.has(l.id))) setSelectedLeadIds(new Set()); else setSelectedLeadIds(new Set(filteredLeads.map((l: CrmLead) => l.id))); };
 
   const handleBulkMoveStage = (stage: string) => { bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { stage } }); setSelectedLeadIds(new Set()); toast.success(`Leads movidos`); };
   const handleBulkAssign = (userId: string) => { bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { assigned_to: userId } }); setSelectedLeadIds(new Set()); toast.success("Responsável atribuído"); };
-  const handleBulkAddTag = () => { if (!bulkTagInput.trim()) return; const tag = bulkTagInput.trim(); allLeads.filter((l: any) => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag)).forEach((l: any) => updateLead.mutate({ id: l.id, tags: [...(l.tags || []), tag] })); setBulkTagInput(""); setSelectedLeadIds(new Set()); toast.success("Tag adicionada"); };
+  const handleBulkAddTag = () => { if (!bulkTagInput.trim()) return; const tag = bulkTagInput.trim(); allLeads.filter((l: CrmLead) => selectedLeadIds.has(l.id) && !(l.tags || []).includes(tag)).forEach((l: CrmLead) => updateLead.mutate({ id: l.id, tags: [...(l.tags || []), tag] })); setBulkTagInput(""); setSelectedLeadIds(new Set()); toast.success("Tag adicionada"); };
   const handleBulkMarkLost = () => { bulkUpdateLeads.mutate({ ids: Array.from(selectedLeadIds), fields: { lost_at: new Date().toISOString(), stage: "perdido" } }); setSelectedLeadIds(new Set()); toast.success("Leads marcados como perdidos"); };
   const handleBulkDelete = () => { bulkDeleteLeads.mutate(Array.from(selectedLeadIds)); setSelectedLeadIds(new Set()); setBulkDeleteOpen(false); toast.success("Leads excluídos"); };
 
-  const draggingLead = draggingId ? allLeads.find((l: any) => l.id === draggingId) : null;
+  const draggingLead = draggingId ? allLeads.find((l: CrmLead) => l.id === draggingId) : null;
 
   if (isLoading) {
     return (
@@ -350,7 +387,7 @@ export default function FranqueadoCRM() {
             {accessibleFunnels.length > 1 && (
               <Select value={selectedFunnelId || ""} onValueChange={setSelectedFunnelId}>
                 <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="Funil" /></SelectTrigger>
-                <SelectContent>{accessibleFunnels.map((f: any) => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{accessibleFunnels.map((f: CrmFunnel) => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}</SelectContent>
               </Select>
             )}
             <div className="relative max-w-xs">
@@ -479,9 +516,9 @@ export default function FranqueadoCRM() {
                           {selectionMode && stageLeads.length > 0 && (
                             <Checkbox
                               className="w-3.5 h-3.5"
-                              checked={stageLeads.every((l: any) => selectedLeadIds.has(l.id))}
+                              checked={stageLeads.every((l: CrmLead) => selectedLeadIds.has(l.id))}
                               onCheckedChange={() => {
-                                const ids = stageLeads.map((l: any) => l.id);
+                                const ids = stageLeads.map((l: CrmLead) => l.id);
                                 const allSelected = ids.every((id: string) => selectedLeadIds.has(id));
                                 const next = new Set(selectedLeadIds);
                                 if (allSelected) ids.forEach((id: string) => next.delete(id));
@@ -500,7 +537,7 @@ export default function FranqueadoCRM() {
                         )}
                         <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
                         <DroppableColumn stageKey={stage.key}>
-                          {stageLeads.map((lead: any) => (
+                          {stageLeads.map((lead: CrmLead) => (
                             <div key={lead.id} className="relative group/check">
                               {selectionMode && (
                                 <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
@@ -538,11 +575,11 @@ export default function FranqueadoCRM() {
             <Card>
               <CardContent className="p-0">
                 <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30">
-                  <Checkbox checked={filteredLeads.length > 0 && filteredLeads.every((l: any) => selectedLeadIds.has(l.id))} onCheckedChange={toggleAllLeads} />
+                  <Checkbox checked={filteredLeads.length > 0 && filteredLeads.every((l: CrmLead) => selectedLeadIds.has(l.id))} onCheckedChange={toggleAllLeads} />
                   <span className="text-[10px] text-muted-foreground font-medium">Selecionar todos</span>
                 </div>
                 <div className="divide-y">
-                  {filteredLeads.map((lead: any) => {
+                  {filteredLeads.map((lead: CrmLead) => {
                     const stage = stages.find(s => s.key === lead.stage);
                     const colorStyle = stage ? getColorStyle(stage.color) : getColorStyle("blue");
                     return (

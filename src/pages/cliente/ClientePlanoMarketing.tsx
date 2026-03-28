@@ -33,9 +33,122 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+
+interface StrategyResult {
+  objetivo_principal?: string;
+  canal_prioritario?: string;
+  investimento_recomendado?: string;
+  potencial_crescimento?: string;
+  resumo_executivo?: string;
+  diagnostico?: {
+    score_geral?: number;
+    analise?: string;
+    pontos_fortes?: string[];
+    oportunidades?: string[];
+    riscos?: string[];
+    radar?: {
+      autoridade?: number;
+      aquisicao?: number;
+      conversao?: number;
+      retencao?: number;
+      conteudo?: number;
+      branding?: number;
+    };
+  };
+  cliente_ideal?: Record<string, unknown>;
+  analise_competitiva?: Record<string, unknown>;
+  tom_comunicacao?: Record<string, unknown>;
+  estrategia_aquisicao?: Record<string, unknown>;
+  estrategia_conteudo?: Record<string, unknown>;
+  projecoes?: Record<string, unknown>;
+  execucao?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface ConcorrenteRow {
+  nome: string;
+  pontos_fortes?: string[];
+  pontos_fracos?: string[];
+  diferencial_vs?: string;
+  [key: string]: unknown;
+}
+
+interface CanalRow {
+  nome: string;
+  peso?: number;
+  descricao?: string;
+  acoes?: string[];
+  investimento_sugerido?: string;
+  [key: string]: unknown;
+}
+
+interface PilarRow {
+  nome: string;
+  descricao?: string;
+  porcentagem?: number;
+  formatos?: string[];
+  [key: string]: unknown;
+}
+
+interface CalendarioRow {
+  dia: string;
+  pilar: string;
+  formato: string;
+  horario?: string;
+  [key: string]: unknown;
+}
+
+interface IdeiaRow {
+  titulo: string;
+  pilar?: string;
+  formato?: string;
+  descricao?: string;
+  [key: string]: unknown;
+}
+
+interface ProjecaoRow {
+  mes: string;
+  receita?: number;
+  leads?: number;
+  investimento?: number;
+  [key: string]: unknown;
+}
+
+interface EstruturaRow {
+  titulo: string;
+  descricao?: string;
+  responsavel?: string;
+  [key: string]: unknown;
+}
+
+interface PlanoMesRow {
+  titulo: string;
+  descricao?: string;
+  passos?: PassoRow[];
+  [key: string]: unknown;
+}
+
+interface PassoRow {
+  titulo: string;
+  descricao?: string;
+  ferramenta?: string;
+  [key: string]: unknown;
+}
+
+interface HistoryStrategy {
+  id: string;
+  created_at: string;
+  score_percentage: number;
+  nivel: string;
+  status: string;
+  strategy_result: StrategyResult | null;
+  answers: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 45%))", "hsl(var(--chart-3, 30 80% 55%))", "hsl(var(--chart-4, 280 65% 60%))", "hsl(var(--chart-5, 340 75% 55%))"];
 
-const TOOL_ROUTES: Record<string, { label: string; path: string; icon: any }> = {
+const TOOL_ROUTES: Record<string, { label: string; path: string; icon: React.ElementType }> = {
   conteudos: { label: "Conteúdos", path: "/cliente/conteudos", icon: FileText },
   postagens: { label: "Postagens", path: "/cliente/redes-sociais", icon: Palette },
   sites: { label: "Sites", path: "/cliente/sites", icon: Monitor },
@@ -114,7 +227,7 @@ function ToolButton({ ferramenta }: { ferramenta: string }) {
 
 /* ═══════════════ TAB: RESUMO ═══════════════ */
 
-function TabResumo({ result }: { result: any }) {
+function TabResumo({ result }: { result: StrategyResult }) {
   const radar = result.diagnostico?.radar;
   const radarData = radar ? [
     { subject: "Autoridade", value: radar.autoridade },
@@ -209,7 +322,7 @@ function TabResumo({ result }: { result: any }) {
 
 /* ═══════════════ TAB: CLIENTE IDEAL ═══════════════ */
 
-function TabClienteIdeal({ result }: { result: any }) {
+function TabClienteIdeal({ result }: { result: StrategyResult }) {
   const icp = result.icp;
   const pv = result.proposta_valor;
   if (!icp) return null;
@@ -304,7 +417,7 @@ function TabClienteIdeal({ result }: { result: any }) {
 
 /* ═══════════════ TAB: CONCORRÊNCIA ═══════════════ */
 
-function TabConcorrencia({ result }: { result: any }) {
+function TabConcorrencia({ result }: { result: StrategyResult }) {
   const ac = result.analise_concorrencia;
   if (!ac) return <p className="text-sm text-muted-foreground p-4">Análise de concorrência não disponível nesta versão. Regenere a estratégia.</p>;
 
@@ -314,7 +427,7 @@ function TabConcorrencia({ result }: { result: any }) {
 
       {ac.concorrentes?.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {ac.concorrentes.map((c: any, i: number) => (
+          {ac.concorrentes.map((c: ConcorrenteRow, i: number) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="h-full">
                 <CardContent className="p-4 space-y-3">
@@ -355,7 +468,7 @@ function TabConcorrencia({ result }: { result: any }) {
 
 /* ═══════════════ TAB: TOM DE VOZ ═══════════════ */
 
-function TabTomVoz({ result }: { result: any }) {
+function TabTomVoz({ result }: { result: StrategyResult }) {
   const navigate = useNavigate();
   const tc = result.tom_comunicacao;
   if (!tc) return <p className="text-sm text-muted-foreground p-4">Tom de comunicação não disponível nesta versão. Regenere a estratégia.</p>;
@@ -405,7 +518,7 @@ function TabTomVoz({ result }: { result: any }) {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Exemplos de Posts</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {tc.exemplos_posts.map((ex: any, i: number) => (
+              {tc.exemplos_posts.map((ex: { texto: string; tipo?: string }, i: number) => (
                 <div key={i} className="p-3 rounded-lg bg-muted/30">
                   <Badge variant="outline" className="text-[10px] mb-2 capitalize">{ex.tipo}</Badge>
                   <p className="text-sm">{ex.exemplo}</p>
@@ -434,12 +547,12 @@ function TabTomVoz({ result }: { result: any }) {
 
 /* ═══════════════ TAB: AQUISIÇÃO ═══════════════ */
 
-function TabAquisicao({ result }: { result: any }) {
+function TabAquisicao({ result }: { result: StrategyResult }) {
   const navigate = useNavigate();
   const ea = result.estrategia_aquisicao;
   const funil = ea?.funil;
 
-  const pieData = (ea?.canais_prioritarios || []).reduce((acc: any[], c: any) => {
+  const pieData = (ea?.canais_prioritarios || []).reduce((acc: { name: string; value: number }[], c: CanalRow) => {
     const tipo = c.tipo === "organico" ? "Orgânico" : c.tipo === "pago" ? "Tráfego Pago" : "Parcerias";
     const existing = acc.find(a => a.name === tipo);
     if (existing) existing.value += (c.percentual || 0);
@@ -501,7 +614,7 @@ function TabAquisicao({ result }: { result: any }) {
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}%`}>
-                    {pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    {pieData.map((_: { name: string; value: number }, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -515,7 +628,7 @@ function TabAquisicao({ result }: { result: any }) {
             <CardHeader className="pb-2"><CardTitle className="text-sm">Canais Prioritários</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {ea.canais_prioritarios.map((c: any, i: number) => (
+                {ea.canais_prioritarios.map((c: CanalRow, i: number) => (
                   <div key={i} className="p-3 rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between mb-1">
                       <Badge variant="outline" className="text-xs">{c.canal}</Badge>
@@ -562,7 +675,7 @@ function TabAquisicao({ result }: { result: any }) {
 
 /* ═══════════════ TAB: CONTEÚDO ═══════════════ */
 
-function TabConteudo({ result }: { result: any }) {
+function TabConteudo({ result }: { result: StrategyResult }) {
   const navigate = useNavigate();
   const ec = result.estrategia_conteudo;
   const pilarIcons: Record<string, any> = { educacao: Lightbulb, autoridade: Target, prova_social: Users, oferta: DollarSign };
@@ -572,7 +685,7 @@ function TabConteudo({ result }: { result: any }) {
       {/* Pilares with percentual */}
       {ec?.pilares?.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {ec.pilares.map((p: any, i: number) => {
+          {ec.pilares.map((p: PilarRow, i: number) => {
             const Icon = pilarIcons[p.tipo] || Lightbulb;
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
@@ -605,7 +718,7 @@ function TabConteudo({ result }: { result: any }) {
           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Calendário Semanal</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
-              {ec.calendario_semanal.map((dia: any, i: number) => (
+              {ec.calendario_semanal.map((dia: CalendarioRow, i: number) => (
                 <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}
                   className="p-3 rounded-lg bg-muted/30 text-center border hover:border-primary/30 transition-colors">
                   <p className="text-xs font-bold text-primary">{dia.dia}</p>
@@ -629,7 +742,7 @@ function TabConteudo({ result }: { result: any }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {ec.ideias_conteudo.map((idea: any, i: number) => (
+              {ec.ideias_conteudo.map((idea: IdeiaRow, i: number) => (
                 <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
                   <Badge variant="outline" className="text-[10px] shrink-0">{idea.formato}</Badge>
                   <span className="text-xs flex-1">{idea.titulo}</span>
@@ -646,13 +759,13 @@ function TabConteudo({ result }: { result: any }) {
 
 /* ═══════════════ TAB: PROJEÇÃO ═══════════════ */
 
-function TabProjecao({ result }: { result: any }) {
+function TabProjecao({ result }: { result: StrategyResult }) {
   const pc = result.plano_crescimento;
   const projecoes = pc?.projecoes_mensais || [];
   const ind = pc?.indicadores;
   const bench = result.benchmarks_setor;
 
-  const chartData = projecoes.map((p: any) => ({
+  const chartData = projecoes.map((p: ProjecaoRow) => ({
     name: `Mês ${p.mes}`,
     leads: p.leads, clientes: p.clientes, receita: p.receita, investimento: p.investimento,
   }));
@@ -711,7 +824,7 @@ function TabProjecao({ result }: { result: any }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />
+                  <Tooltip formatter={(v: number) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />
                   <Legend />
                   <Bar dataKey="receita" fill="hsl(var(--primary))" name="Receita" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="investimento" fill={CHART_COLORS[2]} name="Investimento" radius={[4, 4, 0, 0]} />
@@ -762,7 +875,7 @@ function TabProjecao({ result }: { result: any }) {
 
 /* ═══════════════ TAB: EXECUÇÃO ═══════════════ */
 
-function TabExecucao({ result }: { result: any }) {
+function TabExecucao({ result }: { result: StrategyResult }) {
   const plano = result.plano_execucao || [];
   const estrutura = result.estrutura_recomendada || [];
 
@@ -773,7 +886,7 @@ function TabExecucao({ result }: { result: any }) {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Checklist de Estrutura</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {estrutura.map((e: any, i: number) => (
+              {estrutura.map((e: EstruturaRow, i: number) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
                   {e.status === "tem" ? <CheckSquare className="w-4 h-4 text-green-500 shrink-0" /> : <XSquare className="w-4 h-4 text-destructive shrink-0" />}
                   <div className="flex-1 min-w-0">
@@ -792,7 +905,7 @@ function TabExecucao({ result }: { result: any }) {
 
       {plano.length > 0 && (
         <div className="space-y-3">
-          {plano.map((mes: any, i: number) => (
+          {plano.map((mes: PlanoMesRow, i: number) => (
             <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}>
               <Card>
                 <CardHeader className="pb-2">
@@ -803,7 +916,7 @@ function TabExecucao({ result }: { result: any }) {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {mes.passos?.map((passo: any, j: number) => (
+                    {mes.passos?.map((passo: PassoRow, j: number) => (
                       <div key={j} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/30">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{j + 1}</span>
@@ -826,7 +939,7 @@ function TabExecucao({ result }: { result: any }) {
 /* ═══════════════ STRATEGY DASHBOARD ═══════════════ */
 
 function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt }: {
-  result: any; onApprove: () => void; onRegenerate: () => void; isApproving: boolean; status: string; createdAt?: string;
+  result: StrategyResult; onApprove: () => void; onRegenerate: () => void; isApproving: boolean; status: string; createdAt?: string;
 }) {
   const navigate = useNavigate();
   if (!result) return null;
@@ -952,7 +1065,7 @@ function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, statu
 
 /* ═══════════════ HISTORY ═══════════════ */
 
-function StrategyHistoryItem({ strategy }: { strategy: any }) {
+function StrategyHistoryItem({ strategy }: { strategy: HistoryStrategy }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <Card>
@@ -1004,7 +1117,7 @@ export default function ClientePlanoMarketing() {
         status: "pending",
       });
       toast({ title: "Estratégia gerada!", description: "Revise o resultado e aprove para finalizar." });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({ title: "Erro ao gerar estratégia", description: err.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);

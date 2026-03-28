@@ -399,7 +399,7 @@ function HistoricoTab() {
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar prospecções..." className="pl-9" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar prospecções..." className="pl-9" aria-label="Buscar prospecções" />
         </div>
 
         {isLoading ? (
