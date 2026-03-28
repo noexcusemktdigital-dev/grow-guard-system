@@ -576,7 +576,7 @@ export function ArtWizard({
             <div className="flex flex-wrap gap-2">
               {photoUrls.map((url, i) => (
                 <div key={i} className="relative group w-20 h-20 rounded-xl overflow-hidden border-2 border-border">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img src={url} alt="Referência visual" className="w-full h-full object-cover" />
                   <button
                     className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                     onClick={() => setPhotoUrls(prev => prev.filter((_, j) => j !== i))}
@@ -870,7 +870,7 @@ export function ArtWizard({
                           )}
                           {referenceUrls.slice(0, 5).map((url, i) => (
                             <div key={i} className={`w-10 h-10 rounded-md overflow-hidden border ${primaryRefIndex === i ? "border-primary border-2" : "border-border"}`}>
-                              <img src={url} alt="" className="w-full h-full object-cover" />
+                              <img src={url} alt="Referência visual" className="w-full h-full object-cover" />
                             </div>
                           ))}
                         </div>

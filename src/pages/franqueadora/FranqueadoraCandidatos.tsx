@@ -41,7 +41,7 @@ function buildCandidatePdfHtml(c: FranchiseCandidate, logoBase64: string) {
   return `
     <div style="font-family:Georgia,'Times New Roman',serif;max-width:700px;margin:0 auto;color:#1a1a1a;">
       <div style="background:#111;padding:20px 32px;display:flex;align-items:center;justify-content:space-between;">
-        <div>${logoBase64 ? `<img src="${logoBase64}" style="height:44px;" />` : `<span style="color:#fff;font-size:18px;font-weight:bold;">NOEXCUSE</span>`}</div>
+        <div>${logoBase64 ? `<img src="${logoBase64}" alt="NOEXCUSE" style="height:44px;" />` : `<span style="color:#fff;font-size:18px;font-weight:bold;">NOEXCUSE</span>`}</div>
         <div style="text-align:right;color:#999;font-size:9px;line-height:1.6;font-family:Arial,sans-serif;">
           <div>NOEXCUSE MARKETING DIGITAL LTDA</div>
           <div>contato@noexcuse.com.br</div>
@@ -165,6 +165,7 @@ export default function FranqueadoraCandidatos() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
+            aria-label="Buscar por nome ou email"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>

@@ -1,10 +1,12 @@
+import { memo } from "react";
+
 interface GoalProgressRingProps {
   percent: number;
   size?: number;
   strokeWidth?: number;
 }
 
-export function GoalProgressRing({ percent, size = 56, strokeWidth = 5 }: GoalProgressRingProps) {
+export const GoalProgressRing = memo(function GoalProgressRing({ percent, size = 56, strokeWidth = 5 }: GoalProgressRingProps) {
   const clamped = Math.min(Math.max(percent, 0), 100);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -45,4 +47,4 @@ export function GoalProgressRing({ percent, size = 56, strokeWidth = 5 }: GoalPr
       </span>
     </div>
   );
-}
+});

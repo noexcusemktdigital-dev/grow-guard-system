@@ -253,7 +253,7 @@ export default function FinanceiroControle() {
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar por descrição..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <Input placeholder="Buscar por descrição..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar por descrição" />
       </div>
 
       <Tabs defaultValue="entradas">

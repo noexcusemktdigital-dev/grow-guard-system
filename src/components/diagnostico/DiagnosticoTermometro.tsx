@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -13,7 +14,7 @@ interface Props {
   nivel: { id: number; label: string; cor: string; desc: string };
 }
 
-export function DiagnosticoTermometro({ pontuacao, nivel }: Props) {
+export const DiagnosticoTermometro = memo(function DiagnosticoTermometro({ pontuacao, nivel }: Props) {
   return (
     <Card className="glass-card overflow-hidden">
       <CardContent className="p-6">
@@ -49,4 +50,4 @@ export function DiagnosticoTermometro({ pontuacao, nivel }: Props) {
       </CardContent>
     </Card>
   );
-}
+});

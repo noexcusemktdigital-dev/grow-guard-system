@@ -175,7 +175,7 @@ export function RefUploader({
             <div key={i} className="flex flex-col items-center gap-1">
               <div className="relative">
                 <div className={`w-20 h-20 rounded-xl overflow-hidden border-2 ${primaryRefIndex === i ? "border-primary ring-2 ring-primary/30" : "border-border"}`}>
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img src={url} alt="Referência visual" className="w-full h-full object-cover" />
                 </div>
                 {/* Primary star indicator */}
                 {setPrimaryRefIndex && (
@@ -229,7 +229,7 @@ export function RefUploader({
                   className="relative w-16 h-16 rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-colors"
                   onClick={() => setReferenceUrls(prev => [...prev, url])}
                 >
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img src={url} alt="Referência visual" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <Plus className="w-4 h-4 text-primary-foreground" />
                   </div>

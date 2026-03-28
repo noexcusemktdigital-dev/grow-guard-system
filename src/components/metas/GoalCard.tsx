@@ -42,7 +42,7 @@ interface GoalCardProps {
   onArchive?: () => void;
 }
 
-export function GoalCard({ goal, progress, onEdit, onArchive }: GoalCardProps) {
+export const GoalCard = memo(function GoalCard({ goal, progress, onEdit, onArchive }: GoalCardProps) {
   const metric = METRIC_CONFIG[goal.metric] || METRIC_CONFIG.revenue;
   const scope = SCOPE_CONFIG[goal.scope] || SCOPE_CONFIG.company;
   const ScopeIcon = scope.icon;
@@ -165,4 +165,4 @@ export function GoalCard({ goal, progress, onEdit, onArchive }: GoalCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

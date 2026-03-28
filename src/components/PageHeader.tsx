@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 
 interface PageHeaderProps {
@@ -9,7 +10,7 @@ interface PageHeaderProps {
   backButton?: React.ReactNode;
 }
 
-export function PageHeader({ title, subtitle, badge, icon, actions, backButton }: PageHeaderProps) {
+export const PageHeader = memo(function PageHeader({ title, subtitle, badge, icon, actions, backButton }: PageHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-3.5">
@@ -34,4 +35,4 @@ export function PageHeader({ title, subtitle, badge, icon, actions, backButton }
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
   );
-}
+});

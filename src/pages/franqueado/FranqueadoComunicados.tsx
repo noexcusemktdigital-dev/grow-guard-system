@@ -142,7 +142,7 @@ export default function FranqueadoComunicados() {
         </Select>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="w-[200px] h-8 text-xs pl-8" />
+          <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar" className="w-[200px] h-8 text-xs pl-8" />
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground ml-auto">
           <span>{unread.length} não lido(s)</span>

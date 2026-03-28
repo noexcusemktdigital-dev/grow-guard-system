@@ -16,7 +16,7 @@ interface ProgressCtaCardProps {
   onCtaClick?: () => void;
 }
 
-export const ProgressCtaCard = React.forwardRef<HTMLDivElement, ProgressCtaCardProps>(function ProgressCtaCard({
+export const ProgressCtaCard = React.memo(React.forwardRef<HTMLDivElement, ProgressCtaCardProps>(function ProgressCtaCard({
   title = "MEU PROGRESSO DE VENDAS",
   level = "NÍVEL PRO",
   metaLabel = "META MENSAL",
@@ -86,4 +86,4 @@ export const ProgressCtaCard = React.forwardRef<HTMLDivElement, ProgressCtaCardP
       </div>
     </div>
   );
-});
+}));

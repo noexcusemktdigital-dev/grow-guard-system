@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { AlertTriangle, ShieldAlert, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-export function DisparoWarningBanner() {
+export const DisparoWarningBanner = memo(function DisparoWarningBanner() {
   return (
     <Alert className="border-orange-500/40 bg-orange-500/5">
       <ShieldAlert className="h-5 w-5 text-orange-400" />
@@ -27,4 +28,4 @@ export function DisparoWarningBanner() {
       </AlertDescription>
     </Alert>
   );
-}
+});

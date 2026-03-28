@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { AlertTriangle, ArrowUpRight, Infinity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +10,7 @@ interface UsageQuotaBannerProps {
   planName: string;
 }
 
-export function UsageQuotaBanner({ used, limit, label, planName }: UsageQuotaBannerProps) {
+export const UsageQuotaBanner = memo(function UsageQuotaBanner({ used, limit, label, planName }: UsageQuotaBannerProps) {
   if (limit === -1) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
@@ -67,4 +68,4 @@ export function UsageQuotaBanner({ used, limit, label, planName }: UsageQuotaBan
       )}
     </div>
   );
-}
+});

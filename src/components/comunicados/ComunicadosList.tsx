@@ -100,6 +100,7 @@ export default function ComunicadosList({ comunicados, onView, onEdit, onDuplica
             placeholder="Buscar por título..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Buscar por título"
             className="pl-9"
           />
         </div>

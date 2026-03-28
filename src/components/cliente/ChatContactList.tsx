@@ -135,6 +135,7 @@ export const ChatContactList = React.forwardRef<HTMLDivElement, Props>(
               className="pl-9 h-8 text-xs rounded-full bg-muted/50 border-0"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Buscar contato ou telefone"
             />
           </div>
 

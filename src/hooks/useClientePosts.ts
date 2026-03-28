@@ -16,7 +16,7 @@ export interface PostItem {
   input_text: string | null;
   reference_image_urls: string[] | null;
   result_url: string | null;
-  result_data: any;
+  result_data: Record<string, unknown> | null;
   status: string;
   created_by: string | null;
   created_at: string;
@@ -30,9 +30,9 @@ export function usePostHistory() {
     queryKey: ["client-posts", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts" as unknown as "profiles")
         .select("*")
-        .eq("organization_id", orgId!)
+        .eq("organization_id", orgId ?? "")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as PostItem[];
@@ -55,7 +55,7 @@ export function useGeneratePost() {
       input_text: string;
       content_id?: string;
       reference_image_urls?: string[];
-      identidade_visual?: any;
+      identidade_visual?: Record<string, unknown>;
       // Structured fields
       tipo_postagem?: string;
       headline?: string;
@@ -87,7 +87,7 @@ export function useGeneratePost() {
       if (!orgId) throw new Error("Org not found");
 
       let result_url: string | null = null;
-      let result_data: any = null;
+      let result_data: Record<string, unknown> | null = null;
 
       if (payload.type === "art") {
         const file_path = `posts/${orgId}/${Date.now()}.png`;
@@ -156,7 +156,7 @@ export function useGeneratePost() {
 
       // Save to DB
       const { data, error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts" as unknown as "profiles")
         .insert({
           organization_id: orgId,
           content_id: payload.content_id || null,
@@ -170,7 +170,7 @@ export function useGeneratePost() {
           result_data,
           status: "pending",
           created_by: user?.id,
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
 
@@ -188,9 +188,9 @@ export function useGenerateBriefing() {
   return useMutation({
     mutationFn: async (payload: {
       briefing_text?: string;
-      content_data?: any;
-      identidade_visual?: any;
-      persona?: any;
+      content_data?: Record<string, unknown>;
+      identidade_visual?: Record<string, unknown>;
+      persona?: Record<string, unknown>;
     }) => {
       const resp = await supabase.functions.invoke("generate-social-briefing", {
         body: payload,
@@ -216,9 +216,9 @@ export function useGenerateVideoBriefing() {
   return useMutation({
     mutationFn: async (payload: {
       briefing_text?: string;
-      content_data?: any;
-      identidade_visual?: any;
-      persona?: any;
+      content_data?: Record<string, unknown>;
+      identidade_visual?: Record<string, unknown>;
+      persona?: Record<string, unknown>;
     }) => {
       const resp = await supabase.functions.invoke("generate-video-briefing", {
         body: payload,
@@ -245,7 +245,7 @@ export function useDeletePost() {
   return useMutation({
     mutationFn: async (postId: string) => {
       const { error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts" as unknown as "profiles")
         .delete()
         .eq("id", postId);
       if (error) throw error;
@@ -263,7 +263,7 @@ export function useBulkDeletePosts() {
   return useMutation({
     mutationFn: async (postIds: string[]) => {
       const { error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts" as unknown as "profiles")
         .delete()
         .in("id", postIds);
       if (error) throw error;
@@ -281,8 +281,8 @@ export function useBulkApprovePosts() {
   return useMutation({
     mutationFn: async (postIds: string[]) => {
       const { error } = await supabase
-        .from("client_posts" as any)
-        .update({ status: "approved" } as any)
+        .from("client_posts" as unknown as "profiles")
+        .update({ status: "approved" } as Record<string, unknown>)
         .in("id", postIds);
       if (error) throw error;
     },
@@ -300,8 +300,8 @@ export function useApprovePost() {
   return useMutation({
     mutationFn: async ({ postId }: { postId: string; type?: "art" | "video"; numFrames?: number }) => {
       const { error } = await supabase
-        .from("client_posts" as any)
-        .update({ status: "approved" } as any)
+        .from("client_posts" as unknown as "profiles")
+        .update({ status: "approved" } as Record<string, unknown>)
         .eq("id", postId);
       if (error) throw error;
     },

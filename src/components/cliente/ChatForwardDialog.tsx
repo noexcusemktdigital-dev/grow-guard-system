@@ -83,7 +83,7 @@ export function ChatForwardDialog({ open, onOpenChange, message, contacts }: Pro
             placeholder="Buscar contato..."
             className="pl-9 h-8 text-xs"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)} aria-label="Buscar contato"
           />
         </div>
 

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ interface ContentVisualCardProps {
   showContext?: { tom?: string; publico?: string; plataforma?: string };
 }
 
-export function ContentVisualCard({
+export const ContentVisualCard = memo(function ContentVisualCard({
   content: c, index, onCopy, onPdf, onPost, onApprove, onDelete, onExpand, onRecord, approving, isApproved, showContext,
 }: ContentVisualCardProps) {
   return (
@@ -102,4 +103,4 @@ export function ContentVisualCard({
       </CardContent>
     </Card>
   );
-}
+});

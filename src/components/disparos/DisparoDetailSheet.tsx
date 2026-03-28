@@ -83,7 +83,7 @@ export function DisparoDetailSheet({ dispatch: d, open, onOpenChange }: Props) {
             <p className="text-[10px] uppercase text-muted-foreground font-semibold">Mensagem</p>
             <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3 max-w-xs">
               {d.image_url && (
-                <img src={d.image_url} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
+                <img src={d.image_url} alt="Imagem do disparo" className="w-full h-32 object-cover rounded-lg mb-2" />
               )}
               <p className="text-xs whitespace-pre-wrap">{d.message || "—"}</p>
             </div>

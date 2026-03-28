@@ -5,12 +5,12 @@ import { useUserOrgId } from "./useUserOrgId";
 export interface MarketingStrategy {
   id: string;
   organization_id: string;
-  answers: Record<string, any>;
+  answers: Record<string, unknown>;
   score_percentage: number;
   nivel: string;
   is_active: boolean;
   status: string;
-  strategy_result: any | null;
+  strategy_result: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -21,9 +21,9 @@ export function useActiveStrategy() {
     queryKey: ["marketing-strategy-active", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies" as unknown as "profiles")
         .select("*")
-        .eq("organization_id", orgId!)
+        .eq("organization_id", orgId ?? "")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -42,9 +42,9 @@ export function useStrategyHistory() {
     queryKey: ["marketing-strategy-history", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies" as unknown as "profiles")
         .select("*")
-        .eq("organization_id", orgId!)
+        .eq("organization_id", orgId ?? "")
         .eq("is_active", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -65,24 +65,24 @@ export function useSaveStrategy() {
 
   return useMutation({
     mutationFn: async (payload: {
-      answers: Record<string, any>;
+      answers: Record<string, unknown>;
       score_percentage: number;
       nivel: string;
-      strategy_result?: any;
+      strategy_result?: Record<string, unknown>;
       status?: string;
     }) => {
       if (!orgId) throw new Error("Org not found");
 
       // Deactivate previous active strategies
       await supabase
-        .from("marketing_strategies" as any)
-        .update({ is_active: false } as any)
+        .from("marketing_strategies" as unknown as "profiles")
+        .update({ is_active: false } as Record<string, unknown>)
         .eq("organization_id", orgId)
         .eq("is_active", true);
 
       // Insert new active strategy
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies" as unknown as "profiles")
         .insert({
           organization_id: orgId,
           answers: payload.answers,
@@ -91,7 +91,7 @@ export function useSaveStrategy() {
           is_active: true,
           strategy_result: payload.strategy_result || null,
           status: payload.status || "pending",
-        } as any)
+        } as Record<string, unknown>)
         .select()
         .single();
 
@@ -119,7 +119,7 @@ export function useApproveStrategy() {
       if (!token) throw new Error("Not authenticated");
 
       // Call debit via RPC (server-side)
-      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+      const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_goals_with_parent", {
         _org_id: orgId,
         _amount: 50,
         _description: "Estratégia de marketing aprovada",
@@ -129,8 +129,8 @@ export function useApproveStrategy() {
 
       // Update status
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
-        .update({ status: "approved" } as any)
+        .from("marketing_strategies" as unknown as "profiles")
+        .update({ status: "approved" } as Record<string, unknown>)
         .eq("id", strategyId)
         .select()
         .single();
@@ -147,7 +147,7 @@ export function useApproveStrategy() {
 
 export function useGenerateStrategy() {
   return useMutation({
-    mutationFn: async (payload: { answers: Record<string, any>; organization_id: string }) => {
+    mutationFn: async (payload: { answers: Record<string, unknown>; organization_id: string }) => {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
@@ -158,8 +158,8 @@ export function useGenerateStrategy() {
 
       if (resp.error) throw new Error(resp.error.message || "Erro ao gerar estratégia");
       
-      const data = resp.data as any;
-      if (data?.error) throw new Error(data.error);
+      const data = resp.data as Record<string, unknown>;
+      if (data?.error) throw new Error(String(data.error));
       
       return data;
     },

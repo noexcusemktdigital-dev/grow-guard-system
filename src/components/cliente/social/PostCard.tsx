@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +15,7 @@ interface PostCardProps {
   onDelete: (id: string) => void;
 }
 
-export function PostCard({ post, selectionMode, isSelected, onToggleSelect, onClick, onDelete }: PostCardProps) {
+export const PostCard = memo(function PostCard({ post, selectionMode, isSelected, onToggleSelect, onClick, onDelete }: PostCardProps) {
   return (
     <Card
       className={`overflow-hidden group hover:shadow-md transition-shadow cursor-pointer relative ${selectionMode && isSelected ? "ring-2 ring-primary" : ""}`}
@@ -38,7 +39,7 @@ export function PostCard({ post, selectionMode, isSelected, onToggleSelect, onCl
       )}
       {post.result_url ? (
         <div className="aspect-square bg-muted relative overflow-hidden">
-          <img src={post.result_url} alt="" className="w-full h-full object-cover" />
+          <img src={post.result_url} alt="Arte gerada" className="w-full h-full object-cover" />
           <Badge className="absolute top-2 right-2 text-[10px]" variant={post.status === "approved" ? "default" : "secondary"}>
             {post.status === "approved" ? "Aprovado" : "Pendente"}
           </Badge>
@@ -61,4 +62,4 @@ export function PostCard({ post, selectionMode, isSelected, onToggleSelect, onCl
       </CardContent>
     </Card>
   );
-}
+});

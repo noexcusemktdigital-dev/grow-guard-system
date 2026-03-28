@@ -132,7 +132,7 @@ export function GlobalSearch() {
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Buscar páginas, ações..." />
+        <CommandInput placeholder="Buscar páginas, ações..."  aria-label="Buscar páginas, ações"/>
         <CommandList>
           <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
           <CommandGroup heading="Páginas">

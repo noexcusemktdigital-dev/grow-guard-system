@@ -683,7 +683,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
       {searchOpen && (
         <div className="px-4 py-2 border-b border-border bg-muted/30 flex items-center gap-2">
           <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Input autoFocus placeholder="Buscar na conversa..." className="h-7 text-xs border-0 bg-transparent focus-visible:ring-0" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          <Input autoFocus placeholder="Buscar na conversa..." className="h-7 text-xs border-0 bg-transparent focus-visible:ring-0" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} aria-label="Buscar na conversa" />
           {searchResults && <span className="text-[10px] text-muted-foreground whitespace-nowrap">{searchResults.length} resultado{searchResults.length !== 1 ? "s" : ""}</span>}
           <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setSearchOpen(false); setSearchQuery(""); }}>
             <X className="w-3 h-3" />

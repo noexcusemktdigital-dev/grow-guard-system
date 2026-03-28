@@ -391,7 +391,7 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar contato..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-8" />
+          <Input placeholder="Buscar contato..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar contato" className="pl-10 h-8" />
         </div>
 
         <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>

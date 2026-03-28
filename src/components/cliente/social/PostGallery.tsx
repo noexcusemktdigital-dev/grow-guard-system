@@ -185,7 +185,7 @@ export function PostGallery({
             <Input
               placeholder="Buscar postagens..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)} aria-label="Buscar postagens"
               className="pl-9"
             />
           </div>

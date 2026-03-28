@@ -1,12 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
+interface PlatformErrorRow {
+  id: string;
+  severity: string;
+  source: string;
+  resolved: boolean;
+  created_at: string;
+  resolved_at: string | null;
+  error_message?: string;
+  function_name?: string;
+  [key: string]: unknown;
+}
+
 export function usePlatformErrors(filters?: { severity?: string; source?: string; status?: string; search?: string }) {
   return useQuery({
     queryKey: ["platform-errors", filters],
     queryFn: async () => {
       let query = supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs" as unknown as "profiles")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -28,7 +40,7 @@ export function usePlatformErrors(filters?: { severity?: string; source?: string
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as any[];
+      return (data || []) as unknown as PlatformErrorRow[];
     },
   });
 }
@@ -38,8 +50,8 @@ export function useResolveError() {
   return useMutation({
     mutationFn: async ({ errorId, note }: { errorId: string; note?: string }) => {
       const { error } = await supabase
-        .from("platform_error_logs" as any)
-        .update({ resolved: true, resolved_at: new Date().toISOString(), resolved_note: note || null } as any)
+        .from("platform_error_logs" as unknown as "profiles")
+        .update({ resolved: true, resolved_at: new Date().toISOString(), resolved_note: note || null } as Record<string, unknown>)
         .eq("id", errorId);
       if (error) throw error;
     },
@@ -55,7 +67,7 @@ export function useDeleteError() {
   return useMutation({
     mutationFn: async (errorId: string) => {
       const { error } = await supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs" as unknown as "profiles")
         .delete()
         .eq("id", errorId);
       if (error) throw error;
@@ -72,21 +84,21 @@ export function useErrorStats() {
     queryKey: ["error-stats"],
     queryFn: async () => {
       const { data: all, error } = await supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs" as unknown as "profiles")
         .select("id, severity, source, resolved, created_at, resolved_at")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
 
-      const items = (all || []) as any[];
+      const items = (all || []) as unknown as PlatformErrorRow[];
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-      const openErrors = items.filter((e: any) => !e.resolved);
-      const criticalOpen = openErrors.filter((e: any) => e.severity === "critical");
-      const resolvedThisMonth = items.filter((e: any) => e.resolved && new Date(e.resolved_at) >= startOfMonth);
-      const last24hErrors = items.filter((e: any) => new Date(e.created_at) >= last24h);
+      const openErrors = items.filter((e: PlatformErrorRow) => !e.resolved);
+      const criticalOpen = openErrors.filter((e: PlatformErrorRow) => e.severity === "critical");
+      const resolvedThisMonth = items.filter((e: PlatformErrorRow) => e.resolved && e.resolved_at && new Date(e.resolved_at) >= startOfMonth);
+      const last24hErrors = items.filter((e: PlatformErrorRow) => new Date(e.created_at) >= last24h);
 
       // Errors per day (last 7 days)
       const dailyCounts: Record<string, number> = {};
@@ -96,14 +108,14 @@ export function useErrorStats() {
         const key = d.toISOString().slice(0, 10);
         dailyCounts[key] = 0;
       }
-      items.forEach((e: any) => {
+      items.forEach((e: PlatformErrorRow) => {
         const key = e.created_at.slice(0, 10);
         if (key in dailyCounts) dailyCounts[key]++;
       });
 
       // By source
       const bySource: Record<string, number> = {};
-      items.forEach((e: any) => {
+      items.forEach((e: PlatformErrorRow) => {
         bySource[e.source] = (bySource[e.source] || 0) + 1;
       });
 

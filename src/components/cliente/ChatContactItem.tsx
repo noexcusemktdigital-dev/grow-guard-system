@@ -28,7 +28,7 @@ function formatContactTime(dateStr: string | null) {
   return format(d, "dd/MM", { locale: ptBR });
 }
 
-export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
+export const ChatContactItem = React.memo(React.forwardRef<HTMLButtonElement, Props>(
   function ChatContactItem({ contact, isSelected, onSelect, stageLabel, preview, onArchive }, ref) {
     const contactAny = contact as any;
     const mode = contactAny.attending_mode || null;
@@ -137,4 +137,4 @@ export const ChatContactItem = React.forwardRef<HTMLButtonElement, Props>(
       </ContextMenu>
     );
   }
-);
+));

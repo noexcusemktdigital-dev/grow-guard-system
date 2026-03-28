@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ interface Props {
   onResend?: (id: string) => void;
 }
 
-export const DisparoDispatchCard = forwardRef<HTMLDivElement, Props>(
+export const DisparoDispatchCard = memo(forwardRef<HTMLDivElement, Props>(
   ({ dispatch: d, index, onView, onDelete, onResend }, ref) => {
     const stats = (d.stats as any) || {};
     const recipients = (d.recipients as string[]) || [];
@@ -67,7 +67,7 @@ export const DisparoDispatchCard = forwardRef<HTMLDivElement, Props>(
           )}
 
           {d.image_url && (
-            <img src={d.image_url} alt="" className="w-full h-20 object-cover rounded-md" />
+            <img src={d.image_url} alt="Imagem do disparo" className="w-full h-20 object-cover rounded-md" />
           )}
 
           <p className="text-[10px] text-muted-foreground">
@@ -100,6 +100,6 @@ export const DisparoDispatchCard = forwardRef<HTMLDivElement, Props>(
       </Card>
     );
   }
-);
+));
 
 DisparoDispatchCard.displayName = "DisparoDispatchCard";

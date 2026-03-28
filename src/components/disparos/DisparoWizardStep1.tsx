@@ -107,7 +107,7 @@ export function DisparoWizardStep1({ data, onChange }: Props) {
           <Label className="text-[10px] uppercase text-muted-foreground">Preview</Label>
           <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-3 max-w-xs">
             {data.imageUrl && (
-              <img src={data.imageUrl} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
+              <img src={data.imageUrl} alt="Pré-visualização do disparo" className="w-full h-32 object-cover rounded-lg mb-2" />
             )}
             <p className="text-xs whitespace-pre-wrap">{data.message}</p>
             <p className="text-[9px] text-muted-foreground text-right mt-1">

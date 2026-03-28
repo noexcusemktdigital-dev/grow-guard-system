@@ -372,7 +372,7 @@ function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetchAsaas,
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por descrição ou cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar por descrição ou cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar por descrição ou cliente" />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -550,7 +550,7 @@ function DespesasTab({ expenses, selectedMonth, createExpense, updateExpense, de
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar despesa..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar despesa..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar despesa" />
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-[150px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
@@ -766,7 +766,7 @@ function RepasseTab({ orgId }: { orgId: string | null | undefined }) {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar franqueado..." className="pl-9" value={searchFranqueado} onChange={e => setSearchFranqueado(e.target.value)} />
+          <Input placeholder="Buscar franqueado..." className="pl-9" value={searchFranqueado} onChange={e => setSearchFranqueado(e.target.value)} aria-label="Buscar franqueado" />
         </div>
         <Select value={filterRepasseStatus} onValueChange={setFilterRepasseStatus}>
           <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -1213,7 +1213,7 @@ function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, selectedMo
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar cliente" />
         </div>
         <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
           <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>

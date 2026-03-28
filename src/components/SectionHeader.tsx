@@ -1,10 +1,12 @@
+import { memo } from "react";
+
 interface SectionHeaderProps {
   title: string;
   description?: string;
   actions?: React.ReactNode;
 }
 
-export function SectionHeader({ title, description, actions }: SectionHeaderProps) {
+export const SectionHeader = memo(function SectionHeader({ title, description, actions }: SectionHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div>
@@ -14,4 +16,4 @@ export function SectionHeader({ title, description, actions }: SectionHeaderProp
       {actions}
     </div>
   );
-}
+});

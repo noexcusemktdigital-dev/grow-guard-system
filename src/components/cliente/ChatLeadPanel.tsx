@@ -157,7 +157,7 @@ export function ChatLeadPanel({ contact, onClose, onCreateLead }: Props) {
                 <div className="grid grid-cols-3 gap-1">
                   {mediaItems.slice(0, 30).map(m => (
                     <a key={m.id} href={m.media_url!} target="_blank" rel="noopener noreferrer">
-                      <img src={m.media_url!} alt="" className="w-full aspect-square object-cover rounded-md" loading="lazy" />
+                      <img src={m.media_url!} alt="Mídia da conversa" className="w-full aspect-square object-cover rounded-md" loading="lazy" />
                     </a>
                   ))}
                 </div>

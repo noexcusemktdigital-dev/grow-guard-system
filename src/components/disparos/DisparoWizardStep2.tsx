@@ -166,6 +166,7 @@ export function DisparoWizardStep2({ recipients, sourceType, onChange }: Props) 
                 className="pl-8 text-xs h-8"
                 value={crmSearch}
                 onChange={(e) => setCrmSearch(e.target.value)}
+                aria-label="Buscar contato"
               />
             </div>
             {allTags.length > 0 && (

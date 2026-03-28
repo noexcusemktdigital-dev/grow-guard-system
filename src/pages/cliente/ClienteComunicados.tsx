@@ -102,7 +102,7 @@ export default function ClienteComunicados() {
 
       <div className="relative max-w-xs">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
+        <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar" className="h-8 text-xs pl-8" />
       </div>
 
       <Tabs defaultValue="novos">

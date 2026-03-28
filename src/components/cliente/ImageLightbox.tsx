@@ -67,7 +67,7 @@ export function ImageLightbox({ images, currentIndex, onClose, onNavigate }: Pro
 
       <img
         src={images[currentIndex]}
-        alt=""
+        alt="Imagem ampliada"
         className="max-w-[90vw] max-h-[90vh] object-contain select-none"
         onClick={(e) => e.stopPropagation()}
         draggable={false}
