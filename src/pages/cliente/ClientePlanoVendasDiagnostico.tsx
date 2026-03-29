@@ -283,10 +283,10 @@ export function ClientePlanoVendasDiagnostico({
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                      { label: "Receita Projetada M6", value: `R$ ${(lastRev.comEstrategia / 1000).toFixed(0)}k`, sublabel: `vs R$ ${(lastRev.atual / 1000).toFixed(0)}k atual` },
-                      { label: "Crescimento Receita", value: `+${revGrowth}%`, sublabel: "em 6 meses" },
-                      { label: "Leads Projetados M6", value: `${lastLead.comEstrategia}`, sublabel: `vs ${lastLead.atual} atual` },
-                      { label: "Fechamentos M6", value: `${closingsM6}`, sublabel: `${Math.round(conv2 * 100)}% conversão` },
+                      { label: "Receita Projetada M6", value: `R$ ${(lastRev.comEstrategia / 1000).toFixed(0)}k`, sublabel: `vs R$ ${(lastRev.atual / 1000).toFixed(0)}k atual`, tip: "Estimativa de receita no mês 6 aplicando a estratégia proposta." },
+                      { label: "Crescimento Receita", value: `+${revGrowth}%`, sublabel: "em 6 meses", tip: "Percentual de crescimento projetado comparando cenário atual vs com estratégia." },
+                      { label: "Leads Projetados M6", value: `${lastLead.comEstrategia}`, sublabel: `vs ${lastLead.atual} atual`, tip: "Quantidade estimada de leads no mês 6 com a estratégia implementada." },
+                      { label: "Fechamentos M6", value: `${closingsM6}`, sublabel: `${Math.round(conv2 * 100)}% conversão`, tip: "Número estimado de vendas fechadas no mês 6, com base no ticket médio e taxa de conversão." },
                     ].map((kpi, i) => (
                       <Card key={i} className="glass-card border-primary/10 overflow-hidden group relative">
                         <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-150 transition-transform duration-500" />
