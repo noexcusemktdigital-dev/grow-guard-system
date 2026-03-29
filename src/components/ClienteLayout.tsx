@@ -16,8 +16,15 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export function ClienteLayout() {
   const location = useLocation();
+  const { data: orgData, isLoading: orgLoading } = useOrgProfile();
   const isChatRoute = location.pathname === "/cliente/chat";
+  const isOnboardingRoute = location.pathname === "/cliente/onboarding";
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Gate: redirect to onboarding if not completed (skip if already on onboarding page)
+  if (!isOnboardingRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed === false) {
+    return <Navigate to="/cliente/onboarding" replace />;
+  }
 
   // Sequence: Welcome Modal → Tour → Announcements
   // Persist done states so they survive re-renders/navigation

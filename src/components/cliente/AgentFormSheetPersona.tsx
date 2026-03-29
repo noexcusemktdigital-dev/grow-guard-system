@@ -146,7 +146,7 @@ export function AgentFormSheetPersona({
 
       {persona.generated_description && (
         <div className="space-y-2">
-          <Label>Persona gerada pela IA (editável)</Label>
+          <Label>Persona gerada pela nossa IA (editável)</Label>
           <Textarea
             value={persona.generated_description}
             onChange={(e) => updatePersona("generated_description", e.target.value)}

@@ -100,11 +100,7 @@ export default function ClienteInicio() {
   const { data: gamification } = useClienteGamification();
   const { toggleChecklistItem } = useClienteContentMutations();
 
-  useEffect(() => {
-    if (!orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed === false) {
-      navigate("/cliente/onboarding", { replace: true });
-    }
-  }, [orgData, orgLoading, navigate]);
+  // Onboarding redirect is now handled in ClienteLayout
 
   const firstName = profile?.full_name?.split(" ")[0] || "";
   const today = format(new Date(), "yyyy-MM-dd");
