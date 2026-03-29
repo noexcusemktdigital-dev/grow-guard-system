@@ -10,13 +10,12 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 
 const IZITECH_URL = "https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/provision-instance";
 
-const json = (body: Record<string, unknown>, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-  });
-
 Deno.serve(async (req) => {
+  const json = (body: Record<string, unknown>, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {

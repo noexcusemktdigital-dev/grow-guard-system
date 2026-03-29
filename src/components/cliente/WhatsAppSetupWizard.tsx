@@ -223,7 +223,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {/* Easytech — recommended (automatic) */}
+                {/* Izitech — recommended (automatic) */}
                 <button
                   onClick={() => setProvider("izitech")}
                   className={`rounded-xl border-2 p-4 text-left transition-all ${
@@ -354,10 +354,10 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-primary" />
-                      <p className="text-xs font-semibold">Powered by Easytech</p>
+                      <p className="text-xs font-semibold">Powered by Izitech</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      A instância será criada automaticamente pela Easytech.
+                      A instância será criada automaticamente pela Izitech.
                       Os webhooks serão configurados para receber mensagens diretamente neste sistema.
                     </p>
                   </div>
@@ -390,7 +390,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
                         <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
                       </Label>
-                      <Input placeholder="https://api.easytech.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
+                      <Input placeholder="https://api.izitech.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
@@ -438,7 +438,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     <div className="rounded-xl border border-border bg-muted/30 p-4 w-full text-left space-y-2">
                       <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Tudo pronto!</h4>
                       <ul className="space-y-1.5 text-xs text-foreground">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Instância criada via Easytech</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Instância criada via Izitech</li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Webhooks configurados automaticamente</li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Pronto para enviar e receber mensagens</li>
                         <li className="flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5 text-primary" /> Acesse o Chat para conversar com seus contatos</li>
@@ -451,7 +451,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     {izitechLoading ? (
                       <>
                         <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                        <p className="text-sm font-semibold">Criando instância via Easytech...</p>
+                        <p className="text-sm font-semibold">Criando instância via Izitech...</p>
                         <p className="text-xs text-muted-foreground">Aguarde enquanto configuramos tudo</p>
                       </>
                     ) : izitechQr ? (
@@ -469,7 +469,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                         </div>
                         <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                            <Zap className="w-3 h-3 text-primary" /> Powered by Easytech
+                            <Zap className="w-3 h-3 text-primary" /> Powered by Izitech
                           </p>
                         </div>
                       </>
@@ -482,7 +482,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   </div>
                 )
               ) : (
-                // Easytech Manual result
+                // Izitech Manual result
                 <>
                   {setupMutation.isPending ? (
                     <div className="flex flex-col items-center py-16 text-center">
