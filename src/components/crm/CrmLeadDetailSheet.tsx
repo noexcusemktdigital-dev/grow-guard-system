@@ -117,6 +117,11 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
 
   const [lostDialog, setLostDialog] = useState(false);
   const [lostReason, setLostReason] = useState("");
+  const [lostDescription, setLostDescription] = useState("");
+  const configuredReasons: string[] = (crmSettings as Record<string, unknown>)?.loss_reasons as string[] || [
+    "Preço", "Concorrência", "Timing inadequado", "Sem orçamento",
+    "Sem resposta", "Escolheu outro fornecedor", "Desistiu do projeto",
+  ];
 
   const [actType, setActType] = useState("note");
   const [actTitle, setActTitle] = useState("");
