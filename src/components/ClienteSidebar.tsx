@@ -230,6 +230,9 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
         </div>
       </div>
 
+      {/* Workspace Switcher */}
+      <WorkspaceSwitcher collapsed={collapsed} />
+
       {/* Menu */}
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         <div data-tour="global">
