@@ -67,7 +67,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     whatIs: "Os Scripts de Vendas são roteiros prontos gerados pela nossa IA para diferentes situações do dia a dia comercial: prospecção, follow-up, objeções, fechamento e pós-venda. Cada script é personalizado para o seu nicho.",
     steps: [
       { title: "Escolha a categoria", description: "Selecione se quer um script de prospecção, follow-up, objeção, fechamento ou pós-venda." },
-      { title: "Gere com IA", description: "Clique em gerar e a IA criará um roteiro personalizado para o seu negócio." },
+      { title: "Gere com a nossa IA", description: "Clique em gerar e a nossa IA criará um roteiro personalizado para o seu negócio." },
       { title: "Personalize", description: "Edite o script conforme sua preferência e estilo de comunicação." },
       { title: "Use no dia a dia", description: "Copie e use nos atendimentos via WhatsApp, telefone ou e-mail." },
     ],
