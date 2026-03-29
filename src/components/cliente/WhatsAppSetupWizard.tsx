@@ -172,9 +172,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
 
   const canConnect = provider === "izitech"
     ? izitechName.trim().length >= 3 && !validateIzitechName(izitechName.trim())
-    : provider === "evolution"
-      ? evoCreds.instanceName.trim()
-      : creds.instanceId.trim() && creds.instanceToken.trim() && creds.clientToken.trim();
+    : evoCreds.instanceName.trim();
 
   const openSupport = () => window.open(SUPPORT_LINK, "_blank");
   const providerLabel = provider === "izitech" ? "IZITECH Connect" : provider === "evolution" ? "Evolution API" : "Z-API";
