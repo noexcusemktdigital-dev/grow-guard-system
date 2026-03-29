@@ -78,15 +78,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if user already has a role (avoid duplicate provisioning)
-    const { data: existingRole } = await supabaseAdmin
+    // Idempotency: try to insert role first with ON CONFLICT
+    // If another concurrent call already inserted, this returns empty and we bail out
+    const { data: insertedRole } = await supabaseAdmin
       .from("user_roles")
+      .insert({ user_id, role: "cliente_admin" } as Record<string, unknown>)
       .select("id")
-      .eq("user_id", user_id)
       .maybeSingle();
 
-    if (existingRole) {
-      return new Response(JSON.stringify({ message: "User already provisioned" }), {
+    if (!insertedRole) {
+      // Role already exists — another call won the race or user was already provisioned
+      // Check if org already exists too
+      const { data: existingMembership } = await supabaseAdmin
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      return new Response(JSON.stringify({
+        message: "User already provisioned",
+        organization_id: existingMembership?.organization_id || null,
+      }), {
         status: 200,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
