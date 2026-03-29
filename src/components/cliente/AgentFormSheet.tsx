@@ -221,12 +221,12 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     }
   };
 
-  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) }));
+  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) } as any));
 
   const toggleObjective = (obj: string) => {
-    const current = form.objectives ?? [];
+    const current = (form.objectives ?? []) as any[];
     const exists = current.includes(obj);
-    setForm((f) => ({ ...f, objectives: exists ? current.filter((o: string) => o !== obj) : [...current, obj] }));
+    setForm((f) => ({ ...f, objectives: exists ? current.filter((o: string) => o !== obj) : [...current, obj] } as any));
   };
 
   const handleGeneratePersona = async () => {
