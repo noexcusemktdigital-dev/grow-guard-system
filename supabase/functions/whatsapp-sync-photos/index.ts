@@ -45,35 +45,68 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const limit = body.limit || 50;
-    const syncPreviews = body.syncPreviews !== false; // default true
+    const syncPreviews = body.syncPreviews !== false;
 
-    // Find connected Z-API instance (sync-photos uses Z-API endpoints only)
+    // Find connected instance (any provider)
     const { data: instance } = await adminClient
       .from("whatsapp_instances")
       .select("*")
       .eq("organization_id", orgId)
       .eq("status", "connected")
-      .eq("provider", "zapi")
       .limit(1)
       .maybeSingle();
 
     if (!instance) {
-      // No Z-API instance connected — skip gracefully instead of erroring
       return new Response(JSON.stringify({
         success: true,
         photos_updated: 0,
         previews_updated: 0,
         photos_failed: 0,
-        skipped: "no_zapi_instance",
+        skipped: "no_instance",
       }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
-    const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
-    const zapiHeaders: Record<string, string> = { "Client-Token": instance.client_token };
+    const isEvolution = instance.provider !== "zapi";
 
-    // Get contacts without photos, ordered by most recent
+    // Build fetch helpers per provider
+    async function fetchProfilePicture(phone: string): Promise<string | null> {
+      try {
+        if (isEvolution) {
+          // Evolution API v1
+          const baseUrl = (instance.base_url || "").replace(/\/$/, "");
+          const instanceName = encodeURIComponent(instance.instance_id);
+          const res = await fetch(`${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": instance.client_token || "",
+            },
+            body: JSON.stringify({ number: phone }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            return data?.profilePictureUrl || data?.profilePicUrl || data?.picture || data?.url || null;
+          }
+        } else {
+          // Z-API fallback
+          const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
+          const res = await fetch(`${zapiBase}/profile-picture?phone=${phone}`, {
+            headers: { "Client-Token": instance.client_token },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            return data?.link || data?.imgUrl || data?.profilePictureUrl || null;
+          }
+        }
+      } catch {
+        // silently fail
+      }
+      return null;
+    }
+
+    // Get contacts without photos
     const { data: contactsNoPhoto } = await adminClient
       .from("whatsapp_contacts")
       .select("id, phone")
@@ -86,28 +119,20 @@ Deno.serve(async (req) => {
     let photosFailed = 0;
 
     for (const contact of (contactsNoPhoto || [])) {
-      try {
-        const res = await fetch(`${zapiBase}/profile-picture?phone=${contact.phone}`, {
-          headers: zapiHeaders,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const picUrl = data?.link || data?.imgUrl || data?.profilePictureUrl || null;
-          if (picUrl) {
-            await adminClient
-              .from("whatsapp_contacts")
-              .update({ photo_url: picUrl })
-              .eq("id", contact.id);
-            photosUpdated++;
-          }
-        }
-      } catch {
+      const picUrl = await fetchProfilePicture(contact.phone);
+      if (picUrl) {
+        await adminClient
+          .from("whatsapp_contacts")
+          .update({ photo_url: picUrl })
+          .eq("id", contact.id);
+        photosUpdated++;
+      } else {
         photosFailed++;
       }
       await new Promise(r => setTimeout(r, 200));
     }
 
-    // Phase 2: Sync previews for contacts without preview
+    // Phase 2: Sync previews
     let previewsUpdated = 0;
 
     if (syncPreviews) {
@@ -117,26 +142,28 @@ Deno.serve(async (req) => {
         .eq("organization_id", orgId)
         .is("last_message_preview", null)
         .order("last_message_at", { ascending: false, nullsFirst: false })
-        .limit(Math.min(limit, 30)); // cap at 30 to avoid timeout
+        .limit(Math.min(limit, 30));
 
       for (const contact of (contactsNoPreview || [])) {
         try {
-          // Try to get last 1 message from Z-API
-          const res = await fetch(`${zapiBase}/chat-messages/${contact.phone}?amount=1`, {
-            headers: zapiHeaders,
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const msgs = Array.isArray(data) ? data : (data?.messages || []);
-            if (msgs.length > 0) {
-              const msg = msgs[0];
-              let preview = msg.text?.message || msg.text || msg.body || msg.caption || null;
+          if (isEvolution) {
+            // For Evolution, get last message from DB instead of API call
+            const { data: lastMsg } = await adminClient
+              .from("whatsapp_messages")
+              .select("content, type")
+              .eq("contact_id", contact.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (lastMsg) {
+              let preview = lastMsg.content;
               if (!preview) {
-                if (msg.image) preview = "📷 Imagem";
-                else if (msg.audio || msg.ptt) preview = "🎵 Áudio";
-                else if (msg.video) preview = "🎬 Vídeo";
-                else if (msg.document) preview = "📄 Documento";
-                else if (msg.sticker) preview = "🏷️ Figurinha";
+                const typeMap: Record<string, string> = {
+                  image: "📷 Imagem", audio: "🎵 Áudio", video: "🎬 Vídeo",
+                  document: "📄 Documento", sticker: "🏷️ Figurinha",
+                };
+                preview = typeMap[lastMsg.type] || null;
               }
               if (preview) {
                 if (preview.length > 100) preview = preview.slice(0, 97) + "...";
@@ -145,6 +172,35 @@ Deno.serve(async (req) => {
                   .update({ last_message_preview: preview })
                   .eq("id", contact.id);
                 previewsUpdated++;
+              }
+            }
+          } else {
+            // Z-API: fetch from API
+            const zapiBase = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}`;
+            const res = await fetch(`${zapiBase}/chat-messages/${contact.phone}?amount=1`, {
+              headers: { "Client-Token": instance.client_token },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              const msgs = Array.isArray(data) ? data : (data?.messages || []);
+              if (msgs.length > 0) {
+                const msg = msgs[0];
+                let preview = msg.text?.message || msg.text || msg.body || msg.caption || null;
+                if (!preview) {
+                  if (msg.image) preview = "📷 Imagem";
+                  else if (msg.audio || msg.ptt) preview = "🎵 Áudio";
+                  else if (msg.video) preview = "🎬 Vídeo";
+                  else if (msg.document) preview = "📄 Documento";
+                  else if (msg.sticker) preview = "🏷️ Figurinha";
+                }
+                if (preview) {
+                  if (preview.length > 100) preview = preview.slice(0, 97) + "...";
+                  await adminClient
+                    .from("whatsapp_contacts")
+                    .update({ last_message_preview: preview })
+                    .eq("id", contact.id);
+                  previewsUpdated++;
+                }
               }
             }
           }
