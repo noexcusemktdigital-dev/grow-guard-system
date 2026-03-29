@@ -83,7 +83,7 @@ const BASE_STEPS: Step[] = [
     icon: <Zap className="w-6 h-6" />,
     title: "Configure Automações",
     description: "Automações trabalham por você: criam tarefas, enviam mensagens e notificam quando algo precisa de atenção.",
-    tips: ["Comece com 'Follow-up automático para leads novos'", "Automações com IA qualificam leads automaticamente"],
+    tips: ["Comece com 'Follow-up automático para leads novos'", "Automações com a nossa IA qualificam leads automaticamente"],
   },
   {
     icon: <Shuffle className="w-6 h-6" />,

@@ -141,7 +141,7 @@ export default function ClientePlanoMarketing() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Plano de Marketing" subtitle="Crie seu plano de marketing personalizado com IA" icon={<Megaphone className="w-5 h-5 text-primary" />} />
+      <PageHeader title="Plano de Marketing" subtitle="Crie seu plano de marketing personalizado com a nossa IA" icon={<Megaphone className="w-5 h-5 text-primary" />} />
 
       <Card className="border-dashed">
         <CardContent className="p-12 flex flex-col items-center gap-4 text-center">

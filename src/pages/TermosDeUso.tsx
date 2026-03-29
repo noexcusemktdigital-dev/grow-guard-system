@@ -76,7 +76,7 @@ const TermosDeUso = () => (
           <h2 className="text-xl font-semibold text-foreground">10. Conteúdo Gerado por Inteligência Artificial</h2>
           <p>A Plataforma utiliza modelos de inteligência artificial para gerar sugestões de conteúdo, scripts de vendas, estratégias de marketing e outros materiais. O usuário reconhece que:</p>
           <ul className="list-disc pl-5 space-y-2 mt-2">
-            <li>Os conteúdos gerados por IA são <strong>sugestões</strong> e devem ser revisados, editados e aprovados pelo usuário antes de qualquer publicação ou uso externo.</li>
+            <li>Os conteúdos gerados pela nossa IA são <strong>sugestões</strong> e devem ser revisados, editados e aprovados pelo usuário antes de qualquer publicação ou uso externo.</li>
             <li>A NoExcuse não garante a precisão, adequação, originalidade ou legalidade dos conteúdos gerados automaticamente.</li>
             <li>O usuário é o único responsável pelo conteúdo final publicado ou distribuído, incluindo a verificação de direitos autorais, veracidade das informações e conformidade com legislações aplicáveis.</li>
           </ul>

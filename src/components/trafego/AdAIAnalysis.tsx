@@ -35,7 +35,7 @@ export function AdAIAnalysis() {
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            Analisar com IA
+            Analisar com a nossa IA
             <Badge variant="outline" className="text-[9px] ml-1">30 créditos</Badge>
           </Button>
         </CardContent>

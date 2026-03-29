@@ -598,7 +598,7 @@ export function CreditCalculatorCard() {
       </CardHeader>
       <CardContent>
         <p className="text-xs text-muted-foreground mb-3">
-          Cada ação de IA e automação consome créditos do seu plano mensal. Veja quanto custa cada execução:
+          Cada ação da nossa IA e automação consome créditos do seu plano mensal. Veja quanto custa cada execução:
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {creditEntries.map((item) => (

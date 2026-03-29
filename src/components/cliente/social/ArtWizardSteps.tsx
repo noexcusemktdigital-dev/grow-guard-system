@@ -685,7 +685,7 @@ export function ArtWizardStep8Review({
             disabled={isFillingAI}
             className="w-full"
           >
-            <Wand2 className="w-3 h-3 mr-1" /> Regenerar textos com IA
+            <Wand2 className="w-3 h-3 mr-1" /> Regenerar textos com a nossa IA
           </Button>
         </>
       )}

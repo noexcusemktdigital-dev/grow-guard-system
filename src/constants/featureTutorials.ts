@@ -225,7 +225,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     ],
     benefits: [
       "Rotina comercial organizada sem esquecer nenhuma ação",
-      "Tarefas priorizadas pela IA com base nos seus objetivos",
+      "Tarefas priorizadas pela nossa IA com base nos seus objetivos",
       "Aumento da produtividade com foco nas atividades certas",
       "Gamificação motiva a conclusão diária",
     ],

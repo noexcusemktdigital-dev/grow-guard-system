@@ -29,13 +29,13 @@ const STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Target, title: "CRM Inteligente", desc: "Funis visuais, drag-and-drop, automações e qualificação de leads com IA." },
+  { icon: Target, title: "CRM Inteligente", desc: "Funis visuais, drag-and-drop, automações e qualificação de leads com a nossa IA." },
   { icon: MessageSquare, title: "WhatsApp Integrado", desc: "Atenda pelo WhatsApp direto no CRM. Histórico, etiquetas e respostas rápidas." },
   { icon: Bot, title: "Agentes de IA", desc: "Robôs treinados que atendem, qualificam e agendam reuniões 24 horas por dia." },
-  { icon: Megaphone, title: "Marketing Completo", desc: "Crie artes, conteúdos, sites e estratégias com inteligência artificial." },
-  { icon: Layers, title: "Automação de Vendas", desc: "Disparos em massa, follow-ups automáticos e scripts gerados por IA." },
+  { icon: Megaphone, title: "Marketing Completo", desc: "Crie artes, conteúdos, sites e estratégias com a nossa inteligência artificial." },
+  { icon: Layers, title: "Automação de Vendas", desc: "Disparos em massa, follow-ups automáticos e scripts gerados pela nossa IA." },
   { icon: BarChart3, title: "Relatórios Avançados", desc: "Dashboards em tempo real com métricas comerciais e de marketing." },
-  { icon: Globe, title: "Sites & Landing Pages", desc: "Crie sites otimizados para conversão com IA em poucos cliques." },
+  { icon: Globe, title: "Sites & Landing Pages", desc: "Crie sites otimizados para conversão com a nossa IA em poucos cliques." },
   { icon: Shield, title: "Seguro & Escalável", desc: "Infraestrutura robusta com criptografia, backups e uptime de 99.9%." },
 ];
 

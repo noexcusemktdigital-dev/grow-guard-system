@@ -633,7 +633,7 @@ function PlaybooksTab() {
 export default function FranqueadoProspeccaoIA() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Prospecção" subtitle="Planeje prospecções e arquive estratégias com IA" />
+      <PageHeader title="Prospecção" subtitle="Planeje prospecções e arquive estratégias com a nossa IA" />
 
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-3">

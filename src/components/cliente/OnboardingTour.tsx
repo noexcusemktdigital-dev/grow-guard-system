@@ -45,7 +45,7 @@ const STEPS: TourStep[] = [
   {
     icon: CreditCard,
     title: "Créditos & Plano",
-    description: "Cada ação de IA consome créditos. Acompanhe seu saldo aqui e escolha o plano ideal para o seu negócio.",
+    description: "Cada ação da nossa IA consome créditos. Acompanhe seu saldo aqui e escolha o plano ideal para o seu negócio.",
     target: "creditos",
     position: "right",
   },

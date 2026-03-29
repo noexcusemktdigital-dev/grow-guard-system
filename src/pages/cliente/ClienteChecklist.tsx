@@ -153,7 +153,7 @@ function DailyChecklistTab() {
           <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-emerald-500" />
           <p className="text-sm text-muted-foreground">Nenhuma tarefa hoje</p>
           <Button variant="outline" size="sm" onClick={handleGenerateChecklist} disabled={generating}>
-            <Wand2 className="w-4 h-4 mr-1" /> Gerar Checklist com IA (5 créditos)
+            <Wand2 className="w-4 h-4 mr-1" /> Gerar Checklist com a nossa IA (5 créditos)
           </Button>
         </div>
       ) : (
