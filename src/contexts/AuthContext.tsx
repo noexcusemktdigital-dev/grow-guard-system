@@ -142,10 +142,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Genuine "no roles" — wait for provisioning (done by SaasAuth)
-        // Poll for role creation instead of calling signup-saas (avoids race condition)
+        // Genuine "no roles" — wait for provisioning
         const signupSource = currentUser.user_metadata?.signup_source;
-        if (signupSource === "saas" || currentUser.app_metadata?.provider === "google") {
+        const isGoogleOAuth = currentUser.app_metadata?.provider === "google";
+
+        if (signupSource === "saas" || isGoogleOAuth) {
+          // For Google OAuth users, auto-provision via signup-saas if no org exists
+          if (isGoogleOAuth) {
+            const { data: existingOrg } = await supabase.rpc("get_user_org_id", { _user_id: currentUser.id, _portal: "saas" });
+            if (!existingOrg) {
+              try {
+                const companyName = currentUser.user_metadata?.full_name
+                  ? `${currentUser.user_metadata.full_name}'s Company`
+                  : "Minha Empresa";
+                await supabase.functions.invoke("signup-saas", {
+                  body: {
+                    user_id: currentUser.id,
+                    company_name: companyName,
+                  },
+                });
+                logger.info("[Auth] Auto-provisioned Google OAuth user via signup-saas");
+              } catch (provisionErr) {
+                logger.error("[Auth] Failed to auto-provision Google OAuth user:", provisionErr);
+              }
+            }
+          }
+
+          // Poll for role creation
           let found = false;
           for (let poll = 0; poll < 10 && !found; poll++) {
             await new Promise(r => setTimeout(r, 1000));
