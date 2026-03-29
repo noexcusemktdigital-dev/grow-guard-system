@@ -17,6 +17,7 @@ import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useCliente
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
+import { ScriptContentRenderer } from "@/components/cliente/ScriptContentRenderer";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -218,8 +219,8 @@ export default function ClienteScripts() {
                             />
                           </div>
                         ) : (
-                          <div className="p-4 bg-background/80 rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
-                            {s.content || "Sem conteúdo"}
+                          <div className="p-4 bg-background/80 rounded-lg border max-h-[500px] overflow-y-auto">
+                            <ScriptContentRenderer content={s.content || ""} />
                           </div>
                         )}
                         <div className="flex items-center justify-between">
