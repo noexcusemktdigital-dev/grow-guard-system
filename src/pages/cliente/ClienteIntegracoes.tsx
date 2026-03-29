@@ -192,14 +192,14 @@ export default function ClienteIntegracoes() {
             description: "Verifique se a instância existe no servidor Evolution.",
           });
         }
-      } else {
+    } else {
+        // Fallback: try evolution reconnect
         const res = await setupMutation.mutateAsync({
-          action: "connect",
-          provider: "zapi",
-          instanceId: inst.instance_id,
-          instanceToken: inst.token,
-          clientToken: inst.client_token,
-          label: inst.label,
+          action: "get-qr",
+          provider: "evolution",
+          instanceName: inst.instance_id,
+          baseUrl: inst.base_url || undefined,
+          apiKey: inst.client_token || undefined,
         });
         refetch();
         if (res?.status === "connected") {
@@ -210,7 +210,7 @@ export default function ClienteIntegracoes() {
       }
     } catch (err: unknown) {
       setQrDialogOpen(false);
-      toast.error("Erro na reconexão: " + err.message);
+      toast.error("Erro na reconexão Izitech: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 

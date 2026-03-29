@@ -163,7 +163,7 @@ export default function ClienteDisparos() {
           <div className="flex items-center gap-2">
             <FeatureTutorialButton slug="disparos" />
             <Badge variant="outline" className={`text-[10px] gap-1 ${isConnected ? "border-emerald-500/30 text-emerald-400" : "border-orange-500/30 text-orange-400"}`}>
-              <Zap className="w-3 h-3" /> {isConnected ? "Z-API Conectado" : "Z-API Desconectado"}
+              <Zap className="w-3 h-3" /> {isConnected ? "Izitech Conectado" : "Izitech Desconectado"}
             </Badge>
             <Button size="sm" onClick={() => { resetWizard(); setWizardOpen(true); }}>
               <Plus className="w-4 h-4 mr-1" /> Novo Disparo

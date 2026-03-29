@@ -299,7 +299,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   </h4>
                   <div className="grid gap-2">
                     {[
-                      { icon: Server, text: "Uma instância Easytech rodando" },
+                      { icon: Server, text: "Uma instância Izitech rodando" },
                       { icon: QrCode, text: "Um celular com WhatsApp conectado à instância" },
                       { icon: KeyRound, text: "URL da API, API Key global e nome da instância" },
                     ].map(({ icon: Icon, text }, i) => (
