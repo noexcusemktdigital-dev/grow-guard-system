@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
 
-type Provider = "izitech" | "zapi" | "evolution";
+type Provider = "izitech" | "evolution";
 
 interface Props {
   open: boolean;
