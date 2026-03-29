@@ -33,7 +33,7 @@ export const ORG_LEVELS = [
   { name: "Lenda", minXp: 24000, maxXp: Infinity, icon: Trophy, color: "text-primary" },
 ];
 
-const medalIcons: Record<string, React.ElementType> = {
+export const medalIcons: Record<string, React.ElementType> = {
   lead: Target, sales: Coins, streak: Timer, crm: BarChart3, closer: Trophy,
   content: FileText, dispatch: Send, site: Globe, agent: Bot,
   profile: User, company: Building2, integrator: Wifi, strategist: Clipboard, communicator: MessageCircle,
