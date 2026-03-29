@@ -1,34 +1,38 @@
 
 
-## Usar Resend para todos os e-mails de autenticação
+## Correção do erro "Failed to send a request to the Edge Function" + Melhoria visual dos Scripts
 
-### Situação atual
+### Problema identificado
 
-- O domínio `noexcusedigital.com.br` está **verificado no Resend** (conforme seu print)
-- O domínio configurado no Lovable Cloud (`notify.sistema.noexcusedigital.com.br`) está **pendente** e nunca vai verificar por conta do sub-subdomínio
-- Os e-mails de convite e transacionais **já usam Resend** diretamente e funcionam
-- Os e-mails de autenticação (reset de senha, verificação, magic link) passam pelo sistema gerenciado do Lovable Cloud — como o domínio está pendente, saem sem personalização
+O arquivo `supabase/functions/_shared/cors.ts` tem uma lista fixa de origens permitidas que **não inclui a URL de preview** do Lovable (`https://id-preview--1d5802a2-4462-4bb6-a30e-a9b2d444f68e.lovable.app`). Além disso, faltam headers obrigatórios do SDK Supabase (`x-supabase-client-platform`, `x-supabase-client-platform-version`, `x-supabase-client-runtime`, `x-supabase-client-runtime-version`).
 
-### Solução
+Quando o browser faz o preflight (OPTIONS), o CORS falha e a requisição é bloqueada antes mesmo de chegar ao servidor.
 
-Atualizar o `auth-email-hook` para enviar diretamente pelo Resend (como já fazem `invite-user` e `send-transactional-email`), em vez de depender do sistema de fila do Lovable Cloud que requer DNS verificado.
+### Plano
 
-### O que muda
+**1. Corrigir CORS (`supabase/functions/_shared/cors.ts`)**
+- Aceitar qualquer origem `*.lovable.app` via verificação dinâmica (regex)
+- Adicionar os headers Supabase obrigatórios ao `Access-Control-Allow-Headers`
+- Manter as origens de localhost para desenvolvimento
+
+**2. Re-deploy de todas as edge functions que usam `_shared/cors.ts`**
+- `generate-script`, `invite-user`, `auth-email-hook`, `send-transactional-email`, `evolution-webhook`, `crm-run-automations`, e demais que importam `getCorsHeaders`
+
+**3. Melhorar a visualização dos scripts gerados (`src/pages/cliente/ClienteScripts.tsx`)**
+- Substituir o bloco `whitespace-pre-wrap font-mono` por um renderizador que interpreta a formatação do script:
+  - Títulos de seção (linhas em CAPS ou com `#`, `---`) renderizados como headers visuais com cor do estágio
+  - Marcadores `[PAUSA]`, `[ANOTAR]`, `[DECISÃO]`, `[EXEMPLO]` renderizados como badges coloridas inline
+  - Listas numeradas com indentação visual
+  - Blocos de fala/diálogo com fundo diferenciado e aspas
+  - Separadores visuais entre seções
+- Criar um componente `ScriptContentRenderer` que faz o parsing e renderização rica
+- Manter o modo edição como textarea simples (raw text)
+
+### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/auth-email-hook/index.ts` | Substituir o enqueue para pgmq por envio direto via Resend API. Manter os templates React Email personalizados (logo, cores, PT-BR) |
-
-### Como vai funcionar
-
-1. O hook continua interceptando eventos de autenticação (signup, recovery, magic link, etc.)
-2. Continua renderizando os templates React Email personalizados (logo NoExcuse, botões vermelhos, PT-BR)
-3. Em vez de enfileirar na pgmq, envia diretamente via Resend API usando `RESEND_API_KEY` (que já está configurada)
-4. E-mails saem como `NoExcuse Digital <noreply@noexcusedigital.com.br>` — do domínio verificado
-
-### O que NÃO muda
-
-- Os templates visuais permanecem iguais (logo, cores, textos em português)
-- Os outros e-mails (convite, transacionais) continuam funcionando como já estão
-- Nenhuma mudança de banco de dados necessária
+| `supabase/functions/_shared/cors.ts` | CORS dinâmico + headers completos |
+| `src/components/cliente/ScriptContentRenderer.tsx` | Novo — renderização visual rica do conteúdo |
+| `src/pages/cliente/ClienteScripts.tsx` | Usar `ScriptContentRenderer` no lugar do bloco `pre-wrap` |
 
