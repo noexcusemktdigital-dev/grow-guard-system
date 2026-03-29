@@ -350,7 +350,7 @@ export function ClientePlanoVendasDiagnostico({
                   <Card className="glass-card">
                     <CardContent className="py-6">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">FUNIL DE CONVERSÃO PROJETADO — MÊS 6</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">FUNIL DE CONVERSÃO PROJETADO — MÊS 6 <InfoTip text="Simulação do funil de vendas no mês 6, mostrando a jornada de leads até fechamentos com base no ticket médio e taxa de conversão." /></p>
                         <Badge variant="outline" className="text-[9px]">Ticket: R$ {ticket2.toLocaleString("pt-BR")}</Badge>
                       </div>
                       <div className="h-52">
