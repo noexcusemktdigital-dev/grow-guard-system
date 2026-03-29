@@ -119,7 +119,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditLesson = (les: Record<string, unknown>) => {
+  const openEditLesson = (les: any) => {
     setEditingLessonId(les.id);
     setLessonForm({ title: les.title, content: les.content || "", videoUrl: les.video_url || "", durationMinutes: les.duration_minutes || 30, sortOrder: les.sort_order || 1 });
     setLessonDialog(true);
