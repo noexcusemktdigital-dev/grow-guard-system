@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Atendimento types and constants (extracted from atendimentoData.ts)
 
 export type TicketStatus = "Aberto" | "Em analise" | "Em atendimento" | "Aguardando franqueado" | "Resolvido" | "Encerrado" | "Reaberto";

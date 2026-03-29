@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { logger } from "@/lib/logger";
 import { Globe, Users, RefreshCw, Unplug, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";

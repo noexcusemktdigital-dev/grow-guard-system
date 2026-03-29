@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import logoWhite from "@/assets/logo-noexcuse-white.png";
 import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router-dom";

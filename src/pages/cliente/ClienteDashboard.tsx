@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from "react";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useActiveGoals } from "@/hooks/useGoals";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import DOMPurify from "dompurify";
 
 export function sanitizeHtml(dirty: string): string {

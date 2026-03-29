@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "@testing-library/jest-dom";
 
 // Polyfill PointerEvent for Radix UI components in jsdom

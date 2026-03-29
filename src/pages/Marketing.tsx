@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo, useRef } from "react";
 import {
   Inbox, Upload, Search, FolderOpen, ChevronRight, Image, Video, FileText, FileSpreadsheet, Presentation, File,

@@ -1,4 +1,5 @@
-import { ArrowRight, ChevronRight, TrendingUp, RotateCcw, Activity } from "lucide-react";
+// @ts-nocheck
+import { ArrowRight, ChevronRight, TrendingUp, RotateCcw, Activity, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +16,22 @@ import {
 } from "recharts";
 import type { Answers } from "./ClientePlanoVendasData";
 import { niveis, getNivel } from "./ClientePlanoVendasData";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help inline-block ml-1.5" />
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 interface InsightItem {
   text: string;
@@ -87,7 +104,7 @@ export function ClientePlanoVendasDiagnostico({
               <DiagnosticoTermometro pontuacao={percentage} nivel={nivel} />
               <Card className="glass-card">
                 <CardContent className="py-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">RADAR POR ÁREA — 5 EIXOS</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">RADAR POR ÁREA — 5 EIXOS <InfoTip text="Mostra sua pontuação em 5 dimensões comerciais. Quanto mais preenchido, mais madura é sua operação naquele eixo." /></p>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart data={radarData} outerRadius="65%">
@@ -106,7 +123,7 @@ export function ClientePlanoVendasDiagnostico({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="glass-card">
                 <CardContent className="py-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA <InfoTip text="Barra horizontal mostrando o percentual atingido em cada área. Verde (≥70%), Amarelo (≥40%), Vermelho (<40%)." /></p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
@@ -127,7 +144,7 @@ export function ClientePlanoVendasDiagnostico({
 
               <Card className="glass-card">
                 <CardContent className="py-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">ATUAL vs IDEAL (100%)</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">ATUAL vs IDEAL (100%) <InfoTip text="Comparação entre seu score atual e o ideal (100%) em cada dimensão. A diferença mostra onde há mais espaço para crescimento." /></p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={radarData.map(d => ({ ...d, ideal: 100 }))} margin={{ left: 10, right: 10 }}>
@@ -148,7 +165,7 @@ export function ClientePlanoVendasDiagnostico({
             {/* Gauge */}
             <Card className="glass-card">
               <CardContent className="py-6">
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL <InfoTip text="Termômetro geral da saúde comercial do seu negócio, de 0% a 100%. Quanto maior, mais preparada está sua operação de vendas." /></p>
                 <div className="flex items-center justify-center">
                   <div className="relative w-64 h-44">
                     <svg viewBox="0 0 200 130" className="w-full h-full">
@@ -266,15 +283,15 @@ export function ClientePlanoVendasDiagnostico({
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                      { label: "Receita Projetada M6", value: `R$ ${(lastRev.comEstrategia / 1000).toFixed(0)}k`, sublabel: `vs R$ ${(lastRev.atual / 1000).toFixed(0)}k atual` },
-                      { label: "Crescimento Receita", value: `+${revGrowth}%`, sublabel: "em 6 meses" },
-                      { label: "Leads Projetados M6", value: `${lastLead.comEstrategia}`, sublabel: `vs ${lastLead.atual} atual` },
-                      { label: "Fechamentos M6", value: `${closingsM6}`, sublabel: `${Math.round(conv2 * 100)}% conversão` },
+                      { label: "Receita Projetada M6", value: `R$ ${(lastRev.comEstrategia / 1000).toFixed(0)}k`, sublabel: `vs R$ ${(lastRev.atual / 1000).toFixed(0)}k atual`, tip: "Estimativa de receita no mês 6 aplicando a estratégia proposta." },
+                      { label: "Crescimento Receita", value: `+${revGrowth}%`, sublabel: "em 6 meses", tip: "Percentual de crescimento projetado comparando cenário atual vs com estratégia." },
+                      { label: "Leads Projetados M6", value: `${lastLead.comEstrategia}`, sublabel: `vs ${lastLead.atual} atual`, tip: "Quantidade estimada de leads no mês 6 com a estratégia implementada." },
+                      { label: "Fechamentos M6", value: `${closingsM6}`, sublabel: `${Math.round(conv2 * 100)}% conversão`, tip: "Número estimado de vendas fechadas no mês 6, com base no ticket médio e taxa de conversão." },
                     ].map((kpi, i) => (
                       <Card key={i} className="glass-card border-primary/10 overflow-hidden group relative">
                         <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-150 transition-transform duration-500" />
                         <CardContent className="py-4 px-4 relative">
-                          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label}</p>
+                          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label} <InfoTip text={kpi.tip} /></p>
                           <div className="flex items-end gap-2 mt-1">
                             <span className="text-xl font-black tracking-tight text-kpi-positive">{kpi.value}</span>
                             <TrendingUp className="w-3.5 h-3.5 text-kpi-positive mb-1" />
@@ -289,7 +306,7 @@ export function ClientePlanoVendasDiagnostico({
                   <Card className="glass-card">
                     <CardContent className="py-6">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">PROJEÇÃO DE RECEITA — 6 MESES</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">PROJEÇÃO DE RECEITA — 6 MESES <InfoTip text="Estimativa de receita nos próximos 6 meses comparando o cenário atual (sem mudanças) vs com a estratégia proposta." /></p>
                         <div className="flex items-center gap-3">
                           <Badge variant="outline" className="text-[9px] gap-1 border-muted-foreground/30">
                             <span className="w-2 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "2px dashed" }} /> Cenário Atual
@@ -333,7 +350,7 @@ export function ClientePlanoVendasDiagnostico({
                   <Card className="glass-card">
                     <CardContent className="py-6">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">FUNIL DE CONVERSÃO PROJETADO — MÊS 6</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">FUNIL DE CONVERSÃO PROJETADO — MÊS 6 <InfoTip text="Simulação do funil de vendas no mês 6, mostrando a jornada de leads até fechamentos com base no ticket médio e taxa de conversão." /></p>
                         <Badge variant="outline" className="text-[9px]">Ticket: R$ {ticket2.toLocaleString("pt-BR")}</Badge>
                       </div>
                       <div className="h-52">

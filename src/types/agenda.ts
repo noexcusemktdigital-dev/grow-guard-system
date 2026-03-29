@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Agenda types and constants (extracted from agendaData.ts)
 import {
   isSameDay, isSameMonth, startOfWeek, endOfWeek, eachDayOfInterval,

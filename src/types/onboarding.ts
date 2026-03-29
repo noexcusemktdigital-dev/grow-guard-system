@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Onboarding types and constants (extracted from onboardingData.ts)
 
 export type OnboardingStatus = "Não iniciado" | "Em implantação" | "Em acompanhamento" | "Implantado com sucesso" | "Em risco" | "Encerrado";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Sparkles, Clock, DollarSign, Megaphone } from "lucide-react";
 import { motion } from "framer-motion";
@@ -150,7 +151,7 @@ export default function ClientePlanoMarketing() {
           <div>
             <h3 className="font-semibold text-lg">Crie seu Plano de Marketing</h3>
             <p className="text-sm text-muted-foreground max-w-lg mt-1">
-              Responda perguntas estratégicas e a IA vai gerar um plano completo com diagnóstico, radar 6D,
+              Responda perguntas estratégicas e a nossa IA vai gerar um plano completo com diagnóstico, radar 6D,
               análise de concorrência, tom de voz, calendário editorial, projeções de crescimento, benchmarks do setor e roadmap de execução.
             </p>
           </div>

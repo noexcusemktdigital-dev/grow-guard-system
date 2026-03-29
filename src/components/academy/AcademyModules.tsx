@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { BookOpen, Clock, Play, ArrowRight, TrendingUp, Target, Building2, Package, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";

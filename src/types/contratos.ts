@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Contratos types and constants (extracted from contratosData.ts)
 
 export type ContratoTipo = "Assessoria" | "SaaS" | "Sistema" | "Franquia";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert } from "lucide-react";

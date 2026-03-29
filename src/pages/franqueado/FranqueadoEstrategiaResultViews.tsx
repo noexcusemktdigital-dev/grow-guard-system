@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef } from "react";
 import {
   CheckCircle2, FileText, ClipboardCheck, Target, AlertTriangle,

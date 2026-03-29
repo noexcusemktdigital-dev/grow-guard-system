@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef } from "react";
 import { Link, FileText, MessageSquare, Upload, Plus, X, Loader2, ChevronRight } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";

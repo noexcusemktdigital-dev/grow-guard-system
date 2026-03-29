@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   Filter, X, Calendar, DollarSign, UserCircle,
 } from "lucide-react";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from "react";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";

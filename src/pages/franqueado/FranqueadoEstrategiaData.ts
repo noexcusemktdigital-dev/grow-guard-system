@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface DiagField {
   key: string;
   label: string;

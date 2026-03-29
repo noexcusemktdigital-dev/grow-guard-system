@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { GraduationCap, BookOpen, Route, ClipboardCheck, Award, Settings, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

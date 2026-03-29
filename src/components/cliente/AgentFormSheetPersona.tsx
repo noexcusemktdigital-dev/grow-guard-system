@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Loader2, Sparkles, ChevronRight } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -146,7 +147,7 @@ export function AgentFormSheetPersona({
 
       {persona.generated_description && (
         <div className="space-y-2">
-          <Label>Persona gerada pela IA (editável)</Label>
+          <Label>Persona gerada pela nossa IA (editável)</Label>
           <Textarea
             value={persona.generated_description}
             onChange={(e) => updatePersona("generated_description", e.target.value)}

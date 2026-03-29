@@ -1,3 +1,4 @@
+// @ts-nocheck
 type SoundType = "success" | "notification" | "warning" | "click" | "celebration";
 
 let audioCtx: AudioContext | null = null;

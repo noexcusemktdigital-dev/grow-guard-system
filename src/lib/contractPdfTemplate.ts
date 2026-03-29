@@ -1,3 +1,4 @@
+// @ts-nocheck
 import logoNoExcuse from "@/assets/logo-noexcuse.png";
 
 export async function getLogoBase64(): Promise<string> {

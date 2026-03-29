@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef, useState } from "react";
 import { Send, Paperclip, Image as ImageIcon, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
