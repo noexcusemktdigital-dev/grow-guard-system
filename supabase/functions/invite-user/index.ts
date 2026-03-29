@@ -167,9 +167,18 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewUser = true;
 
-    if (createErr && (createErr as { code?: string }).code === "email_exists") {
+    // Robust detection of "user already exists" across Supabase JS versions
+    const isEmailExists = createErr && (
+      (createErr as any).code === "email_exists" ||
+      (createErr as any).code === "user_already_exists" ||
+      (createErr as any).status === 422 ||
+      (createErr as any).message?.toLowerCase().includes("already been registered") ||
+      (createErr as any).message?.toLowerCase().includes("already exists") ||
+      (createErr as any).message?.toLowerCase().includes("email_exists")
+    );
+
+    if (isEmailExists) {
       isNewUser = false;
-      // User already exists — find them via paginated search
       console.log("[invite-user] User already exists, looking up:", email);
       const existing = await findUserByEmail(adminClient, email);
       if (!existing) throw new Error("Usuário existe mas não foi encontrado na listagem");
@@ -189,9 +198,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      userId = existing.id;
+      userId = existing.id as string;
     } else if (createErr) {
-      console.error("createUser error:", createErr);
+      console.error("[invite-user] Unrecognized createUser error:", JSON.stringify(createErr, null, 2));
+      console.error("[invite-user] Error code:", (createErr as any).code, "| status:", (createErr as any).status, "| message:", (createErr as any).message);
       throw createErr;
     } else {
       userId = newUser.user.id;
