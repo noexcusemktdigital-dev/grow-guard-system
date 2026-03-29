@@ -57,13 +57,13 @@ const ResetPassword = () => {
       }
     });
 
-    // Timeout: if no session after 10s, show error
+    // Timeout: if no session after 15s, show error
     const timeout = setTimeout(() => {
       setSessionReady((ready) => {
         if (!ready) setSessionError(true);
         return ready;
       });
-    }, 10000);
+    }, 15000);
 
     return () => {
       subscription.unsubscribe();
