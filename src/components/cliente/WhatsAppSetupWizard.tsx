@@ -209,15 +209,31 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <MessageSquare className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold">Como deseja conectar?</h3>
+                  <h3 className="text-sm font-bold">Conectar WhatsApp via Easytech</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Escolha a forma de integração do seu WhatsApp.
+                    Parceiro oficial de integração WhatsApp.
                   </p>
                 </div>
               </div>
 
+              {/* Pricing highlight */}
+              <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-emerald-500" />
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Desconto exclusivo NoExcuse</p>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-xs text-muted-foreground line-through">R$ 90,00/mês</span>
+                  <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">R$ 45,00</span>
+                  <span className="text-xs text-muted-foreground">/mês</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Easytech é R$ 90,00/mês.
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 gap-3">
-                {/* IZITECH — recommended */}
+                {/* Easytech — recommended (automatic) */}
                 <button
                   onClick={() => setProvider("izitech")}
                   className={`rounded-xl border-2 p-4 text-left transition-all ${
@@ -232,14 +248,11 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">IZITECH Connect</p>
+                        <p className="text-sm font-bold">Easytech</p>
                         <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]">Recomendado</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
                         Automático — criamos e gerenciamos a instância para você. Basta escanear o QR code.
-                      </p>
-                      <p className="text-[10px] text-amber-500 mt-1 font-medium">
-                        Serviço com custo separado conforme plano contratado
                       </p>
                     </div>
                   </div>
@@ -251,56 +264,23 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setProvider("zapi")}
-                    className={`rounded-xl border-2 p-4 text-left transition-all ${
-                      provider === "zapi"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-3">
-                      <Plug className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <p className="text-sm font-bold">Z-API</p>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-                      Plataforma SaaS gerenciada. Crie sua conta em app.z-api.io.
-                    </p>
-                  </button>
-
-                  <button
-                    onClick={() => setProvider("evolution")}
-                    className={`rounded-xl border-2 p-4 text-left transition-all ${
-                      provider === "evolution"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-                      <Server className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <p className="text-sm font-bold">Evolution API</p>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-                      Open-source, self-hosted. Configure sua própria instância.
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {provider === "zapi" && (
-                <div className="rounded-xl border-2 border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
-                  <div className="flex items-start gap-2.5">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-bold text-amber-600 dark:text-amber-400">Conta paga obrigatória</h4>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Na conta gratuita (trial) da Z-API, todas as mensagens enviadas terão um aviso automático de teste.
-                      </p>
-                    </div>
+                <button
+                  onClick={() => setProvider("evolution")}
+                  className={`rounded-xl border-2 p-4 text-left transition-all ${
+                    provider === "evolution"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+                    <Server className="w-5 h-5 text-blue-500" />
                   </div>
-                </div>
-              )}
+                  <p className="text-sm font-bold">Easytech (Manual)</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                    Configure sua própria instância informando os dados manualmente.
+                  </p>
+                </button>
+              </div>
 
               {provider === "izitech" && (
                 <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
@@ -323,43 +303,24 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                 </div>
               )}
 
-              {(provider === "zapi" || provider === "evolution") && (
+              {provider === "evolution" && (
                 <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                   <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">
                     O que você vai precisar
                   </h4>
                   <div className="grid gap-2">
-                    {provider === "zapi" ? (
-                      <>
-                        {[
-                          { icon: UserPlus, text: "Uma conta na Z-API (gratuita ou paga)" },
-                          { icon: QrCode, text: "Um celular com WhatsApp para escanear o QR Code" },
-                          { icon: KeyRound, text: "Instance ID, Token e Client-Token" },
-                        ].map(({ icon: Icon, text }, i) => (
-                          <div key={i} className="flex items-center gap-2.5 text-xs text-foreground">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Icon className="w-3.5 h-3.5 text-primary" />
-                            </div>
-                            {text}
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        {[
-                          { icon: Server, text: "Uma instância da Evolution API rodando" },
-                          { icon: QrCode, text: "Um celular com WhatsApp conectado à instância" },
-                          { icon: KeyRound, text: "URL da API, API Key global e nome da instância" },
-                        ].map(({ icon: Icon, text }, i) => (
-                          <div key={i} className="flex items-center gap-2.5 text-xs text-foreground">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Icon className="w-3.5 h-3.5 text-primary" />
-                            </div>
-                            {text}
-                          </div>
-                        ))}
-                      </>
-                    )}
+                    {[
+                      { icon: Server, text: "Uma instância Easytech rodando" },
+                      { icon: QrCode, text: "Um celular com WhatsApp conectado à instância" },
+                      { icon: KeyRound, text: "URL da API, API Key global e nome da instância" },
+                    ].map(({ icon: Icon, text }, i) => (
+                      <div key={i} className="flex items-center gap-2.5 text-xs text-foreground">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        {text}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
