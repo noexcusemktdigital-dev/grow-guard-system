@@ -390,7 +390,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
                         <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
                       </Label>
-                      <Input placeholder="https://api.easytech.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
+                      <Input placeholder="https://api.izitech.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-xs font-semibold flex items-center gap-1.5">
