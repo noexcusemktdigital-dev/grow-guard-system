@@ -67,7 +67,7 @@ export const UNIFIED_PLANS: UnifiedPlan[] = [
     price: 1497,
     credits: 1500,
     maxUsers: 9999,
-    maxPipelines: 9999,
+    maxPipelines: 50,
     hasAiAgent: true,
     hasWhatsApp: true,
     hasDispatches: true,

@@ -115,7 +115,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
 
       {!canCreate && (
         <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-3 text-xs text-amber-700">Limite de funis atingido no plano {plan}. Faça upgrade para criar mais.</CardContent>
+          <CardContent className="p-3 text-xs text-amber-700">Limite de funis atingido no plano {planLabel}. Faça upgrade para criar mais.</CardContent>
         </Card>
       )}
 
