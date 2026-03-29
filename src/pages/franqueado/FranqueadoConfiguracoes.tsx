@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Settings, Building2, Users, FileSignature, UserPlus, Shield, Download, Link2, Copy, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";

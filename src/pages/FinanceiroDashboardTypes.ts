@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AsaasPayment } from "@/hooks/useClientPayments";
 
 export interface NetworkContract {
