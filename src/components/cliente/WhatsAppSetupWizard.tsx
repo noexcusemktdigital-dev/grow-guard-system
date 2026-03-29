@@ -139,28 +139,17 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     }
   };
 
-  // ── Z-API / Evolution: existing flow ──
+  // ── Evolution (Manual): existing flow ──
   const handleConnect = async () => {
     setStep(3);
     try {
-      let res: Record<string, unknown>;
-      if (provider === "evolution") {
-        res = await setupMutation.mutateAsync({
-          provider: "evolution",
-          baseUrl: evoCreds.baseUrl.trim() || undefined,
-          apiKey: evoCreds.apiKey.trim() || undefined,
-          instanceName: evoCreds.instanceName.trim(),
-          action: "connect",
-        });
-      } else {
-        res = await setupMutation.mutateAsync({
-          instanceId: creds.instanceId.trim(),
-          instanceToken: creds.instanceToken.trim(),
-          clientToken: creds.clientToken.trim(),
-          action: "connect",
-          provider: "zapi",
-        });
-      }
+      const res = await setupMutation.mutateAsync({
+        provider: "evolution",
+        baseUrl: evoCreds.baseUrl.trim() || undefined,
+        apiKey: evoCreds.apiKey.trim() || undefined,
+        instanceName: evoCreds.instanceName.trim(),
+        action: "connect",
+      });
       setResult(res);
       refetch();
       toast({ title: "WhatsApp conectado!", description: "Webhooks configurados com sucesso." });
