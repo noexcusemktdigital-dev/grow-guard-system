@@ -391,7 +391,9 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
 
         {/* === PROPOSALS TAB === */}
         <TabsContent value="proposals" className="mt-3">
-          <ProposalsTab leadId={lead.id} />
+          <ProposalsTab leadId={lead.id} onValueSync={(val) => {
+            updateLead.mutate({ id: lead.id, value: val });
+          }} />
         </TabsContent>
 
         {/* === WHATSAPP TAB === */}

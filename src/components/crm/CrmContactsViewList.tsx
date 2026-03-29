@@ -85,7 +85,11 @@ export function CrmContactsViewList({
                 <p className="text-[11px] text-muted-foreground truncate">{c.email || c.phone || "—"} {c.company ? `· ${c.company}` : ""}</p>
               </div>
               {c.position && <Badge variant="secondary" className="text-[9px] hidden sm:inline-flex">{c.position}</Badge>}
-              <Badge variant="outline" className="text-[9px]">{leadsCountByContact[c.id] || 0} leads</Badge>
+              {(leadsCountByContact[c.id] || 0) > 0 ? (
+                <Badge className="text-[9px] bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20">Em negociação</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[9px] text-muted-foreground">Sem negociação</Badge>
+              )}
               {c.source && <span className="text-[10px] text-muted-foreground hidden md:inline">{c.source}</span>}
 
               {/* Context menu */}

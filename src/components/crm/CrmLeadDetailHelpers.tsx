@@ -225,7 +225,7 @@ export function LeadProductsTab({ leadId }: { leadId: string }) {
 
 /* ========== PROPOSALS TAB COMPONENT ========== */
 
-export function ProposalsTab({ leadId }: { leadId: string }) {
+export function ProposalsTab({ leadId, onValueSync }: { leadId: string; onValueSync?: (value: number) => void }) {
   const { toast } = useToast();
   const { data: proposals, isLoading } = useCrmProposals(leadId);
   const { createProposal, updateProposal, deleteProposal, duplicateProposal } = useCrmProposalMutations();
@@ -253,15 +253,20 @@ export function ProposalsTab({ leadId }: { leadId: string }) {
         const { data: urlData } = supabase.storage.from("crm-files").getPublicUrl(path);
         fileUrl = urlData.publicUrl;
       }
+      const proposalValue = value ? parseFloat(value) : 0;
       createProposal.mutate({
         title,
         lead_id: leadId,
-        value: value ? parseFloat(value) : 0,
+        value: proposalValue,
         status: "draft",
         items: [],
         discount_total: 0,
         notes: fileUrl ? `Arquivo: ${fileUrl}` : null,
       });
+      // Sync proposal value to lead value
+      if (proposalValue > 0 && onValueSync) {
+        onValueSync(proposalValue);
+      }
       toast({ title: "Proposta anexada" });
       setShowForm(false);
       resetForm();

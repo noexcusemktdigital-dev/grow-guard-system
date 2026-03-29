@@ -159,7 +159,7 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
     setResult({ success, errors });
     setImporting(false);
     setStep(3);
-    toast({ title: `${success} contatos importados${errors > 0 ? `, ${errors} erros` : ""}` });
+    toast({ title: "Planilha aceita!", description: `${success} contatos foram gerados na aba de Contatos.${errors > 0 ? ` ${errors} erros.` : ""}` });
   };
 
   const recognizedCount = DISPLAY_COLUMNS.filter(c => mappedHeaders.includes(c.key)).length;
@@ -274,10 +274,13 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
           <div className="py-8 text-center space-y-4">
             <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
             <div>
-              <p className="text-lg font-semibold">Importação concluída</p>
-              <div className="flex items-center justify-center gap-4 mt-2">
+              <p className="text-lg font-semibold">Importação concluída!</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Sua planilha foi aceita e os contatos foram gerados na aba de <strong>Contatos</strong>.
+              </p>
+              <div className="flex items-center justify-center gap-4 mt-3">
                 <span className="flex items-center gap-1 text-sm text-emerald-600">
-                  <CheckCircle className="w-4 h-4" /> {result.success} importados
+                  <CheckCircle className="w-4 h-4" /> {result.success} contatos criados
                 </span>
                 {result.errors > 0 && (
                   <span className="flex items-center gap-1 text-sm text-red-500">
