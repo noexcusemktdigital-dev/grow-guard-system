@@ -421,7 +421,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         }
       );
     } catch (err: unknown) {
-      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+      toast({ title: "Erro no upload", description: (err as any)?.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
