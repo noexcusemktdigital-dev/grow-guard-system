@@ -33,8 +33,11 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [funnelDesc, setFunnelDesc] = useState("");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
 
-  const plan = subscription?.plan || "basic";
-  const maxFunnels = plan === "basic" ? 2 : 999;
+  const isTrial = subscription?.status === "trial";
+  const planId = subscription?.plan as string | null;
+  const limits = getEffectiveLimits(planId, isTrial);
+  const maxFunnels = limits.maxPipelines;
+  const planLabel = isTrial ? "Trial" : (planId ? planId.charAt(0).toUpperCase() + planId.slice(1) : "Starter");
   const canCreate = !funnelsData || funnelsData.length < maxFunnels;
 
   useEffect(() => {
