@@ -76,7 +76,7 @@ export function VideoVisual({ content }: { content: any }) {
 }
 
 /* ── Story: frames horizontais ── */
-export function StoryVisual({ content }: { content: unknown }) {
+export function StoryVisual({ content }: { content: any }) {
   if (!Array.isArray(content)) return <GenericVisual content={content} />;
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
