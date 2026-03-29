@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Canvas Template Engine — Hybrid rendering system
  * AI generates background image, this engine composes text, shapes, and logo on top

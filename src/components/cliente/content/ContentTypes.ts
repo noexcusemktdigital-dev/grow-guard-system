@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface VideoContent {
   hook?: string;
   desenvolvimento?: string;

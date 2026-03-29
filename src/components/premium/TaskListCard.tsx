@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Zap, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";

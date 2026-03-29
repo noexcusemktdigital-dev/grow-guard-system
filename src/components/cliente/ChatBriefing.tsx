@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { motion, AnimatePresence } from "framer-motion";

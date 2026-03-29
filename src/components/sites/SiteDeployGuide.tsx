@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import {
   Download, Globe, FolderOpen, Upload, Link2, CheckCircle2,

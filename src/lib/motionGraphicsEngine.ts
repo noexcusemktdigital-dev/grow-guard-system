@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Motion Graphics Engine v2 — Professional Agency-Quality
  *

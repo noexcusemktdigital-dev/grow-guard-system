@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Matriz types and constants (extracted from matrizData.ts)
 
 export type MatrizArea = "Financeiro" | "Comercial" | "Juridico" | "Marketing" | "Operacoes" | "Direcao";

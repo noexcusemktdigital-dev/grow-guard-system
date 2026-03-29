@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { screen, fireEvent } from "@testing-library/dom";

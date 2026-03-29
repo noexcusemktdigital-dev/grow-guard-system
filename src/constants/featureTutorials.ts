@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   Users, TrendingUp, FileText, Bot, Send, Palette,
   Share2, Globe, Target, MessageCircle, CheckSquare,

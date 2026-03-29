@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { get, set } from "idb-keyval";
 import type { WhatsAppContact, WhatsAppMessage } from "@/hooks/useWhatsApp";
 

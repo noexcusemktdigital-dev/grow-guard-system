@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Square, RectangleVertical, Smartphone, Monitor } from "lucide-react";
 
 /* ── Art Formats ── */

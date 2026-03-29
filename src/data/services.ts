@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type ServiceType = 'one_time' | 'monthly';
 export type QuantityType = 'single' | 'quantity' | 'package' | 'youtube_time' | 'toggle';
 

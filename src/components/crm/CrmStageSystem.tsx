@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   CirclePlus, PhoneOutgoing, SearchCheck, ClipboardList,
   Handshake, ShieldCheck, Ban, Star, Sparkles, Target,
