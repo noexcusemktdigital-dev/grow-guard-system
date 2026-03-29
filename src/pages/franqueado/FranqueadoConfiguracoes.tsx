@@ -115,14 +115,13 @@ function TeamTab() {
   const { data: members, isLoading } = useOrgMembers();
   const { data: orgId } = useUserOrgId();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
+  const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "franqueado" });
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
 
   const FRANQUEADO_ROLE_OPTIONS = [
     { value: "franqueado", label: "Admin (Franqueado)" },
-    { value: "cliente_user", label: "Operador" },
   ];
 
   const inviteMutation = useMutation({

@@ -64,6 +64,13 @@ Deno.serve(async (req) => {
 
       if ((otherMemberships ?? 0) === 0) {
         await admin.from("user_roles").delete().eq("user_id", user_id);
+        // Clean up auth user completely — no remaining org memberships
+        try {
+          await admin.auth.admin.deleteUser(user_id);
+          console.log(`[update-member] Deleted orphan auth user ${user_id}`);
+        } catch (delErr) {
+          console.warn(`[update-member] Failed to delete auth user ${user_id}:`, delErr);
+        }
       }
 
       return new Response(JSON.stringify({ success: true }), { headers: getCorsHeaders(req) });

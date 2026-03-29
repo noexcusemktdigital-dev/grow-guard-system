@@ -26,6 +26,28 @@ function buildInviteHtml(confirmationUrl: string): string {
 </html>`;
 }
 
+function buildExistingUserInviteHtml(orgName: string, loginUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:'Inter',Arial,sans-serif;">
+  <div style="padding:40px 25px;max-width:560px;margin:0 auto;">
+    <img src="https://gxrhdpbbxfipeopdyygn.supabase.co/storage/v1/object/public/email-assets/logo-noexcuse.png" alt="NoExcuse Digital" width="160" style="margin:0 0 24px;display:block;" />
+    <h1 style="font-size:22px;font-weight:bold;color:#141a24;margin:0 0 20px;">Você foi adicionado a uma organização</h1>
+    <p style="font-size:14px;color:#6c7280;line-height:1.6;margin:0 0 25px;">
+      Você foi adicionado à organização <strong>${orgName}</strong> na plataforma <strong>NoExcuse Digital</strong>. Use sua senha atual para acessar o sistema.
+    </p>
+    <a href="${loginUrl}" style="display:inline-block;background-color:#E2233B;color:#ffffff;font-size:14px;border-radius:12px;padding:12px 24px;text-decoration:none;font-weight:500;">
+      Acessar plataforma
+    </a>
+    <p style="font-size:12px;color:#999999;margin:30px 0 0;">
+      Se você não esperava este convite, pode ignorar este e-mail com segurança.
+    </p>
+  </div>
+</body>
+</html>`;
+}
+
 async function sendViaResend(to: string, html: string): Promise<void> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
@@ -105,6 +127,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---- Prevent self-invite EARLY (before any user creation) ----
+    if (email.toLowerCase().trim() === user.email?.toLowerCase()) {
+      return new Response(
+        JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
+
     // Verify caller is member of the org (or parent org for franqueadora)
     const { data: isMember } = await adminClient.rpc("is_member_or_parent_of_org", {
       _user_id: callerId,
@@ -120,10 +150,11 @@ Deno.serve(async (req) => {
     // ---- Determine org type for contextual redirect and limits ----
     const { data: orgData } = await adminClient
       .from("organizations")
-      .select("type")
+      .select("type, name")
       .eq("id", organization_id)
       .single();
     const orgType = orgData?.type; // 'franqueadora' | 'franqueado' | 'cliente'
+    const orgName = orgData?.name || "Organização";
 
     // ---- Validate maxUsers server-side ----
     let maxUsers = 9999; // default for franchise orgs without subscriptions
@@ -207,40 +238,42 @@ Deno.serve(async (req) => {
       userId = newUser.user.id;
     }
 
-    // ---- Prevent self-invite ----
-    if (userId === callerId) {
-      return new Response(
-        JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    // Generate a password recovery link — redirect based on org type
+    // ---- Send appropriate email ----
     const siteUrl = Deno.env.get("SITE_URL") || "https://sistema.noexcusedigital.com.br";
-    const redirectPath = "/reset-password";
-    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo: `${siteUrl}${redirectPath}?portal=${orgType === "cliente" ? "saas" : "franchise"}` },
-    });
 
-    if (linkErr) {
-      console.error("generateLink error:", linkErr);
-      throw linkErr;
-    }
+    if (isNewUser) {
+      // New user: send recovery link so they can set their password
+      const redirectPath = "/reset-password";
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo: `${siteUrl}${redirectPath}?portal=${orgType === "cliente" ? "saas" : "franchise"}` },
+      });
 
-    // Send invite email via Resend directly
-    const recoveryUrl = linkData?.properties?.action_link;
-    console.log("[invite-user] Recovery URL generated:", recoveryUrl ? "YES" : "NO");
-    if (recoveryUrl) {
-      try {
-        await sendViaResend(email, buildInviteHtml(recoveryUrl));
-        console.log(`Invite email sent via Resend to ${email}`);
-      } catch (emailErr) {
-        console.error("Failed to send invite email via Resend:", emailErr);
+      if (linkErr) {
+        console.error("generateLink error:", linkErr);
+        throw linkErr;
+      }
+
+      const recoveryUrl = linkData?.properties?.action_link;
+      console.log("[invite-user] Recovery URL generated:", recoveryUrl ? "YES" : "NO");
+      if (recoveryUrl) {
+        try {
+          await sendViaResend(email, buildInviteHtml(recoveryUrl));
+          console.log(`Invite email sent via Resend to ${email}`);
+        } catch (emailErr) {
+          console.error("Failed to send invite email via Resend:", emailErr);
+        }
       }
     } else {
-      console.warn("No recovery URL generated, skipping email send");
+      // Existing user: send informational email (no password reset!)
+      const loginUrl = orgType === "cliente" ? `${siteUrl}/app` : `${siteUrl}/acessofranquia`;
+      try {
+        await sendViaResend(email, buildExistingUserInviteHtml(orgName, loginUrl));
+        console.log(`Existing-user invite email sent via Resend to ${email}`);
+      } catch (emailErr) {
+        console.error("Failed to send existing-user invite email:", emailErr);
+      }
     }
 
     // Update profile only for new users (don't overwrite existing profiles)
@@ -283,10 +316,12 @@ Deno.serve(async (req) => {
       console.log(`[invite-user] Inserted role: ${validRole}`);
     }
 
-    // Assign to teams if provided
+    // Assign to teams if provided (with ON CONFLICT to avoid duplicate key errors)
     if (Array.isArray(team_ids) && team_ids.length > 0) {
-      const teamRows = team_ids.map((tid: string) => ({ team_id: tid, user_id: userId }));
-      await adminClient.from("org_team_memberships").insert(teamRows);
+      for (const tid of team_ids) {
+        await adminClient.from("org_team_memberships")
+          .upsert({ team_id: tid, user_id: userId }, { onConflict: "team_id,user_id", ignoreDuplicates: true });
+      }
     }
 
     console.log(`User invited: ${email} -> org ${organization_id} as ${validRole} (teams: ${team_ids?.length ?? 0})`);

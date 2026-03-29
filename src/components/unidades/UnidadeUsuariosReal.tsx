@@ -31,7 +31,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invName, setInvName] = useState("");
   const [invEmail, setInvEmail] = useState("");
-  const [invRole, setInvRole] = useState("cliente_user");
+  const [invRole, setInvRole] = useState("franqueado");
   const [inviting, setInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
@@ -82,7 +82,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
 
   function resetForm() {
     setInviteOpen(false);
-    setInvName(""); setInvEmail(""); setInvRole("cliente_user");
+    setInvName(""); setInvEmail(""); setInvRole("franqueado");
     setInviteSuccess(false);
     setInviteTeamIds([]);
   }
@@ -92,7 +92,6 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const roleOptions = isFranqueadoView
     ? [
         { value: "franqueado", label: "Administrador" },
-        { value: "cliente_user", label: "Usuário" },
       ]
     : [
         { value: "franqueado", label: "Franqueado (Admin)" },
