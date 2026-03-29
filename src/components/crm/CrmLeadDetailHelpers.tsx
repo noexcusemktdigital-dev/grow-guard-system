@@ -478,7 +478,7 @@ export function WhatsAppTab({ lead }: { lead: LeadRow }) {
 }
 
 /* ── Lead History Timeline ── */
-const HISTORY_ICONS: Record<string, React.ReactNode> = {
+const HISTORY_ICONS_2: Record<string, React.ReactNode> = {
   created: <Plus className="w-3 h-3" />,
   stage_change: <ArrowRight className="w-3 h-3" />,
   won: <CheckCircle className="w-3 h-3 text-emerald-500" />,
