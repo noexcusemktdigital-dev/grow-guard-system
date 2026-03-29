@@ -509,7 +509,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
   const handleReact = useCallback((message: WhatsAppMessage, emoji: string) => {
     // Store reaction in metadata - update optimistically
-    const currentReactions = (((message.metadata as Record<string, unknown>)?.reactions || []) as Array<{ emoji: string; from: string }>;
+    const currentReactions = ((message.metadata as Record<string, unknown>)?.reactions || []) as Array<{ emoji: string; from: string }>;
     const newReactions = [...currentReactions, { emoji, from: "user" }];
     // Update via supabase directly
     supabase
