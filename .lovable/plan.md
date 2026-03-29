@@ -1,25 +1,33 @@
 
 
-## Correção — WhatsApp não conecta + "Easytech" → "Izitech"
+## Correção — Erro genérico ao gerar script (mesmo padrão do invite-user)
 
-### Causa raiz do erro
+### Causa raiz
 
-O arquivo `supabase/functions/izitech-provision/index.ts` tem um **bug crítico** na função helper `json()` (linha 14-17): ela referencia `req` para chamar `getCorsHeaders(req)`, mas `req` é declarado apenas dentro do callback de `Deno.serve()`. Isso causa um `ReferenceError` em tempo de execução, fazendo a Edge Function falhar silenciosamente com erro genérico. **Não tem relação com o plano trial** — nenhum usuário consegue conectar WhatsApp por essa rota.
+Idêntica ao bug do `invite-user`: quando a Edge Function `generate-script` retorna HTTP 402 (créditos insuficientes) ou qualquer non-2xx, o SDK do Supabase encapsula como `FunctionsHttpError` genérico. O frontend faz `if (error) throw error` sem extrair a mensagem real do corpo da resposta.
+
+**Não tem relação com o plano trial** — qualquer usuário com créditos deveria conseguir gerar scripts normalmente.
 
 ### Plano de correção
 
-**1. Corrigir `izitech-provision/index.ts`**
-- Transformar `json` em função que recebe `req` como parâmetro, ou mover a definição para dentro do `Deno.serve()` callback
-- Aplicar o mesmo padrão de extração de erro do SDK (como fizemos no `invite-user`)
+Aplicar o mesmo padrão de extração de erro nos 3 locais que chamam `generate-script`:
 
-**2. Substituir "Easytech" → "Izitech" no wizard (já deveria ter sido feito)**
-- `src/components/cliente/WhatsAppSetupWizard.tsx` — 6 ocorrências de "Easytech" para trocar por "Izitech"
-- Placeholder `https://api.easytech.com.br` → `https://api.izitech.com.br`
+```js
+if (error) {
+  const ctx = (error as any).context;
+  if (ctx instanceof Response) {
+    const body = await ctx.json().catch(() => null);
+    throw new Error(body?.error || error.message);
+  }
+  throw error;
+}
+```
 
 ### Arquivos afetados
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/izitech-provision/index.ts` | Mover `json()` helper para dentro do callback ou passar `req` como parâmetro |
-| `src/components/cliente/WhatsAppSetupWizard.tsx` | Trocar 6x "Easytech" → "Izitech" |
+| Arquivo | Local |
+|---------|-------|
+| `src/components/cliente/ScriptGeneratorDialog.tsx` | `handleGenerate` (linha 84) |
+| `src/pages/cliente/ClienteScripts.tsx` | `handleImproveWithAI` (linha 80) |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Loop de geração de scripts (linha ~157) |
 
