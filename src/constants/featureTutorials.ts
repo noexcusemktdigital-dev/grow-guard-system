@@ -149,7 +149,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     ],
     benefits: [
       "Artes profissionais sem precisar de designer",
-      "Textos gerados automaticamente pela IA",
+      "Textos gerados automaticamente pela nossa IA",
       "Tutorial didático para referências visuais",
       "Identidade visual consistente em todas as peças",
     ],
