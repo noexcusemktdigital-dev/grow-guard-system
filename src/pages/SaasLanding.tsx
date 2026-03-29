@@ -25,7 +25,7 @@ const HERO_FEATURES = [
 const STEPS = [
   { num: "01", title: "Cadastre-se em segundos", desc: "Crie sua conta grátis e comece a usar em menos de 2 minutos. Sem cartão de crédito.", icon: PlayCircle },
   { num: "02", title: "Configure sua operação", desc: "Importe leads, conecte seu WhatsApp e ative o agente de IA para atender 24/7.", icon: Layers },
-  { num: "03", title: "Venda no piloto automático", desc: "Acompanhe funis, dispare campanhas e deixe a IA qualificar seus leads.", icon: TrendingUp },
+  { num: "03", title: "Venda no piloto automático", desc: "Acompanhe funis, dispare campanhas e deixe a nossa IA qualificar seus leads.", icon: TrendingUp },
 ];
 
 const FEATURES = [
