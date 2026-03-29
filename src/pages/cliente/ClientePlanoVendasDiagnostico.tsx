@@ -165,7 +165,7 @@ export function ClientePlanoVendasDiagnostico({
             {/* Gauge */}
             <Card className="glass-card">
               <CardContent className="py-6">
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 text-center">INDICADOR DE MATURIDADE COMERCIAL <InfoTip text="Termômetro geral da saúde comercial do seu negócio, de 0% a 100%. Quanto maior, mais preparada está sua operação de vendas." /></p>
                 <div className="flex items-center justify-center">
                   <div className="relative w-64 h-44">
                     <svg viewBox="0 0 200 130" className="w-full h-full">
