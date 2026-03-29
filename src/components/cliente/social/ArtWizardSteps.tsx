@@ -140,7 +140,7 @@ function Step2Briefing({ briefingText, setBriefingText, objective, setObjective,
       <div>
         <h3 className="text-base font-semibold mb-1">💡 O que você quer comunicar?</h3>
         <p className="text-sm text-muted-foreground">
-          Descreva livremente. A IA vai gerar todos os textos, cena e composição para você.
+          Descreva livremente. A nossa IA vai gerar todos os textos, cena e composição para você.
         </p>
       </div>
       <Textarea
