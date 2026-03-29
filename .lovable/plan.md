@@ -1,47 +1,38 @@
 
 
-## Diagnóstico — 3 Problemas Identificados
+## Diagnóstico — E-mails sem personalização
 
-### Problema 1: Link "Esqueci minha senha" expira / inválido
+### Situação atual
 
-**Causa raiz:** Nos dois portais (Auth.tsx e SaasAuth.tsx), o `redirectTo` do "esqueci minha senha" está **sem o parâmetro `?portal=`**:
+1. **O domínio `notify.sistema.noexcusedigital.com.br` está com DNS pendente.** Enquanto o DNS não for verificado, os e-mails de autenticação (definição de senha, redefinição, convite, etc.) são enviados pelo sistema padrão, sem os templates personalizados e sem o domínio da NoExcuse.
 
-```
-redirectTo: `${window.location.origin}/reset-password`  ← falta ?portal=
-```
+2. **O `auth-email-hook` usa um padrão antigo** (envia direto via Resend API) em vez do sistema de fila gerenciado. Isso precisa ser atualizado para o padrão atual com `enqueue_email`, que garante retries, rate-limit e integração correta com o domínio verificado.
 
-Quando o usuário clica no link do e-mail e chega em `/reset-password`, o sistema não sabe de qual portal ele veio. O cliente Supabase é inicializado com uma chave de armazenamento (`storageKey`) que depende desse parâmetro. Sem ele, a sessão de recuperação é armazenada no lugar errado → a página não encontra a sessão → "link expirado ou inválido".
+3. **Os templates já existem e estão corretos** — logo da NoExcuse, textos em PT-BR, cores da marca. O problema não é o conteúdo dos templates, é a infraestrutura de envio.
 
-**Correção:**
-- `Auth.tsx` (franquia): `redirectTo: .../reset-password?portal=franchise`
-- `SaasAuth.tsx` (SaaS): `redirectTo: .../reset-password?portal=saas`
+### Plano de correção
 
-### Problema 2: E-mail de recuperação não usa nosso template/domínio
+**Passo 1: Atualizar a infraestrutura de e-mail**
+- Garantir que a infraestrutura de fila (pgmq, cron, tabelas) esteja configurada
+- Re-gerar o `auth-email-hook` para usar o padrão de fila (`enqueue_email`) em vez do Resend direto
+- Reaplicar os estilos e textos PT-BR da NoExcuse nos templates (logo, cores, tom)
+- Deploy da função atualizada
 
-**Causa:** O domínio de e-mail `notify.sistema.noexcusedigital.com.br` ainda está com **DNS pendente**. Enquanto não for verificado, todos os e-mails de autenticação (incluindo "esqueci minha senha") são enviados pelo template padrão do sistema, sem a nossa marca.
+**Passo 2: DNS (ação do administrador)**
+- O DNS do subdomínio `notify.sistema.noexcusedigital.com.br` precisa ser configurado no registrador de domínio
+- Registros NS apontando para os nameservers corretos (fornecidos nas configurações de e-mail do projeto)
+- Até que o DNS seja verificado, os e-mails continuarão sendo enviados pelo sistema padrão
+- Após verificação, todos os e-mails passam automaticamente a usar os templates personalizados com o domínio da NoExcuse
 
-**Ação necessária:** Configurar os registros DNS (NS records) apontando para os nameservers corretos. Isso precisa ser feito no painel do registrador de domínio (onde o DNS do `sistema.noexcusedigital.com.br` é gerenciado). Você pode acompanhar o status em **Cloud → Emails**.
+### Resultado esperado
 
-### Problema 3: Login falha após definir senha pelo convite
+Após DNS verificado, todos os e-mails de autenticação serão enviados:
+- Com a logo da NoExcuse Digital
+- Em português (PT-BR)
+- Do domínio `noexcusedigital.com.br` (ou `notify.sistema.noexcusedigital.com.br`)
+- Com os templates personalizados (cores da marca, botões vermelhos, textos customizados)
 
-**Causa provável:** O link de convite usa `generateLink({ type: "recovery" })` que gera um token com validade limitada (~1 hora). Se o usuário demora para clicar, o token expira. Adicionalmente, se o `updateUser({ password })` falha silenciosamente (erro 422 por sessão não estabelecida), a senha não é atualizada mas a interface pode não comunicar claramente.
+### Nota importante
 
-**Correção:** Melhorar a resiliência da página `/reset-password`:
-- Aguardar o evento `PASSWORD_RECOVERY` com timeout mais generoso
-- Se `updateUser` falhar com 422, exibir mensagem clara pedindo novo link
-- Após sucesso, fazer logout explícito e redirecionar para login (evitando sessão fantasma)
-
----
-
-### Arquivos afetados
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Auth.tsx` | Adicionar `?portal=franchise` no `redirectTo` |
-| `src/pages/SaasAuth.tsx` | Adicionar `?portal=saas` no `redirectTo` |
-| `src/pages/ResetPassword.tsx` | Melhorar tratamento de erro 422, timeout e mensagem |
-
-### Sobre o DNS (ação do administrador)
-
-O DNS do domínio de e-mail precisa ser configurado para que os e-mails usem nossos templates. Isso não é algo que eu possa fazer automaticamente — precisa ser feito no painel do registrador de domínio. Posso verificar o status atual a qualquer momento.
+A configuração do DNS é a etapa crítica e precisa ser feita no painel do registrador de domínio (onde o `sistema.noexcusedigital.com.br` é gerenciado). Sem isso, nenhuma mudança no código resolverá o problema dos e-mails genéricos.
 
