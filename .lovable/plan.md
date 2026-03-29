@@ -1,59 +1,77 @@
 
 
-## Melhorias no CRM — 5 Correções
+## Plano — 2 Frentes: Limites de Funis + Arquitetura Multi-Workspace
 
-### 1. Sincronizar valor da proposta com valor do lead
+---
 
-Quando uma proposta é criada ou atualizada no `ProposalsTab`, o valor dela deve ser automaticamente copiado para o campo `value` do lead.
+### Frente 1: Corrigir limites de funis por plano
 
-**Arquivo:** `src/components/crm/CrmLeadDetailHelpers.tsx`
-- O `ProposalsTab` recebe apenas `leadId`. Precisa receber também um callback ou usar `useCrmLeadMutations` diretamente
-- Após `createProposal.mutate(...)` com sucesso, chamar `updateLead.mutate({ id: leadId, value: parseFloat(value) })` para sincronizar
-- Fazer o mesmo no `handleStatusChange` se o valor mudar
-- Adicionar `useCrmLeadMutations` no componente
+**Problema:** O `CrmFunnelManager` usa lógica hardcoded `plan === "basic" ? 2 : 999` que não reflete os limites corretos. O campo `maxPipelines` no `plans.ts` também está errado.
 
-### 2. Feedback ao importar planilha CSV
+**Limites corretos:**
+| Plano | Funis |
+|-------|-------|
+| Trial | 3 |
+| Starter | 10 |
+| Pro | 20 |
+| Enterprise | 50 |
 
-Quando a importação termina no `CrmCsvImportDialog`, mostrar uma mensagem mais clara.
+**Mudanças:**
 
-**Arquivo:** `src/components/crm/CrmCsvImportDialog.tsx`
-- Na tela de resultado (step 3), alterar o texto do toast e a UI para dizer: **"Sua planilha foi aceita e os contatos foram gerados na aba de Contatos"**
-- Manter o contador de sucesso/erros
+1. **`src/constants/plans.ts`** — Atualizar `maxPipelines` em cada plano:
+   - Starter: `maxPipelines: 10`
+   - Pro: `maxPipelines: 20`
+   - Enterprise: `maxPipelines: 50`
+   - `TRIAL_PLAN.maxPipelines: 3`
 
-### 3. UX do detalhe do contato — botão Voltar/Fechar
+2. **`src/components/crm/CrmFunnelManager.tsx`** — Substituir a lógica hardcoded (linha 37) por:
+   - Importar `getEffectiveLimits` de `plans.ts`
+   - Usar `subscription?.plan` e `subscription?.status === 'trial'` para calcular `maxFunnels` via `getEffectiveLimits(plan, isTrial).maxPipelines`
+   - Atualizar a mensagem de limite para mostrar o plano real
 
-O detalhe do contato abre inline na view de contatos sem botão claro de fechar.
+---
 
-**Arquivo:** `src/components/crm/CrmContactsViewDialogs.tsx`
-- Verificar como o `editContact` é exibido (Dialog ou inline)
-- Se for Dialog, garantir que tem X no header
-- Se for inline, adicionar botão de seta ← ou X para fechar
+### Frente 2: Arquitetura Multi-Workspace (Seletor de Organização)
 
-### 4. Ícone de Configurações com texto
+**Contexto:** Hoje o `get_user_org_id` retorna `LIMIT 1`, ou seja, se um usuário pertence a 2+ organizações do tipo `cliente`, ele sempre entra na primeira. Não há UI para trocar.
 
-O botão de configurações usa `Settings2` sem texto, apenas tooltip.
+**Arquitetura proposta:**
 
-**Arquivo:** `src/pages/cliente/ClienteCRMHeader.tsx`
-- Trocar de ícone-only (`w-8 p-0`) para botão com texto
-- Usar ícone `Settings` (engrenagem) + texto "Configurações"
-- Manter o tooltip
+O banco de dados já suporta isso — `organization_memberships` permite N vínculos por usuário. Só falta:
 
-### 5. Indicador de negociação na lista de contatos
+1. **Hook `useUserOrganizations`** — Nova query que retorna TODAS as orgs do usuário (não apenas a primeira), filtrando por portal (`saas`/`franchise`).
 
-Na aba de contatos, diferenciar visualmente quais contatos já têm leads associados.
+2. **Componente `WorkspaceSwitcher`** — Dropdown no `ClienteSidebar` que:
+   - Mostra o nome da org atual
+   - Lista todas as orgs do usuário
+   - Ao trocar, salva a org selecionada em `localStorage` e invalida as queries
 
-**Arquivo:** `src/components/crm/CrmContactsViewList.tsx`
-- Já existe `leadsCountByContact` sendo passado e exibido como badge `{count} leads`
-- Melhorar: se `leadsCountByContact[c.id] > 0`, mostrar badge verde **"Em negociação"**; se 0, badge cinza **"Sem negociação"**
-- Isso dá clareza visual imediata
+3. **Atualizar `useUserOrgId`** — Checar primeiro se há uma org salva em `localStorage` antes de usar o `get_user_org_id` RPC. Se o usuário só tem 1 org, comportamento inalterado.
 
-### Arquivos afetados
+4. **Nova RPC `get_user_organizations`** — Retorna todas as orgs do usuário com nome, tipo e logo:
+   ```sql
+   CREATE FUNCTION get_user_organizations(_user_id uuid, _portal text DEFAULT NULL)
+   RETURNS TABLE(org_id uuid, org_name text, org_type text, logo_url text)
+   ```
+
+**Arquivos afetados:**
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/crm/CrmLeadDetailHelpers.tsx` | Sync proposal value → lead value |
-| `src/components/crm/CrmCsvImportDialog.tsx` | Mensagem clara pós-importação |
-| `src/components/crm/CrmContactsViewDialogs.tsx` | UX fechar contato |
-| `src/pages/cliente/ClienteCRMHeader.tsx` | Engrenagem + texto "Configurações" |
-| `src/components/crm/CrmContactsViewList.tsx` | Badge "Em negociação" vs "Sem negociação" |
+| `src/constants/plans.ts` | maxPipelines corretos |
+| `src/components/crm/CrmFunnelManager.tsx` | Usar limites do plano |
+| `src/hooks/useUserOrganizations.ts` | Novo hook — lista orgs |
+| `src/hooks/useUserOrgId.ts` | Respeitar org salva em localStorage |
+| `src/components/WorkspaceSwitcher.tsx` | Novo componente seletor |
+| `src/components/ClienteSidebar.tsx` | Integrar WorkspaceSwitcher |
+| Migration SQL | Nova RPC `get_user_organizations` |
+
+### Detalhes técnicos do WorkspaceSwitcher
+
+- Posicionado no topo do sidebar, acima do menu
+- Mostra avatar/inicial da org + nome
+- Dropdown com as outras orgs disponíveis
+- Ao clicar, salva `selectedOrgId` no `localStorage` com chave `noe_active_org_{userId}`
+- Invalida todas as queries que dependem de `orgId` via `queryClient.invalidateQueries()`
+- Se o usuário só tem 1 org, o switcher aparece sem dropdown (apenas informativo)
 
