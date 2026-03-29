@@ -10,6 +10,7 @@ import {
   Headphones, Calendar, Video, Image,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
