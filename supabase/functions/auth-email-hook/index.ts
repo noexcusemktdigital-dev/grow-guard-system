@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "grow-guard-system"
+const SITE_NAME = "NoExcuse Digital"
 const SENDER_DOMAIN = "notify.sistema.noexcusedigital.com.br"
 const ROOT_DOMAIN = "sistema.noexcusedigital.com.br"
 const FROM_DOMAIN = "sistema.noexcusedigital.com.br" // Domain shown in From address (may be root or sender subdomain)
