@@ -242,7 +242,7 @@ function Step4Logo({ logoUrl, setLogoUrl, onLogoUpload }: StepProps) {
           <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <div className="text-sm text-muted-foreground space-y-1">
             <p className="font-medium text-foreground">Por que a logo é importante?</p>
-            <p>A IA reserva um espaço limpo na arte e sobrepõe sua logo original, sem redesenhá-la. Isso garante fidelidade visual total da sua marca.</p>
+            <p>A nossa IA reserva um espaço limpo na arte e sobrepõe sua logo original, sem redesenhá-la. Isso garante fidelidade visual total da sua marca.</p>
             <p className="text-xs">Formatos aceitos: PNG (fundo transparente recomendado), JPG, SVG</p>
           </div>
         </CardContent>
