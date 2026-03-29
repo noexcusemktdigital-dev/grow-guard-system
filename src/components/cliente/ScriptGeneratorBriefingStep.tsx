@@ -119,7 +119,7 @@ export function ScriptGeneratorBriefingStep({
           <span className="text-[10px] text-muted-foreground">(opcional)</span>
         </div>
         <p className="text-[10px] text-muted-foreground">
-          Adicione links de concorrentes, artigos ou materiais que a IA deve considerar ao gerar o script.
+          Adicione links de concorrentes, artigos ou materiais que a nossa IA deve considerar ao gerar o script.
         </p>
         <div className="flex gap-2">
           <Input
