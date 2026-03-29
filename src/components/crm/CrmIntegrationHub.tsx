@@ -238,10 +238,21 @@ export function CrmIntegrationHub() {
 
   return (
     <div className="space-y-4 mt-4">
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold">De onde vêm seus leads?</h3>
-        <p className="text-xs text-muted-foreground">Escolha a fonte e siga o tutorial para configurar a integração.</p>
-      </div>
+      {/* Educational block */}
+      <Card className="border-emerald-200/30 bg-emerald-500/[0.03]">
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2">
+            <Globe className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-xs font-medium">Centralize todos os seus leads em um só lugar</p>
+              <p className="text-[11px] text-muted-foreground">
+                Configure integrações para que leads de qualquer origem — site, redes sociais, formulários ou WhatsApp — cheguem automaticamente ao seu CRM. Assim você não perde nenhuma oportunidade.
+              </p>
+              <p className="text-[11px] text-muted-foreground font-medium">Escolha abaixo de onde vêm seus leads e siga o passo a passo 👇</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {SOURCES.map((s) => (
