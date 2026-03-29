@@ -107,7 +107,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const persona = (form.persona ?? {}) as Record<string, any>;
   const promptConfig = (form.prompt_config ?? {}) as Record<string, any>;
   const crmActions = (form.crm_actions ?? {}) as Record<string, any>;
-  const knowledgeBase = ((form.knowledge_base ?? []) as KBEntry[]);
+  const knowledgeBase = ((form.knowledge_base ?? []) as unknown as KBEntry[]);
 
   // Step completion logic
   const isStep1Complete = !!(form.name?.trim() && form.role && form.gender);
