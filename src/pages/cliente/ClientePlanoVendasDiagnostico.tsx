@@ -123,7 +123,7 @@ export function ClientePlanoVendasDiagnostico({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="glass-card">
                 <CardContent className="py-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA <InfoTip text="Barra horizontal mostrando o percentual atingido em cada área. Verde (≥70%), Amarelo (≥40%), Vermelho (<40%)." /></p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
