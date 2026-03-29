@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Layers, Users2, Shuffle, Bell, Plug, Zap, Package, Building2 } from "lucide-react";
+import { ArrowLeft, Layers, Users2, Shuffle, Bell, Plug, Zap, Package, Building2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CrmFunnelManager } from "./CrmFunnelManager";
