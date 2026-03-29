@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
 
-type Provider = "izitech" | "zapi" | "evolution";
+type Provider = "izitech" | "evolution";
 
 interface Props {
   open: boolean;
@@ -139,28 +139,17 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     }
   };
 
-  // ── Z-API / Evolution: existing flow ──
+  // ── Evolution (Manual): existing flow ──
   const handleConnect = async () => {
     setStep(3);
     try {
-      let res: Record<string, unknown>;
-      if (provider === "evolution") {
-        res = await setupMutation.mutateAsync({
-          provider: "evolution",
-          baseUrl: evoCreds.baseUrl.trim() || undefined,
-          apiKey: evoCreds.apiKey.trim() || undefined,
-          instanceName: evoCreds.instanceName.trim(),
-          action: "connect",
-        });
-      } else {
-        res = await setupMutation.mutateAsync({
-          instanceId: creds.instanceId.trim(),
-          instanceToken: creds.instanceToken.trim(),
-          clientToken: creds.clientToken.trim(),
-          action: "connect",
-          provider: "zapi",
-        });
-      }
+      const res = await setupMutation.mutateAsync({
+        provider: "evolution",
+        baseUrl: evoCreds.baseUrl.trim() || undefined,
+        apiKey: evoCreds.apiKey.trim() || undefined,
+        instanceName: evoCreds.instanceName.trim(),
+        action: "connect",
+      });
       setResult(res);
       refetch();
       toast({ title: "WhatsApp conectado!", description: "Webhooks configurados com sucesso." });
@@ -172,12 +161,10 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
 
   const canConnect = provider === "izitech"
     ? izitechName.trim().length >= 3 && !validateIzitechName(izitechName.trim())
-    : provider === "evolution"
-      ? evoCreds.instanceName.trim()
-      : creds.instanceId.trim() && creds.instanceToken.trim() && creds.clientToken.trim();
+    : evoCreds.instanceName.trim();
 
   const openSupport = () => window.open(SUPPORT_LINK, "_blank");
-  const providerLabel = provider === "izitech" ? "IZITECH Connect" : provider === "evolution" ? "Evolution API" : "Z-API";
+  const providerLabel = provider === "izitech" ? "Easytech" : "Easytech (Manual)";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); } onOpenChange(v); }}>
@@ -211,15 +198,31 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <MessageSquare className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold">Como deseja conectar?</h3>
+                  <h3 className="text-sm font-bold">Conectar WhatsApp via Easytech</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Escolha a forma de integração do seu WhatsApp.
+                    Parceiro oficial de integração WhatsApp.
                   </p>
                 </div>
               </div>
 
+              {/* Pricing highlight */}
+              <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-emerald-500" />
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Desconto exclusivo NoExcuse</p>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-xs text-muted-foreground line-through">R$ 90,00/mês</span>
+                  <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">R$ 45,00</span>
+                  <span className="text-xs text-muted-foreground">/mês</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Easytech é R$ 90,00/mês.
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 gap-3">
-                {/* IZITECH — recommended */}
+                {/* Easytech — recommended (automatic) */}
                 <button
                   onClick={() => setProvider("izitech")}
                   className={`rounded-xl border-2 p-4 text-left transition-all ${
@@ -234,14 +237,11 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">IZITECH Connect</p>
+                        <p className="text-sm font-bold">Easytech</p>
                         <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]">Recomendado</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
                         Automático — criamos e gerenciamos a instância para você. Basta escanear o QR code.
-                      </p>
-                      <p className="text-[10px] text-amber-500 mt-1 font-medium">
-                        Serviço com custo separado conforme plano contratado
                       </p>
                     </div>
                   </div>
@@ -253,56 +253,23 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setProvider("zapi")}
-                    className={`rounded-xl border-2 p-4 text-left transition-all ${
-                      provider === "zapi"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-3">
-                      <Plug className="w-5 h-5 text-emerald-500" />
-                    </div>
-                    <p className="text-sm font-bold">Z-API</p>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-                      Plataforma SaaS gerenciada. Crie sua conta em app.z-api.io.
-                    </p>
-                  </button>
-
-                  <button
-                    onClick={() => setProvider("evolution")}
-                    className={`rounded-xl border-2 p-4 text-left transition-all ${
-                      provider === "evolution"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
-                      <Server className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <p className="text-sm font-bold">Evolution API</p>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-                      Open-source, self-hosted. Configure sua própria instância.
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {provider === "zapi" && (
-                <div className="rounded-xl border-2 border-amber-500/40 bg-amber-500/5 p-4 space-y-2">
-                  <div className="flex items-start gap-2.5">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-bold text-amber-600 dark:text-amber-400">Conta paga obrigatória</h4>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Na conta gratuita (trial) da Z-API, todas as mensagens enviadas terão um aviso automático de teste.
-                      </p>
-                    </div>
+                <button
+                  onClick={() => setProvider("evolution")}
+                  className={`rounded-xl border-2 p-4 text-left transition-all ${
+                    provider === "evolution"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
+                    <Server className="w-5 h-5 text-blue-500" />
                   </div>
-                </div>
-              )}
+                  <p className="text-sm font-bold">Easytech (Manual)</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                    Configure sua própria instância informando os dados manualmente.
+                  </p>
+                </button>
+              </div>
 
               {provider === "izitech" && (
                 <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
@@ -325,43 +292,24 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                 </div>
               )}
 
-              {(provider === "zapi" || provider === "evolution") && (
+              {provider === "evolution" && (
                 <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                   <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">
                     O que você vai precisar
                   </h4>
                   <div className="grid gap-2">
-                    {provider === "zapi" ? (
-                      <>
-                        {[
-                          { icon: UserPlus, text: "Uma conta na Z-API (gratuita ou paga)" },
-                          { icon: QrCode, text: "Um celular com WhatsApp para escanear o QR Code" },
-                          { icon: KeyRound, text: "Instance ID, Token e Client-Token" },
-                        ].map(({ icon: Icon, text }, i) => (
-                          <div key={i} className="flex items-center gap-2.5 text-xs text-foreground">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Icon className="w-3.5 h-3.5 text-primary" />
-                            </div>
-                            {text}
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        {[
-                          { icon: Server, text: "Uma instância da Evolution API rodando" },
-                          { icon: QrCode, text: "Um celular com WhatsApp conectado à instância" },
-                          { icon: KeyRound, text: "URL da API, API Key global e nome da instância" },
-                        ].map(({ icon: Icon, text }, i) => (
-                          <div key={i} className="flex items-center gap-2.5 text-xs text-foreground">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Icon className="w-3.5 h-3.5 text-primary" />
-                            </div>
-                            {text}
-                          </div>
-                        ))}
-                      </>
-                    )}
+                    {[
+                      { icon: Server, text: "Uma instância Easytech rodando" },
+                      { icon: QrCode, text: "Um celular com WhatsApp conectado à instância" },
+                      { icon: KeyRound, text: "URL da API, API Key global e nome da instância" },
+                    ].map(({ icon: Icon, text }, i) => (
+                      <div key={i} className="flex items-center gap-2.5 text-xs text-foreground">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        {text}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -405,12 +353,11 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-primary" />
-                      <p className="text-xs font-semibold">Powered by IZITECH Connect</p>
+                      <p className="text-xs font-semibold">Powered by Easytech</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      A instância será criada automaticamente na plataforma IZITECH Connect.
+                      A instância será criada automaticamente pela Easytech.
                       Os webhooks serão configurados para receber mensagens diretamente neste sistema.
-                      Este serviço tem custo separado conforme seu plano contratado.
                     </p>
                   </div>
 
@@ -428,88 +375,34 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <StepHeader
                     number={2}
                     title="Insira suas credenciais"
-                    description={provider === "zapi"
-                      ? "Copie as informações do painel Z-API e cole nos campos abaixo."
-                      : "Informe o nome da instância. URL e API Key são opcionais se usar o servidor padrão."
-                    }
+                    description="Informe o nome da instância. URL e API Key são opcionais se usar o servidor padrão."
                   />
 
-                  {provider === "zapi" ? (
-                    <>
-                      <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                        <div className="flex flex-col items-center text-center space-y-3">
-                          <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center">
-                            <KeyRound className="w-8 h-8 text-violet-500" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold">Onde encontrar as credenciais?</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                              No painel Z-API, selecione sua instância e vá na aba <strong>"Detalhes"</strong>.
-                            </p>
-                          </div>
-                        </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <Copy className="w-3 h-3 text-muted-foreground" /> Nome da Instância <span className="text-destructive">*</span>
+                      </Label>
+                      <Input placeholder="Ex: minha-empresa" value={evoCreds.instanceName} onChange={(e) => setEvoCreds((p) => ({ ...p, instanceName: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
+                      </Label>
+                      <Input placeholder="https://api.easytech.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <KeyRound className="w-3 h-3 text-muted-foreground" /> API Key Global <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
+                      </Label>
+                      <div className="relative">
+                        <Input placeholder="Sua API Key global" type={showApiKey ? "text" : "password"} value={evoCreds.apiKey} onChange={(e) => setEvoCreds((p) => ({ ...p, apiKey: e.target.value }))} />
+                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowApiKey(!showApiKey)}>
+                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Copy className="w-3 h-3 text-muted-foreground" /> Instance ID
-                          </Label>
-                          <Input placeholder="Ex: 3C67AB2F1A4D..." value={creds.instanceId} onChange={(e) => setCreds((p) => ({ ...p, instanceId: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <KeyRound className="w-3 h-3 text-muted-foreground" /> Token
-                          </Label>
-                          <div className="relative">
-                            <Input placeholder="Token da instância" type={showToken ? "text" : "password"} value={creds.instanceToken} onChange={(e) => setCreds((p) => ({ ...p, instanceToken: e.target.value }))} />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowToken(!showToken)}>
-                              {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <ShieldCheck className="w-3 h-3 text-muted-foreground" /> Client-Token
-                          </Label>
-                          <div className="relative">
-                            <Input placeholder="Token de segurança da conta" type={showClientToken ? "text" : "password"} value={creds.clientToken} onChange={(e) => setCreds((p) => ({ ...p, clientToken: e.target.value }))} />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowClientToken(!showClientToken)}>
-                              {showClientToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Copy className="w-3 h-3 text-muted-foreground" /> Nome da Instância <span className="text-destructive">*</span>
-                          </Label>
-                          <Input placeholder="Ex: minha-empresa" value={evoCreds.instanceName} onChange={(e) => setEvoCreds((p) => ({ ...p, instanceName: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
-                          </Label>
-                          <Input placeholder="https://evo.grupolamadre.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <KeyRound className="w-3 h-3 text-muted-foreground" /> API Key Global <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
-                          </Label>
-                          <div className="relative">
-                            <Input placeholder="Sua API Key global" type={showApiKey ? "text" : "password"} value={evoCreds.apiKey} onChange={(e) => setEvoCreds((p) => ({ ...p, apiKey: e.target.value }))} />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowApiKey(!showApiKey)}>
-                              {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    </div>
+                  </div>
 
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
@@ -544,7 +437,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     <div className="rounded-xl border border-border bg-muted/30 p-4 w-full text-left space-y-2">
                       <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Tudo pronto!</h4>
                       <ul className="space-y-1.5 text-xs text-foreground">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Instância criada via IZITECH Connect</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Instância criada via Easytech</li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Webhooks configurados automaticamente</li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Pronto para enviar e receber mensagens</li>
                         <li className="flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5 text-primary" /> Acesse o Chat para conversar com seus contatos</li>
@@ -557,7 +450,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     {izitechLoading ? (
                       <>
                         <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                        <p className="text-sm font-semibold">Criando instância via IZITECH Connect...</p>
+                        <p className="text-sm font-semibold">Criando instância via Easytech...</p>
                         <p className="text-xs text-muted-foreground">Aguarde enquanto configuramos tudo</p>
                       </>
                     ) : izitechQr ? (
@@ -575,7 +468,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                         </div>
                         <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                            <Zap className="w-3 h-3 text-primary" /> Powered by IZITECH Connect
+                            <Zap className="w-3 h-3 text-primary" /> Powered by Easytech
                           </p>
                         </div>
                       </>
@@ -588,7 +481,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   </div>
                 )
               ) : (
-                // Z-API / Evolution result
+                // Easytech Manual result
                 <>
                   {setupMutation.isPending ? (
                     <div className="flex flex-col items-center py-16 text-center">

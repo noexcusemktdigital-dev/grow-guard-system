@@ -74,7 +74,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange, onSave, isPen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base">Editar instância {isEvo ? "Evolution" : "Z-API"}</DialogTitle>
+          <DialogTitle className="text-base">Editar instância Easytech</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
@@ -192,7 +192,7 @@ export function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation
                     <div className="flex items-center gap-2">
                       {isEvo ? <Server className="w-4 h-4 text-blue-500" /> : <Plug className="w-4 h-4 text-emerald-500" />}
                       <span className="text-xs font-semibold">{inst.label || inst.instance_id}</span>
-                      <Badge variant="outline" className="text-[9px]">{isEvo ? "Evolution" : "Z-API"}</Badge>
+                      <Badge variant="outline" className="text-[9px]">Easytech</Badge>
                     </div>
                     {r && !r.checking && (
                       r.status === "connected"
@@ -312,7 +312,7 @@ export function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, on
                     {isConn ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
                     {isConn ? "Conectado" : "Desconectado"}
                   </Badge>
-                  <Badge variant="outline" className="text-[9px]">{isEvo ? "Evolution" : "Z-API"}</Badge>
+                  <Badge variant="outline" className="text-[9px]">Easytech</Badge>
                 </div>
                 {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
               </div>

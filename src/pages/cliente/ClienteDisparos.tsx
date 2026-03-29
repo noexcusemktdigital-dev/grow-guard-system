@@ -140,7 +140,7 @@ export default function ClienteDisparos() {
   // KPI calculations
   const totalSent = allDispatches
     .filter((d) => d.stats)
-    .reduce((acc, d) => acc + (((d.stats as Record<string, unknown> | null)?.sent as number || 0) && 0 || ((d.stats as Record<string, unknown> | null)?.sent as number || 0), 0);
+    .reduce((acc, d) => acc + ((d.stats as Record<string, unknown> | null)?.sent as number || 0), 0);
 
   if (isLoading) {
     return (
