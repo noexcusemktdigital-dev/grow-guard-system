@@ -1,38 +1,50 @@
 
 
-## Diagnóstico — E-mails sem personalização
+## Diagnóstico — Erro ao convidar usuário existente de outro workspace
 
-### Situação atual
+### Causa raiz
 
-1. **O domínio `notify.sistema.noexcusedigital.com.br` está com DNS pendente.** Enquanto o DNS não for verificado, os e-mails de autenticação (definição de senha, redefinição, convite, etc.) são enviados pelo sistema padrão, sem os templates personalizados e sem o domínio da NoExcuse.
+O problema está na detecção de "usuário já existe" na Edge Function `invite-user`. Quando o `adminClient.auth.admin.createUser()` falha porque o e-mail já está registrado, o código verifica:
 
-2. **O `auth-email-hook` usa um padrão antigo** (envia direto via Resend API) em vez do sistema de fila gerenciado. Isso precisa ser atualizado para o padrão atual com `enqueue_email`, que garante retries, rate-limit e integração correta com o domínio verificado.
+```typescript
+if (createErr && (createErr as { code?: string }).code === "email_exists")
+```
 
-3. **Os templates já existem e estão corretos** — logo da NoExcuse, textos em PT-BR, cores da marca. O problema não é o conteúdo dos templates, é a infraestrutura de envio.
+Em versões mais recentes do Supabase JS, o código de erro pode ser `"user_already_exists"` em vez de `"email_exists"`, ou o erro pode vir com uma estrutura diferente (ex: apenas na `message`). Se o código não bate, a execução cai no `else if (createErr)` → `throw createErr` → resposta 500.
+
+Adicionalmente, há um problema arquitetural: a tabela `user_roles` tem constraint `UNIQUE(user_id)`, permitindo apenas **uma role por usuário globalmente**. Quando um usuário existente (ex: `cliente_admin` no workspace A) é convidado para o workspace B, a função faz `UPDATE` na role — **sobrescrevendo a role do workspace original**. Isso quebra o acesso no workspace anterior.
 
 ### Plano de correção
 
-**Passo 1: Atualizar a infraestrutura de e-mail**
-- Garantir que a infraestrutura de fila (pgmq, cron, tabelas) esteja configurada
-- Re-gerar o `auth-email-hook` para usar o padrão de fila (`enqueue_email`) em vez do Resend direto
-- Reaplicar os estilos e textos PT-BR da NoExcuse nos templates (logo, cores, tom)
-- Deploy da função atualizada
+**1. Tornar a detecção de "usuário existente" robusta**
 
-**Passo 2: DNS (ação do administrador)**
-- O DNS do subdomínio `notify.sistema.noexcusedigital.com.br` precisa ser configurado no registrador de domínio
-- Registros NS apontando para os nameservers corretos (fornecidos nas configurações de e-mail do projeto)
-- Até que o DNS seja verificado, os e-mails continuarão sendo enviados pelo sistema padrão
-- Após verificação, todos os e-mails passam automaticamente a usar os templates personalizados com o domínio da NoExcuse
+No `invite-user/index.ts`, ao invés de depender exclusivamente do `code === "email_exists"`, verificar também o `message` e o código `"user_already_exists"`:
 
-### Resultado esperado
+```typescript
+const isEmailExists = createErr && (
+  (createErr as any).code === "email_exists" ||
+  (createErr as any).code === "user_already_exists" ||
+  (createErr as any).message?.includes("already been registered") ||
+  (createErr as any).message?.includes("already exists")
+);
+```
 
-Após DNS verificado, todos os e-mails de autenticação serão enviados:
-- Com a logo da NoExcuse Digital
-- Em português (PT-BR)
-- Do domínio `noexcusedigital.com.br` (ou `notify.sistema.noexcusedigital.com.br`)
-- Com os templates personalizados (cores da marca, botões vermelhos, textos customizados)
+Adicionar `console.log` detalhado para o erro quando não for reconhecido.
 
-### Nota importante
+**2. Preservar a role do workspace original (multi-org)**
 
-A configuração do DNS é a etapa crítica e precisa ser feita no painel do registrador de domínio (onde o `sistema.noexcusedigital.com.br` é gerenciado). Sem isso, nenhuma mudança no código resolverá o problema dos e-mails genéricos.
+O cenário multi-workspace exige que um usuário possa ter roles diferentes em organizações diferentes. Porém, como `user_roles` tem `UNIQUE(user_id)`, isso não é possível hoje. A correção:
+
+- Para usuários **existentes** que já têm uma role e estão sendo convidados para outra org: **não sobrescrever a role** se ela já existe. Manter a role atual e apenas criar o membership.
+- Para o futuro (quando a arquitetura multi-workspace evoluir), a role deveria ser por organização, mas isso é uma mudança maior. Por ora, a solução segura é: se o usuário já tem role, preservá-la.
+
+**3. Melhorar logging para debug**
+
+Adicionar logs detalhados em cada etapa para facilitar diagnóstico futuro.
+
+### Arquivos afetados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/functions/invite-user/index.ts` | Detecção robusta de email_exists, preservar role existente, logging melhorado |
 
