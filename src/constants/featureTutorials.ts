@@ -178,7 +178,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Tráfego Pago",
     subtitle: "Estratégia de anúncios com IA",
     icon: Target,
-    whatIs: "A ferramenta de Tráfego Pago gera estratégias completas de anúncios para Meta Ads e Google Ads usando IA. Receba sugestões de público, orçamento, copies e criativos.",
+    whatIs: "A ferramenta de Tráfego Pago gera estratégias completas de anúncios para Meta Ads e Google Ads usando a nossa IA. Receba sugestões de público, orçamento, copies e criativos.",
     steps: [
       { title: "Defina o objetivo", description: "Escolha entre geração de leads, vendas, reconhecimento de marca ou tráfego." },
       { title: "Informe o orçamento", description: "Defina quanto pretende investir mensalmente em anúncios." },
