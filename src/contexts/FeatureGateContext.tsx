@@ -7,7 +7,7 @@ import { useSalesPlanCompleted } from "@/hooks/useSalesPlan";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEffectiveLimits } from "@/constants/plans";
 
-type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | "plan_locked" | null;
+type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
