@@ -167,12 +167,7 @@ Deno.serve(async (req) => {
 
     if (memberError) throw memberError;
 
-    // 3. Create user role
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id, role: "cliente_admin" });
-
-    if (roleError) throw roleError;
+    // 3. User role already created above (idempotency insert)
 
     // 4. Create trial subscription (7 days)
     const expiresAt = new Date();
