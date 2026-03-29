@@ -32,6 +32,7 @@ export interface CrmProposal {
   rejected_at: string | null;
   created_at: string;
   updated_at: string;
+  [key: string]: unknown;
 }
 
 export function useCrmProposals(leadId?: string) {
