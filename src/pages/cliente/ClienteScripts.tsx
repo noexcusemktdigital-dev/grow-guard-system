@@ -219,8 +219,8 @@ export default function ClienteScripts() {
                             />
                           </div>
                         ) : (
-                          <div className="p-4 bg-background/80 rounded-lg text-sm whitespace-pre-wrap border font-mono text-xs leading-relaxed">
-                            {s.content || "Sem conteúdo"}
+                          <div className="p-4 bg-background/80 rounded-lg border max-h-[500px] overflow-y-auto">
+                            <ScriptContentRenderer content={s.content || ""} />
                           </div>
                         )}
                         <div className="flex items-center justify-between">
