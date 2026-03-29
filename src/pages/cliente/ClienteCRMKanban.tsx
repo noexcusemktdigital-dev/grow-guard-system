@@ -58,11 +58,15 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
     zIndex: isDragging ? 50 : undefined,
   };
   const colorStyle = getColorStyle(stageColor);
+  const isWon = !!lead.won_at;
+  const isLost = !!lead.lost_at;
+  const statusBorder = isWon ? "border-l-emerald-500" : isLost ? "border-l-red-500" : colorStyle.border;
+  const statusBg = isWon ? "bg-emerald-50/50 dark:bg-emerald-950/20" : isLost ? "bg-red-50/50 dark:bg-red-950/20" : "";
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`group touch-none ${isDragging ? "pointer-events-none" : ""}`}>
       <Card
-        className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
+        className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${statusBorder} ${statusBg}`}
         onClick={() => { if (!isDragging) onClick(); }}
       >
         <CardContent className="p-3 space-y-2">
