@@ -58,11 +58,15 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
     zIndex: isDragging ? 50 : undefined,
   };
   const colorStyle = getColorStyle(stageColor);
+  const isWon = !!lead.won_at;
+  const isLost = !!lead.lost_at;
+  const statusBorder = isWon ? "border-l-emerald-500" : isLost ? "border-l-red-500" : colorStyle.border;
+  const statusBg = isWon ? "bg-emerald-50/50 dark:bg-emerald-950/20" : isLost ? "bg-red-50/50 dark:bg-red-950/20" : "";
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`group touch-none ${isDragging ? "pointer-events-none" : ""}`}>
       <Card
-        className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${colorStyle.border}`}
+        className={`cursor-pointer hover:shadow-md transition-all duration-150 hover:-translate-y-0.5 border-l-[3px] ${statusBorder} ${statusBg}`}
         onClick={() => { if (!isDragging) onClick(); }}
       >
         <CardContent className="p-3 space-y-2">
@@ -101,6 +105,12 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
               </DropdownMenu>
             </div>
           </div>
+
+          {(isWon || isLost) && (
+            <Badge variant="outline" className={`text-[8px] px-1.5 py-0 font-medium ${isWon ? "border-emerald-300 text-emerald-600 dark:border-emerald-700 dark:text-emerald-400" : "border-red-300 text-red-600 dark:border-red-700 dark:text-red-400"}`}>
+              {isWon ? "✓ Vendido" : "✕ Perdido"}
+            </Badge>
+          )}
 
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-bold text-primary">

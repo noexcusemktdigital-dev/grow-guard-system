@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Layers, Users2, Shuffle, Bell, Plug, Zap, Package, Building2 } from "lucide-react";
+import { ArrowLeft, Layers, Users2, Shuffle, Bell, Plug, Zap, Package, Building2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CrmFunnelManager } from "./CrmFunnelManager";
@@ -12,6 +12,7 @@ import { CrmIntegrations } from "./CrmIntegrations";
 import { CrmAutomations } from "./CrmAutomations";
 import { CrmProductsManager } from "./CrmProductsManager";
 import { CrmPartnersManager } from "./CrmPartnersManager";
+import { CrmLossReasonsConfig } from "./CrmLossReasonsConfig";
 
 export default function CrmConfigPage() {
   const navigate = useNavigate();
@@ -29,11 +30,12 @@ export default function CrmConfigPage() {
       </div>
 
       <Tabs defaultValue="funnels" className="w-full">
-        <TabsList className="grid grid-cols-8 w-full">
+        <TabsList className="grid grid-cols-9 w-full">
           <TabsTrigger value="funnels" className="text-xs gap-1"><Layers className="w-3 h-3" /> Funis</TabsTrigger>
           <TabsTrigger value="team" className="text-xs gap-1"><Users2 className="w-3 h-3" /> Equipe</TabsTrigger>
           <TabsTrigger value="products" className="text-xs gap-1"><Package className="w-3 h-3" /> Produtos</TabsTrigger>
           <TabsTrigger value="partners" className="text-xs gap-1"><Building2 className="w-3 h-3" /> Parceiros</TabsTrigger>
+          <TabsTrigger value="loss_reasons" className="text-xs gap-1"><XCircle className="w-3 h-3" /> Motivos</TabsTrigger>
           <TabsTrigger value="roulette" className="text-xs gap-1"><Shuffle className="w-3 h-3" /> Roleta</TabsTrigger>
           <TabsTrigger value="sla" className="text-xs gap-1"><Bell className="w-3 h-3" /> SLA</TabsTrigger>
           <TabsTrigger value="integrations" className="text-xs gap-1"><Plug className="w-3 h-3" /> Integ.</TabsTrigger>
@@ -44,6 +46,7 @@ export default function CrmConfigPage() {
         <TabsContent value="team"><CrmTeamManager /></TabsContent>
         <TabsContent value="products"><CrmProductsManager /></TabsContent>
         <TabsContent value="partners"><CrmPartnersManager /></TabsContent>
+        <TabsContent value="loss_reasons"><CrmLossReasonsConfig /></TabsContent>
         <TabsContent value="roulette"><CrmRouletteConfig /></TabsContent>
         <TabsContent value="sla"><CrmSlaConfig /></TabsContent>
         <TabsContent value="integrations"><CrmIntegrations /></TabsContent>

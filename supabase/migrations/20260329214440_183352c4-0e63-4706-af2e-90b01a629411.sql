@@ -1,0 +1,1 @@
+ALTER TABLE crm_settings ADD COLUMN IF NOT EXISTS loss_reasons text[] DEFAULT ARRAY['Preço', 'Concorrência', 'Timing inadequado', 'Sem orçamento', 'Sem resposta', 'Escolheu outro fornecedor', 'Desistiu do projeto'];

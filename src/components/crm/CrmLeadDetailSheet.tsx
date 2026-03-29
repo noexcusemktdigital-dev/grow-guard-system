@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities, useCrmActivityMutations } from "@/hooks/useCrmActivities";
 import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmLeadHistory } from "@/hooks/useCrmLeadHistory";
@@ -99,6 +100,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateLead, markAsWon, markAsLost } = useCrmLeadMutations();
+  const { data: crmSettings } = useCrmSettings();
   const { data: activities } = useCrmActivities(lead.id);
   const { createActivity } = useCrmActivityMutations();
   const { data: tasks } = useCrmTasks(lead.id);
@@ -115,6 +117,11 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
 
   const [lostDialog, setLostDialog] = useState(false);
   const [lostReason, setLostReason] = useState("");
+  const [lostDescription, setLostDescription] = useState("");
+  const configuredReasons: string[] = (crmSettings as Record<string, unknown>)?.loss_reasons as string[] || [
+    "Preço", "Concorrência", "Timing inadequado", "Sem orçamento",
+    "Sem resposta", "Escolheu outro fornecedor", "Desistiu do projeto",
+  ];
 
   const [actType, setActType] = useState("note");
   const [actTitle, setActTitle] = useState("");
@@ -158,8 +165,12 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   };
 
   const handleMarkLost = () => {
-    markAsLost.mutate({ id: lead.id, lost_reason: lostReason || undefined });
+    if (!lostReason) return;
+    const fullReason = lostDescription ? `${lostReason}: ${lostDescription}` : lostReason;
+    markAsLost.mutate({ id: lead.id, lost_reason: fullReason });
     setLostDialog(false);
+    setLostReason("");
+    setLostDescription("");
     toast({ title: "Lead marcado como perdido" });
   };
 
@@ -406,13 +417,24 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
       <Dialog open={lostDialog} onOpenChange={setLostDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Marcar como perdido</DialogTitle></DialogHeader>
-          <div>
-            <Label className="text-xs">Motivo (opcional)</Label>
-            <Textarea value={lostReason} onChange={e => setLostReason(e.target.value)} placeholder="Por que este lead foi perdido?" className="text-sm" />
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs font-medium">Motivo da perda *</Label>
+              <Select value={lostReason} onValueChange={setLostReason}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
+                <SelectContent>
+                  {configuredReasons.map(r => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Descrição (opcional)</Label>
+              <Textarea value={lostDescription} onChange={e => setLostDescription(e.target.value)} placeholder="Detalhes adicionais..." className="text-sm" rows={2} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setLostDialog(false)}>Cancelar</Button>
-            <Button size="sm" variant="destructive" onClick={handleMarkLost}>Confirmar</Button>
+            <Button size="sm" variant="destructive" onClick={handleMarkLost} disabled={!lostReason}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

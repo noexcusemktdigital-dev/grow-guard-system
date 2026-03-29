@@ -15,6 +15,7 @@ import {
   Clock, User, Eye, Plus,
 } from "lucide-react";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useProspections } from "@/hooks/useFranqueadoProspections";
 import { useStrategies } from "@/hooks/useFranqueadoStrategies";
@@ -42,8 +43,14 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
   const { data: prospections } = useProspections();
   const { data: strategies } = useStrategies();
   const { data: proposals } = useCrmProposals();
+  const { data: crmSettings } = useCrmSettings();
   const [lostReason, setLostReason] = useState("");
+  const [lostDescription, setLostDescription] = useState("");
   const [showLostDialog, setShowLostDialog] = useState(false);
+  const configuredReasons: string[] = (crmSettings as Record<string, unknown>)?.loss_reasons as string[] || [
+    "Preço", "Concorrência", "Timing inadequado", "Sem orçamento",
+    "Sem resposta", "Escolheu outro fornecedor", "Desistiu do projeto",
+  ];
 
   const activities = propActivities ?? fetchedActivities ?? [];
   const leadProspections = (prospections ?? []).filter(p => p.lead_id === lead?.id);
@@ -61,8 +68,10 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
   }
 
   function handleLost() {
-    markAsLost.mutate({ id: lead.id, lost_reason: lostReason }, {
-      onSuccess: () => { toast.success("Lead marcado como perdido"); setShowLostDialog(false); setLostReason(""); },
+    if (!lostReason) return;
+    const fullReason = lostDescription ? `${lostReason}: ${lostDescription}` : lostReason;
+    markAsLost.mutate({ id: lead.id, lost_reason: fullReason }, {
+      onSuccess: () => { toast.success("Lead marcado como perdido"); setShowLostDialog(false); setLostReason(""); setLostDescription(""); },
     });
   }
 
@@ -133,10 +142,17 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
         ) : (
           <Card className="mb-4">
             <CardContent className="p-3 space-y-2">
-              <Label className="text-xs">Motivo da perda</Label>
-              <Textarea value={lostReason} onChange={e => setLostReason(e.target.value)} placeholder="Descreva o motivo..." className="text-sm" rows={2} />
+              <Label className="text-xs font-medium">Motivo da perda *</Label>
+              <Select value={lostReason} onValueChange={setLostReason}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
+                <SelectContent>
+                  {configuredReasons.map(r => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Label className="text-xs">Descrição (opcional)</Label>
+              <Textarea value={lostDescription} onChange={e => setLostDescription(e.target.value)} placeholder="Detalhes adicionais..." className="text-sm" rows={2} />
               <div className="flex gap-2">
-                <Button size="sm" variant="destructive" className="text-xs" onClick={handleLost} disabled={markAsLost.isPending}>Confirmar Perda</Button>
+                <Button size="sm" variant="destructive" className="text-xs" onClick={handleLost} disabled={markAsLost.isPending || !lostReason}>Confirmar Perda</Button>
                 <Button size="sm" variant="ghost" className="text-xs" onClick={() => setShowLostDialog(false)}>Cancelar</Button>
               </div>
             </CardContent>
