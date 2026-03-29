@@ -35,7 +35,7 @@ const STEPS = [
     bg: "bg-emerald-500/10",
     title: "Conexão",
     description:
-      "Você conecta seu WhatsApp ao sistema pela Easytech, nosso parceiro oficial de integração. O sistema cria a instância automaticamente.",
+      "Você conecta seu WhatsApp ao sistema pela Izitech, nosso parceiro oficial de integração. O sistema cria a instância automaticamente.",
   },
   {
     icon: Webhook,
