@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { getEffectiveLimits } from "@/constants/plans";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_STAGES, STAGE_COLORS, STAGE_ICON_OPTIONS, STAGE_ICONS, type FunnelStage } from "./CrmStageSystem";
 
