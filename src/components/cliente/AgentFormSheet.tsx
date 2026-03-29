@@ -188,7 +188,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
 
   const addKbUrl = () => {
     if (urlInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] }));
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] as any }));
       setUrlInput("");
     }
   };
