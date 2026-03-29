@@ -106,6 +106,12 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
             </div>
           </div>
 
+          {(isWon || isLost) && (
+            <Badge variant="outline" className={`text-[8px] px-1.5 py-0 font-medium ${isWon ? "border-emerald-300 text-emerald-600 dark:border-emerald-700 dark:text-emerald-400" : "border-red-300 text-red-600 dark:border-red-700 dark:text-red-400"}`}>
+              {isWon ? "✓ Vendido" : "✕ Perdido"}
+            </Badge>
+          )}
+
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-bold text-primary">
               {lead.value ? `R$ ${Number(lead.value).toLocaleString("pt-BR")}` : "—"}

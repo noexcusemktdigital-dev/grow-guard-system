@@ -196,7 +196,7 @@ export function useCrmLeadMutations() {
     mutationFn: async ({ id, lost_reason }: { id: string; lost_reason?: string }) => {
       const { data, error } = await supabase
         .from("crm_leads")
-        .update({ lost_at: new Date().toISOString(), lost_reason, stage: "Oportunidade Perdida" })
+        .update({ lost_at: new Date().toISOString(), lost_reason })
         .eq("id", id)
         .select()
         .single();
