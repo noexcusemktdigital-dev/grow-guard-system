@@ -15,7 +15,7 @@ import { useState } from "react";
 /* ── Data ─────────────────────────────────────────────────────── */
 
 const HERO_FEATURES = [
-  { icon: Zap, label: "CRM inteligente com IA" },
+  { icon: Zap, label: "CRM inteligente com a nossa IA" },
   { icon: MessageSquare, label: "WhatsApp integrado" },
   { icon: Bot, label: "Agentes de IA 24/7" },
   { icon: BarChart3, label: "Relatórios em tempo real" },
