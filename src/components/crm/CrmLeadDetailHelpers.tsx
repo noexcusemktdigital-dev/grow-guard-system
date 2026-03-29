@@ -225,7 +225,7 @@ export function LeadProductsTab({ leadId }: { leadId: string }) {
 
 /* ========== PROPOSALS TAB COMPONENT ========== */
 
-export function ProposalsTab({ leadId }: { leadId: string }) {
+export function ProposalsTab({ leadId, onValueSync }: { leadId: string; onValueSync?: (value: number) => void }) {
   const { toast } = useToast();
   const { data: proposals, isLoading } = useCrmProposals(leadId);
   const { createProposal, updateProposal, deleteProposal, duplicateProposal } = useCrmProposalMutations();
