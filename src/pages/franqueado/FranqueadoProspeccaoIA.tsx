@@ -198,7 +198,7 @@ function NovaProspeccaoTab() {
           </div>
           <Button onClick={handleGenerate} className="w-full" disabled={create.isPending}>
             {create.isPending ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-            {create.isPending ? "Gerando plano com IA..." : "Gerar Plano de Prospecção"}
+            {create.isPending ? "Gerando plano com a nossa IA..." : "Gerar Plano de Prospecção"}
           </Button>
         </CardContent>
       </Card>
