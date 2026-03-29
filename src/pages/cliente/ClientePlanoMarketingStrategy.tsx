@@ -28,6 +28,22 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { ScoreRing, TagList, ToolButton } from "./ClientePlanoMarketingHelpers";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <UITooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help inline-block ml-1.5" />
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </UITooltip>
+    </TooltipProvider>
+  );
+}
 import type {
   StrategyResult, ConcorrenteRow, CanalRow, PilarRow, CalendarioRow,
   IdeiaRow, ProjecaoRow, EstruturaRow, PlanoMesRow, PassoRow, HistoryStrategy,
