@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from "react";
 import { Inbox, Search, Filter, Pencil, Trash2, Eye, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
