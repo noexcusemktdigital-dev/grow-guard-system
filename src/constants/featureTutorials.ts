@@ -43,7 +43,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
   plano_vendas: {
     slug: "plano_vendas",
     title: "Plano de Vendas",
-    subtitle: "Estratégia comercial gerada por IA",
+    subtitle: "Estratégia comercial gerada pela nossa IA",
     icon: TrendingUp,
     whatIs: "O Plano de Vendas usa inteligência artificial para criar uma estratégia comercial personalizada para o seu negócio. Com base nas informações da sua empresa, ele gera um plano completo com metas, ações e cronograma.",
     steps: [
