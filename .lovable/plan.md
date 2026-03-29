@@ -1,67 +1,47 @@
 
 
-## Melhorias no CRM — Cards coloridos, motivos de perda e leads permanentes no funil
+## Diagnóstico — 3 Problemas Identificados
 
-### 1. Cards com cor de status (Ganho/Perdido) no Kanban
+### Problema 1: Link "Esqueci minha senha" expira / inválido
 
-**Arquivo:** `src/pages/cliente/ClienteCRMKanban.tsx`
+**Causa raiz:** Nos dois portais (Auth.tsx e SaasAuth.tsx), o `redirectTo` do "esqueci minha senha" está **sem o parâmetro `?portal=`**:
 
-O `DraggableLeadCard` atualmente usa apenas `stageColor` para a borda esquerda. Adicionar lógica condicional:
-- Se `lead.won_at` → borda esquerda verde + fundo sutil verde (`border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20`)
-- Se `lead.lost_at` → borda esquerda vermelha + fundo sutil vermelho (`border-l-red-500 bg-red-50/50 dark:bg-red-950/20`)
-- Badge discreto "Vendido" ou "Perdido" no card para reforçar visualmente
-- Manter o card funcional e arrastável normalmente
+```
+redirectTo: `${window.location.origin}/reset-password`  ← falta ?portal=
+```
 
-Mesma lógica será replicada nos cards do `CrmExpansao.tsx` e `FranqueadoCRM.tsx`.
+Quando o usuário clica no link do e-mail e chega em `/reset-password`, o sistema não sabe de qual portal ele veio. O cliente Supabase é inicializado com uma chave de armazenamento (`storageKey`) que depende desse parâmetro. Sem ele, a sessão de recuperação é armazenada no lugar errado → a página não encontra a sessão → "link expirado ou inválido".
 
-### 2. Motivos de perda configuráveis
+**Correção:**
+- `Auth.tsx` (franquia): `redirectTo: .../reset-password?portal=franchise`
+- `SaasAuth.tsx` (SaaS): `redirectTo: .../reset-password?portal=saas`
 
-**Migration SQL:** Adicionar coluna `loss_reasons` (tipo `text[]`) na tabela `crm_settings` para armazenar os motivos padrão por organização. Valores default: `["Preço", "Concorrência", "Timing inadequado", "Sem orçamento", "Sem resposta", "Escolheu outro fornecedor", "Desistiu do projeto"]`.
+### Problema 2: E-mail de recuperação não usa nosso template/domínio
 
-**Novo componente:** `src/components/crm/CrmLossReasonsConfig.tsx`
-- Aba "Motivos de Perda" nas configurações do CRM (`CrmConfigPage.tsx`)
-- Lista de motivos com opção de adicionar, editar e remover
-- Usa `useCrmSettings` / `useCrmSettingsMutations` para persistir
+**Causa:** O domínio de e-mail `notify.sistema.noexcusedigital.com.br` ainda está com **DNS pendente**. Enquanto não for verificado, todos os e-mails de autenticação (incluindo "esqueci minha senha") são enviados pelo template padrão do sistema, sem a nossa marca.
 
-**Arquivo:** `src/components/crm/CrmConfigPage.tsx`
-- Adicionar nova aba "Motivos" com icone `XCircle`
+**Ação necessária:** Configurar os registros DNS (NS records) apontando para os nameservers corretos. Isso precisa ser feito no painel do registrador de domínio (onde o DNS do `sistema.noexcusedigital.com.br` é gerenciado). Você pode acompanhar o status em **Cloud → Emails**.
 
-### 3. Dialog de perda com motivo obrigatório
+### Problema 3: Login falha após definir senha pelo convite
 
-**Arquivo:** `src/components/crm/CrmLeadDetailSheet.tsx`
-- Carregar motivos de `crm_settings.loss_reasons` via `useCrmSettings()`
-- Substituir o campo de texto livre por: Select com motivos padrão + campo de descrição opcional (Textarea)
-- O botão "Confirmar" fica desabilitado até selecionar um motivo
-- `lost_reason` passa a ser obrigatório no `markAsLost`
+**Causa provável:** O link de convite usa `generateLink({ type: "recovery" })` que gera um token com validade limitada (~1 hora). Se o usuário demora para clicar, o token expira. Adicionalmente, se o `updateUser({ password })` falha silenciosamente (erro 422 por sessão não estabelecida), a senha não é atualizada mas a interface pode não comunicar claramente.
 
-Mesma lógica no `CrmLeadDetailSheet` do franqueado e nos menus rápidos do Kanban (que hoje chamam `onMarkLost` direto sem dialog — precisam abrir dialog primeiro).
+**Correção:** Melhorar a resiliência da página `/reset-password`:
+- Aguardar o evento `PASSWORD_RECOVERY` com timeout mais generoso
+- Se `updateUser` falhar com 422, exibir mensagem clara pedindo novo link
+- Após sucesso, fazer logout explícito e redirecionar para login (evitando sessão fantasma)
 
-### 4. Leads ganhos/perdidos permanecem no funil
-
-**Problema atual:** O `markAsWon` muda o stage para "Venda" e o `markAsLost` muda para "Oportunidade Perdida". Se essas etapas não existem no funil customizado, o lead desaparece do pipeline visual.
-
-**Correção em `src/hooks/useCrmLeads.ts`:**
-- `markAsWon`: **Não alterar o stage**. Apenas setar `won_at`. O lead permanece na etapa onde estava, mas com status visual de vendido.
-- `markAsLost`: **Não alterar o stage**. Apenas setar `lost_at` + `lost_reason`. O lead permanece na etapa onde estava, mas com status visual de perdido.
-
-**Correção em `src/pages/cliente/ClienteCRM.tsx`:**
-- Remover filtro implícito que exclui leads won/lost do pipeline. Atualmente o `leadsByStage` inclui todos os `filteredLeads`, mas o filtro de status padrão pode estar excluindo-os. Garantir que sem filtro ativo, todos os leads (inclusive won/lost) apareçam no kanban.
-
-### 5. Integração com metas e relatórios
-
-A integração já existe: `ClienteDashboard.tsx` já conta `wonLeads` e `lostLeads` com base em `won_at`/`lost_at`, calcula ticket médio, taxa de conversão e motivos de perda. O `goal-progress` já é invalidado quando leads mudam. **Nenhuma mudança necessária** nesta frente — tudo já funciona automaticamente quando `won_at` é setado.
+---
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | `ALTER TABLE crm_settings ADD COLUMN loss_reasons text[]` |
-| `src/pages/cliente/ClienteCRMKanban.tsx` | Card verde/vermelho para won/lost |
-| `src/pages/CrmExpansao.tsx` | Mesma lógica de cor |
-| `src/pages/franqueado/FranqueadoCRM.tsx` | Mesma lógica de cor |
-| `src/components/crm/CrmLossReasonsConfig.tsx` | Novo — gerenciar motivos de perda |
-| `src/components/crm/CrmConfigPage.tsx` | Nova aba "Motivos" |
-| `src/components/crm/CrmLeadDetailSheet.tsx` | Dialog de perda com select obrigatório |
-| `src/components/franqueado/CrmLeadDetailSheet.tsx` | Mesmo ajuste |
-| `src/hooks/useCrmLeads.ts` | markAsWon/markAsLost não alteram mais o stage |
+| `src/pages/Auth.tsx` | Adicionar `?portal=franchise` no `redirectTo` |
+| `src/pages/SaasAuth.tsx` | Adicionar `?portal=saas` no `redirectTo` |
+| `src/pages/ResetPassword.tsx` | Melhorar tratamento de erro 422, timeout e mensagem |
+
+### Sobre o DNS (ação do administrador)
+
+O DNS do domínio de e-mail precisa ser configurado para que os e-mails usem nossos templates. Isso não é algo que eu possa fazer automaticamente — precisa ser feito no painel do registrador de domínio. Posso verificar o status atual a qualquer momento.
 
