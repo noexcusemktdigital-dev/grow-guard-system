@@ -223,7 +223,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {/* Easytech — recommended (automatic) */}
+                {/* Izitech — recommended (automatic) */}
                 <button
                   onClick={() => setProvider("izitech")}
                   className={`rounded-xl border-2 p-4 text-left transition-all ${
