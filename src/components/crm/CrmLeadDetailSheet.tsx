@@ -165,8 +165,12 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   };
 
   const handleMarkLost = () => {
-    markAsLost.mutate({ id: lead.id, lost_reason: lostReason || undefined });
+    if (!lostReason) return;
+    const fullReason = lostDescription ? `${lostReason}: ${lostDescription}` : lostReason;
+    markAsLost.mutate({ id: lead.id, lost_reason: fullReason });
     setLostDialog(false);
+    setLostReason("");
+    setLostDescription("");
     toast({ title: "Lead marcado como perdido" });
   };
 
