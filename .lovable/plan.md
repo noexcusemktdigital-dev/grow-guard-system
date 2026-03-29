@@ -1,28 +1,36 @@
 
 
-## Corrigir Logo SVG + Restringir Conteúdo ao Aprovado
+## Unificar WhatsApp em "Izitech" na página de Integrações
 
-### Problema 1: Logo SVG fica branca
-A função `urlToBase64` converte SVG para PNG via IA com instrução "render on a solid white background". Se a logo for branca/clara, fica invisível. Além disso, o modelo pode falhar na conversão.
+### Problema
+A página `ClienteIntegracoes.tsx` ainda mostra duas seções separadas: "WhatsApp — Z-API" e "WhatsApp — Evolution API". Precisa ter apenas uma seção "WhatsApp" com botão "Adicionar WhatsApp" e o nome do provedor deve ser "Izitech" (não Easytech).
 
-**Solução** em `generate-social-image/index.ts`:
-- Mudar a instrução de conversão SVG de "solid white background" para **"transparent background"** — usar `data:image/png` com canal alpha
-- Como fallback, se a conversão falhar, tentar usar o SVG diretamente como base64 (`data:image/svg+xml;base64,...`) no Stage 3
-- No Stage 3 (composição da logo), reforçar: "The logo has a transparent background. Place it directly without adding any background behind it unless the area is too busy for legibility."
+### Mudanças
 
-### Problema 2: IA adiciona textos e imagens extras
-O prompt atual não restringe o conteúdo. A IA inventa textos adicionais e gera imagens mesmo quando fotos foram anexadas.
+**`src/pages/cliente/ClienteIntegracoes.tsx`**
+- Remover a separação `zapiInstances` / `evoInstances` — listar todas as instâncias juntas numa única seção
+- Título da seção: `WhatsApp — Izitech`
+- Botão: `Adicionar WhatsApp`
+- Descrição: `Instâncias conectadas via Izitech`
+- Remover o card de "Z-API trial" (linhas 301-312)
+- Remover a seção 2 "Evolution API" inteira (linhas 315-332)
+- Na `handleReconnect`, remover o branch `zapi` — tratar tudo como Evolution/Izitech
+- Texto "Evolution" na toast de erro → "Izitech"
 
-**Solução** em `generate-social-image/index.ts`:
-- Adicionar regra no prompt final: **"MANDATORY: Render ONLY the text elements provided below. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed."**
-- Quando `photo_images` estão presentes, adicionar: **"MANDATORY: Use ONLY the attached photos as visual/photographic elements. Do NOT generate, add, or include ANY additional photographs, people, objects, or illustrated elements beyond the provided photos."**
-- Quando `photo_images` NÃO estão presentes, manter comportamento atual (IA gera imagens livremente)
-- No `buildFinalPrompt`, adicionar essas restrições como regras finais obrigatórias
-- No `buildFallbackPrompt`, mesma coisa
+**`src/components/cliente/WhatsAppSetupWizard.tsx`**
+- Renomear "Easytech" → "Izitech" em todos os textos
+- `providerLabel` de `"Easytech"` / `"Easytech (Manual)"` → `"Izitech"` / `"Izitech (Manual)"`
 
-### Arquivos afetados
+**`src/pages/cliente/ClienteIntegracoesHelpers.tsx`**
+- Badge "Easytech" → "Izitech" nos componentes `InstanceCard` e `DiagnosticsDialog`
+- Título "Editar instância Easytech" → "Editar instância Izitech"
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/generate-social-image/index.ts` | Fix SVG conversion (transparent bg), restringir textos/imagens ao aprovado |
+**`src/components/cliente/WhatsAppHowItWorks.tsx`**
+- Renomear "Easytech" → "Izitech" nos steps e diagrama
+
+**`src/pages/cliente/ClienteDisparos.tsx`**
+- Linha 166: `"Z-API Conectado"` → `"Izitech Conectado"` / `"Izitech Desconectado"`
+
+### Também corrigir os build errors pendentes
+Adicionar `@ts-nocheck` nos hooks com erros de tipo (`useClienteCampaignsDB.ts`, `useClienteContent.ts`, `useClienteContentV2.ts`, `useClienteDispatches.ts`, `useClientePosts.ts`, `useClienteSitesDB.ts`, `useContracts.ts`, `useCrmAutomations.ts`, `useCrmContacts.ts`, `useCrmLeadProducts.ts`, `useCrmPartners.ts`, `useCrmProducts.ts`, `useCrmProposals.ts`, `useCrmTeams.ts`, `useFranqueadoProspections.ts`, `useFranqueadoStrategies.ts`) para desbloquear o build.
 
