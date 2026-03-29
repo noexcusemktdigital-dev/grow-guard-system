@@ -106,7 +106,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Funis</h3>
-          <p className="text-[10px] text-muted-foreground">{funnelsData?.length || 0}/{maxFunnels === 999 ? "∞" : maxFunnels} funis · Plano {plan}</p>
+          <p className="text-[10px] text-muted-foreground">{funnelsData?.length || 0}/{maxFunnels} funis · Plano {planLabel}</p>
         </div>
         <Button size="sm" className="gap-1" onClick={openNewFunnel} disabled={!canCreate}>
           <Plus className="w-3.5 h-3.5" /> Novo funil
