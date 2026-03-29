@@ -1,47 +1,62 @@
 
 
-## Melhorias na Ferramenta Conversas — Fotos, Áudio e Bloqueio por Plano
+## Diagnóstico — Workspace duplicado para micaellamcosta@gmail.com
 
-### Diagnóstico
+### O que aconteceu
 
-1. **Fotos dos contatos não aparecem**: A Edge Function `whatsapp-sync-photos` está hardcoded para usar Z-API (`provider: "zapi"`), mas o sistema agora usa Izitech (Evolution API v1). Resultado: a function retorna `skipped: "no_zapi_instance"` e nunca busca fotos.
+A usuária tem **duas organizações** criadas com 268ms de diferença:
 
-2. **Envio de áudio funciona** — o código já tem `startRecording`/`stopRecording` com MediaRecorder completo em `ChatConversation.tsx`. Preciso verificar se existe algum bloqueio visual ou de permissão que impede o botão de aparecer.
+| Organização | Nome | Criada em |
+|---|---|---|
+| `0058d2e2...` | Micaella Costa Arquitetura | 20:27:21.142 |
+| `72cec3bd...` | Micaella de Moura Costa's Company | 20:27:21.411 |
 
-3. **Bloqueio para Starter/Trial**: O `FeatureGateOverlay` já existe e funciona para `/cliente/chat` via `plan_locked` (quando `hasWhatsApp: false`). Porém, o overlay bloqueia completamente a tela — o pedido é que o conteúdo fique visível com fundo desfocado e um aviso explicativo sobre a ferramenta + como desbloquear.
+### Causa raiz — Race condition dupla no `signup-saas`
 
-### Plano de Ação
+O `signup-saas` é chamado de **dois lugares simultaneamente**:
 
-**1. Corrigir `whatsapp-sync-photos` para Evolution API** 
-- Remover a filtragem `provider: "zapi"` 
-- Adicionar suporte a Evolution API: endpoint `GET {baseUrl}/chat/fetchProfilePictureUrl/{instanceId}?number={phone}` para buscar fotos
-- Manter fallback gracioso se a API não retornar foto
+1. **`SaasAuth.tsx` (linha 164)** — logo após o `signUp()`, com o nome da empresa do formulário
+2. **`AuthContext.tsx` (linha 155)** — quando detecta que o usuário não tem role, com fallback `fullName + "'s Company"`
 
-**2. Melhorar o FeatureGateOverlay para mostrar conteúdo desfocado**
-- Em vez de `backdrop-blur-md bg-background/60` cobrindo tudo, manter o conteúdo real da página visível por trás com blur mais leve
-- Adicionar descrição contextual por ferramenta (Conversas = "Espelhe seu WhatsApp e gerencie atendimentos...", CRM = "Gerencie leads e pipeline...", etc.)
-- Manter botões de upgrade e navegação
+A verificação de idempotência na Edge Function (`existingRole` check na linha 82) **falha** porque ambas as chamadas chegam antes de qualquer role ser criada — as duas passam o guard e criam organizações separadas.
 
-**3. Verificar e corrigir envio de áudio**
-- O código de gravação já existe; investigar se o botão do microfone está sendo renderizado corretamente no `ChatConversationInput`
-- Confirmar que o upload para `chat-media` e envio via Evolution API estão funcionando (o `whatsapp-send` já suporta Evolution para mídia/áudio)
+### Plano de correção
+
+**1. Tornar `signup-saas` verdadeiramente idempotente (Edge Function)**
+
+Usar um `INSERT ... ON CONFLICT` na tabela `user_roles` em vez de SELECT + INSERT separados. Se o INSERT falhar por conflito, verificar se o usuário já tem uma org e retornar sem criar duplicata.
+
+Alternativa mais simples: adicionar um **advisory lock** no Postgres usando o `user_id` como chave, garantindo que apenas uma execução simultânea prossiga.
+
+**2. Remover a chamada duplicada no `AuthContext.tsx`**
+
+O `AuthContext` não deveria chamar `signup-saas`. Essa responsabilidade é exclusiva do `SaasAuth.tsx`. O AuthContext deve apenas buscar a role existente e, se não encontrar, aguardar (com retry) em vez de provisionar.
+
+**3. Limpar os dados da usuária afetada**
+
+- Remover a org duplicada `72cec3bd...` ("Micaella de Moura Costa's Company")
+- Remover o membership correspondente
+- Manter apenas a org real `0058d2e2...` ("Micaella Costa Arquitetura")
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/whatsapp-sync-photos/index.ts` | Suporte a Evolution API para buscar fotos de perfil |
-| `src/components/FeatureGateOverlay.tsx` | Redesign: conteúdo desfocado visível + descrição da ferramenta |
-| `src/components/cliente/ChatConversation.tsx` | Verificar/corrigir fluxo de áudio se necessário |
+|---|---|
+| `src/contexts/AuthContext.tsx` | Remover chamada a `signup-saas`; quando não há role, aguardar com retry em vez de provisionar |
+| `supabase/functions/signup-saas/index.ts` | Adicionar lock/idempotência real com `INSERT ... ON CONFLICT` na user_roles antes de criar org |
+| Migração SQL (dados) | Limpar org e membership duplicados da usuária |
 
 ### Detalhes técnicos
 
-**Evolution API — Profile Picture**:
-```
-GET {instance.base_url}/chat/fetchProfilePictureUrl/{instance.instance_id}
-Body: { "number": "5511999999999" }
-Headers: { "apikey": instance.client_token }
+**Idempotência no signup-saas**: Antes de criar a organização, inserir a role com `ON CONFLICT DO NOTHING` e verificar se foi inserida. Se não foi (conflito), significa que outra chamada já está provisionando — retornar imediatamente.
+
+```sql
+INSERT INTO user_roles (user_id, role) VALUES ($1, 'cliente_admin')
+ON CONFLICT (user_id, role) DO NOTHING
+RETURNING id;
 ```
 
-A function precisa buscar a instância sem filtrar por `provider: "zapi"`, e usar o endpoint correto dependendo do provider da instância encontrada.
+Se o `RETURNING` vier vazio, outra chamada já criou — retornar `{ message: "Already provisioned" }`.
+
+**AuthContext**: Em vez de chamar `signup-saas`, fazer polling na `user_roles` por até 10s. Se não encontrar role após 10s, mostrar um erro ao usuário pedindo para recarregar.
 
