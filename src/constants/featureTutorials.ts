@@ -48,8 +48,8 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     whatIs: "O Plano de Vendas usa inteligência artificial para criar uma estratégia comercial personalizada para o seu negócio. Com base nas informações da sua empresa, ele gera um plano completo com metas, ações e cronograma.",
     steps: [
       { title: "Preencha o briefing", description: "Responda perguntas sobre seu negócio, público-alvo, ticket médio e metas de faturamento." },
-      { title: "Gere o plano", description: "A IA analisará suas respostas e criará um plano de vendas completo e personalizado." },
-      { title: "Revise e ajuste", description: "Analise as sugestões, metas semanais e ações recomendadas pela IA." },
+      { title: "Gere o plano", description: "A nossa IA analisará suas respostas e criará um plano de vendas completo e personalizado." },
+      { title: "Revise e ajuste", description: "Analise as sugestões, metas semanais e ações recomendadas pela nossa IA." },
       { title: "Execute e acompanhe", description: "Use o checklist diário e o CRM para executar as ações do plano." },
     ],
     benefits: [
