@@ -104,7 +104,7 @@ export function ClientePlanoVendasDiagnostico({
               <DiagnosticoTermometro pontuacao={percentage} nivel={nivel} />
               <Card className="glass-card">
                 <CardContent className="py-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">RADAR POR ÁREA — 5 EIXOS</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">RADAR POR ÁREA — 5 EIXOS <InfoTip text="Mostra sua pontuação em 5 dimensões comerciais. Quanto mais preenchido, mais madura é sua operação naquele eixo." /></p>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart data={radarData} outerRadius="65%">
