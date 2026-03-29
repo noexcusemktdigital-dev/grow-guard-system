@@ -158,7 +158,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     channel.on("broadcast", { event: "typing" }, (payload: { payload: Record<string, unknown> }) => {
       const data = payload.payload;
       if (data?.phone === contact.phone) {
-        setContactTyping(data.isTyping);
+        setContactTyping(data.isTyping as boolean);
         if (typingDismissRef.current) clearTimeout(typingDismissRef.current);
         if (data.isTyping) {
           typingDismissRef.current = setTimeout(() => setContactTyping(false), 5000);
