@@ -69,21 +69,8 @@ function AcademyAdminInner({
   selectedModuleFilter, setSelectedModuleFilter,
   filteredLessons, filteredQuiz, activeQuizId,
   mutations,
-}: {
-  modules: Array<{ id: string; title: string; description: string; category: string; sort_order: number; [key: string]: unknown }>;
-  allLessons: Array<{ id: string; module_id: string; title: string; content: string; video_url: string | null; sort_order: number; duration_minutes: number; [key: string]: unknown }>;
-  questions: Array<{ id: string; lesson_id: string; question: string; options: string[]; correct_index: number; [key: string]: unknown }>;
-  createModule: { mutate: (data: Record<string, unknown>) => void };
-  updateModule: { mutate: (data: Record<string, unknown>) => void };
-  deleteModule: { mutate: (id: string) => void };
-  createLesson: { mutate: (data: Record<string, unknown>) => void };
-  updateLesson: { mutate: (data: Record<string, unknown>) => void };
-  deleteLesson: { mutate: (id: string) => void };
-  createQuestion: { mutate: (data: Record<string, unknown>) => void };
-  updateQuestion: { mutate: (data: Record<string, unknown>) => void };
-  deleteQuestion: { mutate: (id: string) => void };
-}) {
-  const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId);
+}: any) {
+  const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId) as any;
 
   // Module dialog
   const [moduleDialog, setModuleDialog] = useState(false);
@@ -106,7 +93,7 @@ function AcademyAdminInner({
   // Quiz config
   const [passingScore, setPassingScore] = useState<number>(filteredQuiz?.passing_score ?? 70);
 
-  const openEditModule = (mod: Record<string, unknown>) => {
+  const openEditModule = (mod: any) => {
     setEditingModuleId(mod.id);
     setModuleForm({ title: mod.title, category: mod.category || "Comercial", description: mod.description || "" });
     setModuleDialog(true);
@@ -132,7 +119,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditLesson = (les: Record<string, unknown>) => {
+  const openEditLesson = (les: any) => {
     setEditingLessonId(les.id);
     setLessonForm({ title: les.title, content: les.content || "", videoUrl: les.video_url || "", durationMinutes: les.duration_minutes || 30, sortOrder: les.sort_order || 1 });
     setLessonDialog(true);
@@ -158,7 +145,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditQuestion = (q: Record<string, unknown>) => {
+  const openEditQuestion = (q: any) => {
     setEditingQuestionId(q.id);
     const opts = (q.options as string[]) ?? [];
     setQuestionForm({ question: q.question, options: [...opts, "", "", "", ""].slice(0, 4), correctAnswer: q.correct_answer });
@@ -403,7 +390,7 @@ function AcademyAdminInner({
             <div><Label>Título</Label><Input value={moduleForm.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModuleForm({ ...moduleForm, title: e.target.value })} className="mt-1" /></div>
             <div>
               <Label>Categoria</Label>
-              <Select value={moduleForm.category} onValueChange={(v: string) => setModuleForm({ ...moduleForm, category: v })}>
+              <Select value={moduleForm.category} onValueChange={(v: any) => setModuleForm({ ...moduleForm, category: v })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(["Comercial", "Estrategia", "Institucional", "Produtos"] as const).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}

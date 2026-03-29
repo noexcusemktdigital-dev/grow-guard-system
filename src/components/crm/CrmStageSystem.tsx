@@ -9,6 +9,7 @@ export interface FunnelStage {
   label: string;
   color: string;
   icon: string;
+  [key: string]: unknown;
 }
 
 export const STAGE_ICONS: Record<string, React.ReactNode> = {

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { parseConteudoPrincipal } from "./ContentTypes";
 
 /* ── Carrossel: slides empilhados ── */
-export function CarrosselVisual({ content }: { content: unknown }) {
+export function CarrosselVisual({ content }: { content: any }) {
   if (!Array.isArray(content)) return <GenericVisual content={content} />;
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
@@ -18,7 +18,7 @@ export function CarrosselVisual({ content }: { content: unknown }) {
 }
 
 /* ── Post Único / Educativo / Autoridade ── */
-export function PostVisual({ content }: { content: unknown }) {
+export function PostVisual({ content }: { content: any }) {
   if (!content || typeof content !== "object") return <GenericVisual content={content} />;
   return (
     <div className="rounded-xl bg-gradient-to-br from-primary/8 to-transparent border p-5 space-y-3">
@@ -42,7 +42,7 @@ export function PostVisual({ content }: { content: unknown }) {
 }
 
 /* ── Vídeo: hook em destaque + roteiro colapsado ── */
-export function VideoVisual({ content }: { content: unknown }) {
+export function VideoVisual({ content }: { content: any }) {
   if (!content || typeof content !== "object") return <GenericVisual content={content} />;
   return (
     <div className="space-y-3">
@@ -76,7 +76,7 @@ export function VideoVisual({ content }: { content: unknown }) {
 }
 
 /* ── Story: frames horizontais ── */
-export function StoryVisual({ content }: { content: unknown }) {
+export function StoryVisual({ content }: { content: any }) {
   if (!Array.isArray(content)) return <GenericVisual content={content} />;
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
@@ -94,7 +94,7 @@ export function StoryVisual({ content }: { content: unknown }) {
 }
 
 /* ── Artigo ── */
-export function ArtigoVisual({ content }: { content: unknown }) {
+export function ArtigoVisual({ content }: { content: any }) {
   if (!content || typeof content !== "object") return <GenericVisual content={content} />;
   return (
     <div className="rounded-xl border p-5 space-y-3">

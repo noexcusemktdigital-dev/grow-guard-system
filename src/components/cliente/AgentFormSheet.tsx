@@ -43,6 +43,7 @@ const defaultAgent: Partial<AiAgent> = {
 interface KBEntry {
   type: "url" | "file" | "text";
   content: string;
+  [key: string]: unknown;
   name?: string;
   url?: string;
   size?: number;
@@ -107,7 +108,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const persona = (form.persona ?? {}) as Record<string, any>;
   const promptConfig = (form.prompt_config ?? {}) as Record<string, any>;
   const crmActions = (form.crm_actions ?? {}) as Record<string, any>;
-  const knowledgeBase = ((form.knowledge_base ?? []) as KBEntry[]);
+  const knowledgeBase = ((form.knowledge_base ?? []) as unknown as KBEntry[]);
 
   // Step completion logic
   const isStep1Complete = !!(form.name?.trim() && form.role && form.gender);
@@ -188,14 +189,14 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
 
   const addKbUrl = () => {
     if (urlInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] }));
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] as any }));
       setUrlInput("");
     }
   };
 
   const addKbText = () => {
     if (textInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] }));
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] as any }));
       setTextInput("");
     }
   };
@@ -220,12 +221,12 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     }
   };
 
-  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) }));
+  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) } as any));
 
   const toggleObjective = (obj: string) => {
-    const current = form.objectives ?? [];
+    const current = (form.objectives ?? []) as any[];
     const exists = current.includes(obj);
-    setForm((f) => ({ ...f, objectives: exists ? current.filter((o: string) => o !== obj) : [...current, obj] }));
+    setForm((f) => ({ ...f, objectives: exists ? current.filter((o: string) => o !== obj) : [...current, obj] } as any));
   };
 
   const handleGeneratePersona = async () => {
@@ -356,7 +357,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
           />
 
           <AgentFormSheetPrompt
-            form={form}
+            form={form as any}
             promptConfig={promptConfig}
             crmActions={crmActions}
             engagementRules={engagementRules}

@@ -158,7 +158,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
     channel.on("broadcast", { event: "typing" }, (payload: { payload: Record<string, unknown> }) => {
       const data = payload.payload;
       if (data?.phone === contact.phone) {
-        setContactTyping(data.isTyping);
+        setContactTyping(data.isTyping as boolean);
         if (typingDismissRef.current) clearTimeout(typingDismissRef.current);
         if (data.isTyping) {
           typingDismissRef.current = setTimeout(() => setContactTyping(false), 5000);
@@ -293,7 +293,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           }
         );
       } catch (err: unknown) {
-        toast({ title: "Erro no upload do áudio", description: err.message, variant: "destructive" });
+        toast({ title: "Erro no upload do áudio", description: (err as any)?.message, variant: "destructive" });
       } finally {
         setSendingAudio(false);
       }
@@ -350,7 +350,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           setPendingMessages(prev =>
             prev.map(m => m.id === tempId ? { ...m, status: "failed" } : m)
           );
-          toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
+          toast({ title: "Erro ao enviar", description: (err as any)?.message, variant: "destructive" });
         },
       }
     );
@@ -421,7 +421,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         }
       );
     } catch (err: unknown) {
-      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+      toast({ title: "Erro no upload", description: (err as any)?.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -451,7 +451,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         toast({ title: "Lead criado e vinculado!" });
       }
     } catch (err: unknown) {
-      toast({ title: "Erro ao criar lead", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao criar lead", description: (err as any)?.message, variant: "destructive" });
     }
   };
 

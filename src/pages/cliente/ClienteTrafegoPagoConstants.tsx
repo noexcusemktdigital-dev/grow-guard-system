@@ -50,21 +50,21 @@ export const STEPS = [
   { id: "ativos", label: "Ativos", icon: Image },
 ] as const;
 
-const platformColors: Record<string, string> = {
+export const platformColors: Record<string, string> = {
   Google: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   Meta: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   TikTok: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   LinkedIn: "bg-sky-500/10 text-sky-500 border-sky-500/20",
 };
 
-const platformIcons: Record<string, React.ReactNode> = {
+export const platformIcons: Record<string, React.ReactNode> = {
   Google: <Globe className="w-5 h-5" />,
   Meta: <Users className="w-5 h-5" />,
   TikTok: <PlayCircle className="w-5 h-5" />,
   LinkedIn: <BarChart3 className="w-5 h-5" />,
 };
 
-const platformLinks: Record<string, string> = {
+export const platformLinks: Record<string, string> = {
   Google: "https://ads.google.com",
   Meta: "https://business.facebook.com/adsmanager",
   TikTok: "https://ads.tiktok.com",
