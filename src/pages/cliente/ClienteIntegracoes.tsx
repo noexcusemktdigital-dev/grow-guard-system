@@ -279,52 +279,20 @@ export default function ClienteIntegracoes() {
             </div>
           )}
 
-          {/* ── 1. WhatsApp Z-API ── */}
+          {/* ── WhatsApp — Izitech ── */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Plug className="w-4 h-4 text-emerald-500" /> WhatsApp — Z-API
+              <Plug className="w-4 h-4 text-emerald-500" /> WhatsApp — Izitech
             </h3>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground">Instâncias conectadas via Z-API (SaaS gerenciado)</p>
-              <Button size="sm" onClick={() => setWizardOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Adicionar número</Button>
+              <p className="text-xs text-muted-foreground">Instâncias conectadas via Izitech</p>
+              <Button size="sm" onClick={() => setWizardOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Adicionar WhatsApp</Button>
             </div>
 
-            {zapiInstances.length === 0 ? (
-              <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Z-API configurada.</p></CardContent></Card>
+            {allInstances.length === 0 ? (
+              <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância configurada.</p></CardContent></Card>
             ) : (
-              zapiInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} isPending={setupMutation.isPending} />
-              ))
-            )}
-
-            {zapiInstances.some(i => i.status === "connected") && (
-              <Card className="border-amber-500/30 bg-amber-500/5">
-                <CardContent className="p-4 flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">Conta Z-API em modo trial?</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Ative um plano pago na Z-API para remover o prefixo de trial.</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => window.open("https://app.z-api.io", "_blank")} className="shrink-0 text-xs">Ver planos</Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* ── 2. WhatsApp Evolution ── */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Server className="w-4 h-4 text-blue-500" /> WhatsApp — Evolution API
-            </h3>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground">Instâncias conectadas via Evolution API (self-hosted)</p>
-              <Button size="sm" onClick={() => setWizardOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Adicionar instância</Button>
-            </div>
-
-            {evoInstances.length === 0 ? (
-              <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Evolution configurada.</p></CardContent></Card>
-            ) : (
-              evoInstances.map(inst => (
+              allInstances.map(inst => (
                 <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} onReconfigureWebhook={() => handleReconfigureWebhook(inst)} isPending={setupMutation.isPending} />
               ))
             )}
