@@ -537,7 +537,7 @@ export function ArtWizardStep8Review({
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-4 flex items-center gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <p className="text-sm text-primary">Gerando textos com IA...</p>
+            <p className="text-sm text-primary">Gerando textos com a nossa IA...</p>
           </CardContent>
         </Card>
       )}
