@@ -350,7 +350,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           setPendingMessages(prev =>
             prev.map(m => m.id === tempId ? { ...m, status: "failed" } : m)
           );
-          toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
+          toast({ title: "Erro ao enviar", description: (err as any)?.message, variant: "destructive" });
         },
       }
     );
