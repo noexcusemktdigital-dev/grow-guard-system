@@ -1,79 +1,67 @@
 
 
-## Separar Automações do Time e Automações de IA + Tutorial Educativo
+## Melhorias no CRM — Cards coloridos, motivos de perda e leads permanentes no funil
 
-### Arquitetura
+### 1. Cards com cor de status (Ganho/Perdido) no Kanban
 
-Hoje tudo está em um único componente `CrmAutomations.tsx` com uma lista flat. A proposta é dividir em **duas abas internas** (Time e IA) dentro da mesma aba "Automações", cada uma com suas ações, recomendações e um tutorial introdutório.
+**Arquivo:** `src/pages/cliente/ClienteCRMKanban.tsx`
 
-### Classificação
+O `DraggableLeadCard` atualmente usa apenas `stageColor` para a borda esquerda. Adicionar lógica condicional:
+- Se `lead.won_at` → borda esquerda verde + fundo sutil verde (`border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20`)
+- Se `lead.lost_at` → borda esquerda vermelha + fundo sutil vermelho (`border-l-red-500 bg-red-50/50 dark:bg-red-950/20`)
+- Badge discreto "Vendido" ou "Perdido" no card para reforçar visualmente
+- Manter o card funcional e arrastável normalmente
 
-**Automações do Time (humanas):**
-- Criar tarefa, Adicionar/Remover tag, Mudar etapa, Notificar responsável, Enviar WhatsApp, Atribuir a pessoa, Atribuir a time, Mover para outro funil
+Mesma lógica será replicada nos cards do `CrmExpansao.tsx` e `FranqueadoCRM.tsx`.
 
-**Automações de IA:**
-- IA: Primeiro contato, IA: Follow-up automático, IA: Qualificar lead
+### 2. Motivos de perda configuráveis
 
-### Mudanças
+**Migration SQL:** Adicionar coluna `loss_reasons` (tipo `text[]`) na tabela `crm_settings` para armazenar os motivos padrão por organização. Valores default: `["Preço", "Concorrência", "Timing inadequado", "Sem orçamento", "Sem resposta", "Escolheu outro fornecedor", "Desistiu do projeto"]`.
 
-**1. `src/components/crm/CrmAutomations.tsx`** — Refatorar para ter sub-tabs:
+**Novo componente:** `src/components/crm/CrmLossReasonsConfig.tsx`
+- Aba "Motivos de Perda" nas configurações do CRM (`CrmConfigPage.tsx`)
+- Lista de motivos com opção de adicionar, editar e remover
+- Usa `useCrmSettings` / `useCrmSettingsMutations` para persistir
 
-- Adicionar **duas sub-abas**: "Automações do Time" (ícone Users2) e "Automações de IA" (ícone Bot)
-- Cada aba filtra as automações existentes pelo campo `ai` das ACTIONS
-- Cada aba mostra apenas as recomendações relevantes (IA vs Time)
-- Cada aba mostra apenas os ACTIONS pertinentes no dialog de criação/edição
-- O filtro de funil permanece global (acima das sub-abas)
+**Arquivo:** `src/components/crm/CrmConfigPage.tsx`
+- Adicionar nova aba "Motivos" com icone `XCircle`
 
-**2. Tutorial introdutório em cada aba:**
+### 3. Dialog de perda com motivo obrigatório
 
-Adicionar um bloco colapsável (usando `Collapsible` ou um card com toggle "Saiba mais") no topo de cada aba:
+**Arquivo:** `src/components/crm/CrmLeadDetailSheet.tsx`
+- Carregar motivos de `crm_settings.loss_reasons` via `useCrmSettings()`
+- Substituir o campo de texto livre por: Select com motivos padrão + campo de descrição opcional (Textarea)
+- O botão "Confirmar" fica desabilitado até selecionar um motivo
+- `lost_reason` passa a ser obrigatório no `markAsLost`
 
-**Aba Time:**
-- **O que são?** Regras automáticas que executam ações operacionais quando algo acontece no CRM
-- **Por que usar?** Elimina tarefas manuais repetitivas, garante que nenhum lead fique sem atenção, padroniza processos
-- **Exemplos práticos:** "Quando um lead é criado via Ads, atribuir automaticamente ao time de vendas" / "Quando lead fica parado 3 dias, notificar o responsável"
+Mesma lógica no `CrmLeadDetailSheet` do franqueado e nos menus rápidos do Kanban (que hoje chamam `onMarkLost` direto sem dialog — precisam abrir dialog primeiro).
 
-**Aba IA:**
-- **O que são?** Automações que utilizam nossa IA para interagir com leads via WhatsApp de forma inteligente e personalizada
-- **Por que usar?** Resposta imediata 24/7, qualificação automática com metodologia BANT, follow-ups persistentes sem esforço humano
-- **Exemplos práticos:** "Quando lead chega, nossa IA envia mensagem de boas-vindas e inicia qualificação" / "Se lead não responde em 24h, nossa IA faz follow-up automático"
-- Destaque: "Cada automação de IA precisa de um Agente configurado na seção Agentes IA"
+### 4. Leads ganhos/perdidos permanecem no funil
 
-**3. Tutorial na aba Integrações:**
+**Problema atual:** O `markAsWon` muda o stage para "Venda" e o `markAsLost` muda para "Oportunidade Perdida". Se essas etapas não existem no funil customizado, o lead desaparece do pipeline visual.
 
-Adicionar o mesmo padrão de bloco educativo no topo do `CrmIntegrationHub.tsx`:
-- **O que são?** Conexões que trazem seus leads de diferentes fontes diretamente para o CRM
-- **Por que usar?** Centraliza todos os leads em um só lugar, sem perder nenhum contato, independente da origem
-- Breve: "Escolha abaixo de onde vêm seus leads e siga o passo a passo"
+**Correção em `src/hooks/useCrmLeads.ts`:**
+- `markAsWon`: **Não alterar o stage**. Apenas setar `won_at`. O lead permanece na etapa onde estava, mas com status visual de vendido.
+- `markAsLost`: **Não alterar o stage**. Apenas setar `lost_at` + `lost_reason`. O lead permanece na etapa onde estava, mas com status visual de perdido.
 
-### Estrutura visual
+**Correção em `src/pages/cliente/ClienteCRM.tsx`:**
+- Remover filtro implícito que exclui leads won/lost do pipeline. Atualmente o `leadsByStage` inclui todos os `filteredLeads`, mas o filtro de status padrão pode estar excluindo-os. Garantir que sem filtro ativo, todos os leads (inclusive won/lost) apareçam no kanban.
 
-```text
-┌─────────────────────────────────────┐
-│ Configurações do CRM                │
-│ [Funis][Equipe]...[Integ.][Autom.]  │
-│                                     │
-│ Aba: Automações                     │
-│ ┌──────────────┬───────────────┐    │
-│ │ 👥 Do Time   │ 🤖 De IA     │    │
-│ └──────────────┴───────────────┘    │
-│                                     │
-│ 📘 Saiba mais (colapsável)          │
-│ "O que são? Por que usar?..."       │
-│                                     │
-│ ⭐ Recomendadas (filtradas)         │
-│ ───────────────────────────────     │
-│ Suas automações (filtradas)         │
-│ [+ Nova automação]                  │
-└─────────────────────────────────────┘
-```
+### 5. Integração com metas e relatórios
+
+A integração já existe: `ClienteDashboard.tsx` já conta `wonLeads` e `lostLeads` com base em `won_at`/`lost_at`, calcula ticket médio, taxa de conversão e motivos de perda. O `goal-progress` já é invalidado quando leads mudam. **Nenhuma mudança necessária** nesta frente — tudo já funciona automaticamente quando `won_at` é setado.
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/crm/CrmAutomations.tsx` | Sub-tabs Time/IA, tutorial colapsável, filtro de ações por categoria |
-| `src/components/crm/CrmIntegrationHub.tsx` | Bloco educativo no topo |
-
-Nenhuma mudança de banco de dados necessária — a separação é puramente visual/UX.
+| Migration SQL | `ALTER TABLE crm_settings ADD COLUMN loss_reasons text[]` |
+| `src/pages/cliente/ClienteCRMKanban.tsx` | Card verde/vermelho para won/lost |
+| `src/pages/CrmExpansao.tsx` | Mesma lógica de cor |
+| `src/pages/franqueado/FranqueadoCRM.tsx` | Mesma lógica de cor |
+| `src/components/crm/CrmLossReasonsConfig.tsx` | Novo — gerenciar motivos de perda |
+| `src/components/crm/CrmConfigPage.tsx` | Nova aba "Motivos" |
+| `src/components/crm/CrmLeadDetailSheet.tsx` | Dialog de perda com select obrigatório |
+| `src/components/franqueado/CrmLeadDetailSheet.tsx` | Mesmo ajuste |
+| `src/hooks/useCrmLeads.ts` | markAsWon/markAsLost não alteram mais o stage |
 
