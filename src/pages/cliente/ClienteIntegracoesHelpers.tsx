@@ -312,7 +312,7 @@ export function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, on
                     {isConn ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
                     {isConn ? "Conectado" : "Desconectado"}
                   </Badge>
-                  <Badge variant="outline" className="text-[9px]">{isEvo ? "Evolution" : "Z-API"}</Badge>
+                  <Badge variant="outline" className="text-[9px]">Easytech</Badge>
                 </div>
                 {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
               </div>
