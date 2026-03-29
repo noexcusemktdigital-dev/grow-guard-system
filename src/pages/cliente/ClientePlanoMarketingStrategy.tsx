@@ -112,7 +112,7 @@ function TabResumo({ result }: { result: StrategyResult }) {
         )}
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Diagnóstico</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Diagnóstico <InfoTip text="Análise qualitativa do estado atual do seu marketing, identificando pontos fortes, oportunidades e riscos." /></CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">{result.diagnostico?.analise}</p>
             <div className="grid grid-cols-1 gap-3">
