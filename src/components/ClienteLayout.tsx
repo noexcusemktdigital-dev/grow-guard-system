@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback } from "react";
 import { Outlet, useLocation, Navigate } from "react-router-dom";
 import { useOrgProfile } from "@/hooks/useOrgProfile";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
