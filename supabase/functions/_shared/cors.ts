@@ -6,6 +6,7 @@ const ALLOWED_ORIGIN_PATTERNS = [
 const ALLOWED_ORIGINS_EXACT = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://sistema.noexcusedigital.com.br',
 ];
 
 export function getCorsHeaders(req: Request) {
