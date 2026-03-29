@@ -390,7 +390,7 @@ function AcademyAdminInner({
             <div><Label>Título</Label><Input value={moduleForm.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModuleForm({ ...moduleForm, title: e.target.value })} className="mt-1" /></div>
             <div>
               <Label>Categoria</Label>
-              <Select value={moduleForm.category} onValueChange={(v: string) => setModuleForm({ ...moduleForm, category: v })}>
+              <Select value={moduleForm.category} onValueChange={(v: any) => setModuleForm({ ...moduleForm, category: v })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(["Comercial", "Estrategia", "Institucional", "Produtos"] as const).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}

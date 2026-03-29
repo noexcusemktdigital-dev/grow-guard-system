@@ -43,6 +43,7 @@ const defaultAgent: Partial<AiAgent> = {
 interface KBEntry {
   type: "url" | "file" | "text";
   content: string;
+  [key: string]: unknown;
   name?: string;
   url?: string;
   size?: number;
