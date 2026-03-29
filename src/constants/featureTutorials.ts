@@ -182,7 +182,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     steps: [
       { title: "Defina o objetivo", description: "Escolha entre geração de leads, vendas, reconhecimento de marca ou tráfego." },
       { title: "Informe o orçamento", description: "Defina quanto pretende investir mensalmente em anúncios." },
-      { title: "Gere a estratégia", description: "A IA criará uma estratégia completa com públicos, copies e sugestões de criativos." },
+      { title: "Gere a estratégia", description: "A nossa IA criará uma estratégia completa com públicos, copies e sugestões de criativos." },
       { title: "Execute", description: "Use as recomendações para configurar suas campanhas nas plataformas de anúncios." },
     ],
     benefits: [
