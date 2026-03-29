@@ -121,7 +121,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Roteiros de Vídeo",
     subtitle: "Roteiros estratégicos gerados pela nossa IA",
     icon: Palette,
-    whatIs: "A ferramenta de Roteiros usa IA para criar scripts de vídeo completos para Reels, TikTok, YouTube e Stories. Com base na sua estratégia, ela gera roteiros com hook, desenvolvimento e CTA otimizados para o algoritmo.",
+    whatIs: "A ferramenta de Roteiros usa a nossa IA para criar scripts de vídeo completos para Reels, TikTok, YouTube e Stories. Com base na sua estratégia, ela gera roteiros com hook, desenvolvimento e CTA otimizados para o algoritmo.",
     steps: [
       { title: "Escolha o formato", description: "Selecione entre Reels/TikTok, YouTube, Stories ou vídeo longo." },
       { title: "Defina duração e objetivo", description: "Escolha a duração do vídeo e o resultado que quer gerar (educar, vender, engajar)." },
