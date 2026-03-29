@@ -357,7 +357,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                       <p className="text-xs font-semibold">Powered by Izitech</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      A instância será criada automaticamente pela Easytech.
+                      A instância será criada automaticamente pela Izitech.
                       Os webhooks serão configurados para receber mensagens diretamente neste sistema.
                     </p>
                   </div>
