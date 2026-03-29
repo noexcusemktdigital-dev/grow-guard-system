@@ -230,7 +230,7 @@ function UploadBriefingForm({
           <Upload className="w-4 h-4 text-primary" /> Upload de Briefing
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Envie um arquivo de texto ou cole o briefing abaixo. A IA irá extrair as informações e preencher o formulário automaticamente.
+          Envie um arquivo de texto ou cole o briefing abaixo. A nossa IA irá extrair as informações e preencher o formulário automaticamente.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

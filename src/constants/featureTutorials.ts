@@ -43,13 +43,13 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
   plano_vendas: {
     slug: "plano_vendas",
     title: "Plano de Vendas",
-    subtitle: "Estratégia comercial gerada por IA",
+    subtitle: "Estratégia comercial gerada pela nossa IA",
     icon: TrendingUp,
     whatIs: "O Plano de Vendas usa inteligência artificial para criar uma estratégia comercial personalizada para o seu negócio. Com base nas informações da sua empresa, ele gera um plano completo com metas, ações e cronograma.",
     steps: [
       { title: "Preencha o briefing", description: "Responda perguntas sobre seu negócio, público-alvo, ticket médio e metas de faturamento." },
-      { title: "Gere o plano", description: "A IA analisará suas respostas e criará um plano de vendas completo e personalizado." },
-      { title: "Revise e ajuste", description: "Analise as sugestões, metas semanais e ações recomendadas pela IA." },
+      { title: "Gere o plano", description: "A nossa IA analisará suas respostas e criará um plano de vendas completo e personalizado." },
+      { title: "Revise e ajuste", description: "Analise as sugestões, metas semanais e ações recomendadas pela nossa IA." },
       { title: "Execute e acompanhe", description: "Use o checklist diário e o CRM para executar as ações do plano." },
     ],
     benefits: [
@@ -64,10 +64,10 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Scripts de Vendas",
     subtitle: "Roteiros inteligentes para cada situação",
     icon: FileText,
-    whatIs: "Os Scripts de Vendas são roteiros prontos gerados por IA para diferentes situações do dia a dia comercial: prospecção, follow-up, objeções, fechamento e pós-venda. Cada script é personalizado para o seu nicho.",
+    whatIs: "Os Scripts de Vendas são roteiros prontos gerados pela nossa IA para diferentes situações do dia a dia comercial: prospecção, follow-up, objeções, fechamento e pós-venda. Cada script é personalizado para o seu nicho.",
     steps: [
       { title: "Escolha a categoria", description: "Selecione se quer um script de prospecção, follow-up, objeção, fechamento ou pós-venda." },
-      { title: "Gere com IA", description: "Clique em gerar e a IA criará um roteiro personalizado para o seu negócio." },
+      { title: "Gere com a nossa IA", description: "Clique em gerar e a nossa IA criará um roteiro personalizado para o seu negócio." },
       { title: "Personalize", description: "Edite o script conforme sua preferência e estilo de comunicação." },
       { title: "Use no dia a dia", description: "Copie e use nos atendimentos via WhatsApp, telefone ou e-mail." },
     ],
@@ -119,13 +119,13 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
   conteudos: {
     slug: "conteudos",
     title: "Roteiros de Vídeo",
-    subtitle: "Roteiros estratégicos gerados por IA",
+    subtitle: "Roteiros estratégicos gerados pela nossa IA",
     icon: Palette,
-    whatIs: "A ferramenta de Roteiros usa IA para criar scripts de vídeo completos para Reels, TikTok, YouTube e Stories. Com base na sua estratégia, ela gera roteiros com hook, desenvolvimento e CTA otimizados para o algoritmo.",
+    whatIs: "A ferramenta de Roteiros usa a nossa IA para criar scripts de vídeo completos para Reels, TikTok, YouTube e Stories. Com base na sua estratégia, ela gera roteiros com hook, desenvolvimento e CTA otimizados para o algoritmo.",
     steps: [
       { title: "Escolha o formato", description: "Selecione entre Reels/TikTok, YouTube, Stories ou vídeo longo." },
       { title: "Defina duração e objetivo", description: "Escolha a duração do vídeo e o resultado que quer gerar (educar, vender, engajar)." },
-      { title: "Gere com IA", description: "A IA criará roteiros completos com hook de impacto, desenvolvimento e CTA." },
+      { title: "Gere com a nossa IA", description: "A nossa IA criará roteiros completos com hook de impacto, desenvolvimento e CTA." },
       { title: "Copie e grave", description: "Copie o roteiro e use como guia para gravar seu vídeo." },
     ],
     benefits: [
@@ -140,7 +140,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Postagem",
     subtitle: "Crie artes profissionais com IA",
     icon: Share2,
-    whatIs: "A ferramenta de Postagem permite criar artes visuais para redes sociais usando inteligência artificial. Gere artes profissionais em segundos com textos, referências visuais e sua identidade de marca.",
+    whatIs: "A ferramenta de Postagem permite criar artes visuais para redes sociais usando a nossa inteligência artificial. Gere artes profissionais em segundos com textos, referências visuais e sua identidade de marca.",
     steps: [
       { title: "Descreva o que quer", description: "Informe o tema, objetivo e estilo desejado. A IA gera os textos automaticamente." },
       { title: "Envie a logo", description: "Faça upload da sua logo para aplicação automática na arte." },
@@ -149,7 +149,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     ],
     benefits: [
       "Artes profissionais sem precisar de designer",
-      "Textos gerados automaticamente pela IA",
+      "Textos gerados automaticamente pela nossa IA",
       "Tutorial didático para referências visuais",
       "Identidade visual consistente em todas as peças",
     ],
@@ -159,11 +159,11 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Sites IA",
     subtitle: "Landing pages geradas por inteligência artificial",
     icon: Globe,
-    whatIs: "Crie landing pages profissionais com IA em minutos. A ferramenta gera o design, textos e estrutura da página com base no seu negócio, otimizada para conversão.",
+    whatIs: "Crie landing pages profissionais com a nossa IA em minutos. A ferramenta gera o design, textos e estrutura da página com base no seu negócio, otimizada para conversão.",
     steps: [
       { title: "Informe seu negócio", description: "Descreva sua empresa, produto/serviço e público-alvo." },
       { title: "Escolha o estilo", description: "Selecione cores, estilo visual e tipo de página." },
-      { title: "Gere o site", description: "A IA criará a landing page completa com textos persuasivos." },
+      { title: "Gere o site", description: "A nossa IA criará a landing page completa com textos persuasivos." },
       { title: "Publique", description: "Exporte o código ou publique diretamente pela plataforma." },
     ],
     benefits: [
@@ -178,11 +178,11 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Tráfego Pago",
     subtitle: "Estratégia de anúncios com IA",
     icon: Target,
-    whatIs: "A ferramenta de Tráfego Pago gera estratégias completas de anúncios para Meta Ads e Google Ads usando IA. Receba sugestões de público, orçamento, copies e criativos.",
+    whatIs: "A ferramenta de Tráfego Pago gera estratégias completas de anúncios para Meta Ads e Google Ads usando a nossa IA. Receba sugestões de público, orçamento, copies e criativos.",
     steps: [
       { title: "Defina o objetivo", description: "Escolha entre geração de leads, vendas, reconhecimento de marca ou tráfego." },
       { title: "Informe o orçamento", description: "Defina quanto pretende investir mensalmente em anúncios." },
-      { title: "Gere a estratégia", description: "A IA criará uma estratégia completa com públicos, copies e sugestões de criativos." },
+      { title: "Gere a estratégia", description: "A nossa IA criará uma estratégia completa com públicos, copies e sugestões de criativos." },
       { title: "Execute", description: "Use as recomendações para configurar suas campanhas nas plataformas de anúncios." },
     ],
     benefits: [
@@ -216,7 +216,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Checklist Diário",
     subtitle: "Rotina organizada com tarefas inteligentes",
     icon: CheckSquare,
-    whatIs: "O Checklist Diário gera uma lista de tarefas personalizada com base no seu plano de vendas, agendamentos e metas. A IA cria atividades práticas para cada dia, garantindo que nada seja esquecido.",
+    whatIs: "O Checklist Diário gera uma lista de tarefas personalizada com base no seu plano de vendas, agendamentos e metas. A nossa IA cria atividades práticas para cada dia, garantindo que nada seja esquecido.",
     steps: [
       { title: "Acesse o checklist", description: "Sua lista de tarefas diárias é gerada automaticamente a cada manhã." },
       { title: "Execute as tarefas", description: "Marque cada tarefa como concluída conforme for realizando." },
@@ -225,7 +225,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     ],
     benefits: [
       "Rotina comercial organizada sem esquecer nenhuma ação",
-      "Tarefas priorizadas pela IA com base nos seus objetivos",
+      "Tarefas priorizadas pela nossa IA com base nos seus objetivos",
       "Aumento da produtividade com foco nas atividades certas",
       "Gamificação motiva a conclusão diária",
     ],

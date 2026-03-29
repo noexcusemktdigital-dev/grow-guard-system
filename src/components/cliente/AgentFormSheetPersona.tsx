@@ -69,7 +69,7 @@ export function AgentFormSheetPersona({
               disabled={generating === "greeting"}
             >
               {generating === "greeting" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              Gerar saudação com IA
+              Gerar saudação com a nossa IA
             </Button>
           </div>
         )}
@@ -158,7 +158,7 @@ export function AgentFormSheetPersona({
 
       <Button variant="outline" className="gap-2 w-full" onClick={handleGeneratePersona} disabled={generating === "persona"}>
         {generating === "persona" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-        Gerar descrição da persona com IA
+        Gerar descrição da persona com a nossa IA
       </Button>
 
       {!isEditing && (

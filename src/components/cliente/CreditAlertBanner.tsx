@@ -40,7 +40,7 @@ export function CreditAlertBanner() {
       bg: "bg-destructive/10 border-destructive/20",
       text: "text-destructive dark:text-red-300",
       icon: <XCircle className="w-4 h-4 text-destructive flex-shrink-0" />,
-      message: "Créditos esgotados. Funções de IA estão pausadas.",
+      message: "Créditos esgotados. Funções da nossa IA estão pausadas.",
     },
   }[level];
 

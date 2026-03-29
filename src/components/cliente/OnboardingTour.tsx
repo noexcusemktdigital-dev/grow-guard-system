@@ -31,7 +31,7 @@ const STEPS: TourStep[] = [
   {
     icon: Megaphone,
     title: "Módulo Marketing",
-    description: "Crie estratégias, gere conteúdos e artes com IA, publique sites e gerencie campanhas de tráfego pago.",
+    description: "Crie estratégias, gere conteúdos e artes com a nossa IA, publique sites e gerencie campanhas de tráfego pago.",
     target: "marketing",
     position: "right",
   },
@@ -45,7 +45,7 @@ const STEPS: TourStep[] = [
   {
     icon: CreditCard,
     title: "Créditos & Plano",
-    description: "Cada ação de IA consome créditos. Acompanhe seu saldo aqui e escolha o plano ideal para o seu negócio.",
+    description: "Cada ação da nossa IA consome créditos. Acompanhe seu saldo aqui e escolha o plano ideal para o seu negócio.",
     target: "creditos",
     position: "right",
   },

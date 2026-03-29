@@ -156,7 +156,7 @@ export const LOADING_PHRASES = [
   "Analisando referências visuais…",
   "Construindo prompt otimizado…",
   "Aplicando identidade visual…",
-  "Gerando imagem com IA…",
+  "Gerando imagem com a nossa IA…",
   "Finalizando composição…",
   "Quase pronto…",
 ];

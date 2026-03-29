@@ -225,7 +225,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
                     }`}
                   >
                     <Sparkles className="w-6 h-6 text-primary" />
-                    <span className="text-sm font-semibold">Gerar com IA</span>
+                    <span className="text-sm font-semibold">Gerar com a nossa IA</span>
                     <span className="text-[10px] text-muted-foreground">
                       Responda perguntas e a nossa IA cria o script com base no seu negócio
                     </span>

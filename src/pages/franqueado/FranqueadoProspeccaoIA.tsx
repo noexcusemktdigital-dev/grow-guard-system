@@ -198,7 +198,7 @@ function NovaProspeccaoTab() {
           </div>
           <Button onClick={handleGenerate} className="w-full" disabled={create.isPending}>
             {create.isPending ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
-            {create.isPending ? "Gerando plano com IA..." : "Gerar Plano de Prospecção"}
+            {create.isPending ? "Gerando plano com a nossa IA..." : "Gerar Plano de Prospecção"}
           </Button>
         </CardContent>
       </Card>
@@ -633,7 +633,7 @@ function PlaybooksTab() {
 export default function FranqueadoProspeccaoIA() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Prospecção" subtitle="Planeje prospecções e arquive estratégias com IA" />
+      <PageHeader title="Prospecção" subtitle="Planeje prospecções e arquive estratégias com a nossa IA" />
 
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-3">

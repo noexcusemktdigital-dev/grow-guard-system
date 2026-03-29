@@ -26,7 +26,7 @@ export function AdAIAnalysis() {
           <div>
             <p className="text-sm font-semibold">Análise Inteligente de Campanhas</p>
             <p className="text-xs text-muted-foreground mt-1">
-              A IA analisa suas métricas e gera insights acionáveis para otimizar seus anúncios.
+              A nossa IA analisa suas métricas e gera insights acionáveis para otimizar seus anúncios.
             </p>
           </div>
           <Button onClick={handleAnalyze} disabled={analyzeMutation.isPending} className="gap-2">
@@ -35,7 +35,7 @@ export function AdAIAnalysis() {
             ) : (
               <Sparkles className="w-4 h-4" />
             )}
-            Analisar com IA
+            Analisar com a nossa IA
             <Badge variant="outline" className="text-[9px] ml-1">30 créditos</Badge>
           </Button>
         </CardContent>

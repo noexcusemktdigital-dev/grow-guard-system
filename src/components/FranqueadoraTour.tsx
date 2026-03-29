@@ -31,7 +31,7 @@ const STEPS: TourStep[] = [
   {
     icon: TrendingUp,
     title: "Comercial",
-    description: "Use o CRM de vendas, prospecção com IA, crie estratégias e gere propostas comerciais para expandir sua rede.",
+    description: "Use o CRM de vendas, prospecção com a nossa IA, crie estratégias e gere propostas comerciais para expandir sua rede.",
     target: "comercial",
     position: "right",
   },
