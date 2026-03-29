@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { UserPlus } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
