@@ -1,83 +1,79 @@
 
 
-## Hub de Integrações do CRM — Tutorial Interativo por Fonte de Lead
+## Separar Automações do Time e Automações de IA + Tutorial Educativo
 
-### Objetivo
-Substituir a aba "Integrações" atual (que só tem webhook genérico + CSV) por um hub visual e interativo onde o cliente escolhe **de onde vêm seus leads** e recebe um guia passo-a-passo para configurar cada integração.
+### Arquitetura
 
-### Fontes de Lead (cards visuais)
+Hoje tudo está em um único componente `CrmAutomations.tsx` com uma lista flat. A proposta é dividir em **duas abas internas** (Time e IA) dentro da mesma aba "Automações", cada uma com suas ações, recomendações e um tutorial introdutório.
 
-| Fonte | Ícone | Método | Descrição |
-|-------|-------|--------|-----------|
-| **Site / Landing Page** | Globe | Webhook direto | Colar a URL do webhook no formulário do site |
-| **Meta Ads (Facebook/Instagram)** | Facebook icon | Webhook via Zapier/Make ou integração direta | Conectar formulário de lead do Meta ao CRM |
-| **Google Ads** | Search | Webhook via Zapier/Make | Conectar extensões de formulário do Google |
-| **WhatsApp** | MessageCircle | Integração Izitech | Leads que chegam via WhatsApp (já integrado) |
-| **Formulário externo** | FileText | Webhook direto | Qualquer formulário (Typeform, Google Forms, etc.) |
-| **Zapier / Make** | Zap | Webhook + automação | Usar plataforma de automação como intermediário |
-| **Importar planilha** | FileSpreadsheet | Upload CSV | Importação manual em massa |
+### Classificação
 
-### UX — Fluxo interativo
+**Automações do Time (humanas):**
+- Criar tarefa, Adicionar/Remover tag, Mudar etapa, Notificar responsável, Enviar WhatsApp, Atribuir a pessoa, Atribuir a time, Mover para outro funil
 
-1. **Tela inicial**: Grid de cards (2-3 colunas) com ícone, nome e descrição curta de cada fonte
-2. **Ao clicar num card**: Abre um painel/dialog com tutorial passo-a-passo específico para aquela fonte:
-   - **Passo 1**: Explicação do que é necessário (ex: "Acesse o Gerenciador de Anúncios do Meta")
-   - **Passo 2**: A URL do webhook já pronta para copiar (gerada automaticamente com o orgId)
-   - **Passo 3**: Instruções visuais de onde colar (com screenshots placeholder ou descrições claras)
-   - **Passo 4**: Testar a integração (botão "Enviar lead de teste")
-   - Para Zapier/Make: campo para o usuário colar a URL do webhook do Zapier/Make (bidirecional)
-3. Badge de status em cada card: "Configurado" (verde) / "Pendente" (cinza)
+**Automações de IA:**
+- IA: Primeiro contato, IA: Follow-up automático, IA: Qualificar lead
 
-### Mudanças técnicas
+### Mudanças
 
-**Arquivo novo**: `src/components/crm/CrmIntegrationHub.tsx`
-- Componente principal com grid de cards
-- Estado para qual integração está selecionada
-- Dialog/Sheet com o tutorial step-by-step para cada fonte
-- Reutiliza o `webhookUrl` já existente
-- Mantém a importação CSV existente inline
+**1. `src/components/crm/CrmAutomations.tsx`** — Refatorar para ter sub-tabs:
 
-**Arquivo editado**: `src/components/crm/CrmIntegrations.tsx`
-- Renomear para wrapper que renderiza o novo `CrmIntegrationHub`
-- Ou substituir o conteúdo diretamente
+- Adicionar **duas sub-abas**: "Automações do Time" (ícone Users2) e "Automações de IA" (ícone Bot)
+- Cada aba filtra as automações existentes pelo campo `ai` das ACTIONS
+- Cada aba mostra apenas as recomendações relevantes (IA vs Time)
+- Cada aba mostra apenas os ACTIONS pertinentes no dialog de criação/edição
+- O filtro de funil permanece global (acima das sub-abas)
 
-**Arquivo editado**: `src/components/crm/CrmConfigPage.tsx`
-- Nenhuma mudança necessária (já importa `CrmIntegrations`)
+**2. Tutorial introdutório em cada aba:**
 
-### Conteúdo dos tutoriais (por fonte)
+Adicionar um bloco colapsável (usando `Collapsible` ou um card com toggle "Saiba mais") no topo de cada aba:
 
-**Site / Landing Page:**
-1. Copie a URL do webhook abaixo
-2. No código do seu site, envie um POST para essa URL quando o formulário for submetido
-3. Campos aceitos: name, email, phone, company, source, value, tags
-4. Teste enviando um lead
+**Aba Time:**
+- **O que são?** Regras automáticas que executam ações operacionais quando algo acontece no CRM
+- **Por que usar?** Elimina tarefas manuais repetitivas, garante que nenhum lead fique sem atenção, padroniza processos
+- **Exemplos práticos:** "Quando um lead é criado via Ads, atribuir automaticamente ao time de vendas" / "Quando lead fica parado 3 dias, notificar o responsável"
 
-**Meta Ads:**
-1. Acesse o Gerenciador de Anúncios do Meta
-2. Vá em Integrações > Webhooks do formulário de lead
-3. Cole a URL do webhook
-4. Ou: use Zapier/Make como intermediário (link para o card Zapier)
+**Aba IA:**
+- **O que são?** Automações que utilizam nossa IA para interagir com leads via WhatsApp de forma inteligente e personalizada
+- **Por que usar?** Resposta imediata 24/7, qualificação automática com metodologia BANT, follow-ups persistentes sem esforço humano
+- **Exemplos práticos:** "Quando lead chega, nossa IA envia mensagem de boas-vindas e inicia qualificação" / "Se lead não responde em 24h, nossa IA faz follow-up automático"
+- Destaque: "Cada automação de IA precisa de um Agente configurado na seção Agentes IA"
 
-**Google Ads:**
-1. Extensões de formulário do Google Ads não suportam webhook direto
-2. Use Zapier ou Make para conectar: Google Ads Lead Form → Webhook
-3. Cole a URL do webhook no Zapier/Make
+**3. Tutorial na aba Integrações:**
 
-**WhatsApp (Izitech):**
-1. Sua integração WhatsApp via Izitech já sincroniza contatos automaticamente
-2. Para converter contatos em leads no CRM, acesse a aba Contatos e clique "Criar negociação"
+Adicionar o mesmo padrão de bloco educativo no topo do `CrmIntegrationHub.tsx`:
+- **O que são?** Conexões que trazem seus leads de diferentes fontes diretamente para o CRM
+- **Por que usar?** Centraliza todos os leads em um só lugar, sem perder nenhum contato, independente da origem
+- Breve: "Escolha abaixo de onde vêm seus leads e siga o passo a passo"
 
-**Formulário externo:**
-1. Copie a URL do webhook
-2. Configure seu formulário (Typeform, Google Forms, JotForm, etc.) para enviar POST para essa URL
-3. Mapeie os campos do formulário para: name, email, phone
+### Estrutura visual
 
-**Zapier / Make:**
-1. Crie um Zap ou cenário com o trigger desejado (ex: nova resposta no Google Forms)
-2. Adicione uma ação "Webhook" e cole a URL abaixo
-3. Mapeie os campos para o formato JSON aceito
-4. Opcional: cole a URL do seu Zap aqui para referência
+```text
+┌─────────────────────────────────────┐
+│ Configurações do CRM                │
+│ [Funis][Equipe]...[Integ.][Autom.]  │
+│                                     │
+│ Aba: Automações                     │
+│ ┌──────────────┬───────────────┐    │
+│ │ 👥 Do Time   │ 🤖 De IA     │    │
+│ └──────────────┴───────────────┘    │
+│                                     │
+│ 📘 Saiba mais (colapsável)          │
+│ "O que são? Por que usar?..."       │
+│                                     │
+│ ⭐ Recomendadas (filtradas)         │
+│ ───────────────────────────────     │
+│ Suas automações (filtradas)         │
+│ [+ Nova automação]                  │
+└─────────────────────────────────────┘
+```
 
-**Importar planilha:**
-- Mantém o componente CSV existente inline
+### Arquivos afetados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/crm/CrmAutomations.tsx` | Sub-tabs Time/IA, tutorial colapsável, filtro de ações por categoria |
+| `src/components/crm/CrmIntegrationHub.tsx` | Bloco educativo no topo |
+
+Nenhuma mudança de banco de dados necessária — a separação é puramente visual/UX.
 
