@@ -119,7 +119,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
   conteudos: {
     slug: "conteudos",
     title: "Roteiros de Vídeo",
-    subtitle: "Roteiros estratégicos gerados por IA",
+    subtitle: "Roteiros estratégicos gerados pela nossa IA",
     icon: Palette,
     whatIs: "A ferramenta de Roteiros usa IA para criar scripts de vídeo completos para Reels, TikTok, YouTube e Stories. Com base na sua estratégia, ela gera roteiros com hook, desenvolvimento e CTA otimizados para o algoritmo.",
     steps: [
