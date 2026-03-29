@@ -117,7 +117,7 @@ export default function ClientePlanoCreditos() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Agente IA / WhatsApp</span>
-                  <span className="font-semibold text-foreground">{currentPlan.hasAiAgent ? "✅ Incluso" : "❌ Não incluso"}</span>
+                  <span className="font-semibold text-foreground">✅ Incluso</span>
                 </div>
               </>
             )}

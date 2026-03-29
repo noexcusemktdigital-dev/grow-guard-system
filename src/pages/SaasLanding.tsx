@@ -267,15 +267,6 @@ const SaasLanding = () => {
                   ))}
                 </ul>
 
-                {!plan.hasAiAgent && (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {["Agente IA", "WhatsApp", "Disparos"].map((label) => (
-                      <span key={label} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-white/30 bg-white/5">
-                        <Lock className="h-2.5 w-2.5" /> {label}
-                      </span>
-                    ))}
-                  </div>
-                )}
 
                 <Link to="/app">
                   <Button

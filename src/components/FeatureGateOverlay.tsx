@@ -129,16 +129,6 @@ export function FeatureGateOverlay() {
       accent: "from-primary/90 to-primary/70",
       iconBg: "bg-primary/15 text-primary",
     },
-    plan_locked: {
-      icon: Lock,
-      title: "Recurso exclusivo do Plano Pro",
-      description:
-        "Este recurso está disponível a partir do Plano Pro. Faça upgrade para desbloquear Agente de IA, WhatsApp e Disparos.",
-      cta: "Ver planos disponíveis",
-      ctaPath: "/cliente/plano-creditos",
-      accent: "from-primary/90 to-primary/70",
-      iconBg: "bg-primary/15 text-primary",
-    },
   }[reason];
 
   const Icon = config.icon;
