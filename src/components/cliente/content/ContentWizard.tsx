@@ -170,7 +170,7 @@ export function ContentWizard({
     <div className="space-y-6">
       <div>
         <h3 className="text-xl font-semibold mb-1">Qual é o objetivo desses roteiros?</h3>
-        <p className="text-sm text-muted-foreground">A IA distribui os objetivos proporcionalmente entre os roteiros.</p>
+        <p className="text-sm text-muted-foreground">A nossa IA distribui os objetivos proporcionalmente entre os roteiros.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {OBJETIVOS.map(o => (
