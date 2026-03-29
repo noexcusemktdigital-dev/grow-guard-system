@@ -195,7 +195,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
 
   const addKbText = () => {
     if (textInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] }));
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] as any }));
       setTextInput("");
     }
   };

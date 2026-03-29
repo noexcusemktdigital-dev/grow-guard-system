@@ -69,21 +69,8 @@ function AcademyAdminInner({
   selectedModuleFilter, setSelectedModuleFilter,
   filteredLessons, filteredQuiz, activeQuizId,
   mutations,
-}: {
-  modules: Array<{ id: string; title: string; description: string; category: string; sort_order: number; [key: string]: unknown }>;
-  allLessons: Array<{ id: string; module_id: string; title: string; content: string; video_url: string | null; sort_order: number; duration_minutes: number; [key: string]: unknown }>;
-  questions: Array<{ id: string; lesson_id: string; question: string; options: string[]; correct_index: number; [key: string]: unknown }>;
-  createModule: { mutate: (data: Record<string, unknown>) => void };
-  updateModule: { mutate: (data: Record<string, unknown>) => void };
-  deleteModule: { mutate: (id: string) => void };
-  createLesson: { mutate: (data: Record<string, unknown>) => void };
-  updateLesson: { mutate: (data: Record<string, unknown>) => void };
-  deleteLesson: { mutate: (id: string) => void };
-  createQuestion: { mutate: (data: Record<string, unknown>) => void };
-  updateQuestion: { mutate: (data: Record<string, unknown>) => void };
-  deleteQuestion: { mutate: (id: string) => void };
-}) {
-  const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId);
+}: any) {
+  const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId) as any;
 
   // Module dialog
   const [moduleDialog, setModuleDialog] = useState(false);
