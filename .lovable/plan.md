@@ -1,37 +1,52 @@
 
 
-## Atualização de Planos — Todas as ferramentas liberadas desde o Starter
+## Padronização de termos — "a IA" → "a nossa IA"
 
-### Resumo das mudanças
+### O que será feito
 
-Todos os planos passam a liberar **todas as ferramentas** (WhatsApp, Agente IA, Disparos). A diferenciação entre planos será apenas por créditos, usuários, pipelines e sites. O custo do WhatsApp (R$ 45/mês) já está embutido nos novos preços.
+Varredura completa em todos os arquivos `.tsx` e `.ts` do `src/` para substituir referências genéricas à IA por linguagem proprietária ("a nossa IA", "nossa IA"), reforçando que a tecnologia pertence à plataforma NoExcuse.
 
-### Novos valores e limites
+### Regras de substituição
 
-| Plano | Preço | Créditos | Usuários | Pipelines | WhatsApp/IA/Disparos |
-|-------|-------|----------|----------|-----------|----------------------|
-| Starter | R$ 349 | 500 | 10 | 10 | ✅ Todos |
-| Pro | R$ 739 | 1.000 | 20 | 20 | ✅ Todos |
-| Enterprise | R$ 1.429 | 2.000 | Ilimitados | 50 | ✅ Todos |
+| De | Para |
+|----|------|
+| "a IA" (como sujeito) | "a nossa IA" |
+| "A IA" (início de frase) | "A nossa IA" |
+| "da IA" | "da nossa IA" |
+| "pela IA" | "pela nossa IA" |
+| "deixe a IA" | "deixe a nossa IA" |
+| "com IA" (contexto genérico) | "com a nossa IA" |
+| "de IA" (em descrições de features) | "de IA" (manter quando é nome de categoria, ex: "Agentes de IA") |
+| "Funções de IA" | "Funções da nossa IA" |
+| "ação de IA" | "ação da nossa IA" |
+| "agente de IA" (referindo ao produto) | manter como está (é nome do produto) |
 
-### Arquivos afetados
+**Exceções** — manter sem alteração:
+- "Agentes de IA" (nome do módulo/produto)
+- "Prospecção IA" (nome de feature)
+- Nomes de variáveis/código (ex: `generating === "persona"`)
+- Mensagens de erro técnicas (ex: `"Resposta inválida da IA"`)
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/constants/plans.ts` | Atualizar preços, créditos do Enterprise (2000), e setar `hasAiAgent`, `hasWhatsApp`, `hasDispatches` como `true` em **todos** os planos (incluindo Starter). Atualizar `features[]` para refletir que tudo está incluso. Manter Trial com as flags `false` (trial continua limitado). |
-| `src/contexts/FeatureGateContext.tsx` | Remover as travas `AI_AGENT_ROUTES` e `DISPATCH_ROUTES` que bloqueavam por `plan_locked`. Remover `TRIAL_BLOCKED` (sites e tráfego ficam acessíveis no trial também, limitados por créditos). Simplificar o `getGateReason`. |
-| `src/components/FeatureGateOverlay.tsx` | Remover a config `plan_locked` (não será mais usada). |
-| `src/pages/cliente/ClientePlanoCreditos.tsx` | Atualizar a exibição para não mostrar "Agente IA / WhatsApp: ❌ Não incluso" — agora sempre incluso. |
-| `src/pages/cliente/ClientePlanoCreditsHelpers.tsx` | Remover badges "Pro+ exclusivo" que aparecem quando `!plan.hasAiAgent`. |
-| `src/pages/SaasLanding.tsx` | Remover badges de "Agente IA", "WhatsApp", "Disparos" como exclusivos do Pro. Atualizar preços na landing. |
+### Arquivos afetados (16 arquivos)
 
-### Detalhes técnicos
+| Arquivo | Exemplos de alteração |
+|---------|----------------------|
+| `src/pages/SaasLanding.tsx` | "deixe a IA qualificar" → "deixe a nossa IA qualificar"; "gerados por IA" → "gerados pela nossa IA"; "CRM inteligente com IA" → "CRM inteligente com a nossa IA" |
+| `src/constants/featureTutorials.ts` | "A IA analisará" → "A nossa IA analisará"; "A IA criará" → "A nossa IA criará"; "priorizadas pela IA" → "priorizadas pela nossa IA" |
+| `src/components/cliente/OnboardingTour.tsx` | "Cada ação de IA" → "Cada ação da nossa IA" |
+| `src/components/cliente/CreditAlertBanner.tsx` | "Funções de IA estão pausadas" → "Funções da nossa IA estão pausadas" |
+| `src/components/cliente/AgentFormSheetPersona.tsx` | "Gerar saudação com IA" → "Gerar saudação com a nossa IA" |
+| `src/components/cliente/AgentFormSheetPrompt.tsx` | "Gerar com IA" → "Gerar com a nossa IA" |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | "preenchidos com IA" → "preenchidos pela nossa IA" |
+| `src/pages/cliente/ClienteChecklist.tsx` | "Gerar Checklist com IA" → "Gerar Checklist com a nossa IA" |
+| `src/pages/cliente/ClientePlanoCreditsHelpers.tsx` | "ação de IA" → "ação da nossa IA" |
+| `src/pages/cliente/ClientePlanoVendasData.ts` | Manter "agente de IA" (nome do produto) |
+| `src/pages/franqueado/FranqueadoEstrategia.tsx` | "A IA irá extrair" → "A nossa IA irá extrair" |
+| `src/pages/franqueado/FranqueadoProspeccaoIA.tsx` | "com IA" → "com a nossa IA" |
+| `src/pages/TermosDeUso.tsx` | "geração de conteúdo com IA" → "geração de conteúdo com a nossa IA" |
+| `src/components/crm/CrmAutomations.tsx` | "Nossa IA envia" — já está correto |
+| `src/components/crm/CrmTutorial.tsx` | "Automações com IA" → "Automações com a nossa IA" |
+| `src/components/cliente/ScriptGeneratorDialog.tsx` | "Gerar com IA" → "Gerar com a nossa IA" |
 
-**`plans.ts`** — Mudanças nos dados:
-- Starter: `price: 349`, `hasAiAgent: true`, `hasWhatsApp: true`, `hasDispatches: true`
-- Pro: `price: 739`
-- Enterprise: `price: 1429`, `credits: 2000`
-- Features do Starter atualizadas para incluir "Agente de IA", "Chat WhatsApp", "Disparos em massa"
-
-**`FeatureGateContext.tsx`** — Remover os blocos que checam `limits.hasAiAgent` e `limits.hasDispatches` para retornar `plan_locked`. Também remover `TRIAL_BLOCKED` para que trial users vejam as ferramentas (limitados apenas por créditos e expiração).
+Os arquivos `ArtWizardSteps.tsx` e `ContentWizard.tsx` já usam "A nossa IA" corretamente.
 
