@@ -92,7 +92,6 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const roleOptions = isFranqueadoView
     ? [
         { value: "franqueado", label: "Administrador" },
-        { value: "cliente_user", label: "Usuário" },
       ]
     : [
         { value: "franqueado", label: "Franqueado (Admin)" },

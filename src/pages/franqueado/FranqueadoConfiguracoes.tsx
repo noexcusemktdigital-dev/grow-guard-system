@@ -122,7 +122,6 @@ function TeamTab() {
 
   const FRANQUEADO_ROLE_OPTIONS = [
     { value: "franqueado", label: "Admin (Franqueado)" },
-    { value: "cliente_user", label: "Operador" },
   ];
 
   const inviteMutation = useMutation({
