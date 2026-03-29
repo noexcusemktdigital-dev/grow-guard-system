@@ -144,7 +144,7 @@ export function ClientePlanoVendasDiagnostico({
 
               <Card className="glass-card">
                 <CardContent className="py-6">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">ATUAL vs IDEAL (100%)</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">ATUAL vs IDEAL (100%) <InfoTip text="Comparação entre seu score atual e o ideal (100%) em cada dimensão. A diferença mostra onde há mais espaço para crescimento." /></p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={radarData.map(d => ({ ...d, ideal: 100 }))} margin={{ left: 10, right: 10 }}>
