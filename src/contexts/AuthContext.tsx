@@ -142,48 +142,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Genuine "no roles" — only provision for SaaS signups
+        // Genuine "no roles" — wait for provisioning (done by SaasAuth)
+        // Poll for role creation instead of calling signup-saas (avoids race condition)
         const signupSource = currentUser.user_metadata?.signup_source;
         if (signupSource === "saas" || currentUser.app_metadata?.provider === "google") {
-          const companyName = currentUser.user_metadata?.company_name ||
-            (currentUser.user_metadata?.full_name ? currentUser.user_metadata.full_name + "'s Company" : "Minha Empresa");
-
-          let provisioned = false;
-          for (let attempt = 0; attempt < 2 && !provisioned; attempt++) {
-            try {
-              const provResult = await withTimeout(
-                supabase.functions.invoke("signup-saas", {
-                  body: { user_id: currentUser.id, company_name: companyName },
-                }),
-                8000,
-                { error: { message: "timeout" } } as { error: { message: string } }
-              );
-
-              if (provResult?.error) {
-                // Provisioning error, retrying
-                continue;
-              }
-
-              const { data: verifyRole } = await withTimeout(
-                supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
-                8000,
-                { data: null } as { data: { role: string }[] | null }
-              );
-
-              if (verifyRole && verifyRole.length > 0) {
-                const roles = verifyRole.map((r: { role: string }) => r.role as AppRole);
-                const topRole = roles.find((r: AppRole) => r === "cliente_admin") || roles[0];
-                setRole(topRole);
-                provisioned = true;
-                lastFetchedUserRef.current = currentUser.id;
-              }
-            } catch (err) {
-              logger.error(`[Auth] Provisioning attempt ${attempt + 1} failed:`, err);
+          let found = false;
+          for (let poll = 0; poll < 10 && !found; poll++) {
+            await new Promise(r => setTimeout(r, 1000));
+            const { data: polledRoles } = await withTimeout(
+              supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
+              5000,
+              { data: null } as { data: { role: string }[] | null }
+            );
+            if (polledRoles && polledRoles.length > 0) {
+              const roles = polledRoles.map((r: { role: string }) => r.role as AppRole);
+              const topRole = roles.find((r: AppRole) => r === "cliente_admin") || roles[0];
+              setRole(topRole);
+              lastFetchedUserRef.current = currentUser.id;
+              found = true;
             }
           }
-
-          if (!provisioned) {
-            logger.error("[Auth] All provisioning attempts failed, using fallback role");
+          if (!found) {
+            logger.error("[Auth] Role not found after 10s polling, using fallback");
             setRole("cliente_admin");
             lastFetchedUserRef.current = currentUser.id;
           }
