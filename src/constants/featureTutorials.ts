@@ -125,7 +125,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     steps: [
       { title: "Escolha o formato", description: "Selecione entre Reels/TikTok, YouTube, Stories ou vídeo longo." },
       { title: "Defina duração e objetivo", description: "Escolha a duração do vídeo e o resultado que quer gerar (educar, vender, engajar)." },
-      { title: "Gere com IA", description: "A IA criará roteiros completos com hook de impacto, desenvolvimento e CTA." },
+      { title: "Gere com a nossa IA", description: "A nossa IA criará roteiros completos com hook de impacto, desenvolvimento e CTA." },
       { title: "Copie e grave", description: "Copie o roteiro e use como guia para gravar seu vídeo." },
     ],
     benefits: [
