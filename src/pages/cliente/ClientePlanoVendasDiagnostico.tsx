@@ -291,7 +291,7 @@ export function ClientePlanoVendasDiagnostico({
                       <Card key={i} className="glass-card border-primary/10 overflow-hidden group relative">
                         <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-primary/5 group-hover:scale-150 transition-transform duration-500" />
                         <CardContent className="py-4 px-4 relative">
-                          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label}</p>
+                          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{kpi.label} <InfoTip text={kpi.tip} /></p>
                           <div className="flex items-end gap-2 mt-1">
                             <span className="text-xl font-black tracking-tight text-kpi-positive">{kpi.value}</span>
                             <TrendingUp className="w-3.5 h-3.5 text-kpi-positive mb-1" />
