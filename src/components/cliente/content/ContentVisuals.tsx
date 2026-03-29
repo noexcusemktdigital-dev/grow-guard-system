@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { parseConteudoPrincipal } from "./ContentTypes";
 
 /* ── Carrossel: slides empilhados ── */
-export function CarrosselVisual({ content }: { content: unknown }) {
+export function CarrosselVisual({ content }: { content: any }) {
   if (!Array.isArray(content)) return <GenericVisual content={content} />;
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 snap-x">
