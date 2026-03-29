@@ -21,11 +21,6 @@ export function ClienteLayout() {
   const isOnboardingRoute = location.pathname === "/cliente/onboarding";
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Gate: redirect to onboarding if not completed (skip if already on onboarding page)
-  if (!isOnboardingRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed === false) {
-    return <Navigate to="/cliente/onboarding" replace />;
-  }
-
   // Sequence: Welcome Modal → Tour → Announcements
   // Persist done states so they survive re-renders/navigation
   const [welcomeDone, setWelcomeDone] = useState(() => !!localStorage.getItem("trial_welcome_seen"));
@@ -33,6 +28,11 @@ export function ClienteLayout() {
 
   const handleWelcomeDone = useCallback(() => setWelcomeDone(true), []);
   const handleTourDone = useCallback(() => setTourDone(true), []);
+
+  // Gate: redirect to onboarding if not completed (skip if already on onboarding page)
+  if (!isOnboardingRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed === false) {
+    return <Navigate to="/cliente/onboarding" replace />;
+  }
 
   return (
     <FeatureGateProvider>
