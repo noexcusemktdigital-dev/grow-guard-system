@@ -451,7 +451,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     {izitechLoading ? (
                       <>
                         <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                        <p className="text-sm font-semibold">Criando instância via Easytech...</p>
+                        <p className="text-sm font-semibold">Criando instância via Izitech...</p>
                         <p className="text-xs text-muted-foreground">Aguarde enquanto configuramos tudo</p>
                       </>
                     ) : izitechQr ? (
