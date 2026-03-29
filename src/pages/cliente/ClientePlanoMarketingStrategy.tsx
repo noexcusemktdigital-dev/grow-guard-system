@@ -97,7 +97,7 @@ function TabResumo({ result }: { result: StrategyResult }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {radarData.length > 0 && (
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Radar de Maturidade (6 dimensões)</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Radar de Maturidade (6 dimensões) <InfoTip text="Avalia 6 áreas-chave do seu marketing. Nota de 0 a 10 em cada dimensão. Quanto mais preenchido, mais madura é sua estratégia." /></CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <RadarChart data={radarData}>
