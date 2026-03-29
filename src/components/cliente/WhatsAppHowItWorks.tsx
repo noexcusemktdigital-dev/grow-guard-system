@@ -176,10 +176,10 @@ export function WhatsAppHowItWorks({ open, onOpenChange }: WhatsAppHowItWorksPro
 
                 {/* API */}
                 <div className="flex items-center gap-2 rounded-lg border-2 border-blue-500/30 bg-blue-500/5 px-4 py-2.5">
-                  <Server className="w-4 h-4 text-blue-500" />
-                  <span className="text-xs font-semibold">
-                    Evolution API / Z-API
-                  </span>
+                   <Server className="w-4 h-4 text-blue-500" />
+                   <span className="text-xs font-semibold">
+                     Easytech
+                   </span>
                 </div>
 
                 <div className="flex flex-col items-center">
