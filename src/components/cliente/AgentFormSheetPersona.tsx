@@ -69,7 +69,7 @@ export function AgentFormSheetPersona({
               disabled={generating === "greeting"}
             >
               {generating === "greeting" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              Gerar saudação com IA
+              Gerar saudação com a nossa IA
             </Button>
           </div>
         )}
