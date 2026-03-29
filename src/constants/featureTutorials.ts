@@ -159,7 +159,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Sites IA",
     subtitle: "Landing pages geradas por inteligência artificial",
     icon: Globe,
-    whatIs: "Crie landing pages profissionais com IA em minutos. A ferramenta gera o design, textos e estrutura da página com base no seu negócio, otimizada para conversão.",
+    whatIs: "Crie landing pages profissionais com a nossa IA em minutos. A ferramenta gera o design, textos e estrutura da página com base no seu negócio, otimizada para conversão.",
     steps: [
       { title: "Informe seu negócio", description: "Descreva sua empresa, produto/serviço e público-alvo." },
       { title: "Escolha o estilo", description: "Selecione cores, estilo visual e tipo de página." },
