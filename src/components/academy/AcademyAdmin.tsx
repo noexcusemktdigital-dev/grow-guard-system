@@ -93,7 +93,7 @@ function AcademyAdminInner({
   // Quiz config
   const [passingScore, setPassingScore] = useState<number>(filteredQuiz?.passing_score ?? 70);
 
-  const openEditModule = (mod: Record<string, unknown>) => {
+  const openEditModule = (mod: any) => {
     setEditingModuleId(mod.id);
     setModuleForm({ title: mod.title, category: mod.category || "Comercial", description: mod.description || "" });
     setModuleDialog(true);
