@@ -264,7 +264,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
                     <Server className="w-5 h-5 text-blue-500" />
                   </div>
-                  <p className="text-sm font-bold">Easytech (Manual)</p>
+                  <p className="text-sm font-bold">Izitech (Manual)</p>
                   <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
                     Configure sua própria instância informando os dados manualmente.
                   </p>
