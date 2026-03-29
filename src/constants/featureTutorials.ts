@@ -163,7 +163,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     steps: [
       { title: "Informe seu negócio", description: "Descreva sua empresa, produto/serviço e público-alvo." },
       { title: "Escolha o estilo", description: "Selecione cores, estilo visual e tipo de página." },
-      { title: "Gere o site", description: "A IA criará a landing page completa com textos persuasivos." },
+      { title: "Gere o site", description: "A nossa IA criará a landing page completa com textos persuasivos." },
       { title: "Publique", description: "Exporte o código ou publique diretamente pela plataforma." },
     ],
     benefits: [
