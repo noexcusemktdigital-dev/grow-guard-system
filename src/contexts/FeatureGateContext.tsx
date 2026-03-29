@@ -116,18 +116,6 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
 
     if (isTrialExpired) return "trial_expired";
 
-    // Trial-limited features
-    if (isTrial && TRIAL_BLOCKED.some((r) => feature.startsWith(r)))
-      return "trial_limited";
-
-    // Plan lock: AI Agent requires Pro+
-    if (!limits.hasAiAgent && AI_AGENT_ROUTES.some((r) => feature.startsWith(r)))
-      return "plan_locked";
-
-    // Plan lock: Dispatches requires Pro+
-    if (!limits.hasDispatches && DISPATCH_ROUTES.some((r) => feature.startsWith(r)))
-      return "plan_locked";
-
     if (!salesPlanCompleted && SALES_PLAN_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_sales_plan";
 
