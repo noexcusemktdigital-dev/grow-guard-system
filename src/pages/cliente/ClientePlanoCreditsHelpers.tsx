@@ -657,21 +657,6 @@ export function PlanCard({
           ))}
         </ul>
 
-        {/* Pro+ exclusive badges */}
-        {!plan.hasAiAgent && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {[
-              { icon: Bot, label: "Agente IA" },
-              { icon: MessageSquare, label: "WhatsApp" },
-              { icon: Send, label: "Disparos" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 text-muted-foreground text-[10px]">
-                <Lock className="w-2.5 h-2.5" />
-                {item.label}
-              </div>
-            ))}
-          </div>
-        )}
 
         <Button className="w-full" variant={isCurrent ? "outline" : "default"} disabled={isCurrent} onClick={onSelect}>
           {isCurrent ? "Plano Atual" : "Escolher Plano"}

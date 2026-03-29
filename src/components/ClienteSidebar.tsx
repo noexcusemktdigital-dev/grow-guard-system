@@ -73,7 +73,7 @@ const GATE_REASON_LABELS: Record<string, string> = {
   no_sales_plan: "Complete o Plano de Vendas",
   no_marketing_strategy: "Complete o Plano de Marketing",
   admin_only: "Apenas administradores",
-  plan_locked: "Upgrade de plano necessário",
+  
 };
 
 function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; collapsed: boolean; isGated: boolean; gateReason: string | null }) {

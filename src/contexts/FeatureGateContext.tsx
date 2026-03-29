@@ -7,7 +7,7 @@ import { useSalesPlanCompleted } from "@/hooks/useSalesPlan";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEffectiveLimits } from "@/constants/plans";
 
-type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | "plan_locked" | null;
+type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
@@ -67,13 +67,6 @@ const MARKETING_STRATEGY_REQUIRED = [
   "/cliente/trafego-pago",
 ];
 
-// Routes blocked for trial users (upgrade required)
-const TRIAL_BLOCKED = [
-  "/cliente/sites",
-  "/cliente/trafego-pago",
-  "/cliente/disparos",
-];
-
 // Routes blocked for cliente_user (admin only)
 const ADMIN_ONLY_ROUTES = [
   "/cliente/disparos",
@@ -81,17 +74,6 @@ const ADMIN_ONLY_ROUTES = [
   "/cliente/trafego-pago",
   "/cliente/integracoes",
   "/cliente/plano-creditos",
-];
-
-// Routes requiring AI Agent (Pro+ only)
-const AI_AGENT_ROUTES = [
-  "/cliente/agentes-ia",
-  "/cliente/chat",
-];
-
-// Routes requiring WhatsApp/Dispatches (Pro+ only)
-const DISPATCH_ROUTES = [
-  "/cliente/disparos",
 ];
 
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
@@ -133,18 +115,6 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
       return "admin_only";
 
     if (isTrialExpired) return "trial_expired";
-
-    // Trial-limited features
-    if (isTrial && TRIAL_BLOCKED.some((r) => feature.startsWith(r)))
-      return "trial_limited";
-
-    // Plan lock: AI Agent requires Pro+
-    if (!limits.hasAiAgent && AI_AGENT_ROUTES.some((r) => feature.startsWith(r)))
-      return "plan_locked";
-
-    // Plan lock: Dispatches requires Pro+
-    if (!limits.hasDispatches && DISPATCH_ROUTES.some((r) => feature.startsWith(r)))
-      return "plan_locked";
 
     if (!salesPlanCompleted && SALES_PLAN_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_sales_plan";
