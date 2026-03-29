@@ -417,13 +417,24 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
       <Dialog open={lostDialog} onOpenChange={setLostDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Marcar como perdido</DialogTitle></DialogHeader>
-          <div>
-            <Label className="text-xs">Motivo (opcional)</Label>
-            <Textarea value={lostReason} onChange={e => setLostReason(e.target.value)} placeholder="Por que este lead foi perdido?" className="text-sm" />
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs font-medium">Motivo da perda *</Label>
+              <Select value={lostReason} onValueChange={setLostReason}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
+                <SelectContent>
+                  {configuredReasons.map(r => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Descrição (opcional)</Label>
+              <Textarea value={lostDescription} onChange={e => setLostDescription(e.target.value)} placeholder="Detalhes adicionais..." className="text-sm" rows={2} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setLostDialog(false)}>Cancelar</Button>
-            <Button size="sm" variant="destructive" onClick={handleMarkLost}>Confirmar</Button>
+            <Button size="sm" variant="destructive" onClick={handleMarkLost} disabled={!lostReason}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

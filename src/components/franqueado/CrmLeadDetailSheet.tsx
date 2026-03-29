@@ -15,6 +15,7 @@ import {
   Clock, User, Eye, Plus,
 } from "lucide-react";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useProspections } from "@/hooks/useFranqueadoProspections";
 import { useStrategies } from "@/hooks/useFranqueadoStrategies";
