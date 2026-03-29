@@ -376,88 +376,34 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <StepHeader
                     number={2}
                     title="Insira suas credenciais"
-                    description={provider === "zapi"
-                      ? "Copie as informações do painel Z-API e cole nos campos abaixo."
-                      : "Informe o nome da instância. URL e API Key são opcionais se usar o servidor padrão."
-                    }
+                    description="Informe o nome da instância. URL e API Key são opcionais se usar o servidor padrão."
                   />
 
-                  {provider === "zapi" ? (
-                    <>
-                      <div className="rounded-xl border-2 border-dashed border-border bg-muted/20 p-5">
-                        <div className="flex flex-col items-center text-center space-y-3">
-                          <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center">
-                            <KeyRound className="w-8 h-8 text-violet-500" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold">Onde encontrar as credenciais?</p>
-                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                              No painel Z-API, selecione sua instância e vá na aba <strong>"Detalhes"</strong>.
-                            </p>
-                          </div>
-                        </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <Copy className="w-3 h-3 text-muted-foreground" /> Nome da Instância <span className="text-destructive">*</span>
+                      </Label>
+                      <Input placeholder="Ex: minha-empresa" value={evoCreds.instanceName} onChange={(e) => setEvoCreds((p) => ({ ...p, instanceName: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
+                      </Label>
+                      <Input placeholder="https://api.easytech.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <KeyRound className="w-3 h-3 text-muted-foreground" /> API Key Global <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
+                      </Label>
+                      <div className="relative">
+                        <Input placeholder="Sua API Key global" type={showApiKey ? "text" : "password"} value={evoCreds.apiKey} onChange={(e) => setEvoCreds((p) => ({ ...p, apiKey: e.target.value }))} />
+                        <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowApiKey(!showApiKey)}>
+                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Copy className="w-3 h-3 text-muted-foreground" /> Instance ID
-                          </Label>
-                          <Input placeholder="Ex: 3C67AB2F1A4D..." value={creds.instanceId} onChange={(e) => setCreds((p) => ({ ...p, instanceId: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <KeyRound className="w-3 h-3 text-muted-foreground" /> Token
-                          </Label>
-                          <div className="relative">
-                            <Input placeholder="Token da instância" type={showToken ? "text" : "password"} value={creds.instanceToken} onChange={(e) => setCreds((p) => ({ ...p, instanceToken: e.target.value }))} />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowToken(!showToken)}>
-                              {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <ShieldCheck className="w-3 h-3 text-muted-foreground" /> Client-Token
-                          </Label>
-                          <div className="relative">
-                            <Input placeholder="Token de segurança da conta" type={showClientToken ? "text" : "password"} value={creds.clientToken} onChange={(e) => setCreds((p) => ({ ...p, clientToken: e.target.value }))} />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowClientToken(!showClientToken)}>
-                              {showClientToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Copy className="w-3 h-3 text-muted-foreground" /> Nome da Instância <span className="text-destructive">*</span>
-                          </Label>
-                          <Input placeholder="Ex: minha-empresa" value={evoCreds.instanceName} onChange={(e) => setEvoCreds((p) => ({ ...p, instanceName: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <Server className="w-3 h-3 text-muted-foreground" /> URL da API <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
-                          </Label>
-                          <Input placeholder="https://evo.grupolamadre.com.br" value={evoCreds.baseUrl} onChange={(e) => setEvoCreds((p) => ({ ...p, baseUrl: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold flex items-center gap-1.5">
-                            <KeyRound className="w-3 h-3 text-muted-foreground" /> API Key Global <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
-                          </Label>
-                          <div className="relative">
-                            <Input placeholder="Sua API Key global" type={showApiKey ? "text" : "password"} value={evoCreds.apiKey} onChange={(e) => setEvoCreds((p) => ({ ...p, apiKey: e.target.value }))} />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowApiKey(!showApiKey)}>
-                              {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    </div>
+                  </div>
 
                   <div className="flex gap-2">
                     <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
