@@ -55,7 +55,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   }, [editingFunnel]);
 
   const openNewFunnel = () => {
-    if (!canCreate) { toast({ title: `Limite de ${maxFunnels} funis no plano ${plan}. Faça upgrade.`, variant: "destructive" }); return; }
+    if (!canCreate) { toast({ title: `Limite de ${maxFunnels} funis no plano ${planLabel}. Faça upgrade.`, variant: "destructive" }); return; }
     setEditingFunnel(null);
     setLocalStages([...DEFAULT_STAGES]);
     setFunnelName("");
