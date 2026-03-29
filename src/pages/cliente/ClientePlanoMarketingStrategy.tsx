@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Sparkles, CheckCircle2, RotateCcw, Clock, Target, Users, Lightbulb,
+  Sparkles, CheckCircle2, RotateCcw, Clock, Target, Users, Lightbulb, HelpCircle,
   Globe, DollarSign, TrendingUp, BarChart3, ArrowRight,
   FileText, Palette, Monitor, Zap, PenTool,
   CheckSquare, XSquare, MessageSquare,
