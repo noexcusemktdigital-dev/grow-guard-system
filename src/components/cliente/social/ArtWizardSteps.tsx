@@ -234,7 +234,7 @@ function Step4Logo({ logoUrl, setLogoUrl, onLogoUpload }: StepProps) {
       <div>
         <h3 className="text-base font-semibold mb-1">🏷️ Logo da marca</h3>
         <p className="text-sm text-muted-foreground">
-          Sua logo será aplicada automaticamente na arte final gerada pela IA.
+          Sua logo será aplicada automaticamente na arte final gerada pela nossa IA.
         </p>
       </div>
       <Card className="bg-accent/30 border-accent">
