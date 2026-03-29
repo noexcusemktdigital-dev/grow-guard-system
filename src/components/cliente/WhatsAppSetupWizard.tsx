@@ -164,7 +164,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     : evoCreds.instanceName.trim();
 
   const openSupport = () => window.open(SUPPORT_LINK, "_blank");
-  const providerLabel = provider === "izitech" ? "Easytech" : "Easytech (Manual)";
+  const providerLabel = provider === "izitech" ? "Izitech" : "Izitech (Manual)";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); } onOpenChange(v); }}>
