@@ -67,13 +67,6 @@ const MARKETING_STRATEGY_REQUIRED = [
   "/cliente/trafego-pago",
 ];
 
-// Routes blocked for trial users (upgrade required)
-const TRIAL_BLOCKED = [
-  "/cliente/sites",
-  "/cliente/trafego-pago",
-  "/cliente/disparos",
-];
-
 // Routes blocked for cliente_user (admin only)
 const ADMIN_ONLY_ROUTES = [
   "/cliente/disparos",
@@ -81,17 +74,6 @@ const ADMIN_ONLY_ROUTES = [
   "/cliente/trafego-pago",
   "/cliente/integracoes",
   "/cliente/plano-creditos",
-];
-
-// Routes requiring AI Agent (Pro+ only)
-const AI_AGENT_ROUTES = [
-  "/cliente/agentes-ia",
-  "/cliente/chat",
-];
-
-// Routes requiring WhatsApp/Dispatches (Pro+ only)
-const DISPATCH_ROUTES = [
-  "/cliente/disparos",
 ];
 
 export function FeatureGateProvider({ children }: { children: ReactNode }) {
