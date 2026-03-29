@@ -42,7 +42,7 @@ export function PostVisual({ content }: { content: any }) {
 }
 
 /* ── Vídeo: hook em destaque + roteiro colapsado ── */
-export function VideoVisual({ content }: { content: unknown }) {
+export function VideoVisual({ content }: { content: any }) {
   if (!content || typeof content !== "object") return <GenericVisual content={content} />;
   return (
     <div className="space-y-3">
