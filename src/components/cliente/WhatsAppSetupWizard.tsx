@@ -438,7 +438,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     <div className="rounded-xl border border-border bg-muted/30 p-4 w-full text-left space-y-2">
                       <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Tudo pronto!</h4>
                       <ul className="space-y-1.5 text-xs text-foreground">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Instância criada via Easytech</li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Instância criada via Izitech</li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Webhooks configurados automaticamente</li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Pronto para enviar e receber mensagens</li>
                         <li className="flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5 text-primary" /> Acesse o Chat para conversar com seus contatos</li>
