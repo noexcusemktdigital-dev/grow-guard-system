@@ -57,13 +57,13 @@ const ResetPassword = () => {
       }
     });
 
-    // Timeout: if no session after 10s, show error
+    // Timeout: if no session after 15s, show error
     const timeout = setTimeout(() => {
       setSessionReady((ready) => {
         if (!ready) setSessionError(true);
         return ready;
       });
-    }, 10000);
+    }, 15000);
 
     return () => {
       subscription.unsubscribe();
@@ -106,13 +106,17 @@ const ResetPassword = () => {
       } else if (error.message?.includes("Password should be")) {
         toast.error("A senha não atende os requisitos mínimos de segurança.");
       } else if (error.status === 422) {
-        toast.error("Sessão de recuperação inválida ou expirada. Solicite um novo link.");
+        toast.error("Sessão de recuperação inválida ou expirada. Solicite um novo link de recuperação.");
+      } else if (error.status === 403) {
+        toast.error("Sessão expirada. Solicite um novo link de recuperação.");
       } else {
         toast.error(error.message || "Erro ao redefinir senha. Tente novamente.");
       }
     } else {
       setSuccess(true);
       toast.success("Senha definida com sucesso!");
+      // Logout to clear any ghost session, then redirect to login
+      await supabase.auth.signOut({ scope: "local" });
       const dest = getRedirectPath();
       setTimeout(() => navigate(dest), 2000);
     }

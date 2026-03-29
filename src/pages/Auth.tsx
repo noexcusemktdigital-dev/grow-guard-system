@@ -91,7 +91,7 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password?portal=franchise`,
     });
     setLoading(false);
     if (error) {
