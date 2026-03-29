@@ -451,7 +451,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         toast({ title: "Lead criado e vinculado!" });
       }
     } catch (err: unknown) {
-      toast({ title: "Erro ao criar lead", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao criar lead", description: (err as any)?.message, variant: "destructive" });
     }
   };
 

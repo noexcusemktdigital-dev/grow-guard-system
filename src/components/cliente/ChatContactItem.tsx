@@ -36,7 +36,7 @@ export const ChatContactItem = React.memo(React.forwardRef<HTMLButtonElement, Pr
     const assignedName = contactExt.assigned_name || null;
     const isGroup = contactType === "group";
     const isLid = contactType === "lid";
-    const isWebsite = contactType === "website";
+    const isWebsite = (contactType as string) === "website";
     const isArchived = !!(contactExt.is_archived);
 
     return (
