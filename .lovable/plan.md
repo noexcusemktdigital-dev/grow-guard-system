@@ -1,49 +1,83 @@
 
 
-## Correção — Erro ao Definir Senha no Convite
+## Hub de Integrações do CRM — Tutorial Interativo por Fonte de Lead
 
-### Diagnóstico
+### Objetivo
+Substituir a aba "Integrações" atual (que só tem webhook genérico + CSV) por um hub visual e interativo onde o cliente escolhe **de onde vêm seus leads** e recebe um guia passo-a-passo para configurar cada integração.
 
-O problema está na página `/reset-password`. A sessão de recovery é detectada corretamente (o formulário aparece), mas o `supabase.auth.updateUser({ password })` falha com um erro genérico.
+### Fontes de Lead (cards visuais)
 
-**Causa raiz provável:** Conflito de `storageKey`. O cliente Supabase em `lib/supabase.ts` usa `storageKey: "noe-saas-auth"` para `/reset-password`, independentemente do portal do usuário. Quando o link de convite é para um usuário de franquia (`?portal=franchise`), a sessão pode estar sendo processada sob a chave errada. Além disso, `getSession()` pode retornar uma sessão antiga antes que o token de recovery do hash seja processado, causando race condition.
+| Fonte | Ícone | Método | Descrição |
+|-------|-------|--------|-----------|
+| **Site / Landing Page** | Globe | Webhook direto | Colar a URL do webhook no formulário do site |
+| **Meta Ads (Facebook/Instagram)** | Facebook icon | Webhook via Zapier/Make ou integração direta | Conectar formulário de lead do Meta ao CRM |
+| **Google Ads** | Search | Webhook via Zapier/Make | Conectar extensões de formulário do Google |
+| **WhatsApp** | MessageCircle | Integração Izitech | Leads que chegam via WhatsApp (já integrado) |
+| **Formulário externo** | FileText | Webhook direto | Qualquer formulário (Typeform, Google Forms, etc.) |
+| **Zapier / Make** | Zap | Webhook + automação | Usar plataforma de automação como intermediário |
+| **Importar planilha** | FileSpreadsheet | Upload CSV | Importação manual em massa |
 
-Outro ponto: o código atual não loga o erro real do Supabase, dificultando o diagnóstico.
+### UX — Fluxo interativo
 
-### Correções
+1. **Tela inicial**: Grid de cards (2-3 colunas) com ícone, nome e descrição curta de cada fonte
+2. **Ao clicar num card**: Abre um painel/dialog com tutorial passo-a-passo específico para aquela fonte:
+   - **Passo 1**: Explicação do que é necessário (ex: "Acesse o Gerenciador de Anúncios do Meta")
+   - **Passo 2**: A URL do webhook já pronta para copiar (gerada automaticamente com o orgId)
+   - **Passo 3**: Instruções visuais de onde colar (com screenshots placeholder ou descrições claras)
+   - **Passo 4**: Testar a integração (botão "Enviar lead de teste")
+   - Para Zapier/Make: campo para o usuário colar a URL do webhook do Zapier/Make (bidirecional)
+3. Badge de status em cada card: "Configurado" (verde) / "Pendente" (cinza)
 
-**1. `src/pages/ResetPassword.tsx`**
+### Mudanças técnicas
 
-- Logar o erro real do Supabase no console (`console.error("updateUser error:", error)`) para diagnóstico futuro
-- Exibir a mensagem real do erro no toast (em vez do genérico "Tente novamente")
-- Garantir que o `updateUser` só seja chamado após o evento `PASSWORD_RECOVERY` ou `SIGNED_IN` ser recebido via `onAuthStateChange` (não apenas por `getSession()` que pode retornar sessão antiga)
-- Adicionar um estado `recoveryEvent` para distinguir entre "sessão existente" e "sessão de recovery válida"
+**Arquivo novo**: `src/components/crm/CrmIntegrationHub.tsx`
+- Componente principal com grid de cards
+- Estado para qual integração está selecionada
+- Dialog/Sheet com o tutorial step-by-step para cada fonte
+- Reutiliza o `webhookUrl` já existente
+- Mantém a importação CSV existente inline
 
-**2. `src/lib/supabase.ts`**
+**Arquivo editado**: `src/components/crm/CrmIntegrations.tsx`
+- Renomear para wrapper que renderiza o novo `CrmIntegrationHub`
+- Ou substituir o conteúdo diretamente
 
-- Fazer o `storageKey` respeitar o parâmetro `?portal=` da URL quando estiver em `/reset-password`, garantindo que a sessão de recovery use a mesma chave que o portal de destino do usuário
+**Arquivo editado**: `src/components/crm/CrmConfigPage.tsx`
+- Nenhuma mudança necessária (já importa `CrmIntegrations`)
 
-### Detalhes técnicos
+### Conteúdo dos tutoriais (por fonte)
 
-```
-ResetPassword.tsx — mudanças:
-- Novo estado: recoveryConfirmed (boolean)
-- onAuthStateChange: setar recoveryConfirmed=true apenas nos eventos PASSWORD_RECOVERY/SIGNED_IN
-- getSession(): setar sessionReady mas NÃO recoveryConfirmed
-- handleReset: se !recoveryConfirmed, tentar exchangeCodeForSession ou logar aviso
-- console.error no catch do updateUser com error.message e error.status
-- toast.error mostrando error.message real (traduzido se necessário)
+**Site / Landing Page:**
+1. Copie a URL do webhook abaixo
+2. No código do seu site, envie um POST para essa URL quando o formulário for submetido
+3. Campos aceitos: name, email, phone, company, source, value, tags
+4. Teste enviando um lead
 
-lib/supabase.ts — mudanças:
-- getPortalStorageKey(): quando path === "/reset-password", checar searchParams.get("portal")
-  - Se portal=franchise → "noe-franchise-auth"
-  - Senão → "noe-saas-auth" (default atual)
-```
+**Meta Ads:**
+1. Acesse o Gerenciador de Anúncios do Meta
+2. Vá em Integrações > Webhooks do formulário de lead
+3. Cole a URL do webhook
+4. Ou: use Zapier/Make como intermediário (link para o card Zapier)
 
-### Arquivos afetados
+**Google Ads:**
+1. Extensões de formulário do Google Ads não suportam webhook direto
+2. Use Zapier ou Make para conectar: Google Ads Lead Form → Webhook
+3. Cole a URL do webhook no Zapier/Make
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/ResetPassword.tsx` | Log de erro real, controle de recovery event, mensagem detalhada |
-| `src/lib/supabase.ts` | StorageKey dinâmico para `/reset-password` respeitando `?portal=` |
+**WhatsApp (Izitech):**
+1. Sua integração WhatsApp via Izitech já sincroniza contatos automaticamente
+2. Para converter contatos em leads no CRM, acesse a aba Contatos e clique "Criar negociação"
+
+**Formulário externo:**
+1. Copie a URL do webhook
+2. Configure seu formulário (Typeform, Google Forms, JotForm, etc.) para enviar POST para essa URL
+3. Mapeie os campos do formulário para: name, email, phone
+
+**Zapier / Make:**
+1. Crie um Zap ou cenário com o trigger desejado (ex: nova resposta no Google Forms)
+2. Adicione uma ação "Webhook" e cole a URL abaixo
+3. Mapeie os campos para o formato JSON aceito
+4. Opcional: cole a URL do seu Zap aqui para referência
+
+**Importar planilha:**
+- Mantém o componente CSV existente inline
 
