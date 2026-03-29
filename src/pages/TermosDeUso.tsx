@@ -20,7 +20,7 @@ const TermosDeUso = () => (
 
         <section>
           <h2 className="text-xl font-semibold text-foreground">2. Descrição do Serviço</h2>
-          <p>A NoExcuse é uma plataforma SaaS de gestão comercial e marketing que oferece ferramentas de CRM, automação de vendas, geração de conteúdo com IA, disparos de mensagens e gestão de equipes comerciais.</p>
+          <p>A NoExcuse é uma plataforma SaaS de gestão comercial e marketing que oferece ferramentas de CRM, automação de vendas, geração de conteúdo com a nossa IA, disparos de mensagens e gestão de equipes comerciais.</p>
         </section>
 
         <section>
