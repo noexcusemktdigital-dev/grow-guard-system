@@ -354,7 +354,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-primary" />
-                      <p className="text-xs font-semibold">Powered by Easytech</p>
+                      <p className="text-xs font-semibold">Powered by Izitech</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
                       A instância será criada automaticamente pela Easytech.
