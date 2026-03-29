@@ -82,7 +82,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
 
   function resetForm() {
     setInviteOpen(false);
-    setInvName(""); setInvEmail(""); setInvRole("cliente_user");
+    setInvName(""); setInvEmail(""); setInvRole("franqueado");
     setInviteSuccess(false);
     setInviteTeamIds([]);
   }
