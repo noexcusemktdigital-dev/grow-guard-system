@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities, useCrmActivityMutations } from "@/hooks/useCrmActivities";
 import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmLeadHistory } from "@/hooks/useCrmLeadHistory";
