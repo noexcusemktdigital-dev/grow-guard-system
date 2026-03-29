@@ -136,7 +136,14 @@ function TeamTab() {
           team_ids: inviteTeamIds,
         },
       });
-      if (error) throw error;
+      if (error) {
+        const ctx = (error as any).context;
+        if (ctx instanceof Response) {
+          const body = await ctx.json().catch(() => null);
+          throw new Error(body?.error || error.message);
+        }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
       return data;
     },

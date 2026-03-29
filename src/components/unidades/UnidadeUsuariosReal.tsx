@@ -56,7 +56,14 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
       const { data, error } = await supabase.functions.invoke("invite-user", {
         body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId, team_ids: inviteTeamIds },
       });
-      if (error) throw error;
+      if (error) {
+        const ctx = (error as any).context;
+        if (ctx instanceof Response) {
+          const body = await ctx.json().catch(() => null);
+          throw new Error(body?.error || error.message);
+        }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
       queryClient.invalidateQueries({ queryKey: ["unit-members", unitOrgId] });
       setInviteSuccess(true);
