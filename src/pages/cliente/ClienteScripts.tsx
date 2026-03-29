@@ -17,6 +17,7 @@ import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useCliente
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
+import { ScriptContentRenderer } from "@/components/cliente/ScriptContentRenderer";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 
 import { useUserOrgId } from "@/hooks/useUserOrgId";
