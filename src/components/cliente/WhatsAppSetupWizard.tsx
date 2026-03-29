@@ -198,7 +198,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <MessageSquare className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold">Conectar WhatsApp via Easytech</h3>
+                  <h3 className="text-sm font-bold">Conectar WhatsApp via Izitech</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Parceiro oficial de integração WhatsApp.
                   </p>
