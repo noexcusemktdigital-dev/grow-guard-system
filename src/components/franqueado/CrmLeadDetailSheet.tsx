@@ -68,8 +68,10 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
   }
 
   function handleLost() {
-    markAsLost.mutate({ id: lead.id, lost_reason: lostReason }, {
-      onSuccess: () => { toast.success("Lead marcado como perdido"); setShowLostDialog(false); setLostReason(""); },
+    if (!lostReason) return;
+    const fullReason = lostDescription ? `${lostReason}: ${lostDescription}` : lostReason;
+    markAsLost.mutate({ id: lead.id, lost_reason: fullReason }, {
+      onSuccess: () => { toast.success("Lead marcado como perdido"); setShowLostDialog(false); setLostReason(""); setLostDescription(""); },
     });
   }
 
