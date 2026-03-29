@@ -140,7 +140,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Postagem",
     subtitle: "Crie artes profissionais com IA",
     icon: Share2,
-    whatIs: "A ferramenta de Postagem permite criar artes visuais para redes sociais usando inteligência artificial. Gere artes profissionais em segundos com textos, referências visuais e sua identidade de marca.",
+    whatIs: "A ferramenta de Postagem permite criar artes visuais para redes sociais usando a nossa inteligência artificial. Gere artes profissionais em segundos com textos, referências visuais e sua identidade de marca.",
     steps: [
       { title: "Descreva o que quer", description: "Informe o tema, objetivo e estilo desejado. A IA gera os textos automaticamente." },
       { title: "Envie a logo", description: "Faça upload da sua logo para aplicação automática na arte." },
