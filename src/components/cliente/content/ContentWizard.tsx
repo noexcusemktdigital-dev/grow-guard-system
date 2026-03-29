@@ -188,7 +188,7 @@ export function ContentWizard({
       <div>
         <h3 className="text-xl font-semibold mb-1">Duração e tema do vídeo</h3>
         <p className="text-sm text-muted-foreground">
-          A IA ajusta o roteiro (hook, desenvolvimento e CTA) para caber no tempo selecionado.
+          A nossa IA ajusta o roteiro (hook, desenvolvimento e CTA) para caber no tempo selecionado.
         </p>
       </div>
 

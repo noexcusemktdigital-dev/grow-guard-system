@@ -157,7 +157,7 @@ export function ScriptGeneratorBriefingStep({
         <Textarea
           rows={3}
           className="text-xs"
-          placeholder="Cole aqui trechos de documentos, dados de pesquisa, informações sobre o mercado ou qualquer contexto adicional que a IA deve usar para personalizar o script..."
+          placeholder="Cole aqui trechos de documentos, dados de pesquisa, informações sobre o mercado ou qualquer contexto adicional que a nossa IA deve usar para personalizar o script..."
           value={additionalContext}
           onChange={e => setAdditionalContext(e.target.value)}
         />

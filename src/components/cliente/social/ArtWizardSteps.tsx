@@ -528,7 +528,7 @@ export function ArtWizardStep8Review({
       <div>
         <h3 className="text-base font-semibold mb-1">✅ Revisão final</h3>
         <p className="text-sm text-muted-foreground">
-          {isFillingAI ? "A IA está gerando os textos..." : "Revise e aprove os textos de cada peça individualmente."}
+          {isFillingAI ? "A nossa IA está gerando os textos..." : "Revise e aprove os textos de cada peça individualmente."}
         </p>
       </div>
 
