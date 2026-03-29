@@ -353,12 +353,11 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-primary" />
-                      <p className="text-xs font-semibold">Powered by IZITECH Connect</p>
+                      <p className="text-xs font-semibold">Powered by Easytech</p>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      A instância será criada automaticamente na plataforma IZITECH Connect.
+                      A instância será criada automaticamente pela Easytech.
                       Os webhooks serão configurados para receber mensagens diretamente neste sistema.
-                      Este serviço tem custo separado conforme seu plano contratado.
                     </p>
                   </div>
 
