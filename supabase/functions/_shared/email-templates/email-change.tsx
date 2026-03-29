@@ -32,21 +32,21 @@ export const EmailChangeEmail = ({
 }: EmailChangeEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme a alteração do seu e-mail — NoExcuse Digital</Preview>
+    <Preview>Confirme seu novo e-mail — NoExcuse Digital</Preview>
     <Body style={main}>
       <Container style={container}>
         <Img src={LOGO_URL} alt="NoExcuse Digital" width="160" height="auto" style={logo} />
-        <Heading style={h1}>Confirme a alteração do e-mail</Heading>
+        <Heading style={h1}>Confirme seu novo e-mail</Heading>
         <Text style={text}>
-          Você solicitou a alteração do seu e-mail de{' '}
+          Você solicitou a alteração do seu e-mail na <strong>NoExcuse Digital</strong> de{' '}
           <Link href={`mailto:${email}`} style={link}>{email}</Link> para{' '}
           <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
         </Text>
         <Text style={text}>
-          Clique no botão abaixo para confirmar essa alteração:
+          Clique no botão abaixo para confirmar a alteração:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Confirmar alteração
+          Confirmar novo e-mail
         </Button>
         <Text style={footer}>
           Se você não solicitou essa alteração, proteja sua conta imediatamente.

@@ -31,7 +31,7 @@ export const RecoveryEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Img src={LOGO_URL} alt="NoExcuse Digital" width="160" height="auto" style={logo} />
-        <Heading style={h1}>Redefinir senha</Heading>
+        <Heading style={h1}>Redefinir sua senha</Heading>
         <Text style={text}>
           Recebemos uma solicitação para redefinir sua senha na <strong>NoExcuse Digital</strong>. Clique no botão abaixo para escolher uma nova senha.
         </Text>
@@ -39,7 +39,7 @@ export const RecoveryEmail = ({
           Redefinir senha
         </Button>
         <Text style={footer}>
-          Se você não solicitou a redefinição de senha, pode ignorar este e-mail. Sua senha não será alterada.
+          Se você não solicitou a redefinição, pode ignorar este e-mail com segurança. Sua senha não será alterada.
         </Text>
       </Container>
     </Body>
