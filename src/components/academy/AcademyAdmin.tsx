@@ -145,7 +145,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditQuestion = (q: Record<string, unknown>) => {
+  const openEditQuestion = (q: any) => {
     setEditingQuestionId(q.id);
     const opts = (q.options as string[]) ?? [];
     setQuestionForm({ question: q.question, options: [...opts, "", "", "", ""].slice(0, 4), correctAnswer: q.correct_answer });
