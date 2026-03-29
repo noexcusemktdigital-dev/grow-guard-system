@@ -50,7 +50,7 @@ export const STEPS = [
   { id: "ativos", label: "Ativos", icon: Image },
 ] as const;
 
-const platformColors: Record<string, string> = {
+export const platformColors: Record<string, string> = {
   Google: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   Meta: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   TikTok: "bg-purple-500/10 text-purple-500 border-purple-500/20",
