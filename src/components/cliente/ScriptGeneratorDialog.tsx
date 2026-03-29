@@ -81,7 +81,14 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const ctx = (error as any).context;
+        if (ctx instanceof Response) {
+          const body = await ctx.json().catch(() => null);
+          throw new Error(body?.error || error.message);
+        }
+        throw error;
+      }
       if (data?.error) {
         if (data.error.includes("INSUFFICIENT_CREDITS") || data.error.includes("Créditos insuficientes")) {
           setShowCreditsDialog(true);

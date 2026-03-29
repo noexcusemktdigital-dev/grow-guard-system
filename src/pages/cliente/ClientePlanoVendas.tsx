@@ -157,7 +157,15 @@ export default function ClientePlanoVendas() {
             const { data, error } = await supabase.functions.invoke("generate-script", {
               body: { stage, briefing: {}, context, organization_id: orgId },
             });
-            if (!error && data?.content) {
+            if (error) {
+              const ctx = (error as any).context;
+              if (ctx instanceof Response) {
+                const body = await ctx.json().catch(() => null);
+                logger.error(`Auto-script ${stage} error:`, body?.error || error.message);
+              }
+              continue;
+            }
+            if (data?.content) {
               await createScript.mutateAsync({
                 title: data.title || `Script de ${stage}`,
                 content: data.content,
