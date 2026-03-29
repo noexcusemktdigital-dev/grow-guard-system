@@ -74,7 +74,7 @@ export function EditInstanceDialog({ instance, open, onOpenChange, onSave, isPen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-base">Editar instância {isEvo ? "Evolution" : "Z-API"}</DialogTitle>
+          <DialogTitle className="text-base">Editar instância Easytech</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
