@@ -1,50 +1,34 @@
 
 
-## Diagnóstico — Erro ao convidar usuário existente de outro workspace
+## Usar Resend para todos os e-mails de autenticação
 
-### Causa raiz
+### Situação atual
 
-O problema está na detecção de "usuário já existe" na Edge Function `invite-user`. Quando o `adminClient.auth.admin.createUser()` falha porque o e-mail já está registrado, o código verifica:
+- O domínio `noexcusedigital.com.br` está **verificado no Resend** (conforme seu print)
+- O domínio configurado no Lovable Cloud (`notify.sistema.noexcusedigital.com.br`) está **pendente** e nunca vai verificar por conta do sub-subdomínio
+- Os e-mails de convite e transacionais **já usam Resend** diretamente e funcionam
+- Os e-mails de autenticação (reset de senha, verificação, magic link) passam pelo sistema gerenciado do Lovable Cloud — como o domínio está pendente, saem sem personalização
 
-```typescript
-if (createErr && (createErr as { code?: string }).code === "email_exists")
-```
+### Solução
 
-Em versões mais recentes do Supabase JS, o código de erro pode ser `"user_already_exists"` em vez de `"email_exists"`, ou o erro pode vir com uma estrutura diferente (ex: apenas na `message`). Se o código não bate, a execução cai no `else if (createErr)` → `throw createErr` → resposta 500.
+Atualizar o `auth-email-hook` para enviar diretamente pelo Resend (como já fazem `invite-user` e `send-transactional-email`), em vez de depender do sistema de fila do Lovable Cloud que requer DNS verificado.
 
-Adicionalmente, há um problema arquitetural: a tabela `user_roles` tem constraint `UNIQUE(user_id)`, permitindo apenas **uma role por usuário globalmente**. Quando um usuário existente (ex: `cliente_admin` no workspace A) é convidado para o workspace B, a função faz `UPDATE` na role — **sobrescrevendo a role do workspace original**. Isso quebra o acesso no workspace anterior.
-
-### Plano de correção
-
-**1. Tornar a detecção de "usuário existente" robusta**
-
-No `invite-user/index.ts`, ao invés de depender exclusivamente do `code === "email_exists"`, verificar também o `message` e o código `"user_already_exists"`:
-
-```typescript
-const isEmailExists = createErr && (
-  (createErr as any).code === "email_exists" ||
-  (createErr as any).code === "user_already_exists" ||
-  (createErr as any).message?.includes("already been registered") ||
-  (createErr as any).message?.includes("already exists")
-);
-```
-
-Adicionar `console.log` detalhado para o erro quando não for reconhecido.
-
-**2. Preservar a role do workspace original (multi-org)**
-
-O cenário multi-workspace exige que um usuário possa ter roles diferentes em organizações diferentes. Porém, como `user_roles` tem `UNIQUE(user_id)`, isso não é possível hoje. A correção:
-
-- Para usuários **existentes** que já têm uma role e estão sendo convidados para outra org: **não sobrescrever a role** se ela já existe. Manter a role atual e apenas criar o membership.
-- Para o futuro (quando a arquitetura multi-workspace evoluir), a role deveria ser por organização, mas isso é uma mudança maior. Por ora, a solução segura é: se o usuário já tem role, preservá-la.
-
-**3. Melhorar logging para debug**
-
-Adicionar logs detalhados em cada etapa para facilitar diagnóstico futuro.
-
-### Arquivos afetados
+### O que muda
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/invite-user/index.ts` | Detecção robusta de email_exists, preservar role existente, logging melhorado |
+| `supabase/functions/auth-email-hook/index.ts` | Substituir o enqueue para pgmq por envio direto via Resend API. Manter os templates React Email personalizados (logo, cores, PT-BR) |
+
+### Como vai funcionar
+
+1. O hook continua interceptando eventos de autenticação (signup, recovery, magic link, etc.)
+2. Continua renderizando os templates React Email personalizados (logo NoExcuse, botões vermelhos, PT-BR)
+3. Em vez de enfileirar na pgmq, envia diretamente via Resend API usando `RESEND_API_KEY` (que já está configurada)
+4. E-mails saem como `NoExcuse Digital <noreply@noexcusedigital.com.br>` — do domínio verificado
+
+### O que NÃO muda
+
+- Os templates visuais permanecem iguais (logo, cores, textos em português)
+- Os outros e-mails (convite, transacionais) continuam funcionando como já estão
+- Nenhuma mudança de banco de dados necessária
 
