@@ -469,7 +469,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                         </div>
                         <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                            <Zap className="w-3 h-3 text-primary" /> Powered by Easytech
+                            <Zap className="w-3 h-3 text-primary" /> Powered by Izitech
                           </p>
                         </div>
                       </>
