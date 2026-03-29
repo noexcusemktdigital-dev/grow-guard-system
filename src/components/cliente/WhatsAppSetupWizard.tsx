@@ -237,7 +237,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">Easytech</p>
+                        <p className="text-sm font-bold">Izitech</p>
                         <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]">Recomendado</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
