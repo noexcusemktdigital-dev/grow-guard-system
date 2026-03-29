@@ -31,7 +31,7 @@ const STEPS: TourStep[] = [
   {
     icon: Megaphone,
     title: "Módulo Marketing",
-    description: "Crie estratégias, gere conteúdos e artes com IA, publique sites e gerencie campanhas de tráfego pago.",
+    description: "Crie estratégias, gere conteúdos e artes com a nossa IA, publique sites e gerencie campanhas de tráfego pago.",
     target: "marketing",
     position: "right",
   },
