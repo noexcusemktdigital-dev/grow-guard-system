@@ -142,10 +142,17 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
         ) : (
           <Card className="mb-4">
             <CardContent className="p-3 space-y-2">
-              <Label className="text-xs">Motivo da perda</Label>
-              <Textarea value={lostReason} onChange={e => setLostReason(e.target.value)} placeholder="Descreva o motivo..." className="text-sm" rows={2} />
+              <Label className="text-xs font-medium">Motivo da perda *</Label>
+              <Select value={lostReason} onValueChange={setLostReason}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Selecione o motivo..." /></SelectTrigger>
+                <SelectContent>
+                  {configuredReasons.map(r => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Label className="text-xs">Descrição (opcional)</Label>
+              <Textarea value={lostDescription} onChange={e => setLostDescription(e.target.value)} placeholder="Detalhes adicionais..." className="text-sm" rows={2} />
               <div className="flex gap-2">
-                <Button size="sm" variant="destructive" className="text-xs" onClick={handleLost} disabled={markAsLost.isPending}>Confirmar Perda</Button>
+                <Button size="sm" variant="destructive" className="text-xs" onClick={handleLost} disabled={markAsLost.isPending || !lostReason}>Confirmar Perda</Button>
                 <Button size="sm" variant="ghost" className="text-xs" onClick={() => setShowLostDialog(false)}>Cancelar</Button>
               </div>
             </CardContent>
