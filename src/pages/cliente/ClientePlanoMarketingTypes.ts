@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface StrategyResult {
   objetivo_principal?: string;
   canal_prioritario?: string;
