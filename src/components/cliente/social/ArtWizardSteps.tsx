@@ -280,7 +280,7 @@ function Step5References({ referenceUrls, setReferenceUrls, orgId, uploading, se
       <div>
         <h3 className="text-base font-semibold mb-1">🎨 Referências visuais</h3>
         <p className="text-sm text-muted-foreground">
-          A IA extrai <strong>cores, fontes e estilo</strong> das referências para criar artes no mesmo padrão visual.
+          A nossa IA extrai <strong>cores, fontes e estilo</strong> das referências para criar artes no mesmo padrão visual.
         </p>
       </div>
       <Card className="bg-accent/30 border-accent">
