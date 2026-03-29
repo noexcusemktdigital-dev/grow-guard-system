@@ -26,6 +26,28 @@ function buildInviteHtml(confirmationUrl: string): string {
 </html>`;
 }
 
+function buildExistingUserInviteHtml(orgName: string, loginUrl: string): string {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:'Inter',Arial,sans-serif;">
+  <div style="padding:40px 25px;max-width:560px;margin:0 auto;">
+    <img src="https://gxrhdpbbxfipeopdyygn.supabase.co/storage/v1/object/public/email-assets/logo-noexcuse.png" alt="NoExcuse Digital" width="160" style="margin:0 0 24px;display:block;" />
+    <h1 style="font-size:22px;font-weight:bold;color:#141a24;margin:0 0 20px;">Você foi adicionado a uma organização</h1>
+    <p style="font-size:14px;color:#6c7280;line-height:1.6;margin:0 0 25px;">
+      Você foi adicionado à organização <strong>${orgName}</strong> na plataforma <strong>NoExcuse Digital</strong>. Use sua senha atual para acessar o sistema.
+    </p>
+    <a href="${loginUrl}" style="display:inline-block;background-color:#E2233B;color:#ffffff;font-size:14px;border-radius:12px;padding:12px 24px;text-decoration:none;font-weight:500;">
+      Acessar plataforma
+    </a>
+    <p style="font-size:12px;color:#999999;margin:30px 0 0;">
+      Se você não esperava este convite, pode ignorar este e-mail com segurança.
+    </p>
+  </div>
+</body>
+</html>`;
+}
+
 async function sendViaResend(to: string, html: string): Promise<void> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
