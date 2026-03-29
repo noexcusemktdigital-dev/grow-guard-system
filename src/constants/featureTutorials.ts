@@ -216,7 +216,7 @@ export const FEATURE_TUTORIALS: Record<string, FeatureTutorial> = {
     title: "Checklist Diário",
     subtitle: "Rotina organizada com tarefas inteligentes",
     icon: CheckSquare,
-    whatIs: "O Checklist Diário gera uma lista de tarefas personalizada com base no seu plano de vendas, agendamentos e metas. A IA cria atividades práticas para cada dia, garantindo que nada seja esquecido.",
+    whatIs: "O Checklist Diário gera uma lista de tarefas personalizada com base no seu plano de vendas, agendamentos e metas. A nossa IA cria atividades práticas para cada dia, garantindo que nada seja esquecido.",
     steps: [
       { title: "Acesse o checklist", description: "Sua lista de tarefas diárias é gerada automaticamente a cada manhã." },
       { title: "Execute as tarefas", description: "Marque cada tarefa como concluída conforme for realizando." },
