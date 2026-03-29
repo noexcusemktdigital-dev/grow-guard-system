@@ -306,7 +306,7 @@ export function ClientePlanoVendasDiagnostico({
                   <Card className="glass-card">
                     <CardContent className="py-6">
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">PROJEÇÃO DE RECEITA — 6 MESES</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">PROJEÇÃO DE RECEITA — 6 MESES <InfoTip text="Estimativa de receita nos próximos 6 meses comparando o cenário atual (sem mudanças) vs com a estratégia proposta." /></p>
                         <div className="flex items-center gap-3">
                           <Badge variant="outline" className="text-[9px] gap-1 border-muted-foreground/30">
                             <span className="w-2 h-0.5 bg-muted-foreground inline-block" style={{ borderTop: "2px dashed" }} /> Cenário Atual
