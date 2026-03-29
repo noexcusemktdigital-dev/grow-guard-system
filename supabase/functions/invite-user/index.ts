@@ -167,9 +167,18 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewUser = true;
 
-    if (createErr && (createErr as { code?: string }).code === "email_exists") {
+    // Robust detection of "user already exists" across Supabase JS versions
+    const isEmailExists = createErr && (
+      (createErr as any).code === "email_exists" ||
+      (createErr as any).code === "user_already_exists" ||
+      (createErr as any).status === 422 ||
+      (createErr as any).message?.toLowerCase().includes("already been registered") ||
+      (createErr as any).message?.toLowerCase().includes("already exists") ||
+      (createErr as any).message?.toLowerCase().includes("email_exists")
+    );
+
+    if (isEmailExists) {
       isNewUser = false;
-      // User already exists — find them via paginated search
       console.log("[invite-user] User already exists, looking up:", email);
       const existing = await findUserByEmail(adminClient, email);
       if (!existing) throw new Error("Usuário existe mas não foi encontrado na listagem");
@@ -189,9 +198,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      userId = existing.id;
+      userId = existing.id as string;
     } else if (createErr) {
-      console.error("createUser error:", createErr);
+      console.error("[invite-user] Unrecognized createUser error:", JSON.stringify(createErr, null, 2));
+      console.error("[invite-user] Error code:", (createErr as any).code, "| status:", (createErr as any).status, "| message:", (createErr as any).message);
       throw createErr;
     } else {
       userId = newUser.user.id;
@@ -256,13 +266,21 @@ Deno.serve(async (req) => {
       validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
       console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
     }
-    // Check+update/insert role (prevent duplicate roles)
+    // Check+update/insert role — preserve existing role for multi-org users
     const { data: existingRole } = await adminClient
-      .from("user_roles").select("id").eq("user_id", userId).maybeSingle();
+      .from("user_roles").select("id, role").eq("user_id", userId).maybeSingle();
     if (existingRole) {
-      await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
+      if (isNewUser) {
+        // Only update role for brand new users
+        await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
+        console.log(`[invite-user] Updated role for new user: ${validRole}`);
+      } else {
+        // Existing user from another org — preserve their current role
+        console.log(`[invite-user] Preserving existing role "${existingRole.role}" for multi-org user (requested: ${validRole})`);
+      }
     } else {
       await adminClient.from("user_roles").insert({ user_id: userId, role: validRole });
+      console.log(`[invite-user] Inserted role: ${validRole}`);
     }
 
     // Assign to teams if provided
