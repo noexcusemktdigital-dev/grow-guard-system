@@ -217,7 +217,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <span className="text-xs text-muted-foreground">/mês</span>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Easytech é R$ 90,00/mês.
+                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Izitech é R$ 90,00/mês.
                 </p>
               </div>
 
