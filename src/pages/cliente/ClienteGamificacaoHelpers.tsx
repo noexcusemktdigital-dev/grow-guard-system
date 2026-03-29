@@ -40,7 +40,7 @@ export const medalIcons: Record<string, React.ElementType> = {
   organizer: Calendar, detailist: Target, funnel: GitBranch, checklist: ListChecks, student: GraduationCap, strategy: Zap,
 };
 
-const medalColors: Record<string, { gradient: string; glow: string; text: string; border: string }> = {
+export const medalColors: Record<string, { gradient: string; glow: string; text: string; border: string }> = {
   lead:    { gradient: "from-blue-400 via-blue-500 to-blue-700", glow: "rgba(59,130,246,0.5)", text: "text-blue-400", border: "border-blue-400/40" },
   sales:   { gradient: "from-amber-300 via-amber-500 to-amber-700", glow: "rgba(245,158,11,0.5)", text: "text-amber-400", border: "border-amber-400/40" },
   streak:  { gradient: "from-orange-400 via-orange-500 to-red-600", glow: "rgba(249,115,22,0.5)", text: "text-orange-400", border: "border-orange-400/40" },
