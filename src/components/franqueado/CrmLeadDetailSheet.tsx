@@ -43,8 +43,14 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
   const { data: prospections } = useProspections();
   const { data: strategies } = useStrategies();
   const { data: proposals } = useCrmProposals();
+  const { data: crmSettings } = useCrmSettings();
   const [lostReason, setLostReason] = useState("");
+  const [lostDescription, setLostDescription] = useState("");
   const [showLostDialog, setShowLostDialog] = useState(false);
+  const configuredReasons: string[] = (crmSettings as Record<string, unknown>)?.loss_reasons as string[] || [
+    "Preço", "Concorrência", "Timing inadequado", "Sem orçamento",
+    "Sem resposta", "Escolheu outro fornecedor", "Desistiu do projeto",
+  ];
 
   const activities = propActivities ?? fetchedActivities ?? [];
   const leadProspections = (prospections ?? []).filter(p => p.lead_id === lead?.id);
