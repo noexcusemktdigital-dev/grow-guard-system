@@ -110,16 +110,10 @@ export function ClienteCRMHeader({
             </>
           )}
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigate("/cliente/crm/config")}>
-                  <Settings2 className="w-3.5 h-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Configurações do CRM</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => navigate("/cliente/crm/config")}>
+            <Settings2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline text-xs">Configurações</span>
+          </Button>
         </div>
       }
     />

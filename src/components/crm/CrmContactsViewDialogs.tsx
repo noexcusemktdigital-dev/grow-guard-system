@@ -136,7 +136,14 @@ export function CrmContactsViewDialogs({
       {/* Edit Contact Sheet */}
       <Sheet open={!!editContact} onOpenChange={o => !o && setEditContact(null)}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader><SheetTitle>Editar Contato</SheetTitle></SheetHeader>
+          <SheetHeader>
+            <div className="flex items-center justify-between">
+              <SheetTitle>Editar Contato</SheetTitle>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditContact(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </SheetHeader>
           <div className="mt-4 space-y-4">
             <ContactForm form={form} setForm={setForm} />
             <div className="flex gap-2">

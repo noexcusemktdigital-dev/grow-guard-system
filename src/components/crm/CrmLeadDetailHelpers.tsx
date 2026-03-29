@@ -253,15 +253,20 @@ export function ProposalsTab({ leadId, onValueSync }: { leadId: string; onValueS
         const { data: urlData } = supabase.storage.from("crm-files").getPublicUrl(path);
         fileUrl = urlData.publicUrl;
       }
+      const proposalValue = value ? parseFloat(value) : 0;
       createProposal.mutate({
         title,
         lead_id: leadId,
-        value: value ? parseFloat(value) : 0,
+        value: proposalValue,
         status: "draft",
         items: [],
         discount_total: 0,
         notes: fileUrl ? `Arquivo: ${fileUrl}` : null,
       });
+      // Sync proposal value to lead value
+      if (proposalValue > 0 && onValueSync) {
+        onValueSync(proposalValue);
+      }
       toast({ title: "Proposta anexada" });
       setShowForm(false);
       resetForm();

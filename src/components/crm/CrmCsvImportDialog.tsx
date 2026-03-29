@@ -159,7 +159,7 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
     setResult({ success, errors });
     setImporting(false);
     setStep(3);
-    toast({ title: `${success} contatos importados${errors > 0 ? `, ${errors} erros` : ""}` });
+    toast({ title: "Planilha aceita!", description: `${success} contatos foram gerados na aba de Contatos.${errors > 0 ? ` ${errors} erros.` : ""}` });
   };
 
   const recognizedCount = DISPLAY_COLUMNS.filter(c => mappedHeaders.includes(c.key)).length;
