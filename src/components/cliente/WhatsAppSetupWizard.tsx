@@ -482,7 +482,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   </div>
                 )
               ) : (
-                // Easytech Manual result
+                // Izitech Manual result
                 <>
                   {setupMutation.isPending ? (
                     <div className="flex flex-col items-center py-16 text-center">
