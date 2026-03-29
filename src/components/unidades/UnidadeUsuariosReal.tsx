@@ -31,7 +31,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invName, setInvName] = useState("");
   const [invEmail, setInvEmail] = useState("");
-  const [invRole, setInvRole] = useState("cliente_user");
+  const [invRole, setInvRole] = useState("franqueado");
   const [inviting, setInviting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
