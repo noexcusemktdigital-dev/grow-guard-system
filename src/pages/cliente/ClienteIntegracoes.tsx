@@ -237,8 +237,7 @@ export default function ClienteIntegracoes() {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook/${orgId}` : "";
 
-  const zapiInstances = instances?.filter(i => i.provider === "zapi") || [];
-  const evoInstances = instances?.filter(i => i.provider === "evolution") || [];
+  const allInstances = instances || [];
 
   // Outbound webhook helpers
   const saveWebhooks = (updated: OutboundWebhook[]) => {
