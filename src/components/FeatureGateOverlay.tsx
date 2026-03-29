@@ -1,8 +1,54 @@
 // @ts-nocheck
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
-import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert } from "lucide-react";
+import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert, MessageSquare, Users, BarChart3, PenTool, Globe, Send, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const toolDescriptions: Record<string, { label: string; desc: string; icon: any }> = {
+  "/cliente/chat": {
+    label: "Conversas WhatsApp",
+    desc: "Espelhe seu WhatsApp e gerencie todos os atendimentos da sua equipe em um só lugar. Envie mensagens, áudios, imagens e documentos direto do sistema.",
+    icon: MessageSquare,
+  },
+  "/cliente/crm": {
+    label: "CRM de Vendas",
+    desc: "Gerencie seus leads, funis de vendas e pipeline comercial com automações inteligentes e acompanhamento em tempo real.",
+    icon: Users,
+  },
+  "/cliente/trafego": {
+    label: "Tráfego Pago",
+    desc: "Acompanhe métricas de campanhas de Meta Ads e Google Ads em um dashboard unificado com análise de ROI.",
+    icon: BarChart3,
+  },
+  "/cliente/conteudo": {
+    label: "Conteúdo & Posts",
+    desc: "Crie posts, legendas e artes com IA para Instagram, Facebook e outras redes sociais.",
+    icon: PenTool,
+  },
+  "/cliente/sites": {
+    label: "Sites & Landing Pages",
+    desc: "Crie landing pages de alta conversão com IA para capturar leads e vender seus produtos.",
+    icon: Globe,
+  },
+  "/cliente/disparos": {
+    label: "Disparos em Massa",
+    desc: "Envie mensagens em massa via WhatsApp para sua base de contatos com segmentação inteligente.",
+    icon: Send,
+  },
+  "/cliente/agentes": {
+    label: "Agentes de IA",
+    desc: "Configure assistentes inteligentes que atendem seus clientes 24h por dia via WhatsApp com respostas personalizadas.",
+    icon: Bot,
+  },
+};
+
+function getToolInfo(pathname: string) {
+  // Match exact or prefix
+  for (const [path, info] of Object.entries(toolDescriptions)) {
+    if (pathname === path || pathname.startsWith(path + "/")) return info;
+  }
+  return null;
+}
 
 export function FeatureGateOverlay() {
   const location = useLocation();
@@ -96,20 +142,33 @@ export function FeatureGateOverlay() {
   }[reason];
 
   const Icon = config.icon;
+  const toolInfo = getToolInfo(location.pathname);
+  const ToolIcon = toolInfo?.icon;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-background/60">
-      <div className="relative max-w-md w-full mx-4">
+    <div className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-background/40">
+      <div className="relative max-w-lg w-full mx-4">
         {/* Glow effect */}
         <div
           className={`absolute -inset-1 rounded-2xl bg-gradient-to-br ${config.accent} opacity-20 blur-xl`}
         />
 
-        <div className="relative bg-card border border-border rounded-2xl p-8 text-center shadow-2xl space-y-5">
+        <div className="relative bg-card/95 border border-border rounded-2xl p-8 text-center shadow-2xl space-y-5 backdrop-blur-md">
+          {/* Tool info section */}
+          {toolInfo && (
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2 border border-border/50">
+              <div className="flex items-center justify-center gap-2">
+                {ToolIcon && <ToolIcon className="w-5 h-5 text-primary" />}
+                <span className="text-sm font-semibold text-foreground">{toolInfo.label}</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{toolInfo.desc}</p>
+            </div>
+          )}
+
           {/* Icon */}
           <div className="flex justify-center">
-            <div className={`w-16 h-16 rounded-2xl ${config.iconBg} flex items-center justify-center`}>
-              <Icon className="w-8 h-8" />
+            <div className={`w-14 h-14 rounded-2xl ${config.iconBg} flex items-center justify-center`}>
+              <Icon className="w-7 h-7" />
             </div>
           </div>
 
