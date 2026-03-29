@@ -245,7 +245,7 @@ export function ChatBriefingInputArea({
       {currentStep.inputType === "textarea" && (
         <div className="space-y-2">
           <Textarea
-            ref={inputRef as React.RefObject<HTMLInputElement>}
+            ref={inputRef as any}
             value={textValue}
             onChange={e => setTextValue(e.target.value)}
             placeholder={currentStep.placeholder || "Descreva aqui..."}

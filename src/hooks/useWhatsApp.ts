@@ -45,6 +45,7 @@ export interface WhatsAppMessage {
   status: string;
   metadata: Record<string, unknown>;
   created_at: string;
+  [key: string]: unknown;
 }
 
 // Returns all instances for the organization

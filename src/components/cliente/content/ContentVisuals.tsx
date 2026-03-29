@@ -18,7 +18,7 @@ export function CarrosselVisual({ content }: { content: unknown }) {
 }
 
 /* ── Post Único / Educativo / Autoridade ── */
-export function PostVisual({ content }: { content: unknown }) {
+export function PostVisual({ content }: { content: any }) {
   if (!content || typeof content !== "object") return <GenericVisual content={content} />;
   return (
     <div className="rounded-xl bg-gradient-to-br from-primary/8 to-transparent border p-5 space-y-3">

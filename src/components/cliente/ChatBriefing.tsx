@@ -180,7 +180,7 @@ export function ChatBriefing({ agent, steps, onComplete, onCancel, className, co
         : step.categories
           ? step.categories.flatMap(c => c.options)
           : (step.options || []);
-      return allOpts.find(o => o.value === value)?.label || value;
+      return allOpts.find(o => o.value === value)?.label || (value as string);
     }
     return String(value);
   };

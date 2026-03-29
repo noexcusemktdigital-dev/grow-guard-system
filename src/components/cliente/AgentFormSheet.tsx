@@ -357,7 +357,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
           />
 
           <AgentFormSheetPrompt
-            form={form}
+            form={form as any}
             promptConfig={promptConfig}
             crmActions={crmActions}
             engagementRules={engagementRules}
