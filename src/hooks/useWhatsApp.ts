@@ -30,6 +30,7 @@ export interface WhatsAppContact {
   updated_at: string;
   contact_type?: "individual" | "group" | "lid";
   last_message_preview?: string | null;
+  [key: string]: unknown;
 }
 
 export interface WhatsAppMessage {
