@@ -35,7 +35,7 @@ const STEPS = [
     bg: "bg-emerald-500/10",
     title: "Conexão",
     description:
-      "Você conecta seu WhatsApp ao sistema pela Easytech, nosso parceiro oficial de integração. O sistema cria a instância automaticamente.",
+      "Você conecta seu WhatsApp ao sistema pela Izitech, nosso parceiro oficial de integração. O sistema cria a instância automaticamente.",
   },
   {
     icon: Webhook,
@@ -80,7 +80,7 @@ const FAQ = [
   {
     question: "Preciso de servidor próprio?",
     answer:
-      "Não! A Easytech cuida de toda a infraestrutura para você.",
+      "Não! A Izitech cuida de toda a infraestrutura para você.",
   },
   {
     question: "E se eu quiser conectar outro sistema?",
@@ -178,7 +178,7 @@ export function WhatsAppHowItWorks({ open, onOpenChange }: WhatsAppHowItWorksPro
                 <div className="flex items-center gap-2 rounded-lg border-2 border-blue-500/30 bg-blue-500/5 px-4 py-2.5">
                    <Server className="w-4 h-4 text-blue-500" />
                    <span className="text-xs font-semibold">
-                     Easytech
+                     Izitech
                    </span>
                 </div>
 

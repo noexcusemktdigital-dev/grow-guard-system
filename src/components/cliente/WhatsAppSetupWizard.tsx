@@ -164,7 +164,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     : evoCreds.instanceName.trim();
 
   const openSupport = () => window.open(SUPPORT_LINK, "_blank");
-  const providerLabel = provider === "izitech" ? "Easytech" : "Easytech (Manual)";
+  const providerLabel = provider === "izitech" ? "Izitech" : "Izitech (Manual)";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); } onOpenChange(v); }}>
@@ -198,7 +198,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <MessageSquare className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold">Conectar WhatsApp via Easytech</h3>
+                  <h3 className="text-sm font-bold">Conectar WhatsApp via Izitech</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Parceiro oficial de integração WhatsApp.
                   </p>
@@ -217,7 +217,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <span className="text-xs text-muted-foreground">/mês</span>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Easytech é R$ 90,00/mês.
+                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Izitech é R$ 90,00/mês.
                 </p>
               </div>
 
@@ -237,7 +237,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">Easytech</p>
+                        <p className="text-sm font-bold">Izitech</p>
                         <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]">Recomendado</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
@@ -264,7 +264,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mb-3">
                     <Server className="w-5 h-5 text-blue-500" />
                   </div>
-                  <p className="text-sm font-bold">Easytech (Manual)</p>
+                  <p className="text-sm font-bold">Izitech (Manual)</p>
                   <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
                     Configure sua própria instância informando os dados manualmente.
                   </p>
@@ -299,7 +299,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   </h4>
                   <div className="grid gap-2">
                     {[
-                      { icon: Server, text: "Uma instância Easytech rodando" },
+                      { icon: Server, text: "Uma instância Izitech rodando" },
                       { icon: QrCode, text: "Um celular com WhatsApp conectado à instância" },
                       { icon: KeyRound, text: "URL da API, API Key global e nome da instância" },
                     ].map(({ icon: Icon, text }, i) => (

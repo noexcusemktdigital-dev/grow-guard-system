@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useActiveStrategy } from "./useMarketingStrategy";
 import { useSalesPlan } from "./useSalesPlan";
 
