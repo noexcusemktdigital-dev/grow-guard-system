@@ -100,6 +100,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateLead, markAsWon, markAsLost } = useCrmLeadMutations();
+  const { data: crmSettings } = useCrmSettings();
   const { data: activities } = useCrmActivities(lead.id);
   const { createActivity } = useCrmActivityMutations();
   const { data: tasks } = useCrmTasks(lead.id);
