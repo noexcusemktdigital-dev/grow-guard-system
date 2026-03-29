@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Navigate } from "react-router-dom";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { ClienteSidebar, ClienteSidebarContent } from "./ClienteSidebar";
 import { FeatureGateProvider } from "@/contexts/FeatureGateContext";
 import { FeatureGateOverlay } from "./FeatureGateOverlay";
