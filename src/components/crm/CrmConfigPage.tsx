@@ -12,6 +12,7 @@ import { CrmIntegrations } from "./CrmIntegrations";
 import { CrmAutomations } from "./CrmAutomations";
 import { CrmProductsManager } from "./CrmProductsManager";
 import { CrmPartnersManager } from "./CrmPartnersManager";
+import { CrmLossReasonsConfig } from "./CrmLossReasonsConfig";
 
 export default function CrmConfigPage() {
   const navigate = useNavigate();
