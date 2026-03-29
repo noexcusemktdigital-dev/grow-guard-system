@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { getEffectiveLimits } from "@/constants/plans";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_STAGES, STAGE_COLORS, STAGE_ICON_OPTIONS, STAGE_ICONS, type FunnelStage } from "./CrmStageSystem";
 
@@ -33,8 +34,11 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [funnelDesc, setFunnelDesc] = useState("");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
 
-  const plan = subscription?.plan || "basic";
-  const maxFunnels = plan === "basic" ? 2 : 999;
+  const isTrial = subscription?.status === "trial";
+  const planId = subscription?.plan as string | null;
+  const limits = getEffectiveLimits(planId, isTrial);
+  const maxFunnels = limits.maxPipelines;
+  const planLabel = isTrial ? "Trial" : (planId ? planId.charAt(0).toUpperCase() + planId.slice(1) : "Starter");
   const canCreate = !funnelsData || funnelsData.length < maxFunnels;
 
   useEffect(() => {
@@ -51,7 +55,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   }, [editingFunnel]);
 
   const openNewFunnel = () => {
-    if (!canCreate) { toast({ title: `Limite de ${maxFunnels} funis no plano ${plan}. Faça upgrade.`, variant: "destructive" }); return; }
+    if (!canCreate) { toast({ title: `Limite de ${maxFunnels} funis no plano ${planLabel}. Faça upgrade.`, variant: "destructive" }); return; }
     setEditingFunnel(null);
     setLocalStages([...DEFAULT_STAGES]);
     setFunnelName("");
@@ -102,7 +106,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Funis</h3>
-          <p className="text-[10px] text-muted-foreground">{funnelsData?.length || 0}/{maxFunnels === 999 ? "∞" : maxFunnels} funis · Plano {plan}</p>
+          <p className="text-[10px] text-muted-foreground">{funnelsData?.length || 0}/{maxFunnels} funis · Plano {planLabel}</p>
         </div>
         <Button size="sm" className="gap-1" onClick={openNewFunnel} disabled={!canCreate}>
           <Plus className="w-3.5 h-3.5" /> Novo funil
@@ -111,7 +115,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
 
       {!canCreate && (
         <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-3 text-xs text-amber-700">Limite de funis atingido no plano {plan}. Faça upgrade para criar mais.</CardContent>
+          <CardContent className="p-3 text-xs text-amber-700">Limite de funis atingido no plano {planLabel}. Faça upgrade para criar mais.</CardContent>
         </Card>
       )}
 

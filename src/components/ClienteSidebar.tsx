@@ -10,6 +10,7 @@ import {
   Headphones, Calendar, Video, Image,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -228,6 +229,9 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
           <img src={logoWhite} alt="NOEXCUSE" className={`object-contain flex-shrink-0 ${collapsed ? "h-7 w-7" : "h-8"}`} />
         </div>
       </div>
+
+      {/* Workspace Switcher */}
+      <WorkspaceSwitcher collapsed={collapsed} />
 
       {/* Menu */}
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
