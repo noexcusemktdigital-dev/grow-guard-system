@@ -1,77 +1,49 @@
 
 
-## Plano — 2 Frentes: Limites de Funis + Arquitetura Multi-Workspace
+## Correção — Erro ao Definir Senha no Convite
 
----
+### Diagnóstico
 
-### Frente 1: Corrigir limites de funis por plano
+O problema está na página `/reset-password`. A sessão de recovery é detectada corretamente (o formulário aparece), mas o `supabase.auth.updateUser({ password })` falha com um erro genérico.
 
-**Problema:** O `CrmFunnelManager` usa lógica hardcoded `plan === "basic" ? 2 : 999` que não reflete os limites corretos. O campo `maxPipelines` no `plans.ts` também está errado.
+**Causa raiz provável:** Conflito de `storageKey`. O cliente Supabase em `lib/supabase.ts` usa `storageKey: "noe-saas-auth"` para `/reset-password`, independentemente do portal do usuário. Quando o link de convite é para um usuário de franquia (`?portal=franchise`), a sessão pode estar sendo processada sob a chave errada. Além disso, `getSession()` pode retornar uma sessão antiga antes que o token de recovery do hash seja processado, causando race condition.
 
-**Limites corretos:**
-| Plano | Funis |
-|-------|-------|
-| Trial | 3 |
-| Starter | 10 |
-| Pro | 20 |
-| Enterprise | 50 |
+Outro ponto: o código atual não loga o erro real do Supabase, dificultando o diagnóstico.
 
-**Mudanças:**
+### Correções
 
-1. **`src/constants/plans.ts`** — Atualizar `maxPipelines` em cada plano:
-   - Starter: `maxPipelines: 10`
-   - Pro: `maxPipelines: 20`
-   - Enterprise: `maxPipelines: 50`
-   - `TRIAL_PLAN.maxPipelines: 3`
+**1. `src/pages/ResetPassword.tsx`**
 
-2. **`src/components/crm/CrmFunnelManager.tsx`** — Substituir a lógica hardcoded (linha 37) por:
-   - Importar `getEffectiveLimits` de `plans.ts`
-   - Usar `subscription?.plan` e `subscription?.status === 'trial'` para calcular `maxFunnels` via `getEffectiveLimits(plan, isTrial).maxPipelines`
-   - Atualizar a mensagem de limite para mostrar o plano real
+- Logar o erro real do Supabase no console (`console.error("updateUser error:", error)`) para diagnóstico futuro
+- Exibir a mensagem real do erro no toast (em vez do genérico "Tente novamente")
+- Garantir que o `updateUser` só seja chamado após o evento `PASSWORD_RECOVERY` ou `SIGNED_IN` ser recebido via `onAuthStateChange` (não apenas por `getSession()` que pode retornar sessão antiga)
+- Adicionar um estado `recoveryEvent` para distinguir entre "sessão existente" e "sessão de recovery válida"
 
----
+**2. `src/lib/supabase.ts`**
 
-### Frente 2: Arquitetura Multi-Workspace (Seletor de Organização)
+- Fazer o `storageKey` respeitar o parâmetro `?portal=` da URL quando estiver em `/reset-password`, garantindo que a sessão de recovery use a mesma chave que o portal de destino do usuário
 
-**Contexto:** Hoje o `get_user_org_id` retorna `LIMIT 1`, ou seja, se um usuário pertence a 2+ organizações do tipo `cliente`, ele sempre entra na primeira. Não há UI para trocar.
+### Detalhes técnicos
 
-**Arquitetura proposta:**
+```
+ResetPassword.tsx — mudanças:
+- Novo estado: recoveryConfirmed (boolean)
+- onAuthStateChange: setar recoveryConfirmed=true apenas nos eventos PASSWORD_RECOVERY/SIGNED_IN
+- getSession(): setar sessionReady mas NÃO recoveryConfirmed
+- handleReset: se !recoveryConfirmed, tentar exchangeCodeForSession ou logar aviso
+- console.error no catch do updateUser com error.message e error.status
+- toast.error mostrando error.message real (traduzido se necessário)
 
-O banco de dados já suporta isso — `organization_memberships` permite N vínculos por usuário. Só falta:
+lib/supabase.ts — mudanças:
+- getPortalStorageKey(): quando path === "/reset-password", checar searchParams.get("portal")
+  - Se portal=franchise → "noe-franchise-auth"
+  - Senão → "noe-saas-auth" (default atual)
+```
 
-1. **Hook `useUserOrganizations`** — Nova query que retorna TODAS as orgs do usuário (não apenas a primeira), filtrando por portal (`saas`/`franchise`).
-
-2. **Componente `WorkspaceSwitcher`** — Dropdown no `ClienteSidebar` que:
-   - Mostra o nome da org atual
-   - Lista todas as orgs do usuário
-   - Ao trocar, salva a org selecionada em `localStorage` e invalida as queries
-
-3. **Atualizar `useUserOrgId`** — Checar primeiro se há uma org salva em `localStorage` antes de usar o `get_user_org_id` RPC. Se o usuário só tem 1 org, comportamento inalterado.
-
-4. **Nova RPC `get_user_organizations`** — Retorna todas as orgs do usuário com nome, tipo e logo:
-   ```sql
-   CREATE FUNCTION get_user_organizations(_user_id uuid, _portal text DEFAULT NULL)
-   RETURNS TABLE(org_id uuid, org_name text, org_type text, logo_url text)
-   ```
-
-**Arquivos afetados:**
+### Arquivos afetados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/constants/plans.ts` | maxPipelines corretos |
-| `src/components/crm/CrmFunnelManager.tsx` | Usar limites do plano |
-| `src/hooks/useUserOrganizations.ts` | Novo hook — lista orgs |
-| `src/hooks/useUserOrgId.ts` | Respeitar org salva em localStorage |
-| `src/components/WorkspaceSwitcher.tsx` | Novo componente seletor |
-| `src/components/ClienteSidebar.tsx` | Integrar WorkspaceSwitcher |
-| Migration SQL | Nova RPC `get_user_organizations` |
-
-### Detalhes técnicos do WorkspaceSwitcher
-
-- Posicionado no topo do sidebar, acima do menu
-- Mostra avatar/inicial da org + nome
-- Dropdown com as outras orgs disponíveis
-- Ao clicar, salva `selectedOrgId` no `localStorage` com chave `noe_active_org_{userId}`
-- Invalida todas as queries que dependem de `orgId` via `queryClient.invalidateQueries()`
-- Se o usuário só tem 1 org, o switcher aparece sem dropdown (apenas informativo)
+| `src/pages/ResetPassword.tsx` | Log de erro real, controle de recovery event, mensagem detalhada |
+| `src/lib/supabase.ts` | StorageKey dinâmico para `/reset-password` respeitando `?portal=` |
 
