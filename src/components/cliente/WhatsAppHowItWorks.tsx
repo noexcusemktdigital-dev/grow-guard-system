@@ -80,7 +80,7 @@ const FAQ = [
   {
     question: "Preciso de servidor próprio?",
     answer:
-      "Não para Z-API. Para Evolution API, sim (ou use o servidor compartilhado).",
+      "Não! A Easytech cuida de toda a infraestrutura para você.",
   },
   {
     question: "E se eu quiser conectar outro sistema?",
