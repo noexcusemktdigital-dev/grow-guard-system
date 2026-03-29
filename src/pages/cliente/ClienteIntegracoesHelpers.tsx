@@ -192,7 +192,7 @@ export function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation
                     <div className="flex items-center gap-2">
                       {isEvo ? <Server className="w-4 h-4 text-blue-500" /> : <Plug className="w-4 h-4 text-emerald-500" />}
                       <span className="text-xs font-semibold">{inst.label || inst.instance_id}</span>
-                      <Badge variant="outline" className="text-[9px]">{isEvo ? "Evolution" : "Z-API"}</Badge>
+                      <Badge variant="outline" className="text-[9px]">Easytech</Badge>
                     </div>
                     {r && !r.checking && (
                       r.status === "connected"
