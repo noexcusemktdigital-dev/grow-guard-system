@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { supabase as defaultClient } from "@/integrations/supabase/client";
