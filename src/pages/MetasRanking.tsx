@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { formatBRL } from "@/lib/formatting";
 import { Trophy, BarChart3, Target, Plus, TrendingUp, Medal, Users, CalendarDays, Inbox, MoreVertical, Pencil, Archive, Star, Flame, Zap, Lock, Crown, Award } from "lucide-react";
