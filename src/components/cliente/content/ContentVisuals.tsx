@@ -94,7 +94,7 @@ export function StoryVisual({ content }: { content: any }) {
 }
 
 /* ── Artigo ── */
-export function ArtigoVisual({ content }: { content: unknown }) {
+export function ArtigoVisual({ content }: { content: any }) {
   if (!content || typeof content !== "object") return <GenericVisual content={content} />;
   return (
     <div className="rounded-xl border p-5 space-y-3">
