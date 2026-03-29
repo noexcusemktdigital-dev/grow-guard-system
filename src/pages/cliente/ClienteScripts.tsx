@@ -101,7 +101,9 @@ export default function ClienteScripts() {
       if (isInsufficientCreditsError(e)) {
         setShowCreditsDialog(true);
       } else {
-        toast({ title: "Erro ao melhorar script", description: e.message, variant: "destructive" });
+        const msg = e instanceof Error ? e.message : String(e);
+        const isFetchError = msg.includes("Failed to send") || msg.includes("FunctionsRelayError") || msg.includes("fetch");
+        toast({ title: "Erro ao melhorar script", description: isFetchError ? "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente." : msg, variant: "destructive" });
       }
     } finally {
       setImprovingId(null);
