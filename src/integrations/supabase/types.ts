@@ -2587,6 +2587,7 @@ export type Database = {
           created_at: string
           id: string
           lead_roulette_enabled: boolean
+          loss_reasons: string[] | null
           organization_id: string
           outbound_webhooks: Json
           roulette_last_index: number | null
@@ -2604,6 +2605,7 @@ export type Database = {
           created_at?: string
           id?: string
           lead_roulette_enabled?: boolean
+          loss_reasons?: string[] | null
           organization_id: string
           outbound_webhooks?: Json
           roulette_last_index?: number | null
@@ -2621,6 +2623,7 @@ export type Database = {
           created_at?: string
           id?: string
           lead_roulette_enabled?: boolean
+          loss_reasons?: string[] | null
           organization_id?: string
           outbound_webhooks?: Json
           roulette_last_index?: number | null
