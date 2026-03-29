@@ -53,7 +53,14 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
       const { data, error } = await supabase.functions.invoke("update-member", {
         body: { user_id: member.user_id, organization_id: organizationId, action: "update", full_name: fullName, job_title: jobTitle, role },
       });
-      if (error) throw error;
+      if (error) {
+        const ctx = (error as any).context;
+        if (ctx instanceof Response) {
+          const body = await ctx.json().catch(() => null);
+          throw new Error(body?.error || error.message);
+        }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
       toast({ title: "Membro atualizado!" });
       qc.invalidateQueries({ queryKey: ["org-members"] });
@@ -73,7 +80,14 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
       const { data, error } = await supabase.functions.invoke("update-member", {
         body: { user_id: member.user_id, organization_id: organizationId, action: "remove" },
       });
-      if (error) throw error;
+      if (error) {
+        const ctx = (error as any).context;
+        if (ctx instanceof Response) {
+          const body = await ctx.json().catch(() => null);
+          throw new Error(body?.error || error.message);
+        }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
       toast({ title: "Membro removido!" });
       qc.invalidateQueries({ queryKey: ["org-members"] });
