@@ -24,6 +24,7 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState(false);
+  const [recoveryConfirmed, setRecoveryConfirmed] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -33,31 +34,36 @@ const ResetPassword = () => {
   const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event from Supabase auth
+    // Listen for PASSWORD_RECOVERY / SIGNED_IN events — these confirm
+    // the recovery token from the URL hash has been processed.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[ResetPassword] onAuthStateChange:", event);
       if (event === "PASSWORD_RECOVERY" && session) {
         setSessionReady(true);
+        setRecoveryConfirmed(true);
       }
-      // Also accept SIGNED_IN if it came from a recovery link
       if (event === "SIGNED_IN" && session) {
         setSessionReady(true);
+        setRecoveryConfirmed(true);
       }
     });
 
-    // Check if session already exists (user clicked link, page loaded with token in hash)
+    // Fallback: check if a session already exists (e.g. page refresh).
+    // We mark sessionReady so the form renders, but do NOT mark
+    // recoveryConfirmed — it will be set by onAuthStateChange above.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSessionReady(true);
       }
     });
 
-    // Timeout: if no session after 8s, show error
+    // Timeout: if no session after 10s, show error
     const timeout = setTimeout(() => {
       setSessionReady((ready) => {
         if (!ready) setSessionError(true);
         return ready;
       });
-    }, 8000);
+    }, 10000);
 
     return () => {
       subscription.unsubscribe();
@@ -83,14 +89,26 @@ const ResetPassword = () => {
       toast.error("As senhas não coincidem");
       return;
     }
+
+    if (!recoveryConfirmed) {
+      console.warn("[ResetPassword] Recovery event not yet confirmed. Waiting…");
+      // Give a small window for the event to arrive
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
+      console.error("[ResetPassword] updateUser error:", error.message, error.status, error);
       if (error.message?.includes("same_password")) {
         toast.error("A nova senha deve ser diferente da senha atual.");
+      } else if (error.message?.includes("Password should be")) {
+        toast.error("A senha não atende os requisitos mínimos de segurança.");
+      } else if (error.status === 422) {
+        toast.error("Sessão de recuperação inválida ou expirada. Solicite um novo link.");
       } else {
-        toast.error("Erro ao redefinir senha. Tente novamente.");
+        toast.error(error.message || "Erro ao redefinir senha. Tente novamente.");
       }
     } else {
       setSuccess(true);
