@@ -106,7 +106,9 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
       if (isInsufficientCreditsError(e)) {
         setShowCreditsDialog(true);
       } else {
-        toast({ title: "Erro ao gerar script", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+        const msg = e instanceof Error ? e.message : String(e);
+        const isFetchError = msg.includes("Failed to send") || msg.includes("FunctionsRelayError") || msg.includes("fetch");
+        toast({ title: "Erro ao gerar script", description: isFetchError ? "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente." : msg, variant: "destructive" });
       }
     } finally {
       setIsGenerating(false);

@@ -56,6 +56,9 @@ INSTRUÇÕES DE FORMATAÇÃO:
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("origin") || "unknown";
+  console.log(`[generate-script] ${req.method} from origin=${origin}`);
+
   if (req.method === "OPTIONS")
     return new Response(null, { headers: getCorsHeaders(req) });
 
