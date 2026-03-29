@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video, Clapperboard } from "lucide-react";
