@@ -127,7 +127,6 @@ Deno.serve(async (req) => {
 
     if (!email || !organization_id) {
       return new Response(JSON.stringify({ error: "email and organization_id required" }), {
-        status: 400,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -136,7 +135,7 @@ Deno.serve(async (req) => {
     if (email.toLowerCase().trim() === user.email?.toLowerCase()) {
       return new Response(
         JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
