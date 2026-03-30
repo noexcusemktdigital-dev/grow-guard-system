@@ -95,7 +95,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.invite-user]
     verify_jwt = false
   [functions.process-email-queue]
-    verify_jwt = true
+    verify_jwt = false
   [functions.provision-unit]
     verify_jwt = true
   [functions.recharge-credits]
