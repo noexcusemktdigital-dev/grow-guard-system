@@ -93,7 +93,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
 
   # --- Admin/management functions (require authenticated admin session) ---
   [functions.invite-user]
-    verify_jwt = true
+    verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
   [functions.provision-unit]
