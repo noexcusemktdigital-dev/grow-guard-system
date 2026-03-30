@@ -91,7 +91,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Etapa do funil inválida" }),
         {
-          status: 400,
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
