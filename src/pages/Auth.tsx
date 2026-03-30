@@ -90,16 +90,20 @@ const Auth = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password?portal=franchise`,
-    });
-    setLoading(false);
-    if (error) {
+    try {
+      const { data, error } = await supabase.functions.invoke("request-password-reset", {
+        body: { email, portal: "franchise" },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao enviar email de recuperação.");
+      } else {
+        toast.success("Email de recuperação enviado! Verifique sua caixa de entrada.");
+        setMode("login");
+      }
+    } catch {
       toast.error("Erro ao enviar email de recuperação.");
-    } else {
-      toast.success("Email de recuperação enviado! Verifique sua caixa de entrada.");
-      setMode("login");
     }
+    setLoading(false);
   };
 
   return (
