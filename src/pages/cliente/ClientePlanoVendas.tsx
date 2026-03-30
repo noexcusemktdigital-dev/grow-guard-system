@@ -158,11 +158,11 @@ export default function ClientePlanoVendas() {
               body: { stage, briefing: {}, context, organization_id: orgId },
             });
             if (error) {
-              const ctx = (error as any).context;
-              if (ctx instanceof Response) {
-                const body = await ctx.json().catch(() => null);
-                logger.error(`Auto-script ${stage} error:`, body?.error || error.message);
-              }
+              logger.error(`Auto-script ${stage} error:`, error.message);
+              continue;
+            }
+            if (data?.error) {
+              logger.error(`Auto-script ${stage} error:`, data.error);
               continue;
             }
             if (data?.content) {

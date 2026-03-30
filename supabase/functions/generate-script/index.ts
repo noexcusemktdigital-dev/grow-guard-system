@@ -65,8 +65,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -77,14 +76,14 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
-    const userId = user.id;
+    const userId = claimsData.claims.sub;
 
     const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext } = await req.json();
 
@@ -92,7 +91,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Etapa do funil inválida" }),
         {
-          status: 400,
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
@@ -103,7 +101,7 @@ serve(async (req) => {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data: wallet } = await adminClient.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
       if (!wallet || wallet.balance < CREDIT_COST) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
     }
 
@@ -183,7 +181,6 @@ IMPORTANTE:
       return new Response(
         JSON.stringify({ error: "AI not configured" }),
         {
-          status: 500,
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
@@ -218,7 +215,6 @@ IMPORTANTE:
             error: "Limite de requisições excedido. Tente novamente em alguns minutos.",
           }),
           {
-            status: 429,
             headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           }
         );
@@ -229,7 +225,6 @@ IMPORTANTE:
             error: "Créditos insuficientes. Faça upgrade do seu plano.",
           }),
           {
-            status: 402,
             headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           }
         );
@@ -239,7 +234,6 @@ IMPORTANTE:
       return new Response(
         JSON.stringify({ error: "Erro ao gerar script" }),
         {
-          status: 500,
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
@@ -315,7 +309,6 @@ IMPORTANTE:
         error: e instanceof Error ? e.message : "Erro desconhecido",
       }),
       {
-        status: 500,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );

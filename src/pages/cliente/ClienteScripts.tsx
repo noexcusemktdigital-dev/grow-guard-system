@@ -77,14 +77,7 @@ export default function ClienteScripts() {
           organization_id: orgId,
         },
       });
-      if (error) {
-        const ctx = (error as any).context;
-        if (ctx instanceof Response) {
-          const body = await ctx.json().catch(() => null);
-          throw new Error(body?.error || error.message);
-        }
-        throw error;
-      }
+      if (error) throw new Error(error.message);
       if (data?.error) {
         if (data.error.includes("INSUFFICIENT_CREDITS") || data.error.includes("Créditos insuficientes")) {
           setShowCreditsDialog(true);
