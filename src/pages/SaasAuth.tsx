@@ -253,9 +253,15 @@ const SaasAuth = () => {
               <button
                 type="button"
                 onClick={async () => {
-                  const { error } = await supabase.auth.resend({ type: "signup", email });
-                  if (error) toast.error("Erro ao reenviar. Tente novamente.");
-                  else toast.success("Email reenviado!");
+                  try {
+                    const { data, error } = await supabase.functions.invoke("signup-saas", {
+                      body: { email, resend_only: true },
+                    });
+                    if (error || data?.error) toast.error("Erro ao reenviar. Tente novamente.");
+                    else toast.success("Email reenviado!");
+                  } catch {
+                    toast.error("Erro ao reenviar. Tente novamente.");
+                  }
                 }}
                 className="text-sm text-white/40 hover:text-white/70 w-full text-center block transition-colors"
               >
