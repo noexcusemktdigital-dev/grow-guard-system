@@ -5,24 +5,34 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
+  const hdr = { ...getCorsHeaders(req), "Content-Type": "application/json" };
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const apiKey = (Deno.env.get("ASAAS_API_KEY") || "").trim();
     const baseUrl = (Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3").replace(/\/$/, "");
 
-    if (!apiKey) return new Response(JSON.stringify({ error: "ASAAS_API_KEY not configured" }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    if (!apiKey) return new Response(JSON.stringify({ error: "ASAAS_API_KEY not configured" }), { headers: hdr });
 
-    // Auth check
+    // Auth via getClaims
     const authHeader = req.headers.get("authorization") || "";
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user }, error: authError } = await anonClient.auth.getUser();
-    if (authError || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { headers: hdr });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { headers: hdr });
+    }
 
     const { action, payment_id, value, dueDate, description } = await req.json();
 
-    if (!payment_id) return new Response(JSON.stringify({ error: "payment_id is required" }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    if (!payment_id) return new Response(JSON.stringify({ error: "payment_id is required" }), { headers: hdr });
 
     const headers = { access_token: apiKey, "Content-Type": "application/json" };
 
@@ -31,9 +41,9 @@ Deno.serve(async (req) => {
       const data = await res.json();
       if (!res.ok) {
         console.error("[asaas-manage-payment] Cancel error:", JSON.stringify(data));
-        return new Response(JSON.stringify({ error: data.errors?.[0]?.description || "Erro ao cancelar cobrança" }), { status: res.status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: data.errors?.[0]?.description || "Erro ao cancelar cobrança" }), { headers: hdr });
       }
-      return new Response(JSON.stringify({ success: true, deleted: true }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, deleted: true }), { headers: hdr });
     }
 
     if (action === "update") {
@@ -46,14 +56,14 @@ Deno.serve(async (req) => {
       const data = await res.json();
       if (!res.ok) {
         console.error("[asaas-manage-payment] Update error:", JSON.stringify(data));
-        return new Response(JSON.stringify({ error: data.errors?.[0]?.description || "Erro ao editar cobrança" }), { status: res.status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: data.errors?.[0]?.description || "Erro ao editar cobrança" }), { headers: hdr });
       }
-      return new Response(JSON.stringify({ success: true, payment: data }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, payment: data }), { headers: hdr });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use 'cancel' or 'update'." }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Invalid action. Use 'cancel' or 'update'." }), { headers: hdr });
   } catch (err: unknown) {
     console.error("[asaas-manage-payment] Error:", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { headers: hdr });
   }
 });
