@@ -46,7 +46,11 @@ const Auth = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
-      toast.error("Credenciais inválidas. Verifique seu email e senha.");
+      if (error.message?.includes("Email not confirmed")) {
+        toast.error("Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.");
+      } else {
+        toast.error("Credenciais inválidas. Verifique seu email e senha.");
+      }
       return;
     }
     // Block SaaS users from franchise portal (with timeout fallback)

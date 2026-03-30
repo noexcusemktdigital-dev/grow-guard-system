@@ -6,15 +6,17 @@ import { BrowserRouter } from "react-router-dom";
 
 // Mock supabase (Auth imports from @/lib/supabase)
 const mockSignIn = vi.fn();
-const mockResetPassword = vi.fn();
 const mockSignOut = vi.fn();
+const mockInvoke = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),
-      resetPasswordForEmail: (...args: any[]) => mockResetPassword(...args),
       signOut: (...args: any[]) => mockSignOut(...args),
+    },
+    functions: {
+      invoke: (...args: any[]) => mockInvoke(...args),
     },
     from: () => ({
       select: () => ({
@@ -101,7 +103,7 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("submits forgot password form", async () => {
-    mockResetPassword.mockResolvedValue({ error: null });
+    mockInvoke.mockResolvedValue({ data: { success: true }, error: null });
     renderAuth();
 
     fireEvent.click(screen.getByText("Esqueci minha senha"));
@@ -109,7 +111,9 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
     fireEvent.click(screen.getByRole("button", { name: /enviar link/i }));
 
     await waitFor(() => {
-      expect(mockResetPassword).toHaveBeenCalledWith("user@test.com", expect.objectContaining({ redirectTo: expect.stringContaining("/reset-password") }));
+      expect(mockInvoke).toHaveBeenCalledWith("request-password-reset", expect.objectContaining({
+        body: { email: "user@test.com", portal: "franchise" },
+      }));
     });
   });
 });

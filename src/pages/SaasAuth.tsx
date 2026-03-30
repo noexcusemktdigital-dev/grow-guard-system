@@ -132,7 +132,7 @@ const SaasAuth = () => {
           email,
           password,
           full_name: fullName,
-          company_name: fullName + "'s Company",
+          company_name: "Minha Empresa",
           ...(referralCode ? { referral_code: referralCode } : {}),
         },
       });
