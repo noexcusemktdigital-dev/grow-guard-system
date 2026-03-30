@@ -126,55 +126,38 @@ const SaasAuth = () => {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, signup_source: "saas" },
-        emailRedirectTo: window.location.origin + "/app",
-      },
-    });
-    if (error) {
-      setLoading(false);
-      toast.error(error.message);
-      return;
-    }
+    try {
+      const { data, error } = await supabase.functions.invoke("signup-saas", {
+        body: {
+          email,
+          password,
+          full_name: fullName,
+          company_name: fullName + "'s Company",
+          ...(referralCode ? { referral_code: referralCode } : {}),
+        },
+      });
 
-    const isExistingUser = Boolean(data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
-
-    if (isExistingUser) {
-      setLoading(false);
-      setVerificationContext("existing");
-      toast.error("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
-      try {
-        await supabase.auth.resend({ type: "signup", email });
-      } catch {}
-      setMode("verify-email");
-      return;
-    }
-
-    if (data.user) {
-      setVerificationContext("new");
-      // Save terms acceptance
-      try {
-        await supabase.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as Record<string, unknown>).eq("id", data.user.id);
-      } catch {}
-      // Provision org, subscription, wallet (with referral if present)
-      try {
-        await supabase.functions.invoke("signup-saas", {
-          body: {
-            user_id: data.user.id,
-            company_name: fullName + "'s Company",
-            ...(referralCode ? { referral_code: referralCode } : {}),
-          },
-        });
-      } catch (err) {
-        logger.error("Provisioning error:", err);
+      if (error || data?.error) {
+        setLoading(false);
+        const errMsg = data?.error || error?.message || "Erro ao criar conta.";
+        if (errMsg === "email_exists") {
+          setVerificationContext("existing");
+          toast.error("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
+          setMode("verify-email");
+        } else {
+          toast.error(errMsg);
+        }
+        return;
       }
+
+      setVerificationContext("new");
+      setLoading(false);
+      setMode("verify-email");
+    } catch (err) {
+      setLoading(false);
+      toast.error("Erro ao criar conta. Tente novamente.");
+      logger.error("Signup error:", err);
     }
-    setLoading(false);
-    // Show email verification screen
-    setMode("verify-email");
   };
 
   const handleGoogleLogin = async () => {
@@ -270,9 +253,15 @@ const SaasAuth = () => {
               <button
                 type="button"
                 onClick={async () => {
-                  const { error } = await supabase.auth.resend({ type: "signup", email });
-                  if (error) toast.error("Erro ao reenviar. Tente novamente.");
-                  else toast.success("Email reenviado!");
+                  try {
+                    const { data, error } = await supabase.functions.invoke("signup-saas", {
+                      body: { email, resend_only: true },
+                    });
+                    if (error || data?.error) toast.error("Erro ao reenviar. Tente novamente.");
+                    else toast.success("Email reenviado!");
+                  } catch {
+                    toast.error("Erro ao reenviar. Tente novamente.");
+                  }
                 }}
                 className="text-sm text-white/40 hover:text-white/70 w-full text-center block transition-colors"
               >
