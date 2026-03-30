@@ -181,7 +181,6 @@ IMPORTANTE:
       return new Response(
         JSON.stringify({ error: "AI not configured" }),
         {
-          status: 500,
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
