@@ -1,41 +1,47 @@
 
 
-## Diagnóstico — E-mail de signup chegando sem branding
+## Plano — E-mail de confirmação de signup via Resend
 
-### O que está acontecendo
-
-O e-mail de confirmação de signup está sendo enviado pelo **sistema padrão** (template em inglês, sem logo, remetente `no-reply@auth.lovable.cloud`), ignorando completamente o `auth-email-hook` customizado que já existe no projeto com templates em PT-BR, logo e envio via Resend.
-
-### Causa raiz
-
-O domínio de e-mail do projeto (`notify.sistema.noexcusedigital.com.br`) está com **DNS pendente**. Até que o DNS seja verificado, o sistema de e-mail gerenciado não ativa o hook customizado — todos os e-mails de autenticação (signup, recovery, etc.) passam pelo template padrão em inglês.
-
-Além disso, o `auth-email-hook` atual usa o padrão antigo (envio direto via Resend) em vez do padrão de fila gerenciada. Mesmo após DNS verificado, pode não ser ativado corretamente pelo sistema gerenciado.
+### Problema
+O `supabase.auth.signUp()` dispara automaticamente o e-mail de confirmação padrão (inglês, sem branding). Não há como suprimir esse e-mail quando se usa o método client-side.
 
 ### Solução
+Mover a criação do usuário para uma Edge Function que usa a Admin API (`admin.createUser` com `email_confirm: false`), impedindo o disparo do e-mail padrão. A função gera o link de confirmação via `admin.generateLink({ type: "signup" })` e envia o e-mail branded via Resend.
 
-1. **Verificar/completar DNS** — O primeiro passo é completar a configuração DNS do domínio de e-mail em **Cloud → Emails**. Sem isso, nenhum e-mail customizado será enviado.
-
-2. **Re-scaffoldar o auth-email-hook** — Usar o sistema gerenciado para recriar o hook no padrão correto (com fila), aplicando o branding existente (logo, cores #E2233B, textos PT-BR).
-
-3. **Redeployar** — Deploy do `auth-email-hook` atualizado.
-
-4. **Manter fallback Resend para invite/recovery** — Os fluxos de convite e reset de senha já funcionam via Resend direto (Edge Functions separadas). Esses continuam funcionando independentemente.
-
-### Ação imediata necessária do usuário
-
-Antes de qualquer mudança de código, é necessário completar a verificação DNS do domínio de e-mail. Vou abrir as configurações de e-mail para você verificar o status e completar o setup DNS.
-
-### Após DNS verificado
+### Arquivos
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/auth-email-hook/index.ts` | Re-scaffold via sistema gerenciado + aplicar branding NoExcuse |
-| `supabase/functions/_shared/email-templates/*.tsx` | Manter templates existentes com logo e cores da marca |
-| Deploy `auth-email-hook` | Ativar o hook no pipeline de auth |
+| `supabase/functions/signup-saas/index.ts` | Adicionar criação do usuário via Admin API + envio de e-mail branded via Resend. Hoje a função recebe `user_id` do frontend; passará a receber `email`, `password`, `full_name` e criar o usuário internamente |
+| `supabase/config.toml` | `signup-saas` → `verify_jwt = false` (agora é chamada antes de existir sessão) |
+| `src/pages/SaasAuth.tsx` | Remover `supabase.auth.signUp()` e chamar `signup-saas` diretamente com email/password/full_name. Substituir `supabase.auth.resend()` por chamada à mesma função com flag `resend_only: true` |
 
-### Resultado esperado
+### Fluxo novo
 
-- E-mail de signup chega com logo NoExcuse, texto em PT-BR, botão vermelho (#E2233B), remetente `noreply@noexcusedigital.com.br`
-- Todos os e-mails de auth (signup, magic link, email change) passam pelo hook customizado
+```text
+Frontend (SaasAuth)
+  -> POST signup-saas { email, password, full_name, referral_code }
+     -> admin.createUser({ email, password, email_confirm: false })
+     -> admin.generateLink({ type: "signup" })
+     -> Resend: e-mail branded PT-BR com logo NoExcuse
+     -> Provisiona org/subscription/wallet (lógica existente)
+     -> Retorna { success, user_id }
+  -> Mostra tela "verifique seu e-mail"
+
+Reenviar confirmação:
+  -> POST signup-saas { email, resend_only: true }
+     -> admin.generateLink({ type: "signup" })
+     -> Resend: mesmo template
+     -> Retorna { success }
+```
+
+### Template do e-mail
+Mesmo padrão visual dos convites e reset: logo NoExcuse, título "Confirme seu e-mail", texto PT-BR, botão vermelho (#E2233B), remetente `noreply@noexcusedigital.com.br`.
+
+### Detalhes técnicos
+- `admin.createUser()` com `email_confirm: false` cria o usuário sem disparar e-mail nenhum
+- `admin.generateLink({ type: "signup" })` gera o link de confirmação que, ao ser clicado, confirma o e-mail do usuário
+- A lógica de provisioning (org, subscription, wallet, referral) permanece na mesma função
+- Detecção de usuário existente continua funcionando (erro `email_exists` do `createUser`)
+- O `resend_only: true` permite reenviar a confirmação sem recriar o usuário
 
