@@ -1,106 +1,112 @@
 
+## Diagnóstico
 
-## Auditoria Completa — Arquitetura de Usuários
+Não, isso não faz sentido como regra de plano. O erro atual não é “limite do Trial”.
 
-Após revisão detalhada de todos os fluxos (signup, login, convite, edição, remoção, reset de senha, Google OAuth), identifiquei os seguintes bugs e melhorias organizados por criticidade.
+### Causa real encontrada
 
----
+A falha está acontecendo antes da lógica de exclusão rodar.
 
-### BUG CRÍTICO 1 — Google OAuth: usuário fica sem organização/assinatura/créditos
+Evidências:
+- A requisição para `functions/v1/update-member` está saindo com `Authorization: Bearer ...`
+- O backend responde `401`
+- O corpo da resposta é: `{"code":401,"message":"Invalid JWT"}`
+- O runtime error também aponta: `supabase/functions/update-member/index.ts` com `Invalid JWT`
 
-Quando um usuário faz "Criar conta com Google" no portal SaaS, o fluxo OAuth redireciona diretamente para `/cliente/inicio`. A Edge Function `signup-saas` **nunca é chamada** para usuários Google. O `AuthContext` detecta `provider === "google"` e faz polling pela role, mas como ninguém provisionou org/role/subscription/wallet, o polling falha por 10s e o fallback atribui `cliente_admin` — porém **sem organização, sem assinatura, sem créditos**.
+Isso significa:
+- o usuário está logado
+- a sessão chega no navegador
+- mas a função `update-member` está sendo rejeitada na validação de JWT da própria plataforma antes/de/na autenticação da função
 
-O onboarding (`ClienteOnboardingCompany`) tenta ler `orgData` mas como não existe org, provavelmente falha silenciosamente ou mostra tela em branco.
+Então:
+- não é bloqueio de Trial
+- não é limite de usuários
+- não é regra de negócio de exclusão
+- é um problema de autenticação/validação do token nesse endpoint específico
 
-**Correção:** Após o redirect do Google OAuth, o `AuthContext` (ou uma página intermediária) deve detectar que o usuário Google não tem organização e chamar `signup-saas` automaticamente para provisionar org + subscription + wallet.
+## O que corrigir
 
----
+### 1. Tornar a autenticação da `update-member` consistente com as outras funções que já funcionam
+Revisar `supabase/functions/update-member/index.ts` para alinhar exatamente o padrão das funções autenticadas estáveis do projeto:
+- validar `Authorization` com `Bearer `
+- criar client com `SUPABASE_ANON_KEY`
+- usar `auth.getUser()`
+- retornar erro detalhado de autenticação no corpo quando falhar
 
-### BUG CRÍTICO 2 — Franqueado: papel "cliente_user" usado como "Operador"
+Hoje o arquivo já parece parecido, mas o comportamento real indica que ele precisa ser refeito no mesmo padrão das funções que estão funcionando (`whatsapp-setup`, `generate-script`, etc.), eliminando qualquer diferença sutil.
 
-Em `FranqueadoConfiguracoes.tsx` (linha 125-126), as opções de papel para convidar membros na franquia são:
-- `franqueado` → "Admin (Franqueado)"
-- `cliente_user` → "Operador"
+### 2. Evitar dupla dependência de validação JWT
+Como `update-member` já está configurada com `verify_jwt = true` no `supabase/config.toml`, a função ainda faz validação manual via `auth.getUser()`.
 
-Isso atribui a role global `cliente_user` a um membro da **franquia**, o que causa conflito com o `portalRoleGuard`: na próxima vez que esse "operador" tentar logar, o sistema pode bloquear o acesso ao portal da franquia porque `cliente_user` é uma role SaaS, não franchising.
+Plano recomendado:
+- manter a validação manual para identificar o usuário autenticado
+- mas ajustar a função para seguir exatamente o mesmo fluxo das outras funções protegidas
+- se o erro persistir, a alternativa segura é revisar a configuração da função no `config.toml` para o modo compatível com o restante do projeto
 
-Da mesma forma, em `UnidadeUsuariosReal.tsx` a opção "Usuário" também usa `cliente_user`.
+### 3. Melhorar observabilidade dessa função
+Adicionar logs claros em `update-member` para descobrir em qual etapa quebra:
+- início da requisição
+- presença do header Authorization
+- resultado do `auth.getUser()`
+- caller id
+- organização alvo
+- action remove/update
 
-**Correção:** Criar ou usar uma role específica para operadores de franquia (ex: manter `franqueado` como única role do portal franquia, ou adicionar `franqueado_user` ao enum), ou ajustar o `portalRoleGuard` para permitir `cliente_user` no portal franchise quando o membership é de uma org tipo `franqueado`.
+Assim, se voltar a falhar, a causa fica explícita em vez de parecer “erro de plano”.
 
----
+### 4. Manter exclusão liberada para todos os planos
+A lógica de produto deve permanecer:
+- adicionar usuários depende do limite do plano
+- excluir usuários não depende do plano
 
-### BUG MÉDIO 3 — invite-user: self-invite check acontece DEPOIS da criação do usuário
+Não vou adicionar nenhuma trava de plano para exclusão, porque isso seria incorreto.
 
-No `invite-user` (linha 210-216), a verificação de "auto-convite" (`userId === callerId`) só acontece **depois** de tentar criar o usuário e gerar o link de recuperação. Se o admin digitar o próprio email, o sistema vai gerar um recovery link e enviar email antes de barrar. Isso não é um blocker funcional mas é um desperdício e potencialmente confuso.
+### 5. Ajustar o frontend para mostrar a mensagem real quando houver 401
+No `EditMemberDialog.tsx`, manter tratamento de erro robusto para exibir:
+- “Sessão expirada”
+- “Acesso não autorizado”
+- “Você não pode remover a si mesmo”
+- etc.
 
-**Correção:** Mover a verificação de self-invite para antes da criação do usuário (logo após validar o `callerId`).
+Isso evita o erro genérico mesmo quando o backend rejeitar a chamada.
 
----
+## Arquivos a revisar
 
-### BUG MÉDIO 4 — invite-user: email de convite enviado mesmo para usuários existentes que já são membros
+- `supabase/functions/update-member/index.ts`
+- `supabase/config.toml`
+- `src/components/EditMemberDialog.tsx`
 
-Se um usuário já existe E já é membro, o código retorna 409 na linha 194-198. Isso está correto. Porém, se o usuário **existe mas NÃO é membro** (multi-org), o sistema gera um novo recovery link e envia email — o que reseta a senha do usuário existente sem aviso. Isso pode causar perda de acesso temporária na outra organização.
+## Resultado esperado
 
-**Correção:** Para usuários existentes sendo adicionados a nova org, enviar um email informativo ("Você foi adicionado à organização X") em vez de um recovery link que reseta a senha.
+Após o ajuste:
+- admins Trial, Basic, Pro ou Standard poderão excluir usuários normalmente
+- somente bloqueios reais continuarão valendo:
+  - remover a si mesmo
+  - remover o último super admin
+  - falta real de permissão
+- o sistema deixará claro quando o problema for sessão/JWT e não plano
 
----
+## Observação importante
 
-### BUG MÉDIO 5 — update-member remove: não deleta o usuário do auth
+Também apareceu um warning separado no console do `EditMemberDialog` sobre `ref` em componentes do `AlertDialog`. Isso não parece ser a causa do 401, mas vale corrigir depois porque pode gerar comportamento estranho no modal de confirmação.
 
-Quando um admin remove um membro, o `update-member` deleta: team memberships, org membership, e condicionalmente a role. Porém **o usuário continua existindo no auth.users**. Se ele não tem mais nenhum membership, fica como um "usuário fantasma" — pode fazer login mas não tem acesso a nada, resultando em tela em branco ou erro.
+## Detalhes técnicos
 
-**Correção:** Quando `otherMemberships === 0` após a remoção, deletar também o auth user via `admin.auth.admin.deleteUser(user_id)` para limpar completamente. Ou alternativamente, mostrar uma tela de "Você não tem acesso a nenhuma organização" no frontend.
+```text
+Fluxo atual observado:
 
----
-
-### BUG MENOR 6 — team_ids no invite-user: sem ON CONFLICT
-
-Linha 288-289 do `invite-user`: se o mesmo usuário for convidado duas vezes com os mesmos team_ids (edge case), o insert falha com duplicate key. Deveria ter `ON CONFLICT DO NOTHING`.
-
-**Correção:** Adicionar `.onConflict("team_id,user_id")` ou handling de erro no insert de `org_team_memberships`.
-
----
-
-### BUG MENOR 7 — Franqueado role options inconsistente com invite-user default
-
-No `invite-user` (linha 266), quando o org type é `franqueado`, o default role é `franqueado`. Mas em `FranqueadoConfiguracoes.tsx` o default do formulário de convite é `cliente_user`. O frontend envia `role: "cliente_user"` que o backend aceita (está na lista `allowedRoles`). Isso não deveria acontecer — um operador de franquia não deveria receber `cliente_user`.
-
----
-
-### MELHORIA 1 — Consistência de error handling
-
-Embora já tenhamos corrigido vários locais, ainda existe o risco de que **novos locais que chamam Edge Functions** repitam o pattern `if (error) throw error` sem extrair o contexto. Sugiro criar um helper reutilizável:
-
-```typescript
-// src/lib/edgeFunctionError.ts
-export async function extractEdgeFunctionError(error: any): Promise<Error> {
-  const ctx = error?.context;
-  if (ctx instanceof Response) {
-    const body = await ctx.json().catch(() => null);
-    return new Error(body?.error || error.message);
-  }
-  return error instanceof Error ? error : new Error(String(error));
-}
+UI -> POST /functions/v1/update-member
+   -> Authorization Bearer presente
+   -> gateway/runtime responde 401 Invalid JWT
+   -> função não chega na lógica de remover membership
+   -> usuário vê erro ao remover
 ```
 
-E usá-lo em todos os locais que invocam functions.
-
----
-
-### Resumo de arquivos afetados
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/contexts/AuthContext.tsx` | Provisionar Google OAuth users via `signup-saas` |
-| `src/pages/franqueado/FranqueadoConfiguracoes.tsx` | Corrigir role options (remover `cliente_user` de franquias) |
-| `src/components/unidades/UnidadeUsuariosReal.tsx` | Idem |
-| `supabase/functions/invite-user/index.ts` | Mover self-invite check, ON CONFLICT em team_ids, email diferente para existing users |
-| `supabase/functions/update-member/index.ts` | Deletar auth user quando sem memberships |
-| `src/lib/edgeFunctionError.ts` | Novo helper reutilizável para extração de erros |
-| Todos os locais que chamam Edge Functions | Usar o helper |
-
-### Nenhuma mudança de banco de dados necessária
-
-Todas as correções são em código frontend e Edge Functions.
-
+```text
+Conclusão:
+Erro de autenticação do endpoint
+!=
+limite de plano
+!=
+restrição de Trial
+```
