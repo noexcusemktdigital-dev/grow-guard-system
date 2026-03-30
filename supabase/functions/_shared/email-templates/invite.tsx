@@ -29,13 +29,13 @@ export const InviteEmail = ({
 }: InviteEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Você foi convidado para a NoExcuse Digital</Preview>
+    <Preview>Você foi convidado(a) — NoExcuse Digital</Preview>
     <Body style={main}>
       <Container style={container}>
         <Img src={LOGO_URL} alt="NoExcuse Digital" width="160" height="auto" style={logo} />
-        <Heading style={h1}>Você foi convidado</Heading>
+        <Heading style={h1}>Você foi convidado(a)</Heading>
         <Text style={text}>
-          Você foi convidado para a plataforma <strong>NoExcuse Digital</strong>. Defina sua senha para começar a usar o sistema.
+          Você foi convidado(a) para a <strong>NoExcuse Digital</strong>. Clique no botão abaixo para aceitar o convite e criar sua conta.
         </Text>
         <Button style={button} href={confirmationUrl}>
           Aceitar convite

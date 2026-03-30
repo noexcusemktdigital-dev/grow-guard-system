@@ -39,7 +39,7 @@ export const RecoveryEmail = ({
           Redefinir senha
         </Button>
         <Text style={footer}>
-          Se você não solicitou a redefinição, pode ignorar este e-mail com segurança. Sua senha não será alterada.
+          Se você não solicitou a redefinição de senha, pode ignorar este e-mail. Sua senha não será alterada.
         </Text>
       </Container>
     </Body>

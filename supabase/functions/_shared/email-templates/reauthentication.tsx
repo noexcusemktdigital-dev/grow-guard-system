@@ -26,11 +26,11 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
     <Body style={main}>
       <Container style={container}>
         <Img src={LOGO_URL} alt="NoExcuse Digital" width="160" height="auto" style={logo} />
-        <Heading style={h1}>Confirmar identidade</Heading>
+        <Heading style={h1}>Código de verificação</Heading>
         <Text style={text}>Use o código abaixo para confirmar sua identidade:</Text>
         <Text style={codeStyle}>{token}</Text>
         <Text style={footer}>
-          Este código expira em breve. Se você não solicitou, pode ignorar este e-mail.
+          Este código expira em breve. Se você não solicitou, pode ignorar este e-mail com segurança.
         </Text>
       </Container>
     </Body>

@@ -33,10 +33,10 @@ export const MagicLinkEmail = ({
         <Img src={LOGO_URL} alt="NoExcuse Digital" width="160" height="auto" style={logo} />
         <Heading style={h1}>Seu link de acesso</Heading>
         <Text style={text}>
-          Clique no botão abaixo para acessar sua conta na <strong>NoExcuse Digital</strong>. Este link expira em breve.
+          Clique no botão abaixo para acessar a <strong>NoExcuse Digital</strong>. Este link expira em breve.
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Acessar conta
+          Acessar
         </Button>
         <Text style={footer}>
           Se você não solicitou este link, pode ignorar este e-mail com segurança.
