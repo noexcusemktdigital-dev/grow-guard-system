@@ -215,7 +215,6 @@ IMPORTANTE:
             error: "Limite de requisições excedido. Tente novamente em alguns minutos.",
           }),
           {
-            status: 429,
             headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           }
         );
@@ -226,7 +225,6 @@ IMPORTANTE:
             error: "Créditos insuficientes. Faça upgrade do seu plano.",
           }),
           {
-            status: 402,
             headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           }
         );
@@ -236,7 +234,6 @@ IMPORTANTE:
       return new Response(
         JSON.stringify({ error: "Erro ao gerar script" }),
         {
-          status: 500,
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
