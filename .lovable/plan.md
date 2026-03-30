@@ -1,46 +1,33 @@
 
 
-## Plano — Migrar auth-email-hook para envio direto via Resend
+## Correção — Forçar onboarding no primeiro login após criação de conta
 
-### Situação atual
+### Causa raiz
 
-| Fluxo | Como envia | Status |
-|-------|-----------|--------|
-| Signup | Resend direto (`signup-saas`) | ✅ Funcionando |
-| Convite | Resend direto (`invite-user`) | ✅ Funcionando |
-| Reset senha | Resend direto (`request-password-reset`) | ✅ Funcionando |
-| Magic link, email change, reauth | `auth-email-hook` → fila gerenciada → `process-email-queue` | ❌ Depende de DNS pendente |
+O fluxo de redirecionamento para onboarding já existe (`ClienteLayout` → `/cliente/onboarding`), mas **nunca é acionado** porque:
 
-O `auth-email-hook` usa o sistema de fila gerenciada (enqueue → process-email-queue) que depende do DNS de `notify.sistema.noexcusedigital.com.br` estar verificado. Como o DNS está pendente, esses e-mails nunca são enviados.
+1. A coluna `onboarding_completed` na tabela `organizations` é `boolean | null` (sem default)
+2. A função `signup-saas` cria a org sem definir `onboarding_completed`, então o valor fica `null`
+3. O gate no `ClienteLayout` verifica `=== false` — como o valor é `null`, a condição nunca é verdadeira
 
 ### Solução
 
-Modificar o `auth-email-hook` para enviar diretamente via Resend API (igual ao `request-password-reset` e `invite-user`), eliminando a dependência da fila gerenciada e do DNS pendente.
-
-Os templates React Email já existem e estão corretos (PT-BR, logo, cores). Só precisa mudar o mecanismo de envio.
-
-### Mudança no auth-email-hook
-
-**Antes:** Renderiza HTML → enqueue na fila pgmq → `process-email-queue` envia via sistema gerenciado
-
-**Depois:** Renderiza HTML → envia direto via Resend API (`RESEND_API_KEY`) → loga em `email_send_log`
-
-O hook continua interceptando os eventos de auth (magic link, email change, reauthentication). Signup e recovery são ignorados pelo hook porque já são tratados pelas Edge Functions diretas.
-
-### Arquivos afetados
+Duas mudanças simples:
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/auth-email-hook/index.ts` | Trocar `enqueue_email` por chamada direta ao Resend API. Manter preview endpoint, templates, e logging no `email_send_log` |
+| `supabase/functions/signup-saas/index.ts` | Adicionar `onboarding_completed: false` no payload de criação da org (linha 249) |
+| `src/components/ClienteLayout.tsx` | Mudar a condição de `=== false` para `!== true`, cobrindo tanto `false` quanto `null` |
+| **Migração SQL** | Setar default da coluna para `false` e corrigir orgs existentes com `null` → `false` (para quem ainda não fez onboarding) |
 
-### O que NÃO muda
+### Migração SQL
 
-- Templates (já estão corretos)
-- `signup-saas`, `invite-user`, `request-password-reset` (já usam Resend)
-- `config.toml` (já tem `verify_jwt = false`)
-- Preview endpoint (continua funcionando)
+```sql
+ALTER TABLE organizations ALTER COLUMN onboarding_completed SET DEFAULT false;
+UPDATE organizations SET onboarding_completed = false WHERE onboarding_completed IS NULL AND type = 'cliente';
+```
 
 ### Resultado
 
-Todos os e-mails do sistema passam pelo Resend com domínio verificado `noexcusedigital.com.br`, templates branded em PT-BR, sem dependência de DNS pendente.
+Após criar a conta e fazer o primeiro login, o usuário é redirecionado automaticamente para a tela de onboarding (cadastro da empresa). Só depois de preencher os dados e clicar "Finalizar" é que ele acessa o sistema.
 
