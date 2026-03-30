@@ -151,9 +151,9 @@ describe("SaasAuth (Cliente SaaS)", () => {
     expect(screen.getByText("Recuperar senha")).toBeInTheDocument();
   });
 
-  it("shows existing account state and resends confirmation when signup returns obfuscated existing user", async () => {
-    mockSignUp.mockResolvedValue({
-      data: { user: { id: "u-existing", identities: [] } },
+  it("shows existing account state when signup returns email_exists error", async () => {
+    mockInvoke.mockResolvedValue({
+      data: { error: "email_exists" },
       error: null,
     });
 
@@ -163,10 +163,8 @@ describe("SaasAuth (Cliente SaaS)", () => {
     expect(nomeInput).toBeInTheDocument();
 
     fireEvent.change(nomeInput, { target: { value: "Teste Cliente" } });
-    // Use getAllByLabelText since both login and signup forms render
     const emailInputs = screen.getAllByLabelText("Email");
     const senhaInputs = screen.getAllByLabelText("Senha");
-    // Signup inputs are the second set (index 1)
     fireEvent.change(emailInputs[emailInputs.length - 1], { target: { value: "existente@test.com" } });
     fireEvent.change(senhaInputs[senhaInputs.length - 1], { target: { value: "Senha123!" } });
     fireEvent.click(screen.getByRole("checkbox"));
