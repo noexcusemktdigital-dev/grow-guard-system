@@ -63,7 +63,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.generate-prospection]
     verify_jwt = true
   [functions.generate-script]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-site]
     verify_jwt = true
   [functions.generate-social-briefing]

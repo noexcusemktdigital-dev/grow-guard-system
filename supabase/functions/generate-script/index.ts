@@ -309,7 +309,6 @@ IMPORTANTE:
         error: e instanceof Error ? e.message : "Erro desconhecido",
       }),
       {
-        status: 500,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );
