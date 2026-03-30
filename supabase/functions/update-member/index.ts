@@ -4,39 +4,63 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
+  const corsHeaders = { ...getCorsHeaders(req), "Content-Type": "application/json" };
+
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: getCorsHeaders(req) });
+    console.log("[update-member] Request received, auth present:", !!authHeader);
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.log("[update-member] Missing or invalid Authorization header");
+      return new Response(JSON.stringify({ error: "Sessão expirada. Faça login novamente." }), { status: 200, headers: corsHeaders });
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Get caller identity
+    // Validate caller via anon client + getUser
     const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user: caller }, error: authErr } = await userClient.auth.getUser();
-    if (authErr || !caller) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: getCorsHeaders(req) });
+    
+    console.log("[update-member] Auth result:", caller ? `user=${caller.id}` : "no user", authErr ? `err=${authErr.message}` : "no error");
+
+    if (authErr || !caller) {
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), { status: 200, headers: corsHeaders });
+    }
 
     const { user_id, organization_id, action = "update", role, full_name, job_title } = await req.json();
-    if (!user_id || !organization_id) return new Response(JSON.stringify({ error: "user_id and organization_id required" }), { status: 400, headers: getCorsHeaders(req) });
+    console.log("[update-member] Action:", action, "target_user:", user_id, "org:", organization_id, "caller:", caller.id);
+
+    if (!user_id || !organization_id) {
+      return new Response(JSON.stringify({ error: "user_id and organization_id required" }), { status: 200, headers: corsHeaders });
+    }
 
     const admin = createClient(supabaseUrl, serviceKey);
 
     // Validate caller is member or parent admin
     const { data: isMember } = await admin.rpc("is_member_or_parent_of_org", { _user_id: caller.id, _org_id: organization_id });
-    if (!isMember) return new Response(JSON.stringify({ error: "Sem permissão para gerenciar esta organização" }), { status: 403, headers: getCorsHeaders(req) });
+    if (!isMember) {
+      console.log("[update-member] Caller not member of org");
+      return new Response(JSON.stringify({ error: "Sem permissão para gerenciar esta organização" }), { status: 200, headers: corsHeaders });
+    }
 
     // Validate caller has admin role
     const { data: callerRole } = await admin.rpc("get_user_role", { _user_id: caller.id });
     const adminRoles = ["super_admin", "admin", "franqueado", "cliente_admin"];
-    if (!adminRoles.includes(callerRole)) return new Response(JSON.stringify({ error: "Apenas administradores podem gerenciar membros" }), { status: 403, headers: getCorsHeaders(req) });
+    if (!adminRoles.includes(callerRole)) {
+      console.log("[update-member] Caller role not admin:", callerRole);
+      return new Response(JSON.stringify({ error: "Apenas administradores podem gerenciar membros" }), { status: 200, headers: corsHeaders });
+    }
 
     // Cannot modify self on remove
     if (action === "remove" && user_id === caller.id) {
-      return new Response(JSON.stringify({ error: "Você não pode remover a si mesmo" }), { status: 400, headers: getCorsHeaders(req) });
+      return new Response(JSON.stringify({ error: "Você não pode remover a si mesmo" }), { status: 200, headers: corsHeaders });
     }
 
     if (action === "remove") {
+      console.log("[update-member] Removing user", user_id, "from org", organization_id);
+
       // Get teams belonging to this organization so we can clean up team memberships
       const { data: orgTeams } = await admin
         .from("org_teams")
@@ -73,10 +97,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ success: true }), { headers: getCorsHeaders(req) });
+      console.log("[update-member] Remove successful");
+      return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
     }
 
     // action === "update"
+    console.log("[update-member] Updating user", user_id);
     const updates: Promise<unknown>[] = [];
 
     if (full_name !== undefined || job_title !== undefined) {
@@ -91,7 +117,6 @@ Deno.serve(async (req) => {
       if (role !== "super_admin") {
         const { data: targetRole } = await admin.rpc("get_user_role", { _user_id: user_id });
         if (targetRole === "super_admin") {
-          // Count super_admins that are members of THIS organization
           const { data: orgMembers } = await admin
             .from("organization_memberships")
             .select("user_id")
@@ -106,7 +131,7 @@ Deno.serve(async (req) => {
 
           const otherSuperAdmins = (superAdminRoles ?? []).filter((r: { user_id: string }) => r.user_id !== user_id);
           if (otherSuperAdmins.length === 0) {
-            return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin desta organização" }), { status: 400, headers: getCorsHeaders(req) });
+            return new Response(JSON.stringify({ error: "Não é possível rebaixar o último Super Admin desta organização" }), { status: 200, headers: corsHeaders });
           }
         }
       }
@@ -120,8 +145,10 @@ Deno.serve(async (req) => {
     }
 
     await Promise.all(updates);
-    return new Response(JSON.stringify({ success: true }), { headers: getCorsHeaders(req) });
+    console.log("[update-member] Update successful");
+    return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
   } catch (err: unknown) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 500, headers: getCorsHeaders(req) });
+    console.error("[update-member] Unhandled error:", err);
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 200, headers: corsHeaders });
   }
 });
