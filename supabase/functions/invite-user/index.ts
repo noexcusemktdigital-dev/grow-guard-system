@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
     if ((currentMembers ?? 0) >= maxUsers) {
       return new Response(
         JSON.stringify({ error: `Limite de ${maxUsers} usuários atingido. Faça upgrade para adicionar mais.` }),
-        { status: 403, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
