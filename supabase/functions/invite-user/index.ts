@@ -145,8 +145,7 @@ Deno.serve(async (req) => {
       _org_id: organization_id,
     });
     if (!isMember) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
+      return new Response(JSON.stringify({ error: "Sem permissão para convidar nesta organização." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
