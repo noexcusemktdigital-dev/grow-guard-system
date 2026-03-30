@@ -104,25 +104,29 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+
+    // Use getClaims for compatibility with signing-keys system
+    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("[invite-user] Claims error:", claimsError);
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+    const user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
     const callerId = user.id;
 
     const { email, full_name, role, organization_id, team_ids } = await req.json();
 
     if (!email || !organization_id) {
       return new Response(JSON.stringify({ error: "email and organization_id required" }), {
-        status: 400,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -131,7 +135,7 @@ Deno.serve(async (req) => {
     if (email.toLowerCase().trim() === user.email?.toLowerCase()) {
       return new Response(
         JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -141,8 +145,7 @@ Deno.serve(async (req) => {
       _org_id: organization_id,
     });
     if (!isMember) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
+      return new Response(JSON.stringify({ error: "Sem permissão para convidar nesta organização." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -181,7 +184,7 @@ Deno.serve(async (req) => {
     if ((currentMembers ?? 0) >= maxUsers) {
       return new Response(
         JSON.stringify({ error: `Limite de ${maxUsers} usuários atingido. Faça upgrade para adicionar mais.` }),
-        { status: 403, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -225,7 +228,7 @@ Deno.serve(async (req) => {
       if (existingMembership) {
         return new Response(
           JSON.stringify({ error: "Este usuário já é membro desta organização." }),
-          { status: 409, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
@@ -333,7 +336,6 @@ Deno.serve(async (req) => {
   } catch (err: unknown) {
     console.error("invite-user error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
