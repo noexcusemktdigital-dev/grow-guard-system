@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
       if (existingMembership) {
         return new Response(
           JSON.stringify({ error: "Este usuário já é membro desta organização." }),
-          { status: 409, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
         );
       }
 
