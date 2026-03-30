@@ -31,7 +31,7 @@ export function ClienteLayout() {
   const handleTourDone = useCallback(() => setTourDone(true), []);
 
   // Gate: redirect to onboarding if not completed (skip if already on onboarding page)
-  if (!isOnboardingRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed === false) {
+  if (!isOnboardingRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed !== true) {
     return <Navigate to="/cliente/onboarding" replace />;
   }
 

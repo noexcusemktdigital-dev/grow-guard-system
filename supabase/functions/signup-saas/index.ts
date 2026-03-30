@@ -246,7 +246,7 @@ async function provisionUser(
   }
 
   // Create organization
-  const orgPayload: Record<string, unknown> = { name: companyName, type: "cliente" };
+  const orgPayload: Record<string, unknown> = { name: companyName, type: "cliente", onboarding_completed: false };
   if (resolvedParentOrgId) orgPayload.parent_org_id = resolvedParentOrgId;
 
   const { data: org, error: orgError } = await supabaseAdmin
