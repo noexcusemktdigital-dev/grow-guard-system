@@ -103,7 +103,7 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("submits forgot password form", async () => {
-    mockResetPassword.mockResolvedValue({ error: null });
+    mockInvoke.mockResolvedValue({ data: { success: true }, error: null });
     renderAuth();
 
     fireEvent.click(screen.getByText("Esqueci minha senha"));
@@ -111,7 +111,9 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
     fireEvent.click(screen.getByRole("button", { name: /enviar link/i }));
 
     await waitFor(() => {
-      expect(mockResetPassword).toHaveBeenCalledWith("user@test.com", expect.objectContaining({ redirectTo: expect.stringContaining("/reset-password") }));
+      expect(mockInvoke).toHaveBeenCalledWith("request-password-reset", expect.objectContaining({
+        body: { email: "user@test.com", portal: "franchise" },
+      }));
     });
   });
 });
