@@ -118,6 +118,9 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.receive-candidate]
     # Public franchise candidate form
     verify_jwt = false
+  [functions.request-password-reset]
+    # Public password reset endpoint, no auth needed
+    verify_jwt = false
   [functions.validate-coupon]
     # Public coupon validation endpoint
     verify_jwt = false

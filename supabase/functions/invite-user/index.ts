@@ -302,21 +302,19 @@ Deno.serve(async (req) => {
       validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
       console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
     }
-    // Check+update/insert role — preserve existing role for multi-org users
-    const { data: existingRole } = await adminClient
-      .from("user_roles").select("id, role").eq("user_id", userId).maybeSingle();
-    if (existingRole) {
-      if (isNewUser) {
-        // Only update role for brand new users
-        await adminClient.from("user_roles").update({ role: validRole }).eq("user_id", userId);
-        console.log(`[invite-user] Updated role for new user: ${validRole}`);
-      } else {
-        // Existing user from another org — preserve their current role
-        console.log(`[invite-user] Preserving existing role "${existingRole.role}" for multi-org user (requested: ${validRole})`);
-      }
+
+    // Multi-role support: INSERT new role, ON CONFLICT do nothing (user may already have this role)
+    const { error: roleInsertErr } = await adminClient
+      .from("user_roles")
+      .insert({ user_id: userId, role: validRole })
+      .select()
+      .maybeSingle();
+
+    // If conflict (already has this role), that's fine
+    if (roleInsertErr && !roleInsertErr.message?.includes("duplicate")) {
+      console.error("[invite-user] Role insert error:", roleInsertErr);
     } else {
-      await adminClient.from("user_roles").insert({ user_id: userId, role: validRole });
-      console.log(`[invite-user] Inserted role: ${validRole}`);
+      console.log(`[invite-user] Role ensured: ${validRole} for user ${userId} (isNew=${isNewUser})`);
     }
 
     // Assign to teams if provided (with ON CONFLICT to avoid duplicate key errors)
