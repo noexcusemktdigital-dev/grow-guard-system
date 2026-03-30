@@ -104,18 +104,23 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+
+    // Use getClaims for compatibility with signing-keys system
+    const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("[invite-user] Claims error:", claimsError);
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+    const user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
     const callerId = user.id;
 
     const { email, full_name, role, organization_id, team_ids } = await req.json();
