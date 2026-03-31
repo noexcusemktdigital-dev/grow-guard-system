@@ -119,6 +119,7 @@ export default function ClienteGPSNegocio() {
   const { data: history } = useStrategyHistory();
   const { data: orgId } = useUserOrgId();
   const { data: wallet } = useClienteWallet();
+  const { data: salesPlan, isLoading: isLoadingSalesPlan } = useSalesPlan();
   const saveStrategy = useSaveStrategy();
   const approveStrategy = useApproveStrategy();
   const generateStrategy = useGenerateStrategy();
@@ -131,12 +132,20 @@ export default function ClienteGPSNegocio() {
   const status = activeStrategy?.status || "pending";
   const generationCount = (history?.length ?? 0) + (activeStrategy ? 1 : 0);
 
-  // Auto-detect if result exists → jump to result
+  // Detect if Rafael completed but Sofia/generation hasn't — partial progress
+  const hasPartialProgress = !!(
+    salesPlan?.answers &&
+    Object.keys(salesPlan.answers).length >= 3 &&
+    !hasResult
+  );
+
+  // Auto-detect phase on load
   useEffect(() => {
-    if (!isLoading && hasResult) {
+    if (isLoading || isLoadingSalesPlan) return;
+    if (hasResult) {
       setPhase("result");
     }
-  }, [isLoading, hasResult]);
+  }, [isLoading, isLoadingSalesPlan, hasResult]);
 
   const handleRafaelComplete = (answers: Record<string, any>) => {
     setRafaelAnswers(answers);
