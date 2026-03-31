@@ -1,37 +1,47 @@
 
 
-## Plano — Retomar GPS do Negócio de onde parou
+## Correção — GPS do Negócio não gera estratégia (timeout na Edge Function)
 
-### Problema
+### Diagnóstico
 
-Quando Rafael (comercial) completa mas Sofia (marketing) falha, as respostas do Rafael ficam apenas no estado React (`useState`). Ao recarregar a página, o estado é perdido e o GPS recomeça do zero, obrigando o usuário a responder tudo de novo.
+Os logs da Edge Function `generate-strategy` mostram apenas **"booted"** — sem nenhum log de "Generating..." nem erro. Isso confirma que a função morre por **timeout silencioso** durante a chamada à AI. Mesmo com a divisão em 2 chamadas (marketing + comercial), cada schema ainda é grande demais com muitos `additionalProperties: false` aninhados e propriedades `required` profundas, fazendo o modelo demorar além do limite de 150s.
 
-### Solução
+### Solução: 3 mudanças combinadas
 
-Persistir as respostas do Rafael imediatamente após ele completar, e ao carregar a página, detectar se já existem respostas salvas sem resultado final — pulando direto para a fase da Sofia.
+| Mudança | Motivo |
+|---------|--------|
+| **Dividir marketing em 2 sub-chamadas** | O schema de marketing tem 16 propriedades top-level obrigatórias — dividir em "core" (~8 seções: diagnóstico, ICP, proposta, concorrência, tom, aquisição) e "growth" (~8 seções: conteúdo, crescimento, benchmarks, execução, estrutura, campos simples) | 
+| **Remover `additionalProperties: false` dos objetos aninhados** | Esta constraint força o modelo a validar cada nível e desacelera a geração significativamente. Manter apenas no nível top-level de cada schema |
+| **Trocar modelo para `google/gemini-3-flash-preview`** | Modelo mais recente e rápido para structured output |
 
-### Mudanças
+### Fluxo atualizado
+
+```text
+Etapa 1/3 — Marketing Core (diagnóstico, ICP, proposta, concorrência, tom, aquisição)
+Etapa 2/3 — Marketing Growth (conteúdo, crescimento, benchmarks, execução, estrutura)
+Etapa 3/3 — Diagnóstico Comercial (radar, projeções, funil, estratégias, plano)
+```
+
+### Arquivos alterados
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | 1. Em `handleRafaelComplete`: salvar as respostas do Rafael no `sales_plans` imediatamente (já faz isso no `handleSofiaComplete`, mover para antes). 2. No `useEffect` de auto-detect: se existe `salesPlan` com respostas mas NÃO existe `activeStrategy` com `strategy_result`, carregar as respostas do Rafael do `salesPlan` no state e pular direto para `chat-sofia`. 3. Adicionar botão "Continuar de onde parou" na tela welcome quando detectar esse estado parcial. |
+| `supabase/functions/generate-strategy/index.ts` | Dividir `MARKETING_TOOL_SCHEMA` em `MARKETING_CORE_SCHEMA` e `MARKETING_GROWTH_SCHEMA`. Aceitar `section` = `marketing-core`, `marketing-growth`, `comercial`. Remover `additionalProperties: false` dos objetos internos. Trocar modelo. Créditos debitados apenas no `marketing-core`. |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | 3 chamadas sequenciais em `handleSofiaComplete`. Progresso: "Etapa 1/3", "Etapa 2/3", "Etapa 3/3". Merge dos 3 resultados antes de salvar. |
+| `src/hooks/useMarketingStrategy.ts` | Sem mudança (já suporta `section` genérico) |
 
-### Fluxo corrigido
+### Divisão dos schemas
 
-```text
-1. Rafael completa → salva respostas no sales_plans imediatamente
-2. Transição → Sofia inicia
-3. Sofia completa → gera estratégia (marketing + comercial)
-4. Se falhar na geração → respostas do Rafael já estão salvas
-5. Usuário recarrega → detecta sales_plan sem strategy_result
-6. Mostra "Continuar de onde parou" → pula direto pra Sofia
-```
+**Marketing Core** (6 seções):
+- `diagnostico`, `objetivo_principal`, `canal_prioritario`, `investimento_recomendado`, `potencial_crescimento`, `resumo_executivo`, `icp`, `proposta_valor`, `analise_concorrencia`, `tom_comunicacao`, `estrategia_aquisicao`
 
-### Detalhes técnicos
+**Marketing Growth** (5 seções):
+- `estrategia_conteudo`, `plano_crescimento`, `benchmarks_setor`, `plano_execucao`, `estrutura_recomendada`
 
-- O hook `useSalesPlan` já existe e retorna as respostas salvas
-- O hook `useSaveSalesPlan` já faz upsert por `organization_id`
-- A detecção é: `salesPlan?.answers` tem dados + `!hasResult` (sem strategy_result na marketing_strategies)
-- As respostas do Rafael são carregadas no `rafaelAnswers` state via `setRafaelAnswers(salesPlan.answers)`
-- Na tela welcome, mostrar card diferenciado: "Você já completou a etapa comercial. Continuar com a Sofia?"
+**Comercial** (1 seção, sem mudança):
+- `diagnostico_comercial`
+
+### Resultado
+
+Cada chamada gera ~5-6 seções em vez de 16, ficando dentro do limite de tempo. O frontend mostra progresso granular em 3 etapas.
 
