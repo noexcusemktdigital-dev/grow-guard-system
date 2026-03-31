@@ -203,8 +203,8 @@ export default function ClienteGPSNegocio() {
     return parts.map((name, i) => ({
       key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
       label: name,
-      color: STAGE_COLORS[i % STAGE_COLORS.length],
-      icon: "circle-dot",
+      color: COLOR_NAMES[i % COLOR_NAMES.length],
+      icon: i === 0 ? "circle-plus" : i === parts.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
     }));
   };
 
@@ -215,8 +215,8 @@ export default function ClienteGPSNegocio() {
     return stages.map((name, i) => ({
       key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
       label: name,
-      color: STAGE_COLORS[i % STAGE_COLORS.length],
-      icon: "circle-dot",
+      color: COLOR_NAMES[i % COLOR_NAMES.length],
+      icon: i === 0 ? "circle-plus" : i === stages.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
     }));
   };
 
