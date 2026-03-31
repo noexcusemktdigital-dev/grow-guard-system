@@ -688,9 +688,11 @@ export interface StrategyDashboardProps {
   isApproving: boolean;
   status: string;
   createdAt?: string;
+  metasProps?: ClientePlanoVendasMetasProps;
+  metasDialog?: React.ReactNode;
 }
 
-export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt }: StrategyDashboardProps) {
+export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt, metasProps, metasDialog }: StrategyDashboardProps) {
   const navigate = useNavigate();
   if (!result) return null;
 
