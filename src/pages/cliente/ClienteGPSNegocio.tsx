@@ -193,8 +193,7 @@ export default function ClienteGPSNegocio() {
     setPhase("generating");
 
     try {
-      // 1. Save sales plan data (Rafael's answers)
-      saveSalesPlan.mutate({ answers: rafaelAnswers, score: 0 });
+      // 1. Sales plan already saved in handleRafaelComplete
 
       // 2. Auto-create CRM funnel from Rafael's answers
       const etapasText = rafaelAnswers.etapas_funil;
