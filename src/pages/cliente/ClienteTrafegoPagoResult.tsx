@@ -13,6 +13,7 @@ import {
   PieChart, Users, BarChart3, Layers,
 } from "lucide-react";
 import { platformColors, platformIcons, platformLinks, PLATFORM_TUTORIALS, TutorialStep } from "./ClienteTrafegoPagoConstants";
+import { CampaignStructureRenderer } from "./CampaignStructureRenderer";
 import { useCreateClientCampaign } from "@/hooks/useClienteCampaignsDB";
 import { toast } from "@/hooks/use-toast";
 
