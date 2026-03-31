@@ -36,8 +36,8 @@ interface ClienteTrafegoPagoResultProps {
   approveMutationIsPending: boolean;
 }
 
-/* ── Tutorial Dialog (unchanged logic, same as before) ── */
-function TutorialDialog({
+/* ── Tutorial Dialog — exported for reuse ── */
+export function TutorialDialog({
   open,
   onOpenChange,
   platformKey,
