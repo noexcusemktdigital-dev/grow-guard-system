@@ -1,37 +1,35 @@
 
 
-## Melhorias visuais na Sidebar
+## Diagnóstico — GPS do Negócio não gera resultado
 
-### O que muda
+### Causa raiz
 
-| Melhoria | Descrição |
-|----------|-----------|
-| **Fundo com gradiente sutil** | Substituir cor sólida por gradiente vertical escuro (topo mais claro → base mais escura), dando profundidade sem peso |
-| **Largura expandida** | De 240px para 256px — mais respiro nos textos e ícones |
-| **Active state premium** | Item ativo ganha um fundo com gradiente sutil da cor primary + borda lateral com glow suave (box-shadow), substituindo a barra sólida atual |
-| **Hover com micro-interação** | Ícones fazem um translateX(2px) sutil no hover, dando sensação de responsividade |
-| **GPS do Negócio como card** | Ao invés de um item de menu comum, o GPS ganha um mini-card com borda gradiente amber, padding maior e ícone com pulse sutil quando incompleto |
-| **Section headers com ícone decorativo** | Labels de seção ("Vendas", "Marketing", "Sistema") ganham um dot colorido antes do texto (vermelho para vendas, roxo para marketing, cinza para sistema) |
-| **Borda direita com gradiente** | Substituir borda sólida por gradiente vertical transparente→primary→transparente, criando uma linha de luz sutil |
-| **Logo area refinada** | Mais espaçamento vertical (h-16), logo ligeiramente maior |
-| **Footer de créditos** | Barra de progresso mais espessa (h-1.5) com gradiente animado quando < 25% |
-| **Botão de colapso** | Ícone com rotação suave (180deg) e hover com background circular |
+O TOOL_SCHEMA do `generate-strategy` é extremamente grande (17 propriedades top-level obrigatórias, com objetos profundamente aninhados incluindo o novo `diagnostico_comercial`). Isso causa **timeout na Edge Function** — o modelo AI precisa gerar um JSON estruturado gigante via tool calling, e a execução excede o limite de tempo da Edge Function (150s).
 
-### Detalhes técnicos
+Os logs confirmam: a função faz boot mas nunca registra erro nem resposta — simplesmente morre por timeout silencioso.
 
-**Arquivo único**: `src/components/ClienteSidebar.tsx`
+### Solução: Dividir a geração em 2 chamadas sequenciais
 
-Mudanças CSS-only e de classes Tailwind — sem novas dependências, sem framer-motion, sem impacto em performance:
+Em vez de pedir tudo em uma única chamada AI (que excede o timeout), dividir em:
 
-1. **`<aside>`**: `bg-sidebar` → `bg-gradient-to-b from-[hsl(225,20%,9%)] to-[hsl(225,20%,5%)]`, largura `w-[256px]`, borda direita com `border-r border-white/[0.04]`
-2. **NavItem active**: adicionar `shadow-[inset_0_0_12px_rgba(var(--sidebar-primary-raw),0.08)]` e gradiente no bg
-3. **NavItem hover**: `group-hover:translate-x-0.5` no ícone com `transition-transform`
-4. **GPS card**: wrapper com `mx-2.5 p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.04]` e ícone com `animate-pulse` quando incompleto
-5. **Section dots**: span com `w-1.5 h-1.5 rounded-full bg-red-400` antes do título
-6. **Logo**: `h-16` no container, `h-9` na imagem
-7. **Collapse button**: `rounded-full w-7 h-7` com hover `bg-white/[0.06]`
+1. **Chamada 1 — Marketing** (~12 seções existentes): `diagnostico`, `icp`, `proposta_valor`, `analise_concorrencia`, `tom_comunicacao`, `estrategia_aquisicao`, `estrategia_conteudo`, `plano_crescimento`, `benchmarks_setor`, `plano_execucao`, `estrutura_recomendada`, + campos simples
+2. **Chamada 2 — Comercial** (`diagnostico_comercial` completo): radar 5 eixos, projeções, funil reverso, estratégias de vendas, plano de ação
 
-### Resultado
+Cada chamada fica dentro do limite de tempo. O frontend faz as duas chamadas em sequência e junta os resultados antes de salvar.
 
-Sidebar com mais personalidade e profundidade visual, mantendo a performance (zero backdrop-blur, zero JS adicional, apenas classes Tailwind). O visual fica mais "app premium" sem parecer pesado.
+### Mudanças
+
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/generate-strategy/index.ts` | Aceitar parâmetro `section` (`marketing` ou `comercial`). Quando `section=marketing`, usar TOOL_SCHEMA e SYSTEM_PROMPT só de marketing (como era antes). Quando `section=comercial`, usar TOOL_SCHEMA e SYSTEM_PROMPT só do diagnóstico comercial. Não debitar créditos na chamada comercial (debitar só na marketing). |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | Na função de geração: chamar `generate-strategy` com `section: "marketing"` primeiro, depois chamar com `section: "comercial"`. Juntar os dois resultados em um objeto unificado antes de salvar em `marketing_strategies`. Mostrar progresso ("Gerando estratégia de marketing..." → "Gerando diagnóstico comercial..."). |
+| `src/hooks/useMarketingStrategy.ts` | Sem mudança (o hook `useGenerateStrategy` já retorna `data` genérico). |
+
+### Alternativa considerada e descartada
+
+Queue-based (salvar job no banco, processar em background): mais complexo, requer polling no frontend, nova tabela, novo worker. A divisão em 2 chamadas é mais simples e resolve o problema diretamente.
+
+### Benefício adicional
+
+Dividir também reduz o risco de o modelo falhar no parse do JSON gigante — schemas menores = respostas mais confiáveis.
 
