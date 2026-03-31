@@ -8,6 +8,9 @@ import type { BriefingStep, BriefingAgent } from "./ChatBriefing";
 export const AGENTS: Record<string, BriefingAgent> = {
   sofia: { name: "Sofia", role: "Consultora de Marketing", avatar: "S", color: "#8b5cf6" },
   rafael: { name: "Rafael", role: "Consultor Comercial", avatar: "R", color: "#0ea5e9" },
+  // GPS do Negócio agents (same agents, new context)
+  gps_rafael: { name: "Rafael", role: "Especialista Comercial · GPS do Negócio", avatar: "R", color: "#0ea5e9" },
+  gps_sofia: { name: "Sofia", role: "Especialista em Marketing · GPS do Negócio", avatar: "S", color: "#8b5cf6" },
   luna: { name: "Luna", role: "Estrategista de Conteúdo", avatar: "L", color: "#f59e0b" },
   theo: { name: "Theo", role: "Diretor de Arte", avatar: "T", color: "#ec4899" },
   alex: { name: "Alex", role: "Arquiteto Web", avatar: "A", color: "#10b981" },
