@@ -1,48 +1,43 @@
 
 
-## Plano — Corrigir compensação de 150 créditos para usuários trial
+## Plano — Melhorar diagramação da estratégia de tráfego + redirecionar aprovadas para Campanhas
 
 ### Problema
 
-A query SQL anterior usou `s.status = 'trial'` para filtrar usuários trial, mas na realidade o campo correto é `s.plan = 'trial'` (o status de todas as subscriptions é `'active'`). Por isso, nenhum usuário trial recebeu os 150 créditos.
+1. A estratégia gerada tem layout denso e pouco visual — cards de plataforma, KPIs e projeções ficam amontoados
+2. Ao aprovar uma estratégia, ela continua na aba "Estratégia" em vez de ir para "Campanhas" com as plataformas separadas
 
-### Dados atuais (orgs com `plan = 'trial'`)
+### Mudanças
 
-| Org | Balance atual |
-|-----|--------------|
-| 9a3bb183... | 150 |
-| 0058d2e2... | 200 |
-| 6c6ec1cf... | 95 |
-| 3f6c5bf4... | 200 |
-| fc36ee3b... | 200 |
-| d1e0bc87... | 3140 |
-| 91f29ed9... | 200 |
-| 6f409ecb... | 500 |
-| 49b32047... | 1000 |
+#### 1. Redesign do `ClienteTrafegoPagoResult.tsx` — Layout mais visual
 
-### Correção
+- **Header hero**: Card de destaque com status, diagnóstico e botões de ação (aprovar/regerar) em layout mais limpo
+- **Plano de investimento**: Cards com ícones coloridos por plataforma + barra de distribuição visual (progress bar proporcional)
+- **Projeções**: Cards com ícones grandes e valores destacados em grid responsivo
+- **Cards de plataforma**: Layout com header colorido (faixa de cor da plataforma no topo), seções com separação visual clara (público, orçamento, KPIs em mini-cards com ícones), copies e keywords em collapsible mais organizado
+- **KPIs por plataforma**: Mini dashboard com 4 métricas em grid 2x2 com bordas e ícones maiores
 
-Executar via insert tool:
+#### 2. Fluxo pós-aprovação — Redirecionar para aba Campanhas
 
-```sql
--- Incrementar 150 créditos nas wallets de orgs trial
-UPDATE credit_wallets cw
-SET balance = balance + 150, updated_at = now()
-FROM subscriptions s
-WHERE s.organization_id = cw.organization_id
-  AND s.plan = 'trial'
-  AND s.status = 'active';
+No `ClienteTrafegoPago.tsx`, ao aprovar com sucesso:
+- Criar automaticamente uma campanha por plataforma na tabela `client_campaigns` (cada plataforma vira uma campanha separada)
+- Mudar `activeTab` para `"campanhas"` após aprovação
+- Toast informando que as campanhas foram criadas
 
--- Registrar transação
-INSERT INTO credit_transactions (organization_id, type, amount, balance_after, description, metadata)
-SELECT cw.organization_id, 'purchase', 150, cw.balance,
-  'Compensação trial — créditos pré-GPS', '{"source": "trial_compensation"}'::jsonb
-FROM credit_wallets cw
-JOIN subscriptions s ON s.organization_id = cw.organization_id
-WHERE s.plan = 'trial' AND s.status = 'active';
-```
+#### 3. Aba Campanhas — Cards por plataforma
+
+Melhorar os cards de campanha existentes para mostrar mais informações vindas do `content` (objetivo, público, orçamento, KPIs) de forma visual.
 
 ### Arquivos a modificar
 
-Nenhum arquivo de código — apenas execução de SQL de dados via insert tool.
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/cliente/ClienteTrafegoPagoResult.tsx` | Redesign completo do layout — hero, investimento visual, cards de plataforma melhorados |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | No `handleApprove`, criar campanhas por plataforma e redirecionar para aba Campanhas |
+
+### Detalhes técnicos
+
+**Criação automática de campanhas**: No `onSuccess` do `handleApprove`, iterar sobre `platforms` e chamar `createCampaign.mutateAsync` para cada plataforma, salvando os dados completos da estratégia no campo `content`.
+
+**Layout dos cards de plataforma**: Cada card terá uma faixa colorida no topo (`border-t-4`), seções com `grid` para público/orçamento/criativos, e um mini-dashboard de KPIs com ícones e valores maiores.
 
