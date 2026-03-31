@@ -1,65 +1,91 @@
 
 
-## Reformulação — Tráfego Pago focado em Estratégias + Tutoriais + Repositório
+## Reformulação — Ferramenta de Sites com tipos, edição por seção e publicação
 
 ### Visão geral
 
-Remover a aba "Métricas" (que depende de integração com Google/Meta) e reestruturar o módulo em 3 abas: **Estratégia** (wizard + resultado), **Campanhas** (repositório salvo) e **Histórico**. Cada plataforma ganha um botão "Criar Campanha" que abre um tutorial detalhado e salva a campanha no repositório.
+Reestruturar o fluxo de criação de sites em 3 fases: (1) Escolha do tipo de site com perguntas específicas, (2) Edição por seção após geração, (3) Publicação via link compartilhável.
 
-### Estrutura de abas
+### Fase 1 — Tipos de site com wizard adaptativo
+
+O primeiro passo do wizard será escolher o **tipo de site**, e as etapas seguintes mudarão conforme o tipo:
+
+| Tipo | Seções geradas | Perguntas específicas |
+|------|---------------|----------------------|
+| **Landing Page de Captação** | Hero + Problema + Solução + Benefícios + Prova Social + Formulário + CTA | Qual oferta? Qual lead magnet? Campos do formulário? |
+| **Site Institucional** | Hero + Sobre + Equipe + Serviços + Valores + Contato | História da empresa? Equipe (nomes/cargos)? Missão/Visão? |
+| **Site de Vendas** | Hero + Produto + Benefícios + Preço + Depoimentos + Garantia + CTA | Qual produto? Preço? Garantia? Urgência? |
+| **Portfólio** | Hero + Projetos + Sobre + Processo + Contato | Quantos projetos destacar? Categorias? |
+| **Link na Bio** | Hero + Links + Redes + Mini-Sobre | Quais links? Quais redes? |
+
+Cada tipo define um array de `sections` que determina quais seções o site terá e quais perguntas serão feitas. As perguntas comuns (empresa, contato, estilo, CTA) permanecem, mas as específicas mudam.
+
+### Fase 2 — Checklist de edição por seção
+
+Após o site ser gerado, em vez de ir direto para aprovação, o usuário vê um **checklist de seções** onde pode:
 
 ```text
-┌──────────────────────────────────────────────┐
-│  [Estratégia]  [Campanhas]  [Histórico]      │
-├──────────────────────────────────────────────┤
-│  Estratégia: wizard 8 etapas → resultado     │
-│  por plataforma com CTA "Criar Campanha"     │
-├──────────────────────────────────────────────┤
-│  Campanhas: repositório de campanhas salvas  │
-│  (cards por plataforma, status, data)        │
-├──────────────────────────────────────────────┤
-│  Histórico: estratégias anteriores           │
-└──────────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│  Preview do site (iframe)                  │
+├────────────────────────────────────────────┤
+│  SEÇÕES DO SITE                            │
+│                                            │
+│  [✓] Hero                    [Editar]      │
+│      Título: "Transforme seu negócio"      │
+│      Subtítulo: "Agência líder em..."      │
+│      Imagem: hero-bg.jpg                   │
+│                                            │
+│  [✓] Sobre                   [Editar]      │
+│      Texto: "Somos uma empresa..."         │
+│                                            │
+│  [ ] Serviços                [Editar]      │
+│      3 serviços listados                   │
+│                                            │
+│  [ ] Depoimentos             [Editar]      │
+│  [ ] Contato                 [Editar]      │
+│  [ ] Footer                  [Editar]      │
+├────────────────────────────────────────────┤
+│  [Regenerar com alterações] [Aprovar site] │
+└────────────────────────────────────────────┘
 ```
 
-### Mudanças no resultado da estratégia
+Ao clicar em **Editar** uma seção, abre um painel onde o usuário pode:
+- Alterar textos (título, subtítulo, parágrafos)
+- Trocar/adicionar imagem (upload ou URL)
+- Adicionar/remover elementos (ex: mais um serviço, mais um depoimento)
+- Escrever uma instrução livre (ex: "Mude a cor do fundo para azul")
 
-Cada card de plataforma ganha um botão **"Criar Campanha"** que:
-1. Abre um `Dialog` com tutorial passo-a-passo específico da plataforma
-2. O tutorial é visual com steps numerados, screenshots descritivos, e dicas
-3. Ao final do tutorial, botão **"Salvar Campanha"** persiste na tabela `client_campaigns` com `type = platform`, `content = { strategy data + tutorial }`, `status = "draft"`
+Ao clicar em **"Regenerar com alterações"**, uma nova chamada à Edge Function `generate-site` é feita passando o HTML atual + as instruções de alteração por seção, gerando uma versão atualizada. Isso **não cobra créditos adicionais** (apenas a primeira geração cobra).
 
-### Tutoriais por plataforma
+### Fase 3 — Publicação e compartilhamento
 
-Cada plataforma terá um tutorial detalhado hardcoded com ~8-12 passos:
+Após aprovação, o site pode ser utilizado de 3 formas:
 
-- **Google Ads**: Criar conta → Escolher objetivo → Configurar campanha → Definir público → Definir orçamento → Criar grupos de anúncios → Escrever copies → Configurar extensões → Publicar
-- **Meta Ads**: Acessar Gerenciador → Criar campanha → Escolher objetivo → Definir público (interesses, lookalike) → Definir posicionamentos → Criar criativos → Configurar pixel → Publicar
-- **TikTok Ads**: Criar conta → Escolher objetivo → Configurar público → Criar criativo (vídeo) → Definir orçamento → Publicar
-- **LinkedIn Ads**: Criar Campaign Manager → Escolher objetivo → Definir segmentação (cargo, empresa, setor) → Criar anúncio → Definir orçamento → Publicar
+1. **Link compartilhável** (principal): O HTML aprovado é salvo no Storage bucket `marketing-assets` como arquivo público. O sistema gera uma URL pública tipo `https://gxrhdpbbxfipeopdyygn.supabase.co/storage/v1/object/public/marketing-assets/sites/{org_id}/{site_id}/index.html`. O usuário copia e compartilha.
 
-Cada passo terá: título, descrição detalhada, dica contextual baseada nos dados da estratégia gerada (ex: "Use o público-alvo: Empresários de São Paulo que a IA sugeriu").
+2. **Download do código**: Já existe, mantém.
 
-### Aba "Campanhas" (Repositório)
-
-- Lista todas as campanhas salvas em `client_campaigns` filtradas por `type` contendo a plataforma
-- Cards com: nome da plataforma, objetivo, orçamento sugerido, data de criação, status (Rascunho/Ativa/Pausada)
-- Botão para ver detalhes (reabre o tutorial com dados da estratégia)
-- Filtro por plataforma
+3. **Exportar para GitHub**: Botão que gera um arquivo ZIP com o HTML + assets e orienta o deploy via Vercel/Netlify (tutorial já existente no `SiteDeployGuide`).
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteTrafegoPago.tsx` | Remover aba "Métricas" e imports de `AdConnectionCards`, `AdMetricsDashboard`, `AdAIAnalysis`. Adicionar aba "Campanhas". Adicionar lógica de salvar campanha |
-| `src/pages/cliente/ClienteTrafegoPagoResult.tsx` | Adicionar botão "Criar Campanha" em cada card de plataforma. Adicionar Dialog com tutorial step-by-step por plataforma |
-| `src/pages/cliente/ClienteTrafegoPagoConstants.tsx` | Adicionar `PLATFORM_TUTORIALS` com passos detalhados por plataforma (Google, Meta, TikTok, LinkedIn) |
-| `src/hooks/useClienteCampaignsDB.ts` | Já existe e será reutilizado para o repositório de campanhas |
+| `src/pages/cliente/ClienteSitesWizardSteps.tsx` | Adicionar step "Tipo de Site" como primeiro passo. Criar perguntas condicionais por tipo. Definir `SITE_TYPES` com seções e perguntas específicas |
+| `src/pages/cliente/ClienteSites.tsx` | Adaptar wizard para novo fluxo com tipo no step 0. Adicionar fase de edição por seção entre geração e aprovação. Implementar upload do HTML aprovado ao Storage para gerar link público |
+| `src/components/sites/SiteSectionEditor.tsx` | **Novo** — Componente de checklist de seções com painel de edição inline (textos, imagens, instruções) |
+| `src/components/sites/SitePreview.tsx` | Adicionar botão "Compartilhar Link" que copia a URL pública do Storage. Adicionar botão "Exportar GitHub" |
+| `supabase/functions/generate-site/index.ts` | Aceitar campo `edit_instructions` (objeto com alterações por seção) + `current_html` para regeneração parcial. Quando presente, o prompt pede para manter o HTML base e aplicar apenas as alterações solicitadas |
 
 ### Detalhes técnicos
 
-- **Tutorial Dialog**: Componente com stepper interno (step 1/N), cada step com título + descrição + dica contextual. A dica usa dados da estratégia gerada (público, orçamento, copies)
-- **Salvar campanha**: Usa `useCreateClientCampaign` existente com `content = { platform, objective, audience, budget, tutorial_completed: true, strategy_id }`
-- **Repositório**: Query `client_campaigns` com filtro `type IN ('Google','Meta','TikTok','LinkedIn')`, agrupados visualmente por plataforma
-- Remoção dos componentes `AdConnectionCards`, `AdMetricsDashboard`, `AdAIAnalysis` dos imports (os arquivos ficam para uso futuro se integração for implementada)
+**Tipos de site e seções**: Cada tipo define um `sections: string[]` (ex: `["hero", "sobre", "servicos", "depoimentos", "contato", "footer"]`). O wizard adapta as perguntas e o prompt da IA recebe as seções como instrução obrigatória.
+
+**Edição por seção**: O componente `SiteSectionEditor` parseia o HTML gerado por `<section>` tags (ou `id`s convencionados como `section-hero`, `section-sobre`, etc.) e exibe um resumo de cada. As alterações são coletadas como objeto `{ hero: { titulo: "Novo título", instrucao: "Mude a cor" }, servicos: { adicionar: "Novo serviço X" } }` e enviadas na regeneração.
+
+**Regeneração sem custo**: A Edge Function recebe `edit_mode: true` e não debita créditos. O prompt recebe o HTML atual + instruções de edição, pedindo para manter a estrutura e aplicar apenas as mudanças.
+
+**Link público via Storage**: Ao aprovar, o HTML é uploaded para `marketing-assets/sites/{org_id}/{site_id}/index.html` via `supabase.storage.from('marketing-assets').upload(...)`. A URL pública é salva no campo `url` da tabela `client_sites`.
+
+**Convenção de seções no HTML**: O system prompt da IA será atualizado para gerar `<section id="section-hero">`, `<section id="section-sobre">`, etc., permitindo parsing confiável para o editor.
 
