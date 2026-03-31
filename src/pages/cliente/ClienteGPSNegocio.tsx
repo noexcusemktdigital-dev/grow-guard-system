@@ -86,8 +86,25 @@ function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => 
           </div>
         </div>
 
+        {hasPartialProgress && onResume && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+            <Card className="border-violet-500/30 bg-violet-500/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center text-white text-sm font-bold shrink-0">S</div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">Etapa comercial já concluída!</p>
+                  <p className="text-xs text-muted-foreground">Continue de onde parou com a Sofia (marketing).</p>
+                </div>
+                <Button size="sm" onClick={onResume} className="gap-1.5 bg-violet-500 hover:bg-violet-600 text-white shrink-0">
+                  <ArrowRight className="w-3.5 h-3.5" /> Continuar
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20">
-          <Navigation className="w-4 h-4" /> Iniciar Diagnóstico
+          <Navigation className="w-4 h-4" /> {hasPartialProgress ? "Recomeçar do Início" : "Iniciar Diagnóstico"}
         </Button>
       </div>
     </motion.div>
