@@ -7,7 +7,7 @@ import {
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
-  Headphones, Calendar, Video, Image,
+  Headphones, Calendar, Video, Image, Navigation,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
@@ -30,6 +30,7 @@ interface SidebarItem {
   path: string;
   badgeKey?: string;
   adminOnly?: boolean;
+  highlight?: boolean;
 }
 
 const globalSection: SidebarItem[] = [
@@ -39,8 +40,14 @@ const globalSection: SidebarItem[] = [
   { label: "Gamificação", icon: Trophy, path: "/cliente/gamificacao" },
 ];
 
+const gpsItem: SidebarItem = {
+  label: "GPS do Negócio",
+  icon: Navigation,
+  path: "/cliente/gps-negocio",
+  highlight: true,
+};
+
 const vendasSection: SidebarItem[] = [
-  { label: "Plano de Vendas", icon: Target, path: "/cliente/plano-vendas" },
   { label: "CRM", icon: Users, path: "/cliente/crm" },
   { label: "Conversas", icon: MessageCircle, path: "/cliente/chat" },
   { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
@@ -50,8 +57,6 @@ const vendasSection: SidebarItem[] = [
 ];
 
 const marketingSection: SidebarItem[] = [
-  
-  { label: "Plano de Marketing", icon: Megaphone, path: "/cliente/plano-marketing" },
   { label: "Roteiros", icon: Video, path: "/cliente/conteudos" },
   { label: "Postagem", icon: Image, path: "/cliente/redes-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
@@ -70,8 +75,9 @@ const GATE_REASON_LABELS: Record<string, string> = {
   trial_expired: "Trial expirado",
   trial_limited: "Disponível no plano pago",
   no_credits: "Sem créditos",
-  no_sales_plan: "Complete o Plano de Vendas",
-  no_marketing_strategy: "Complete o Plano de Marketing",
+  no_gps: "Complete o GPS do Negócio",
+  no_sales_plan: "Complete o GPS do Negócio",
+  no_marketing_strategy: "Complete o GPS do Negócio",
   admin_only: "Apenas administradores",
   
 };
@@ -82,6 +88,7 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
   const Icon = item.icon;
   const basePath = item.path.split("?")[0];
   const isActive = location.pathname === basePath || (basePath !== "/cliente/inicio" && location.pathname.startsWith(basePath + "/"));
+  const isHighlight = item.highlight;
 
   const showBadge = item.badgeKey === "plano-creditos" && (level === "warning" || level === "critical" || level === "zero");
 
@@ -92,18 +99,23 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
       className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
         ${collapsed ? "justify-center px-2 mx-1" : ""}
         ${isGated ? "opacity-40 cursor-not-allowed" : ""}
-        ${isActive && !isGated
-          ? "bg-sidebar-primary/15 text-white font-medium"
-          : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+        ${isHighlight && !isGated
+          ? isActive
+            ? "bg-amber-500/20 text-amber-300 font-semibold"
+            : "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-medium"
+          : isActive && !isGated
+            ? "bg-sidebar-primary/15 text-white font-medium"
+            : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
         }
       `}
     >
       <div className="relative">
         <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+          isHighlight && !isGated ? "text-amber-400" :
           isActive && !isGated ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
         }`} />
         {isActive && !isGated && (
-          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+          <div className={`absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full ${isHighlight ? "bg-amber-400" : "bg-sidebar-primary"}`} />
         )}
       </div>
       {!collapsed && (
@@ -237,6 +249,11 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         <div data-tour="global">
           <SidebarNavItems items={globalSection} collapsed={collapsed} />
+        </div>
+        {/* GPS do Negócio — destaque isolado */}
+        <div className="mx-3 border-t border-sidebar-border/60" />
+        <div data-tour="gps">
+          <SidebarNavItems items={[gpsItem]} collapsed={collapsed} />
         </div>
         <div className="mx-3 border-t border-sidebar-border/60" />
         <div data-tour="vendas">

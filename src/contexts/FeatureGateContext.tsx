@@ -49,7 +49,7 @@ const CREDIT_REQUIRED = [
   "/cliente/trafego-pago",
 ];
 
-// Routes that require sales plan to be completed
+// Routes that require GPS do Negócio (sales plan) to be completed
 const SALES_PLAN_REQUIRED = [
   "/cliente/crm",
   "/cliente/chat",
@@ -59,7 +59,7 @@ const SALES_PLAN_REQUIRED = [
   "/cliente/dashboard",
 ];
 
-// Routes that require marketing strategy to be completed
+// Routes that require GPS do Negócio (marketing strategy) to be completed
 const MARKETING_STRATEGY_REQUIRED = [
   "/cliente/conteudos",
   "/cliente/redes-sociais",

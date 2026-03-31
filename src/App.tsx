@@ -73,6 +73,7 @@ const ClienteNotificacoes = lazy(() => import("./pages/cliente/ClienteNotificaco
 const ClienteGamificacao = lazy(() => import("./pages/cliente/ClienteGamificacao"));
 const ClientePlanoVendas = lazy(() => import("./pages/cliente/ClientePlanoVendas"));
 const ClienteChat = lazy(() => import("./pages/cliente/ClienteChat"));
+const ClienteGPSNegocio = lazy(() => import("./pages/cliente/ClienteGPSNegocio"));
 const ClienteCRM = lazy(() => import("./pages/cliente/ClienteCRM"));
 const CrmConfigPage = lazy(() => import("./components/crm/CrmConfigPage"));
 const ClienteAgentesIA = lazy(() => import("./pages/cliente/ClienteAgentesIA"));
@@ -199,15 +200,16 @@ function App() {
                   <Route path="agenda" element={<ClienteAgenda />} />
                   <Route path="notificacoes" element={<ClienteNotificacoes />} />
                   <Route path="gamificacao" element={<ClienteGamificacao />} />
-                  <Route path="plano-vendas" element={<ClientePlanoVendas />} />
+                  <Route path="plano-vendas" element={<Navigate to="/cliente/gps-negocio" replace />} />
                   <Route path="chat" element={<ClienteChat />} />
+                  <Route path="gps-negocio" element={<ClienteGPSNegocio />} />
                   <Route path="crm" element={<ClienteCRM />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
                   <Route path="agentes-ia" element={<ClienteAgentesIA />} />
                   <Route path="scripts" element={<ClienteScripts />} />
                   <Route path="disparos" element={<ClienteDisparos />} />
                   <Route path="dashboard" element={<ClienteDashboard />} />
-                  <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
+                  <Route path="plano-marketing" element={<Navigate to="/cliente/gps-negocio" replace />} />
                   <Route path="conteudos" element={<ClienteConteudos />} />
                   <Route path="redes-sociais" element={<ClienteRedesSociais />} />
                   <Route path="sites" element={<ClienteSites />} />

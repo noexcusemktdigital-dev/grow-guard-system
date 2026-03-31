@@ -58,7 +58,20 @@ export function useStrategyData() {
     objetivoPrincipal: result?.objetivo_principal || null,
     canalPrioritario: result?.canal_prioritario || null,
 
-    // Sales Plan (unified knowledge base)
+    // Diagnóstico Comercial (GPS do Negócio)
+    diagnosticoComercial: result?.diagnostico_comercial || null,
+    scoreComercial: result?.diagnostico_comercial?.score_comercial || null,
+    nivelComercial: result?.diagnostico_comercial?.nivel || null,
+    radarComercial: result?.diagnostico_comercial?.radar_comercial || null,
+    insightsComerciais: result?.diagnostico_comercial?.insights || [],
+    estrategiasVendas: result?.diagnostico_comercial?.estrategias_vendas || [],
+    funilReverso: result?.diagnostico_comercial?.funil_reverso || null,
+    projecaoLeads: result?.diagnostico_comercial?.projecao_leads || [],
+    projecaoReceita: result?.diagnostico_comercial?.projecao_receita || [],
+    planoAcaoComercial: result?.diagnostico_comercial?.plano_acao || [],
+    gapsComerciais: result?.diagnostico_comercial?.gaps || [],
+
+    // Sales Plan (backward compat — unified knowledge base)
     hasSalesPlan: Object.keys(spAnswers).length > 5,
     salesPlanAnswers: spAnswers,
     salesPlanProducts: spAnswers.produtos_servicos || null,
