@@ -113,7 +113,7 @@ export const CREDIT_COSTS: Record<string, { cost: number; label: string }> = {
   "generate-strategy":          { cost: 50,  label: "Estratégia de marketing" },
   "crm-automation":             { cost: 5,   label: "Automação CRM (por execução)" },
   "ai-agent-reply":             { cost: 2,   label: "Agente IA (por mensagem)" },
-  "generate-traffic-strategy":  { cost: 50,  label: "Estratégia de tráfego" },
+  "generate-traffic-strategy":  { cost: 25,  label: "Estratégia de tráfego" },
   "generate-daily-checklist":   { cost: 5,   label: "Checklist diário IA" },
   "generate-prospection":       { cost: 30,  label: "Plano de prospecção" },
   "ai-generate-agent-config":   { cost: 10,  label: "Config. automática agente" },

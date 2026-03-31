@@ -14,7 +14,7 @@ const INCLUDED = [
   { icon: Users, label: "CRM completo", desc: "Gerencie leads e funil de vendas" },
   { icon: Target, label: "Plano de Vendas", desc: "Estratégia comercial personalizada" },
   { icon: Megaphone, label: "Marketing completo", desc: "Conteúdos, artes, sites e tráfego" },
-  { icon: Zap, label: "200 créditos", desc: "Para testar todas as ferramentas de IA" },
+  { icon: Zap, label: "500 créditos", desc: "Para testar todas as ferramentas de IA" },
 ];
 
 const BLOCKED = [
@@ -65,7 +65,7 @@ export function TrialWelcomeModal({ onComplete }: { onComplete?: () => void }) {
             <h2 className="text-xl font-bold text-foreground">Bem-vindo ao NOEXCUSE! 🎉</h2>
             <p className="text-sm text-muted-foreground">
               Você tem <Badge variant="secondary" className="mx-1 font-bold">7 dias grátis</Badge> e
-              <Badge variant="secondary" className="mx-1 font-bold">200 créditos</Badge> para explorar.
+              <Badge variant="secondary" className="mx-1 font-bold">500 créditos</Badge> para explorar.
             </p>
           </div>
         </div>

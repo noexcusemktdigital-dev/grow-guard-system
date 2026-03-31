@@ -126,7 +126,7 @@ export function useApproveTrafficStrategy() {
       // Debit credits
       const { error: rpcErr } = await supabase.rpc("debit_credits", {
         _org_id: orgId,
-        _amount: 200,
+        _amount: 25,
         _description: "Aprovação de Estratégia de Tráfego Pago",
         _source: "traffic_strategy",
       });

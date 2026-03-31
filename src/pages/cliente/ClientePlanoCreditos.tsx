@@ -95,7 +95,7 @@ export default function ClientePlanoCreditos() {
                     {daysLeft > 0 ? `${daysLeft} dias restantes no trial` : "Trial expirado"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    200 créditos · 2 usuários · 7 dias
+                    500 créditos · 2 usuários · 7 dias
                   </p>
                 </div>
               );

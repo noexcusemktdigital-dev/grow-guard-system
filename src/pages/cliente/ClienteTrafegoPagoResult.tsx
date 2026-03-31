@@ -281,7 +281,7 @@ export function ClienteTrafegoPagoResult({
                   ) : (
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   )}
-                  Aprovar (200 créditos)
+                  Aprovar (25 créditos)
                 </Button>
               )}
               <Button
