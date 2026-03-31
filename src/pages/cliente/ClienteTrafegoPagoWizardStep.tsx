@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import type { TrafficWizardData } from "@/hooks/useTrafficStrategy";
-import { BrazilMapSelector } from "@/components/traffic/BrazilMapSelector";
+import { BrazilLocationAutocomplete } from "@/components/traffic/BrazilLocationAutocomplete";
 import {
   OBJECTIVES, AUDIENCES, DESTINATIONS, PLATFORMS, ASSETS, STEPS,
 } from "./ClienteTrafegoPagoConstants";
@@ -177,7 +177,7 @@ export function ClienteTrafegoPagoWizardStep({
       return (
         <div className="space-y-3">
           <p className="text-sm font-medium">Em qual região deseja anunciar?</p>
-          <BrazilMapSelector
+          <BrazilLocationAutocomplete
             value={wizardData.regiao}
             onChange={(v) => setWizardData((p) => ({ ...p, regiao: v }))}
           />
