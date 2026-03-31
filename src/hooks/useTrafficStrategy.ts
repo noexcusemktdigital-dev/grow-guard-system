@@ -94,12 +94,16 @@ export function useGenerateTrafficStrategy() {
   return useMutation({
     mutationFn: async (wizardData: TrafficWizardData & { strategy_id?: string }) => {
       if (!orgId) throw new Error("Org not found");
-      const { data, error } = await supabase.functions.invoke("generate-traffic-strategy", {
+      const resp = await supabase.functions.invoke("generate-traffic-strategy", {
         body: { organization_id: orgId, ...wizardData },
       });
-      if (error) throw error;
+      if (resp.error) {
+        const realError = await extractEdgeFunctionError(resp.error);
+        throw realError;
+      }
+      const data = resp.data as Record<string, unknown>;
       if (data?.error) {
-        const err = new Error(data.error);
+        const err = new Error(String(data.error));
         (err as unknown as Record<string, unknown>).code = data.code;
         throw err;
       }
