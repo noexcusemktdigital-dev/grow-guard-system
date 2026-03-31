@@ -161,8 +161,9 @@ export default function ClienteTrafegoPago() {
           // Campaigns creation is non-blocking
         }
         
-        // Redirect to campaigns tab
+        // Redirect to campaigns tab (immediate + pending for refetch)
         setActiveTab("campanhas");
+        setPendingRedirect(true);
       },
       onError: (err: unknown) => {
         if (isInsufficientCreditsError(err)) {
