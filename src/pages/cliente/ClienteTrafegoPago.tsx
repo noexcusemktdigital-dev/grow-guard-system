@@ -59,6 +59,15 @@ export default function ClienteTrafegoPago() {
   const [campaignFilter, setCampaignFilter] = useState<string>("all");
   const [tutorialCampaign, setTutorialCampaign] = useState<{ platform: string; data: Record<string, unknown> } | null>(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
+  const [pendingRedirect, setPendingRedirect] = useState(false);
+
+  // Robust redirect: wait for campaigns query to refetch, then switch tab
+  useEffect(() => {
+    if (pendingRedirect && campaigns && campaigns.length > 0) {
+      setActiveTab("campanhas");
+      setPendingRedirect(false);
+    }
+  }, [pendingRedirect, campaigns]);
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
