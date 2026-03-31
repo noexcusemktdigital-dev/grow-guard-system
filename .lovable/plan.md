@@ -1,69 +1,40 @@
 
 
-## Diagnóstico — GPS mostra só Marketing, falta Comercial
+## Plano — Funil colorido + 3 scripts automáticos no GPS
 
-### O que encontrei
+### Problema 1: Todas as etapas do funil com mesma cor
 
-Os logs da Edge Function confirmam que **as 3 seções foram geradas com sucesso** (marketing-core: 5346 tokens, marketing-growth: 4482 tokens, comercial: 3291 tokens). Os dados comerciais (`diagnostico_comercial`, `estrategias_vendas`, `funil_reverso`, `projecao_leads`, `projecao_receita`) **estão salvos no banco** dentro do `strategy_result`.
+O `parseFunnelStages` e `getDefaultFunnelStages` em `ClienteGPSNegocio.tsx` usam um array local de cores hex (`"#8b5cf6"`, `"#0ea5e9"`, etc.), mas o CRM inteiro usa `getColorStyle(stage.color)` que espera **nomes de cor** (`"blue"`, `"amber"`, `"purple"`, etc.) definidos em `CrmStageSystem.tsx`. Como nenhum hex bate com um nome, `getColorStyle` retorna sempre o fallback (azul), e todas as etapas ficam da mesma cor.
 
-O problema é que **o dashboard de resultado não tem abas para exibir os dados comerciais**. O componente `StrategyDashboard` em `ClientePlanoMarketingStrategy.tsx` só tem 8 abas — todas de marketing:
+### Correção
 
-| Aba atual | Dados |
-|-----------|-------|
-| Resumo | Score marketing, radar 6 eixos (marketing), objetivo, canal |
-| Cliente Ideal | ICP/persona |
-| Concorrência | Análise concorrencial |
-| Tom de Voz | Personalidade da marca |
-| Aquisição | Canais e funil |
-| Conteúdo | Pilares e calendário |
-| Projeção | Crescimento (marketing growth) |
-| Execução | Roadmap 3 meses |
+Em `src/pages/cliente/ClienteGPSNegocio.tsx`:
 
-**Faltam completamente:**
-- Aba "Comercial" com radar de 5 eixos, score comercial, gaps, insights, estratégias de vendas
-- Aba "Projeção Comercial" com funil reverso, projeção de leads e receita (AreaChart)
-- O "Resumo" não integra o score comercial nem mostra a visão unificada
+- Substituir o array hex por nomes de cor do `STAGE_COLORS` do `CrmStageSystem`:
+  ```typescript
+  import { STAGE_COLORS as CRM_COLORS } from "@/components/crm/CrmStageSystem";
+  const COLOR_NAMES = CRM_COLORS.map(c => c.name);
+  // ["blue","amber","purple","emerald","red","cyan","pink","orange","indigo","teal"]
+  ```
+- Em `parseFunnelStages` e `getDefaultFunnelStages`, usar `COLOR_NAMES[i % COLOR_NAMES.length]` em vez de `STAGE_COLORS[i % ...]`.
+- Também atribuir ícones variados por posição (primeiro = `"circle-plus"`, último = `"ban"`, meio = variados como `"phone-outgoing"`, `"search-check"`, `"clipboard"`, `"handshake"`, `"shield-check"`).
 
-### Sobre os erros
+O mesmo problema existe em `ClientePlanoVendas.tsx` — corrigir lá também.
 
-Os logs mostram várias linhas `shutdown` — indicam que tentativas anteriores sofreram timeout. A geração mais recente (01:28-01:29) funcionou. O erro que o usuário viu foi provavelmente de uma tentativa anterior, mas o resultado parcial (só marketing visível) deu a impressão de falha.
+### Problema 2: Scripts já estão sendo gerados
 
-### Plano de correção
-
-1. **Adicionar aba "Comercial"** ao `StrategyDashboard`
-   - Radar de 5 eixos (processo, gestão_leads, ferramentas, canais, performance)
-   - Score comercial + nível
-   - Análise textual
-   - Gaps identificados
-   - Insights com badges coloridos (success/warning/opportunity)
-   - Estratégias de vendas com passos e resultado esperado
-   - Plano de ação (3 fases: 30/60/90 dias)
-
-2. **Adicionar aba "Projeções" (comercial)** ou unificar na aba Projeção existente
-   - Funil reverso (meta → vendas → leads → tráfego)
-   - Gráfico AreaChart de projeção de leads (atual vs com estratégia)
-   - Gráfico AreaChart de projeção de receita (atual vs com estratégia)
-
-3. **Atualizar aba "Resumo"** para incluir visão unificada
-   - Mostrar ambos os scores (marketing + comercial)
-   - Integrar radar comercial ao lado do radar marketing
-   - Exibir diagnóstico completo
+Os 3 scripts (`prospeccao`, `diagnostico`, `fechamento`) já são gerados automaticamente nas linhas 320-335. Se estão falhando silenciosamente, é porque o `generate-script` pode ter o mesmo problema de JWT que o `generate-strategy` tinha. Preciso verificar se `generate-script` está no `config.toml` com `verify_jwt = false`.
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClientePlanoMarketingStrategy.tsx` | Adicionar `TabComercial` e `TabProjecaoComercial`, atualizar `TabResumo` com dados comerciais, adicionar abas no TabsList |
-| `src/pages/cliente/ClientePlanoMarketingTypes.ts` | Adicionar types para `DiagnosticoComercial`, `FunilReverso`, `ProjecaoRow` comercial |
-
-### Detalhes técnicos
-
-- Os dados comerciais já estão no `strategy_result` como `diagnostico_comercial` (com sub-campos: `score_comercial`, `radar_comercial`, `gaps`, `insights`, `estrategias_vendas`, `funil_reverso`, `projecao_leads`, `projecao_receita`, `plano_acao`)
-- O `StrategyResult` type precisa incluir `diagnostico_comercial`
-- O radar comercial usa `RadarChart` com 5 eixos (mesmo componente Recharts já importado)
-- As projeções de leads/receita usam `AreaChart` (também já importado)
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | Trocar hex colors por nomes do CRM, adicionar ícones variados |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Mesma correção de cores e ícones |
+| `supabase/config.toml` | Verificar/adicionar `verify_jwt = false` para `generate-script` se necessário |
 
 ### Resultado
 
-O GPS do Negócio passará a exibir a entrega completa: Marketing + Comercial, com abas dedicadas para cada área e um resumo unificado mostrando os dois scores lado a lado.
+- Cada etapa do funil terá cor distinta (azul, âmbar, roxo, verde, etc.) e ícone próprio
+- Os 3 scripts continuam sendo gerados automaticamente — se estavam falhando por JWT, a correção no config.toml resolve
 
