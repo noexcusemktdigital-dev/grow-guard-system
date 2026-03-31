@@ -36,6 +36,7 @@ import { ClienteTrafegoPagoWizardStep } from "./ClienteTrafegoPagoWizardStep";
 import { ClienteTrafegoPagoResult, TutorialDialog } from "./ClienteTrafegoPagoResult";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Rocket, ChevronDown, ChevronUp, Users, Eye, MousePointer, TrendingUp, Zap, Layers } from "lucide-react";
+import { normalizePlatformType, CampaignStructureRenderer } from "./CampaignStructureRenderer";
 
 export default function ClienteTrafegoPago() {
   const { data: activeStrategy, isLoading: loadingStrategy } = useActiveTrafficStrategy();
