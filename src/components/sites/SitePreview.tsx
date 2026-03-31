@@ -2,7 +2,7 @@
 import { useState } from "react";
 import {
   Monitor, Tablet, Smartphone, Maximize2, Minimize2,
-  Download, RotateCcw, Edit3, Coins,
+  Download, RotateCcw, Edit3, Coins, Share2, Copy, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,9 +21,11 @@ interface Props {
   html: string;
   siteId?: string;
   siteStatus?: string;
+  siteUrl?: string;
   onRegenerate: () => void;
   onEditBriefing: () => void;
   onApprove?: () => void;
+  onPublish?: () => void;
   generating: boolean;
 }
 
@@ -35,11 +37,12 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: "375px",
 };
 
-export function SitePreview({ html, siteId, siteStatus, onRegenerate, onEditBriefing, onApprove, generating }: Props) {
+export function SitePreview({ html, siteId, siteStatus, siteUrl, onRegenerate, onEditBriefing, onApprove, onPublish, generating }: Props) {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [fullscreen, setFullscreen] = useState(false);
 
   const isApproved = siteStatus === "Aprovado" || siteStatus === "Publicado";
+  const isPublished = siteStatus === "Publicado";
 
   const handleDownload = () => {
     const blob = new Blob([html], { type: "text/html" });
@@ -52,6 +55,13 @@ export function SitePreview({ html, siteId, siteStatus, onRegenerate, onEditBrie
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({ title: "Site baixado!", description: "Arquivo HTML pronto para hospedar." });
+  };
+
+  const handleCopyLink = () => {
+    if (siteUrl) {
+      navigator.clipboard.writeText(siteUrl);
+      toast({ title: "Link copiado!", description: "Compartilhe com seus clientes." });
+    }
   };
 
   const ViewportButtons = () => (
@@ -131,7 +141,7 @@ export function SitePreview({ html, siteId, siteStatus, onRegenerate, onEditBrie
           status="pending"
           onApprove={() => {
             onApprove?.();
-            toast({ title: "Site aprovado!", description: "Agora você pode baixar o código." });
+            toast({ title: "Site aprovado!", description: "Agora você pode publicar e compartilhar." });
           }}
           onRequestChanges={(note) => {
             onEditBriefing();
@@ -139,18 +149,43 @@ export function SitePreview({ html, siteId, siteStatus, onRegenerate, onEditBrie
           }}
           onReject={() => {}}
           showReject={false}
-          helpText="Ao aprovar, o site fica marcado como pronto para download e publicação."
+          helpText="Ao aprovar, o site fica pronto para publicação e compartilhamento."
         />
       )}
 
       {isApproved && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
-          <p className="text-sm font-medium text-green-700 dark:text-green-400">✅ Site aprovado — pronto para download e publicação</p>
+          <p className="text-sm font-medium text-green-700 dark:text-green-400">✅ Site aprovado — pronto para publicação</p>
         </div>
       )}
 
+      {/* Published link */}
+      {isPublished && siteUrl && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="py-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-primary" />
+              <p className="text-sm font-bold text-foreground">Link do site publicado</p>
+            </div>
+            <div className="flex items-center gap-2 bg-background rounded-lg p-2 border">
+              <input
+                readOnly
+                value={siteUrl}
+                className="flex-1 text-xs bg-transparent outline-none text-foreground font-mono"
+              />
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleCopyLink}>
+                <Copy className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => window.open(siteUrl, "_blank")}>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${isApproved && !isPublished ? "grid-cols-3" : "grid-cols-2"}`}>
         <Button
           className="w-full gap-2"
           onClick={handleDownload}
@@ -159,6 +194,12 @@ export function SitePreview({ html, siteId, siteStatus, onRegenerate, onEditBrie
           <Download className="w-4 h-4" />
           {isApproved ? "Baixar Código" : "Aprove para Baixar"}
         </Button>
+
+        {isApproved && !isPublished && (
+          <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" onClick={onPublish}>
+            <Share2 className="w-4 h-4" /> Publicar Link
+          </Button>
+        )}
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
