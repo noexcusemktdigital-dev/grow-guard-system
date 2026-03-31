@@ -82,7 +82,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
         },
       });
 
-      if (error) throw new Error(error.message);
+      if (error) throw await extractEdgeFunctionError(error);
       if (data?.error) {
         if (data.error.includes("INSUFFICIENT_CREDITS") || data.error.includes("Créditos insuficientes")) {
           setShowCreditsDialog(true);
