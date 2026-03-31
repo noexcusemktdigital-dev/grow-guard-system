@@ -225,7 +225,7 @@ export function useGenerateVideoBriefing() {
       const resp = await supabase.functions.invoke("generate-video-briefing", {
         body: payload,
       });
-      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar briefing de vídeo");
+      if (resp.error) throw await extractEdgeFunctionError(resp.error);
       if (resp.data?.error) throw new Error(resp.data.error);
       return resp.data as {
         plataforma: string;
