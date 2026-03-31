@@ -1,47 +1,39 @@
 
 
-## Correção — GPS do Negócio não gera estratégia (timeout na Edge Function)
+## Plano — Permitir gerar resultado sem preencher novamente
 
-### Diagnóstico
+### Problema
 
-Os logs da Edge Function `generate-strategy` mostram apenas **"booted"** — sem nenhum log de "Generating..." nem erro. Isso confirma que a função morre por **timeout silencioso** durante a chamada à AI. Mesmo com a divisão em 2 chamadas (marketing + comercial), cada schema ainda é grande demais com muitos `additionalProperties: false` aninhados e propriedades `required` profundas, fazendo o modelo demorar além do limite de 150s.
+Quando ambas as fases (Rafael + Sofia) são preenchidas mas a geração falha, as respostas da Sofia são perdidas — elas só existem em memória durante `handleSofiaComplete`. Ao recarregar, o sistema só encontra as respostas do Rafael no `sales_plans` e pede para refazer tudo.
 
-### Solução: 3 mudanças combinadas
+### Solução
 
-| Mudança | Motivo |
-|---------|--------|
-| **Dividir marketing em 2 sub-chamadas** | O schema de marketing tem 16 propriedades top-level obrigatórias — dividir em "core" (~8 seções: diagnóstico, ICP, proposta, concorrência, tom, aquisição) e "growth" (~8 seções: conteúdo, crescimento, benchmarks, execução, estrutura, campos simples) | 
-| **Remover `additionalProperties: false` dos objetos aninhados** | Esta constraint força o modelo a validar cada nível e desacelera a geração significativamente. Manter apenas no nível top-level de cada schema |
-| **Trocar modelo para `google/gemini-3-flash-preview`** | Modelo mais recente e rápido para structured output |
+1. **Persistir as respostas da Sofia junto com as do Rafael** — no início de `handleSofiaComplete`, antes de chamar a IA, salvar o `allAnswers` (Rafael + Sofia merged) no `sales_plans` via `saveSalesPlan.mutate`.
 
-### Fluxo atualizado
+2. **Detectar progresso completo sem resultado** — se `salesPlan.answers` tem chaves suficientes (respostas de ambos os agentes, ~25+ chaves) mas `activeStrategy.strategy_result` é null, significa que tudo foi preenchido mas a geração falhou.
 
-```text
-Etapa 1/3 — Marketing Core (diagnóstico, ICP, proposta, concorrência, tom, aquisição)
-Etapa 2/3 — Marketing Growth (conteúdo, crescimento, benchmarks, execução, estrutura)
-Etapa 3/3 — Diagnóstico Comercial (radar, projeções, funil, estratégias, plano)
-```
+3. **Botão "Gerar Resultado"** — na tela welcome, quando esse estado é detectado, mostrar um botão direto para gerar o resultado sem refazer perguntas. Esse botão chama `handleSofiaComplete({})` com answers vazio (os dados completos já estão no `salesPlan.answers`).
 
-### Arquivos alterados
+### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/generate-strategy/index.ts` | Dividir `MARKETING_TOOL_SCHEMA` em `MARKETING_CORE_SCHEMA` e `MARKETING_GROWTH_SCHEMA`. Aceitar `section` = `marketing-core`, `marketing-growth`, `comercial`. Remover `additionalProperties: false` dos objetos internos. Trocar modelo. Créditos debitados apenas no `marketing-core`. |
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | 3 chamadas sequenciais em `handleSofiaComplete`. Progresso: "Etapa 1/3", "Etapa 2/3", "Etapa 3/3". Merge dos 3 resultados antes de salvar. |
-| `src/hooks/useMarketingStrategy.ts` | Sem mudança (já suporta `section` genérico) |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | 1. No início de `handleSofiaComplete`: persistir `allAnswers` no `sales_plans`. 2. Novo estado `hasFullProgress` (salesPlan com ~25+ respostas + sem resultado). 3. Na welcome screen: botão "Gerar Resultado Agora" que carrega answers do banco e vai direto para a fase `generating`. 4. Ajustar `handleSofiaComplete` para usar `salesPlan.answers` como fallback quando `rafaelAnswers` está vazio (caso de retry). |
 
-### Divisão dos schemas
+### Fluxo corrigido
 
-**Marketing Core** (6 seções):
-- `diagnostico`, `objetivo_principal`, `canal_prioritario`, `investimento_recomendado`, `potencial_crescimento`, `resumo_executivo`, `icp`, `proposta_valor`, `analise_concorrencia`, `tom_comunicacao`, `estrategia_aquisicao`
+```text
+Rafael completa → salva no sales_plans (só Rafael)
+Sofia completa → salva no sales_plans (Rafael + Sofia merged)
+Geração inicia → se falhar, answers já estão salvos
+Usuário volta → detecta answers completos sem resultado
+→ Mostra botão "Gerar Resultado Agora"
+→ Carrega answers do banco e vai direto pra geração
+```
 
-**Marketing Growth** (5 seções):
-- `estrategia_conteudo`, `plano_crescimento`, `benchmarks_setor`, `plano_execucao`, `estrutura_recomendada`
+### Detalhes técnicos
 
-**Comercial** (1 seção, sem mudança):
-- `diagnostico_comercial`
-
-### Resultado
-
-Cada chamada gera ~5-6 seções em vez de 16, ficando dentro do limite de tempo. O frontend mostra progresso granular em 3 etapas.
+- `hasFullProgress`: `salesPlan?.answers && Object.keys(salesPlan.answers).length >= 20 && !hasResult`
+- O botão de gerar chama uma nova função `handleRetryGeneration` que faz `setRafaelAnswers(salesPlan.answers)` e depois chama a lógica de geração diretamente (as 3 chamadas sequenciais)
+- O `hasPartialProgress` existente (só Rafael) continua funcionando para quem parou antes da Sofia
 
