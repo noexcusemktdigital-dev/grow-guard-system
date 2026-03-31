@@ -314,6 +314,112 @@ const TOOL_SCHEMA = {
           },
           description: "6-10 itens de checklist de estrutura",
         },
+        diagnostico_comercial: {
+          type: "object",
+          properties: {
+            score_comercial: { type: "number", description: "Score de maturidade comercial 0-100" },
+            nivel: { type: "string", description: "Nível: Iniciante, Básico, Intermediário, Avançado ou Expert" },
+            radar_comercial: {
+              type: "object",
+              properties: {
+                processo: { type: "number", description: "Score 0-10 de processo de vendas" },
+                gestao_leads: { type: "number", description: "Score 0-10 de gestão de leads" },
+                ferramentas: { type: "number", description: "Score 0-10 de ferramentas e CRM" },
+                canais: { type: "number", description: "Score 0-10 de canais de aquisição" },
+                performance: { type: "number", description: "Score 0-10 de performance e metas" },
+              },
+              required: ["processo", "gestao_leads", "ferramentas", "canais", "performance"],
+              additionalProperties: false,
+            },
+            analise_comercial: { type: "string", description: "Análise geral da situação comercial (2-3 parágrafos)" },
+            gaps: { type: "array", items: { type: "string" }, description: "3-5 gaps comerciais identificados" },
+            insights: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  texto: { type: "string" },
+                  tipo: { type: "string", enum: ["success", "warning", "opportunity"] },
+                },
+                required: ["texto", "tipo"],
+                additionalProperties: false,
+              },
+              description: "3-6 insights personalizados",
+            },
+            estrategias_vendas: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  descricao: { type: "string" },
+                  passos: { type: "array", items: { type: "string" } },
+                  resultado_esperado: { type: "string" },
+                },
+                required: ["nome", "descricao", "passos", "resultado_esperado"],
+                additionalProperties: false,
+              },
+              description: "2-3 estratégias de vendas detalhadas",
+            },
+            funil_reverso: {
+              type: "object",
+              properties: {
+                meta_faturamento: { type: "string" },
+                ticket_medio: { type: "string" },
+                vendas_necessarias: { type: "number" },
+                leads_necessarios: { type: "number" },
+                trafego_necessario: { type: "number" },
+                taxa_conversao_usada: { type: "string" },
+              },
+              required: ["meta_faturamento", "ticket_medio", "vendas_necessarias", "leads_necessarios", "trafego_necessario", "taxa_conversao_usada"],
+              additionalProperties: false,
+            },
+            projecao_leads: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  mes: { type: "string" },
+                  atual: { type: "number" },
+                  com_estrategia: { type: "number" },
+                },
+                required: ["mes", "atual", "com_estrategia"],
+                additionalProperties: false,
+              },
+              description: "Projeção de leads para 6 meses",
+            },
+            projecao_receita: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  mes: { type: "string" },
+                  atual: { type: "number" },
+                  com_estrategia: { type: "number" },
+                },
+                required: ["mes", "atual", "com_estrategia"],
+                additionalProperties: false,
+              },
+              description: "Projeção de receita para 6 meses",
+            },
+            plano_acao: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  fase: { type: "string" },
+                  periodo: { type: "string" },
+                  items: { type: "array", items: { type: "string" } },
+                },
+                required: ["fase", "periodo", "items"],
+                additionalProperties: false,
+              },
+              description: "Plano de ação em 3 fases (30/60/90 dias)",
+            },
+          },
+          required: ["score_comercial", "nivel", "radar_comercial", "analise_comercial", "gaps", "insights", "estrategias_vendas", "funil_reverso", "projecao_leads", "projecao_receita", "plano_acao"],
+          additionalProperties: false,
+        },
       },
       required: [
         "diagnostico", "objetivo_principal", "canal_prioritario",
@@ -321,6 +427,7 @@ const TOOL_SCHEMA = {
         "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
         "estrategia_aquisicao", "estrategia_conteudo", "plano_crescimento",
         "benchmarks_setor", "plano_execucao", "estrutura_recomendada",
+        "diagnostico_comercial",
       ],
       additionalProperties: false,
     },
