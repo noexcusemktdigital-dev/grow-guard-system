@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
 
 export interface MarketingStrategy {
@@ -161,7 +162,10 @@ export function useGenerateStrategy() {
         },
       });
 
-      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar estratégia");
+      if (resp.error) {
+        const realError = await extractEdgeFunctionError(resp.error);
+        throw realError;
+      }
       
       const data = resp.data as Record<string, unknown>;
       if (data?.error) throw new Error(String(data.error));
