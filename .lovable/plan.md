@@ -1,35 +1,37 @@
 
 
-## Diagnóstico — GPS do Negócio não gera resultado
+## Plano — Retomar GPS do Negócio de onde parou
 
-### Causa raiz
+### Problema
 
-O TOOL_SCHEMA do `generate-strategy` é extremamente grande (17 propriedades top-level obrigatórias, com objetos profundamente aninhados incluindo o novo `diagnostico_comercial`). Isso causa **timeout na Edge Function** — o modelo AI precisa gerar um JSON estruturado gigante via tool calling, e a execução excede o limite de tempo da Edge Function (150s).
+Quando Rafael (comercial) completa mas Sofia (marketing) falha, as respostas do Rafael ficam apenas no estado React (`useState`). Ao recarregar a página, o estado é perdido e o GPS recomeça do zero, obrigando o usuário a responder tudo de novo.
 
-Os logs confirmam: a função faz boot mas nunca registra erro nem resposta — simplesmente morre por timeout silencioso.
+### Solução
 
-### Solução: Dividir a geração em 2 chamadas sequenciais
-
-Em vez de pedir tudo em uma única chamada AI (que excede o timeout), dividir em:
-
-1. **Chamada 1 — Marketing** (~12 seções existentes): `diagnostico`, `icp`, `proposta_valor`, `analise_concorrencia`, `tom_comunicacao`, `estrategia_aquisicao`, `estrategia_conteudo`, `plano_crescimento`, `benchmarks_setor`, `plano_execucao`, `estrutura_recomendada`, + campos simples
-2. **Chamada 2 — Comercial** (`diagnostico_comercial` completo): radar 5 eixos, projeções, funil reverso, estratégias de vendas, plano de ação
-
-Cada chamada fica dentro do limite de tempo. O frontend faz as duas chamadas em sequência e junta os resultados antes de salvar.
+Persistir as respostas do Rafael imediatamente após ele completar, e ao carregar a página, detectar se já existem respostas salvas sem resultado final — pulando direto para a fase da Sofia.
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/generate-strategy/index.ts` | Aceitar parâmetro `section` (`marketing` ou `comercial`). Quando `section=marketing`, usar TOOL_SCHEMA e SYSTEM_PROMPT só de marketing (como era antes). Quando `section=comercial`, usar TOOL_SCHEMA e SYSTEM_PROMPT só do diagnóstico comercial. Não debitar créditos na chamada comercial (debitar só na marketing). |
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | Na função de geração: chamar `generate-strategy` com `section: "marketing"` primeiro, depois chamar com `section: "comercial"`. Juntar os dois resultados em um objeto unificado antes de salvar em `marketing_strategies`. Mostrar progresso ("Gerando estratégia de marketing..." → "Gerando diagnóstico comercial..."). |
-| `src/hooks/useMarketingStrategy.ts` | Sem mudança (o hook `useGenerateStrategy` já retorna `data` genérico). |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | 1. Em `handleRafaelComplete`: salvar as respostas do Rafael no `sales_plans` imediatamente (já faz isso no `handleSofiaComplete`, mover para antes). 2. No `useEffect` de auto-detect: se existe `salesPlan` com respostas mas NÃO existe `activeStrategy` com `strategy_result`, carregar as respostas do Rafael do `salesPlan` no state e pular direto para `chat-sofia`. 3. Adicionar botão "Continuar de onde parou" na tela welcome quando detectar esse estado parcial. |
 
-### Alternativa considerada e descartada
+### Fluxo corrigido
 
-Queue-based (salvar job no banco, processar em background): mais complexo, requer polling no frontend, nova tabela, novo worker. A divisão em 2 chamadas é mais simples e resolve o problema diretamente.
+```text
+1. Rafael completa → salva respostas no sales_plans imediatamente
+2. Transição → Sofia inicia
+3. Sofia completa → gera estratégia (marketing + comercial)
+4. Se falhar na geração → respostas do Rafael já estão salvas
+5. Usuário recarrega → detecta sales_plan sem strategy_result
+6. Mostra "Continuar de onde parou" → pula direto pra Sofia
+```
 
-### Benefício adicional
+### Detalhes técnicos
 
-Dividir também reduz o risco de o modelo falhar no parse do JSON gigante — schemas menores = respostas mais confiáveis.
+- O hook `useSalesPlan` já existe e retorna as respostas salvas
+- O hook `useSaveSalesPlan` já faz upsert por `organization_id`
+- A detecção é: `salesPlan?.answers` tem dados + `!hasResult` (sem strategy_result na marketing_strategies)
+- As respostas do Rafael são carregadas no `rafaelAnswers` state via `setRafaelAnswers(salesPlan.answers)`
+- Na tela welcome, mostrar card diferenciado: "Você já completou a etapa comercial. Continuar com a Sofia?"
 
