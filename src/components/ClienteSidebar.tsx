@@ -88,6 +88,7 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
   const Icon = item.icon;
   const basePath = item.path.split("?")[0];
   const isActive = location.pathname === basePath || (basePath !== "/cliente/inicio" && location.pathname.startsWith(basePath + "/"));
+  const isHighlight = item.highlight;
 
   const showBadge = item.badgeKey === "plano-creditos" && (level === "warning" || level === "critical" || level === "zero");
 
@@ -98,18 +99,23 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
       className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
         ${collapsed ? "justify-center px-2 mx-1" : ""}
         ${isGated ? "opacity-40 cursor-not-allowed" : ""}
-        ${isActive && !isGated
-          ? "bg-sidebar-primary/15 text-white font-medium"
-          : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+        ${isHighlight && !isGated
+          ? isActive
+            ? "bg-amber-500/20 text-amber-300 font-semibold"
+            : "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-medium"
+          : isActive && !isGated
+            ? "bg-sidebar-primary/15 text-white font-medium"
+            : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
         }
       `}
     >
       <div className="relative">
         <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+          isHighlight && !isGated ? "text-amber-400" :
           isActive && !isGated ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
         }`} />
         {isActive && !isGated && (
-          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+          <div className={`absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full ${isHighlight ? "bg-amber-400" : "bg-sidebar-primary"}`} />
         )}
       </div>
       {!collapsed && (

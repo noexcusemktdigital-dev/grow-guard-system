@@ -643,3 +643,164 @@ function computeArtSaldo(ctx: Record<string, any>, ans: Record<string, any>, oth
   const otherTotal = otherKeys.reduce((sum, k) => sum + (parseInt(ans[k]) || 0), 0);
   return Math.max(0, max - used - otherTotal);
 }
+
+/* ══════════════════════════════════════════════
+   GPS DO NEGÓCIO — RAFAEL (Fase Comercial, ~15 perguntas)
+   ══════════════════════════════════════════════ */
+
+export const GPS_RAFAEL_STEPS: BriefingStep[] = [
+  {
+    id: "_intro_gps_rafael",
+    agentMessage: "Oi! 👋 Eu sou o **Rafael**, especialista comercial do GPS do Negócio.\n\nVou fazer algumas perguntas sobre o seu negócio, estrutura comercial, financeiro e gestão de leads.\n\nSuas respostas vão alimentar toda a inteligência da plataforma — CRM, scripts, agentes de IA e muito mais.\n\nVamos lá? 🚀",
+    inputType: "info",
+  },
+
+  // ── Bloco 1: Negócio
+  { id: "empresa", section: "Negócio", agentMessage: "Qual é o nome da sua empresa e o que ela faz?", inputType: "textarea", placeholder: "Ex: Somos uma clínica odontológica especializada em implantes.", helpText: "Uma descrição clara ajuda a IA a direcionar toda a estratégia." },
+  { id: "produto", section: "Negócio", agentMessage: "Qual é o principal produto ou serviço que você quer vender agora?", inputType: "textarea", placeholder: "Ex: Implantes dentários, consultoria empresarial, curso online...", helpText: "Focamos a estratégia no produto/serviço com maior potencial de retorno." },
+  { id: "segmento", section: "Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", options: SEGMENTO_OPTIONS, helpText: "O segmento influencia benchmarks, concorrência e estratégia." },
+  { id: "modelo_negocio", section: "Negócio", agentMessage: "Modelo de negócio: B2B, B2C ou ambos?", inputType: "select", options: [
+    { value: "b2b", label: "B2B (empresas)" }, { value: "b2c", label: "B2C (consumidor final)" }, { value: "ambos", label: "Ambos" },
+  ], helpText: "Saber se vende para empresas ou consumidor final muda toda a estratégia." },
+
+  // ── Bloco 2: Financeiro
+  { id: "ticket_medio", section: "Financeiro", agentMessage: "Qual é o ticket médio do seu principal produto/serviço?", inputType: "select", options: [
+    { value: "0-500", label: "Até R$ 500" }, { value: "500-2k", label: "R$ 500 a R$ 2.000" },
+    { value: "2k-5k", label: "R$ 2.000 a R$ 5.000" }, { value: "5k-15k", label: "R$ 5.000 a R$ 15.000" },
+    { value: "15k+", label: "Mais de R$ 15.000" }, { value: "personalizar", label: "Outro valor" },
+  ], helpText: "O ticket médio impacta diretamente nas projeções de receita." },
+  { id: "faturamento", section: "Financeiro", agentMessage: "Qual o faturamento mensal aproximado?", inputType: "select", options: [
+    { value: "0-10k", label: "Até R$ 10 mil" }, { value: "10-30k", label: "R$ 10-30 mil" },
+    { value: "30-100k", label: "R$ 30-100 mil" }, { value: "100-300k", label: "R$ 100-300 mil" },
+    { value: "300k+", label: "R$ 300 mil+" },
+  ], helpText: "Usado para calcular projeções de crescimento." },
+  { id: "meta_faturamento", section: "Financeiro", agentMessage: "Qual a meta de faturamento mensal?", inputType: "select", options: [
+    { value: "0-20k", label: "Até R$ 20 mil" }, { value: "20-50k", label: "R$ 20-50 mil" },
+    { value: "50-150k", label: "R$ 50-150 mil" }, { value: "150-500k", label: "R$ 150-500 mil" },
+    { value: "500k+", label: "R$ 500 mil+" },
+  ], helpText: "Sua meta ideal de receita. Usamos para projetar o funil reverso." },
+  { id: "tem_recorrencia", section: "Financeiro", agentMessage: "Você tem clientes que compram mais de uma vez? 🔄", inputType: "select", options: [
+    { value: "sim", label: "Sim, boa parte volta" }, { value: "parcialmente", label: "Parcialmente" }, { value: "nao", label: "Não, sempre clientes novos" },
+  ], helpText: "Recorrência é a base de um negócio previsível e escalável." },
+
+  // ── Bloco 3: Equipe e Estrutura
+  { id: "tamanho_equipe", section: "Equipe Comercial", agentMessage: "Qual o tamanho da equipe comercial?", inputType: "select", options: [
+    { value: "1", label: "Só eu" }, { value: "2-3", label: "2-3 pessoas" },
+    { value: "4-7", label: "4-7 pessoas" }, { value: "8-15", label: "8-15 pessoas" }, { value: "16+", label: "16+" },
+  ], helpText: "Quantas pessoas estão envolvidas em vendas e prospecção." },
+  { id: "funcoes_equipe", section: "Equipe Comercial", agentMessage: "Quais funções existem na equipe?", inputType: "multi-select", options: [
+    { value: "sdr", label: "SDR / Pré-vendas" }, { value: "closer", label: "Closer / Vendedor" },
+    { value: "cs", label: "CS / Pós-venda" }, { value: "gestor", label: "Gestor Comercial" }, { value: "nenhuma", label: "Nenhuma definida" },
+  ], helpText: "Equipes com funções definidas têm maior previsibilidade." },
+  { id: "tempo_fechamento", section: "Equipe Comercial", agentMessage: "Tempo médio pra fechar uma venda?", inputType: "select", options: [
+    { value: "mesmo_dia", label: "No mesmo dia" }, { value: "1-7", label: "1 a 7 dias" },
+    { value: "1-4sem", label: "1 a 4 semanas" }, { value: "1-3m", label: "1 a 3 meses" }, { value: "3m+", label: "Mais de 3 meses" },
+  ], helpText: "Ciclos mais longos exigem automação e cadências de follow-up robustas." },
+
+  // ── Bloco 4: Gestão de Leads
+  { id: "usa_crm", section: "Gestão de Leads", agentMessage: "Usa algum CRM atualmente?", inputType: "select", options: [
+    { value: "nao", label: "Não uso nada" }, { value: "planilha", label: "Planilha / anotações" },
+    { value: "crm_basico", label: "CRM básico" }, { value: "crm_pro", label: "CRM profissional" },
+  ], helpText: "CRM centraliza informações e evita perda de oportunidades." },
+  { id: "followup", section: "Gestão de Leads", agentMessage: "Tem follow-up estruturado?", inputType: "select", options: [
+    { value: "nao", label: "Não faço follow-up" }, { value: "eventual", label: "Faço quando lembro" },
+    { value: "cadencia", label: "Sim, com cadência definida" }, { value: "auto", label: "Sim, automatizado" },
+  ], helpText: "80% das vendas precisam de 5+ follow-ups para fechar." },
+  { id: "dor_principal", section: "Gestão de Leads", agentMessage: "Qual a maior dor ou necessidade do seu cliente ideal? 🎯", inputType: "textarea", placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas...", helpText: "Entender a dor do cliente é essencial para criar scripts e conteúdos que convertem." },
+
+  // ── Bloco 5: Canais
+  { id: "canais_aquisicao", section: "Canais", agentMessage: "Quais canais de aquisição você usa?", inputType: "multi-select", options: [
+    { value: "google", label: "Google Ads" }, { value: "instagram", label: "Instagram" },
+    { value: "facebook", label: "Facebook" }, { value: "linkedin", label: "LinkedIn" },
+    { value: "indicacao", label: "Indicação" }, { value: "whatsapp", label: "WhatsApp" },
+    { value: "cold_call", label: "Cold Call" }, { value: "cold_email", label: "Cold Email" },
+    { value: "eventos", label: "Eventos" }, { value: "parcerias", label: "Parcerias" },
+  ], helpText: "Diversificar canais reduz o risco." },
+
+  // ── Bloco 6: Processo de Vendas
+  { id: "etapas_funil", section: "Processo de Vendas", agentMessage: "Descreva as etapas do seu processo de vendas, da prospecção ao fechamento 🎯", inputType: "textarea", placeholder: "Ex: Prospecção → Qualificação → Reunião → Proposta → Negociação → Fechamento", helpText: "Vamos criar seu funil automaticamente a partir dessas etapas!" },
+
+  // ── Bloco 7: Performance
+  { id: "metas_historicas", section: "Performance", agentMessage: "Suas metas são baseadas em dados históricos?", inputType: "select", options: [
+    { value: "nao", label: "Não tenho metas" }, { value: "achismo", label: "Metas por achismo" },
+    { value: "historico", label: "Baseadas em histórico" }, { value: "projecoes", label: "Com projeções e cenários" },
+  ], helpText: "Metas baseadas em dados evitam frustração e permitem projeções realistas." },
+  { id: "conversao_etapa", section: "Performance", agentMessage: "Pra finalizar a parte comercial: acompanha taxa de conversão por etapa do funil?", inputType: "select", options: [
+    { value: "nao", label: "Não acompanho" }, { value: "geral", label: "Apenas conversão geral" }, { value: "por_etapa", label: "Sim, por etapa" },
+  ], helpText: "Conversão por etapa revela onde os leads estão sendo perdidos." },
+];
+
+/* ══════════════════════════════════════════════
+   GPS DO NEGÓCIO — SOFIA (Fase Marketing, ~13 perguntas)
+   Perguntas duplicadas (empresa, produto, segmento, ticket_medio, dor_principal) 
+   já foram cobertas pelo Rafael — aqui só o que é exclusivo de marketing.
+   ══════════════════════════════════════════════ */
+
+export const GPS_SOFIA_STEPS: BriefingStep[] = [
+  {
+    id: "_intro_gps_sofia",
+    agentMessage: "Olá! 👋 Eu sou a **Sofia**, especialista em marketing do GPS do Negócio.\n\nO Rafael já coletou as informações sobre o seu negócio e comercial. Agora eu vou focar na parte de **marketing, posicionamento e comunicação**.\n\nVamos criar uma estratégia completa! 🎯✨",
+    inputType: "info",
+  },
+
+  // ── Bloco 1: Público
+  { id: "publico", section: "Público", agentMessage: "Quem é o cliente ideal para o seu produto? Pode marcar vários!", inputType: "multi-select", options: [
+    { value: "empresarios", label: "Empresários" }, { value: "medicos", label: "Médicos / Profissionais de Saúde" },
+    { value: "pequenas_empresas", label: "Pequenas empresas" }, { value: "consumidor_final", label: "Consumidor final" },
+    { value: "executivos", label: "Executivos / Gestores" }, { value: "profissionais_liberais", label: "Profissionais liberais" },
+    { value: "maes", label: "Mães / Pais" }, { value: "jovens", label: "Jovens (18-25)" },
+    { value: "investidores", label: "Investidores" }, { value: "atletas", label: "Atletas / Fitness" },
+    { value: "estudantes", label: "Estudantes" }, { value: "aposentados", label: "Aposentados / 55+" },
+    { value: "personalizar", label: "Outro perfil" },
+  ], helpText: "Quanto mais detalhado, melhor será a segmentação da estratégia." },
+  { id: "faixa_etaria", section: "Público", agentMessage: "Qual a faixa etária predominante do seu público?", inputType: "multi-select", options: FAIXA_ETARIA_OPTIONS, helpText: "A faixa etária influencia linguagem, canais e tipo de conteúdo." },
+
+  // ── Bloco 2: Posicionamento
+  { id: "razao_escolha", section: "Posicionamento", agentMessage: "Por que um cliente deveria escolher sua empresa e não a concorrência?", inputType: "textarea", placeholder: "Ex: Preço competitivo, qualidade superior, método próprio, experiência de 10 anos...", helpText: "Seu posicionamento será a base de toda a comunicação estratégica." },
+  { id: "diferencial", section: "Posicionamento", agentMessage: "Você tem algum diferencial claro no mercado?", inputType: "select", options: [
+    { value: "metodo", label: "Método exclusivo" }, { value: "atendimento", label: "Atendimento personalizado" },
+    { value: "nicho", label: "Especialização em nicho" }, { value: "tecnologia", label: "Tecnologia / Inovação" },
+    { value: "preco", label: "Melhor custo-benefício" }, { value: "equipe", label: "Equipe qualificada" },
+    { value: "resultados", label: "Resultados comprovados" }, { value: "marca", label: "Marca reconhecida" },
+    { value: "personalizar", label: "Outro diferencial" },
+  ], helpText: "Seu diferencial será usado para posicionar a marca e criar a proposta de valor." },
+  { id: "resultados_clientes", section: "Posicionamento", agentMessage: "Quais resultados seus clientes geralmente alcançam?", inputType: "textarea", placeholder: "Ex: Aumento de 40% nas vendas, emagrecimento de 10kg em 3 meses...", helpText: "Resultados reais são a melhor prova social.", optional: true },
+
+  // ── Bloco 3: Concorrência
+  { id: "concorrentes_urls", section: "Concorrência", agentMessage: "Cole os links (site ou Instagram) dos seus 2-3 principais concorrentes 🔍", inputType: "textarea", placeholder: "Ex:\nhttps://www.concorrente1.com.br\nhttps://instagram.com/concorrente2", helpText: "Com URLs reais, a IA consegue inferir posicionamento e estratégia dos concorrentes.", optional: true },
+  { id: "concorrente_faz_melhor", section: "Concorrência", agentMessage: "O que seus concorrentes fazem melhor que você hoje?", inputType: "textarea", placeholder: "Ex: Têm mais presença digital, investem mais em tráfego...", helpText: "Identificar pontos fracos relativos ajuda a criar estratégias de diferenciação.", optional: true },
+
+  // ── Bloco 4: Estrutura de Marketing
+  { id: "canais_atuais", section: "Marketing Atual", agentMessage: "Quais canais você já usa para atrair clientes? Pode marcar vários!", inputType: "multi-select", options: [
+    { value: "instagram", label: "Instagram" }, { value: "site", label: "Site" },
+    { value: "trafego_pago", label: "Tráfego pago" }, { value: "indicacao", label: "Indicação" },
+    { value: "youtube", label: "YouTube" }, { value: "tiktok", label: "TikTok" },
+    { value: "linkedin", label: "LinkedIn" }, { value: "whatsapp", label: "WhatsApp" },
+  ], helpText: "Saber os canais atuais ajuda a identificar oportunidades." },
+  { id: "investe_anuncios", section: "Marketing Atual", agentMessage: "Você já investe em anúncios pagos? Se sim, quanto por mês?", inputType: "select", options: [
+    { value: "nao", label: "Não invisto" }, { value: "0-500", label: "Sim, até R$ 500/mês" },
+    { value: "500-2k", label: "Sim, R$ 500 a R$ 2.000/mês" }, { value: "2k-5k", label: "Sim, R$ 2.000 a R$ 5.000/mês" },
+    { value: "5k+", label: "Sim, mais de R$ 5.000/mês" },
+  ], helpText: "Entender seu investimento atual ajuda a dimensionar a estratégia." },
+
+  // ── Bloco 5: Objetivo
+  { id: "objetivo", section: "Objetivo", agentMessage: "Qual é seu principal objetivo de marketing neste momento?", inputType: "select", options: [
+    { value: "gerar_leads", label: "Gerar leads" }, { value: "aumentar_vendas", label: "Aumentar vendas" },
+    { value: "captar_premium", label: "Captar clientes premium" }, { value: "aumentar_autoridade", label: "Aumentar autoridade" },
+    { value: "lancar_produto", label: "Lançar produto/serviço" }, { value: "fidelizar", label: "Fidelizar clientes" },
+    { value: "aumentar_ticket", label: "Aumentar ticket médio" },
+  ], helpText: "O objetivo define toda a direção da estratégia." },
+
+  // ── Bloco 6: Comunicação
+  { id: "tom_comunicacao", section: "Comunicação", agentMessage: "Qual tom de comunicação combina mais com sua marca?", inputType: "multi-select", options: [
+    { value: "profissional", label: "Profissional / Formal" }, { value: "acessivel", label: "Acessível / Amigável" },
+    { value: "provocativo", label: "Provocativo / Direto" }, { value: "educativo", label: "Educativo / Didático" },
+    { value: "inspirador", label: "Inspirador / Motivacional" }, { value: "humoristico", label: "Humorístico / Descontraído" },
+    { value: "tecnico", label: "Técnico / Especialista" }, { value: "premium", label: "Premium / Sofisticado" },
+  ], helpText: "O tom de voz será aplicado em todos os conteúdos, scripts e comunicações." },
+  { id: "marcas_referencia", section: "Comunicação", agentMessage: "Existe alguma marca que você admira e gostaria de se parecer?", inputType: "textarea", placeholder: "Ex: Apple pela simplicidade, Nubank pela comunicação, Nike pela energia...", helpText: "Referências ajudam a IA a entender a estética desejada.", optional: true },
+
+  // ── Bloco 7: Contexto
+  { id: "regiao", section: "Contexto", agentMessage: "Onde sua empresa atua? Informe cidade, estado ou país.", inputType: "text", placeholder: "Ex: São Paulo - SP, Brasil inteiro...", helpText: "A região de atuação influencia a segmentação de campanhas." },
+  { id: "links_digitais", section: "Contexto", agentMessage: "Pra finalizar: compartilhe os links do seu site, Instagram ou landing page 😊", inputType: "textarea", placeholder: "Site: https://...\nInstagram: @...", helpText: "Links permitem que a IA entenda o contexto visual e de comunicação.", optional: true },
+];
