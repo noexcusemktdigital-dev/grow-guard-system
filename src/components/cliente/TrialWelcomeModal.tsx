@@ -14,7 +14,7 @@ const INCLUDED = [
   { icon: Users, label: "CRM completo", desc: "Gerencie leads e funil de vendas" },
   { icon: Target, label: "Plano de Vendas", desc: "Estratégia comercial personalizada" },
   { icon: Megaphone, label: "Marketing completo", desc: "Conteúdos, artes, sites e tráfego" },
-  { icon: Zap, label: "200 créditos", desc: "Para testar todas as ferramentas de IA" },
+  { icon: Zap, label: "500 créditos", desc: "Para testar todas as ferramentas de IA" },
 ];
 
 const BLOCKED = [
