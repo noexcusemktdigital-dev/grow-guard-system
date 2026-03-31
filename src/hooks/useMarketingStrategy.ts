@@ -148,13 +148,17 @@ export function useApproveStrategy() {
 
 export function useGenerateStrategy() {
   return useMutation({
-    mutationFn: async (payload: { answers: Record<string, unknown>; organization_id: string }) => {
+    mutationFn: async (payload: { answers: Record<string, unknown>; organization_id: string; section?: string }) => {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
       const resp = await supabase.functions.invoke("generate-strategy", {
-        body: { answers: payload.answers, organization_id: payload.organization_id },
+        body: { 
+          answers: payload.answers, 
+          organization_id: payload.organization_id,
+          section: payload.section || "marketing",
+        },
       });
 
       if (resp.error) throw new Error(resp.error.message || "Erro ao gerar estratégia");

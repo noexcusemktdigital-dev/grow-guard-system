@@ -23,6 +23,7 @@ import { logger } from "@/lib/logger";
 const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
 
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
+type GeneratingStep = "marketing" | "comercial";
 
 function GPSWelcome({ onStart }: { onStart: () => void }) {
   return (
@@ -108,6 +109,7 @@ function TransitionScreen() {
 
 export default function ClienteGPSNegocio() {
   const [phase, setPhase] = useState<Phase>("welcome");
+  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("marketing");
   const [rafaelAnswers, setRafaelAnswers] = useState<Record<string, any>>({});
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -168,6 +170,7 @@ export default function ClienteGPSNegocio() {
 
     // Merge all answers
     const allAnswers = { ...rafaelAnswers, ...sofiaAnswers };
+    setGeneratingStep("marketing");
     setPhase("generating");
 
     try {
@@ -195,14 +198,33 @@ export default function ClienteGPSNegocio() {
         }
       }
 
-      // 3. Generate strategy via AI (sends ALL answers)
-      const aiResult = await generateStrategy.mutateAsync({ answers: allAnswers, organization_id: orgId });
+      // 3. Generate strategy via AI — two sequential calls
+      // Call 1: Marketing
+      const marketingResult = await generateStrategy.mutateAsync({ 
+        answers: allAnswers, 
+        organization_id: orgId,
+        section: "marketing",
+      });
+
+      // Call 2: Comercial
+      setGeneratingStep("comercial");
+      const comercialResult = await generateStrategy.mutateAsync({ 
+        answers: allAnswers, 
+        organization_id: orgId,
+        section: "comercial",
+      });
+
+      // Merge results
+      const unifiedResult = {
+        ...(marketingResult.result || {}),
+        ...(comercialResult.result || {}),
+      };
       
       await saveStrategy.mutateAsync({
         answers: allAnswers,
-        score_percentage: aiResult.result?.diagnostico?.score_geral || 0,
+        score_percentage: (unifiedResult as any)?.diagnostico?.score_geral || 0,
         nivel: "gerado",
-        strategy_result: aiResult.result,
+        strategy_result: unifiedResult,
         status: "pending",
       });
 
@@ -317,7 +339,19 @@ export default function ClienteGPSNegocio() {
                 </motion.div>
                 <div className="text-center">
                   <p className="font-semibold">Gerando seu GPS do Negócio...</p>
-                  <p className="text-sm text-muted-foreground">Estamos analisando seu comercial e marketing, criando diagnóstico, projeções, estratégias e plano de ação. Isso pode levar até 60 segundos.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {generatingStep === "marketing" 
+                      ? "Etapa 1/2 — Analisando marketing, criando ICP, estratégias e plano de conteúdo..."
+                      : "Etapa 2/2 — Gerando diagnóstico comercial, projeções de receita e estratégias de vendas..."
+                    }
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <div className={`w-2 h-2 rounded-full ${generatingStep === "marketing" ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                    <span className="text-xs text-muted-foreground">Marketing</span>
+                    <div className="w-6 h-px bg-muted-foreground/30" />
+                    <div className={`w-2 h-2 rounded-full ${generatingStep === "comercial" ? "bg-amber-500 animate-pulse" : "bg-muted-foreground/30"}`} />
+                    <span className="text-xs text-muted-foreground">Comercial</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
