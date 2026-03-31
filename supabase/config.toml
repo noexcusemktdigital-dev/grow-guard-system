@@ -143,9 +143,9 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.whatsapp-load-history]
     verify_jwt = true
   [functions.whatsapp-sync-chats]
-    verify_jwt = true
+    verify_jwt = false
   [functions.whatsapp-sync-photos]
-    verify_jwt = true
+    verify_jwt = false
 
   # --- WhatsApp/Evolution external webhooks (use own secret validation) ---
   [functions.evolution-webhook]

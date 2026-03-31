@@ -115,8 +115,8 @@ Deno.serve(async (req) => {
     });
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await userClient.auth.getUser(token);
-    if (authError || !user) {
+    const { data: claimsData, error: authError } = await userClient.auth.getClaims(token);
+    if (authError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: user.id, _portal: "saas" });
+    const { data: orgId } = await adminClient.rpc("get_user_org_id", { _user_id: claimsData.claims.sub, _portal: "saas" });
     if (!orgId) {
       return new Response(JSON.stringify({ error: "User has no organization" }), {
         status: 400,
