@@ -209,7 +209,7 @@ function App() {
                   <Route path="scripts" element={<ClienteScripts />} />
                   <Route path="disparos" element={<ClienteDisparos />} />
                   <Route path="dashboard" element={<ClienteDashboard />} />
-                  <Route path="plano-marketing" element={<ClientePlanoMarketing />} />
+                  <Route path="plano-marketing" element={<Navigate to="/cliente/gps-negocio" replace />} />
                   <Route path="conteudos" element={<ClienteConteudos />} />
                   <Route path="redes-sociais" element={<ClienteRedesSociais />} />
                   <Route path="sites" element={<ClienteSites />} />

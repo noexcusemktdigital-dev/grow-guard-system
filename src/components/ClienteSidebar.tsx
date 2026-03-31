@@ -250,6 +250,11 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
         <div data-tour="global">
           <SidebarNavItems items={globalSection} collapsed={collapsed} />
         </div>
+        {/* GPS do Negócio — destaque isolado */}
+        <div className="mx-3 border-t border-sidebar-border/60" />
+        <div data-tour="gps">
+          <SidebarNavItems items={[gpsItem]} collapsed={collapsed} />
+        </div>
         <div className="mx-3 border-t border-sidebar-border/60" />
         <div data-tour="vendas">
           <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
