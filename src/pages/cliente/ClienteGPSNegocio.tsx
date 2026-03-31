@@ -568,6 +568,36 @@ export default function ClienteGPSNegocio() {
               isApproving={approveStrategy.isPending}
               status={status}
               createdAt={activeStrategy?.created_at ?? ""}
+              metasProps={{
+                activeGoals: activeGoals ?? [],
+                historicGoals,
+                goalProgress,
+                goalsLoading,
+                scopeFilter,
+                setScopeFilter,
+                onNewMeta: () => setNovaMetaOpen(true),
+                onEditMeta: openEditGoal,
+                onArchiveMeta: (id: string) => archiveGoal.mutate(id),
+                isMonetaryMetric,
+              }}
+              metasDialog={
+                <ClientePlanoVendasMetaDialog
+                  open={novaMetaOpen}
+                  onOpenChange={(o) => { setNovaMetaOpen(o); if (!o) setEditingGoal(null); }}
+                  editingGoal={editingGoal}
+                  novaMeta={novaMeta}
+                  setNovaMeta={setNovaMeta}
+                  targetDisplay={targetDisplay}
+                  setTargetDisplay={setTargetDisplay}
+                  onAdd={handleAddMeta}
+                  onEdit={handleEditMeta}
+                  isCreating={createGoal.isPending}
+                  isUpdating={updateGoal.isPending}
+                  isMonetaryMetric={isMonetaryMetric}
+                  teams={teams}
+                  members={members}
+                />
+              }
             />
           </motion.div>
         )}
