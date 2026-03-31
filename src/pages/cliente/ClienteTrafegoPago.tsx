@@ -329,9 +329,16 @@ export default function ClienteTrafegoPago() {
             <div className="grid gap-3 md:grid-cols-2">
               {filteredCampaigns.map((c) => {
                 const content = (c.content || {}) as Record<string, unknown>;
+                const kpis = (content.kpis || {}) as Record<string, unknown>;
+                const platformBorderTop: Record<string, string> = {
+                  Google: "border-t-emerald-500",
+                  Meta: "border-t-blue-500",
+                  TikTok: "border-t-purple-500",
+                  LinkedIn: "border-t-sky-500",
+                };
                 return (
-                  <Card key={c.id} className={`border-l-4 ${platformColors[c.type]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
-                    <CardContent className="py-4 space-y-2">
+                  <Card key={c.id} className={`border-t-4 ${platformBorderTop[c.type] || ""}`}>
+                    <CardContent className="py-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className={`p-1.5 rounded-lg ${platformColors[c.type] || "bg-muted"}`}>
@@ -348,16 +355,34 @@ export default function ClienteTrafegoPago() {
                           {campaignStatusLabels[c.status] || c.status}
                         </Badge>
                       </div>
+
+                      {/* Objective + Audience */}
                       {content.objective && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Objetivo: {String(content.objective)}
+                        <div className="p-2 rounded-lg bg-muted/30 border">
+                          <p className="text-[10px] font-medium text-muted-foreground">Objetivo: {String(content.objective)}</p>
+                        </div>
+                      )}
+                      {content.audience && (
+                        <p className="text-[10px] text-muted-foreground line-clamp-2">
+                          <span className="font-medium">Público:</span> {String(content.audience)}
                         </p>
                       )}
-                      {content.budget && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Orçamento: {String(content.budget)}
-                        </p>
-                      )}
+
+                      {/* Budget + KPIs row */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {content.budget && (
+                          <div className="p-2 rounded-lg bg-muted/20 border text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">Orçamento</p>
+                            <p className="text-xs font-bold">{String(content.budget)}</p>
+                          </div>
+                        )}
+                        {kpis.estimated_cpl && (
+                          <div className="p-2 rounded-lg bg-muted/20 border text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">CPL Estimado</p>
+                            <p className="text-xs font-bold">{String(kpis.estimated_cpl)}</p>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
