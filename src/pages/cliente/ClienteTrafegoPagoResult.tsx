@@ -519,23 +519,70 @@ export function ClienteTrafegoPagoResult({
                       </div>
                     )}
 
-                    {(p.campaign_structure as Record<string, unknown>)?.campaigns &&
-                      ((p.campaign_structure as Record<string, unknown>).campaigns as Record<string, unknown>[]).length > 0 && (
+                    {p.campaign_structure && (() => {
+                      const cs = p.campaign_structure;
+                      // String
+                      if (typeof cs === "string") return (
                         <div>
                           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
-                          {((p.campaign_structure as Record<string, unknown>).campaigns as Record<string, unknown>[]).map((c, ci) => (
+                          <p className="text-xs leading-relaxed whitespace-pre-line">{cs}</p>
+                        </div>
+                      );
+                      // Array of strings or objects
+                      if (Array.isArray(cs)) return (
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
+                          {cs.map((item, i) => (
+                            <div key={i} className="p-2.5 rounded-lg bg-muted/10 border mb-1.5">
+                              {typeof item === "string" ? (
+                                <p className="text-xs">{item}</p>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-bold">{String(item.name || item.title || `Campanha ${i + 1}`)}</p>
+                                  {item.description && <p className="text-[10px] text-muted-foreground mt-0.5">{String(item.description)}</p>}
+                                  {Array.isArray(item.ad_sets) && item.ad_sets.map((as_: any, ai: number) => (
+                                    <div key={ai} className="ml-3 mt-1.5 pl-2 border-l-2 border-muted">
+                                      <p className="text-[11px] font-medium">{typeof as_ === "string" ? as_ : String(as_.name || `Conjunto ${ai + 1}`)}</p>
+                                      {typeof as_ === "object" && as_.targeting && <p className="text-[10px] text-muted-foreground">{String(as_.targeting)}</p>}
+                                    </div>
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                      // Object with .campaigns array
+                      if (typeof cs === "object" && (cs as any).campaigns && Array.isArray((cs as any).campaigns)) return (
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
+                          {((cs as any).campaigns as any[]).map((c: any, ci: number) => (
                             <div key={ci} className="p-2.5 rounded-lg bg-muted/10 border mb-1.5">
-                              <p className="text-xs font-bold">{String(c.name)}</p>
-                              {(c.ad_sets as Record<string, unknown>[])?.map((as_, ai) => (
+                              <p className="text-xs font-bold">{String(c.name || c.title || `Campanha ${ci + 1}`)}</p>
+                              {Array.isArray(c.ad_sets) && c.ad_sets.map((as_: any, ai: number) => (
                                 <div key={ai} className="ml-3 mt-1.5 pl-2 border-l-2 border-muted">
-                                  <p className="text-[11px] font-medium">{String(as_.name)}</p>
-                                  <p className="text-[10px] text-muted-foreground">{String(as_.targeting)}</p>
+                                  <p className="text-[11px] font-medium">{typeof as_ === "string" ? as_ : String(as_.name || `Conjunto ${ai + 1}`)}</p>
+                                  {typeof as_ === "object" && as_.targeting && <p className="text-[10px] text-muted-foreground">{String(as_.targeting)}</p>}
                                 </div>
                               ))}
                             </div>
                           ))}
                         </div>
-                      )}
+                      );
+                      // Fallback: any other object
+                      if (typeof cs === "object") return (
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
+                          {Object.entries(cs as Record<string, unknown>).map(([key, val]) => (
+                            <div key={key} className="p-2 rounded-lg bg-muted/10 border mb-1.5">
+                              <p className="text-[11px] font-medium capitalize">{key.replace(/_/g, " ")}</p>
+                              <p className="text-[10px] text-muted-foreground">{typeof val === "string" ? val : JSON.stringify(val)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                      return null;
+                    })()}
 
                     {(p.optimization_actions as string[])?.length > 0 && (
                       <div>

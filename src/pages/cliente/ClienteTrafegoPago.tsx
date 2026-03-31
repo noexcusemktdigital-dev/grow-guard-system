@@ -29,11 +29,13 @@ import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import {
   STEPS,
-  platformColors, platformIcons,
+  platformColors, platformIcons, PLATFORM_TUTORIALS,
   campaignStatusLabels, campaignStatusColors,
 } from "./ClienteTrafegoPagoConstants";
 import { ClienteTrafegoPagoWizardStep } from "./ClienteTrafegoPagoWizardStep";
-import { ClienteTrafegoPagoResult } from "./ClienteTrafegoPagoResult";
+import { ClienteTrafegoPagoResult, TutorialDialog } from "./ClienteTrafegoPagoResult";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Rocket, ChevronDown, ChevronUp, Users, Eye, MousePointer, TrendingUp, Zap, Layers } from "lucide-react";
 
 export default function ClienteTrafegoPago() {
   const { data: activeStrategy, isLoading: loadingStrategy } = useActiveTrafficStrategy();
