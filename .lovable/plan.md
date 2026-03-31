@@ -1,20 +1,52 @@
 
+Corrigir a geração do GPS sem exigir novo preenchimento.
 
-## Melhoria — Extração de erro correta no GPS
+### O que encontrei
+- A função `generate-strategy` está configurada com `verify_jwt = true` em `supabase/config.toml`.
+- Ao mesmo tempo, ela já faz autenticação manual dentro do código (`Authorization` + `supabase.auth.getUser()`).
+- Esse padrão está desalinhado com o restante do projeto: funções similares já usam `verify_jwt = false` + validação manual via `getClaims(token)`.
+- O erro que você reportou (`401 Invalid JWT`) é compatível com rejeição no gateway antes da função processar a geração.
+- Há um detalhe extra: o helper `extractEdgeFunctionError` hoje prioriza `body.error`, mas o gateway pode devolver `body.message` (`Invalid JWT`), então a mensagem ao usuário fica ruim.
 
-### Situação atual
+### Plano de correção
 
-A divisão em 3 chamadas e a persistência de respostas já estão implementadas. O risco de timeout foi drasticamente reduzido.
+1. **Alinhar a autenticação da função `generate-strategy`**
+   - Em `supabase/config.toml`, trocar:
+     - `[functions.generate-strategy] verify_jwt = true`
+     - para `verify_jwt = false`
+   - Isso evita que o gateway bloqueie a requisição antes do código rodar.
 
-Porém, há um problema menor: o hook `useGenerateStrategy` não usa o `extractEdgeFunctionError` para extrair a mensagem real de erro. Se a Edge Function retornar status 402 (créditos) ou 500 (falha AI), o SDK do Supabase consome o body e mostra "Edge Function returned a non-2xx status code" em vez da mensagem real.
+2. **Atualizar a validação dentro da própria função**
+   - Em `supabase/functions/generate-strategy/index.ts`:
+     - manter leitura do header `Authorization`
+     - trocar `supabase.auth.getUser()` por `auth.getClaims(token)`
+     - extrair o usuário via `claimsData.claims.sub`
+   - Seguir o mesmo padrão já usado em `whatsapp-sync-photos`, `whatsapp-sync-chats` e `generate-script`.
 
-### Mudança
+3. **Manter o modelo de dois clientes**
+   - Continuar com:
+     - cliente em contexto do usuário para validar sessão/token
+     - cliente com service role para créditos, `sales_plans`, logs e demais operações administrativas
+   - Isso preserva a lógica atual sem mexer no fluxo de negócio.
 
-| Arquivo | Ação |
-|---------|------|
-| `src/hooks/useMarketingStrategy.ts` | Importar `extractEdgeFunctionError` e usá-lo no `catch` do `useGenerateStrategy` para extrair a mensagem real do erro |
+4. **Melhorar a mensagem de erro no frontend**
+   - Em `src/lib/edgeFunctionError.ts`, ampliar a extração para usar:
+     - `body.error`
+     - senão `body.message`
+     - senão `error.message`
+   - Assim, se houver qualquer novo 401/429/500, o toast mostra a causa real.
 
-### Impacto
+5. **Garantir reaproveitamento de quem já respondeu tudo**
+   - O fluxo atual em `ClienteGPSNegocio.tsx` já salva progresso e já tem `Gerar Resultado`.
+   - Depois da correção de autenticação, quem já preencheu comercial + marketing poderá apenas gerar novamente sem responder tudo de novo, desde que os dados já estejam salvos em `sales_plans`.
 
-Se uma das 3 chamadas falhar, o toast mostrará "Créditos insuficientes" ou "Falha ao estruturar resposta da IA" em vez de uma mensagem genérica — facilitando o diagnóstico. A geração em si já deve funcionar com o 3-split implementado.
+### Arquivos a ajustar
+- `supabase/config.toml`
+- `supabase/functions/generate-strategy/index.ts`
+- `src/lib/edgeFunctionError.ts`
 
+### Resultado esperado
+- O GPS volta a gerar a estratégia final.
+- O erro `Invalid JWT` deixa de bloquear a função no gateway.
+- Quem já concluiu comercial e marketing não precisa refazer o briefing.
+- Se ainda houver falha, a mensagem exibida será específica e útil para diagnóstico.
