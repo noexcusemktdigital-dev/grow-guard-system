@@ -1,43 +1,48 @@
 
 
-## Plano — Melhorar diagramação da estratégia de tráfego + redirecionar aprovadas para Campanhas
+## Plano — Melhorar diagramação da estratégia + campanhas pós-aprovação
 
-### Problema
+### Problemas identificados
 
-1. A estratégia gerada tem layout denso e pouco visual — cards de plataforma, KPIs e projeções ficam amontoados
-2. Ao aprovar uma estratégia, ela continua na aba "Estratégia" em vez de ir para "Campanhas" com as plataformas separadas
+1. **Estrutura de campanha mal diagramada**: O código em `ClienteTrafegoPagoResult.tsx` (linhas 522-538) assume que `campaign_structure` tem formato `{ campaigns: [{ name, ad_sets: [{ name, targeting }] }] }`, mas a IA pode retornar strings, arrays simples ou objetos com estrutura diferente. Isso causa erros de renderização.
+
+2. **Botão "Criar Campanha" existe** mas só aparece na aba Estratégia (dentro dos cards de plataforma). Na aba Campanhas, os cards não têm o botão para abrir o tutorial.
+
+3. **Redirecionamento pós-aprovação** já existe no código (`setActiveTab("campanhas")`), mas as campanhas criadas automaticamente precisam ter o botão de tutorial visível na aba Campanhas.
 
 ### Mudanças
 
-#### 1. Redesign do `ClienteTrafegoPagoResult.tsx` — Layout mais visual
+#### 1. Corrigir renderização da estrutura de campanha (`ClienteTrafegoPagoResult.tsx`)
 
-- **Header hero**: Card de destaque com status, diagnóstico e botões de ação (aprovar/regerar) em layout mais limpo
-- **Plano de investimento**: Cards com ícones coloridos por plataforma + barra de distribuição visual (progress bar proporcional)
-- **Projeções**: Cards com ícones grandes e valores destacados em grid responsivo
-- **Cards de plataforma**: Layout com header colorido (faixa de cor da plataforma no topo), seções com separação visual clara (público, orçamento, KPIs em mini-cards com ícones), copies e keywords em collapsible mais organizado
-- **KPIs por plataforma**: Mini dashboard com 4 métricas em grid 2x2 com bordas e ícones maiores
+- Tornar o render de `campaign_structure` defensivo: verificar se é string (renderizar como texto), array (renderizar como lista), ou objeto com `campaigns` (renderizar com a estrutura atual)
+- Tratar `ad_sets` que podem ser strings ou objetos
+- Adicionar fallback para qualquer formato inesperado
 
-#### 2. Fluxo pós-aprovação — Redirecionar para aba Campanhas
+#### 2. Adicionar botão "Criar Campanha" nos cards da aba Campanhas (`ClienteTrafegoPago.tsx`)
 
-No `ClienteTrafegoPago.tsx`, ao aprovar com sucesso:
-- Criar automaticamente uma campanha por plataforma na tabela `client_campaigns` (cada plataforma vira uma campanha separada)
-- Mudar `activeTab` para `"campanhas"` após aprovação
-- Toast informando que as campanhas foram criadas
+- Nos cards de campanha (linhas 330-388), adicionar um botão "Criar Campanha" que abre o `TutorialDialog` com os dados daquela campanha
+- Importar `TutorialDialog` do `ClienteTrafegoPagoResult.tsx` (ou extraí-lo para ser reutilizável)
+- Cada card de campanha terá o botão se a plataforma tiver tutorial disponível
 
-#### 3. Aba Campanhas — Cards por plataforma
+#### 3. Melhorar diagramação geral dos cards de campanha na aba Campanhas
 
-Melhorar os cards de campanha existentes para mostrar mais informações vindas do `content` (objetivo, público, orçamento, KPIs) de forma visual.
+- Adicionar mais informações visuais: creative_formats, keywords (badges), optimization_actions
+- Seções colapsáveis para detalhes extras
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteTrafegoPagoResult.tsx` | Redesign completo do layout — hero, investimento visual, cards de plataforma melhorados |
-| `src/pages/cliente/ClienteTrafegoPago.tsx` | No `handleApprove`, criar campanhas por plataforma e redirecionar para aba Campanhas |
+| `src/pages/cliente/ClienteTrafegoPagoResult.tsx` | Extrair `TutorialDialog` para export; corrigir render defensivo de `campaign_structure` |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Importar `TutorialDialog`; adicionar botão "Criar Campanha" nos cards da aba Campanhas com dados do content |
 
-### Detalhes técnicos
+### Detalhes técnicos — render defensivo de campaign_structure
 
-**Criação automática de campanhas**: No `onSuccess` do `handleApprove`, iterar sobre `platforms` e chamar `createCampaign.mutateAsync` para cada plataforma, salvando os dados completos da estratégia no campo `content`.
-
-**Layout dos cards de plataforma**: Cada card terá uma faixa colorida no topo (`border-t-4`), seções com `grid` para público/orçamento/criativos, e um mini-dashboard de KPIs com ícones e valores maiores.
+```text
+campaign_structure →
+  se string → renderizar como <p>
+  se array → renderizar cada item como card simples
+  se objeto com .campaigns → renderizar estrutura atual (nome + ad_sets)
+  se objeto sem .campaigns → renderizar JSON.stringify formatado
+```
 
