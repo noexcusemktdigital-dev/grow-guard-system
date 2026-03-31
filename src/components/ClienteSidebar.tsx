@@ -79,7 +79,12 @@ const GATE_REASON_LABELS: Record<string, string> = {
   no_sales_plan: "Complete o GPS do Negócio",
   no_marketing_strategy: "Complete o GPS do Negócio",
   admin_only: "Apenas administradores",
-  
+};
+
+const SECTION_DOT_COLORS: Record<string, string> = {
+  Vendas: "bg-red-400",
+  Marketing: "bg-purple-400",
+  Sistema: "bg-slate-400",
 };
 
 function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; collapsed: boolean; isGated: boolean; gateReason: string | null }) {
@@ -96,26 +101,26 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
     <RouterNavLink
       to={isGated ? "#" : item.path}
       onClick={isGated ? (e: React.MouseEvent) => { e.preventDefault(); import("sonner").then(m => m.toast.warning(gateReason ? GATE_REASON_LABELS[gateReason] || "Recurso bloqueado" : "Recurso bloqueado")); } : undefined}
-      className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
+      className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-colors duration-200 rounded-lg mx-1.5
         ${collapsed ? "justify-center px-2 mx-1" : ""}
         ${isGated ? "opacity-40 cursor-not-allowed" : ""}
         ${isHighlight && !isGated
           ? isActive
-            ? "bg-amber-500/20 text-amber-300 font-semibold"
+            ? "bg-amber-500/20 text-amber-300 font-semibold shadow-[inset_0_0_16px_rgba(245,158,11,0.08)]"
             : "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 font-medium"
           : isActive && !isGated
-            ? "bg-sidebar-primary/15 text-white font-medium"
+            ? "bg-sidebar-primary/10 text-white font-medium shadow-[inset_0_0_12px_rgba(99,102,241,0.08)]"
             : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
         }
       `}
     >
       <div className="relative">
-        <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+        <Icon className={`w-[18px] h-[18px] flex-shrink-0 transition-transform duration-200 ${
           isHighlight && !isGated ? "text-amber-400" :
           isActive && !isGated ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
-        }`} />
+        } group-hover:translate-x-0.5`} />
         {isActive && !isGated && (
-          <div className={`absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full ${isHighlight ? "bg-amber-400" : "bg-sidebar-primary"}`} />
+          <div className={`absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full ${isHighlight ? "bg-gradient-to-b from-amber-400 to-amber-500" : "bg-gradient-to-b from-sidebar-primary to-indigo-500"}`} />
         )}
       </div>
       {!collapsed && (
@@ -161,7 +166,6 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
   const { getGateReason } = useFeatureGate();
   const { isAdmin } = useRoleAccess();
 
-  // Filter out admin-only items for non-admin users
   const visibleItems = items.filter((item) => !item.adminOnly || isAdmin);
 
   return (
@@ -182,10 +186,32 @@ function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed
   );
 }
 
+function GPSNavCard({ collapsed }: { collapsed: boolean }) {
+  const { getGateReason } = useFeatureGate();
+  const reason = getGateReason(gpsItem.path);
+  const isGated = !!reason;
+
+  if (collapsed) {
+    return (
+      <div className="py-1">
+        <SidebarNavItems items={[gpsItem]} collapsed={collapsed} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-2.5 p-1 rounded-xl border border-amber-500/20 bg-amber-500/[0.04]">
+      <NavItem item={gpsItem} collapsed={collapsed} isGated={isGated} gateReason={reason} />
+    </div>
+  );
+}
+
 function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { title: string; items: SidebarItem[]; collapsed: boolean; defaultOpen?: boolean }) {
   const location = useLocation();
   const isActive = items.some(item => { const bp = item.path.split("?")[0]; return location.pathname === bp || location.pathname.startsWith(bp + "/"); });
   const [isOpen, setIsOpen] = useState(defaultOpen || isActive);
+
+  const dotColor = SECTION_DOT_COLORS[title] || "bg-slate-400";
 
   if (collapsed) {
     return (
@@ -199,9 +225,12 @@ function CollapsibleSection({ title, items, collapsed, defaultOpen = false }: { 
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="w-full">
         <div className="flex items-center justify-between cursor-pointer hover:bg-white/[0.03] rounded-md px-3 py-1.5 transition-colors mx-1.5 group">
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-muted group-hover:text-sidebar-foreground transition-colors">
-            {title}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-muted group-hover:text-sidebar-foreground transition-colors">
+              {title}
+            </span>
+          </div>
           <ChevronDown className={`h-3 w-3 text-sidebar-muted transition-transform duration-300 ${isOpen ? "rotate-0" : "-rotate-90"}`} />
         </div>
       </CollapsibleTrigger>
@@ -232,13 +261,14 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
   const totalIncluded = limits.totalCredits || 500;
   const creditPercent = totalIncluded > 0 ? (currentBalance / totalIncluded) * 100 : 0;
   const planLabel = isTrial ? "Trial" : (planId ? planId.charAt(0).toUpperCase() + planId.slice(1) : "—");
+  const creditLow = creditPercent < 25;
 
   return (
     <>
       {/* Logo */}
-      <div className={`flex items-center h-14 border-b border-sidebar-border ${collapsed ? "justify-center px-2" : "px-4"}`}>
+      <div className={`flex items-center h-16 border-b border-white/[0.06] ${collapsed ? "justify-center px-2" : "px-4"}`}>
         <div className="flex items-center gap-2.5">
-          <img src={logoWhite} alt="NOEXCUSE" className={`object-contain flex-shrink-0 ${collapsed ? "h-7 w-7" : "h-8"}`} />
+          <img src={logoWhite} alt="NOEXCUSE" className={`object-contain flex-shrink-0 ${collapsed ? "h-7 w-7" : "h-9"}`} />
         </div>
       </div>
 
@@ -250,12 +280,12 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
         <div data-tour="global">
           <SidebarNavItems items={globalSection} collapsed={collapsed} />
         </div>
-        {/* GPS do Negócio — destaque isolado */}
-        <div className="mx-3 border-t border-sidebar-border/60" />
+        {/* GPS do Negócio — destaque isolado como card */}
+        <div className="mx-3 border-t border-white/[0.06]" />
         <div data-tour="gps">
-          <SidebarNavItems items={[gpsItem]} collapsed={collapsed} />
+          <GPSNavCard collapsed={collapsed} />
         </div>
-        <div className="mx-3 border-t border-sidebar-border/60" />
+        <div className="mx-3 border-t border-white/[0.06]" />
         <div data-tour="vendas">
           <CollapsibleSection title="Vendas" items={vendasSection} collapsed={collapsed} defaultOpen />
         </div>
@@ -308,11 +338,11 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
 
       {/* Footer — Credits */}
       {!collapsed ? (
-        <div className="px-3 py-3 border-t border-sidebar-border" data-tour="creditos">
+        <div className="px-3 py-3 border-t border-white/[0.06]" data-tour="creditos">
           {walletLoading || subLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-3 w-full bg-white/10" />
-              <Skeleton className="h-1 w-full bg-white/10" />
+              <Skeleton className="h-1.5 w-full bg-white/10" />
               <Skeleton className="h-[18px] w-24 bg-white/10" />
             </div>
           ) : (
@@ -323,14 +353,16 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
                   {currentBalance.toLocaleString("pt-BR")}/{totalIncluded.toLocaleString("pt-BR")}
                 </span>
               </div>
-              <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+              <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-sidebar-primary transition-all duration-500"
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    creditLow ? "bg-gradient-to-r from-red-500 to-amber-400 animate-shimmer bg-[length:200%_100%]" : "bg-sidebar-primary"
+                  }`}
                   style={{ width: `${creditPercent}%` }}
                 />
               </div>
               <div className="flex items-center gap-1.5 mt-2">
-                <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-sidebar-border text-sidebar-foreground rounded-full">
+                <Badge variant="outline" className="text-[9px] px-2 py-0 h-[18px] gap-1 border-white/[0.08] text-sidebar-foreground rounded-full">
                   <Zap className="w-2.5 h-2.5 text-sidebar-primary" />
                   {planLabel}{isTrialing && " · Trial"}
                 </Badge>
@@ -341,10 +373,10 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
       ) : (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <div className="flex justify-center py-3 border-t border-sidebar-border cursor-default">
+            <div className="flex justify-center py-3 border-t border-white/[0.06] cursor-default">
               <div className="relative">
                 <CreditCard className="h-3.5 w-3.5 text-sidebar-muted" />
-                {creditPercent < 25 && (
+                {creditLow && (
                   <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-400" />
                 )}
               </div>
@@ -356,11 +388,17 @@ export function ClienteSidebarContent({ collapsed, setCollapsed }: { collapsed: 
         </Tooltip>
       )}
 
+      {/* Collapse button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-10 border-t border-sidebar-border text-sidebar-muted hover:text-white hover:bg-white/[0.03] transition-all duration-200"
+        className="flex items-center justify-center h-10 border-t border-white/[0.06] text-sidebar-muted hover:text-white transition-colors duration-200"
       >
-        {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        <div className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/[0.06] transition-colors">
+          {collapsed
+            ? <ChevronRight className="w-3.5 h-3.5" />
+            : <ChevronLeft className="w-3.5 h-3.5" />
+          }
+        </div>
       </button>
     </>
   );
@@ -371,7 +409,7 @@ export function ClienteSidebar() {
 
   return (
     <aside
-      className={`h-[calc(100vh-56px)] bg-sidebar flex-col transition-all duration-300 ease-out sticky top-14 hidden md:flex ${collapsed ? "w-[60px]" : "w-[240px]"}`}
+      className={`h-[calc(100vh-56px)] bg-gradient-to-b from-[hsl(225,20%,9%)] to-[hsl(225,20%,5%)] border-r border-white/[0.04] flex-col transition-all duration-300 ease-out sticky top-14 hidden md:flex ${collapsed ? "w-[60px]" : "w-[256px]"}`}
     >
       <ClienteSidebarContent collapsed={collapsed} setCollapsed={setCollapsed} />
     </aside>
