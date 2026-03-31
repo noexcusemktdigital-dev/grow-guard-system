@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
-import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert, MessageSquare, Users, BarChart3, PenTool, Globe, Send, Bot } from "lucide-react";
+import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert, MessageSquare, Users, BarChart3, PenTool, Globe, Send, Bot, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const toolDescriptions: Record<string, { label: string; desc: string; icon: any }> = {
