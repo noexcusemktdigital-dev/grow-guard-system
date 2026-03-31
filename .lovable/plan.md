@@ -1,91 +1,71 @@
 
 
-## Reformulação — Ferramenta de Sites com tipos, edição por seção e publicação
+## Plano — Bloqueio até aprovação do GPS + Animação de desbloqueio
 
-### Visão geral
+### Problema atual
 
-Reestruturar o fluxo de criação de sites em 3 fases: (1) Escolha do tipo de site com perguntas específicas, (2) Edição por seção após geração, (3) Publicação via link compartilhável.
+O `useHasActiveStrategy` retorna `true` quando existe qualquer estratégia ativa (`is_active: true`), **independente do status**. Isso significa que as ferramentas são desbloqueadas assim que o GPS é **gerado**, não quando é **aprovado**. O correto é desbloquear apenas após `status === "approved"`.
 
-### Fase 1 — Tipos de site com wizard adaptativo
+### Mudanças
 
-O primeiro passo do wizard será escolher o **tipo de site**, e as etapas seguintes mudarão conforme o tipo:
+#### 1. Gate: Exigir aprovação para desbloquear
 
-| Tipo | Seções geradas | Perguntas específicas |
-|------|---------------|----------------------|
-| **Landing Page de Captação** | Hero + Problema + Solução + Benefícios + Prova Social + Formulário + CTA | Qual oferta? Qual lead magnet? Campos do formulário? |
-| **Site Institucional** | Hero + Sobre + Equipe + Serviços + Valores + Contato | História da empresa? Equipe (nomes/cargos)? Missão/Visão? |
-| **Site de Vendas** | Hero + Produto + Benefícios + Preço + Depoimentos + Garantia + CTA | Qual produto? Preço? Garantia? Urgência? |
-| **Portfólio** | Hero + Projetos + Sobre + Processo + Contato | Quantos projetos destacar? Categorias? |
-| **Link na Bio** | Hero + Links + Redes + Mini-Sobre | Quais links? Quais redes? |
+**`src/hooks/useMarketingStrategy.ts`** — Alterar `useHasActiveStrategy` para verificar `status === "approved"`:
 
-Cada tipo define um array de `sections` que determina quais seções o site terá e quais perguntas serão feitas. As perguntas comuns (empresa, contato, estilo, CTA) permanecem, mas as específicas mudam.
-
-### Fase 2 — Checklist de edição por seção
-
-Após o site ser gerado, em vez de ir direto para aprovação, o usuário vê um **checklist de seções** onde pode:
-
-```text
-┌────────────────────────────────────────────┐
-│  Preview do site (iframe)                  │
-├────────────────────────────────────────────┤
-│  SEÇÕES DO SITE                            │
-│                                            │
-│  [✓] Hero                    [Editar]      │
-│      Título: "Transforme seu negócio"      │
-│      Subtítulo: "Agência líder em..."      │
-│      Imagem: hero-bg.jpg                   │
-│                                            │
-│  [✓] Sobre                   [Editar]      │
-│      Texto: "Somos uma empresa..."         │
-│                                            │
-│  [ ] Serviços                [Editar]      │
-│      3 serviços listados                   │
-│                                            │
-│  [ ] Depoimentos             [Editar]      │
-│  [ ] Contato                 [Editar]      │
-│  [ ] Footer                  [Editar]      │
-├────────────────────────────────────────────┤
-│  [Regenerar com alterações] [Aprovar site] │
-└────────────────────────────────────────────┘
+```typescript
+export function useHasActiveStrategy() {
+  const { data, isLoading } = useActiveStrategy();
+  return { 
+    hasStrategy: !!data && (data as any).status === "approved", 
+    isLoading 
+  };
+}
 ```
 
-Ao clicar em **Editar** uma seção, abre um painel onde o usuário pode:
-- Alterar textos (título, subtítulo, parágrafos)
-- Trocar/adicionar imagem (upload ou URL)
-- Adicionar/remover elementos (ex: mais um serviço, mais um depoimento)
-- Escrever uma instrução livre (ex: "Mude a cor do fundo para azul")
+Isso faz com que **todas** as rotas em `MARKETING_STRATEGY_REQUIRED` e `SALES_PLAN_REQUIRED` continuem bloqueadas até o cliente clicar "Aprovar" no GPS.
 
-Ao clicar em **"Regenerar com alterações"**, uma nova chamada à Edge Function `generate-site` é feita passando o HTML atual + as instruções de alteração por seção, gerando uma versão atualizada. Isso **não cobra créditos adicionais** (apenas a primeira geração cobra).
+#### 2. Unificar os dois gates em um só
 
-### Fase 3 — Publicação e compartilhamento
+**`src/contexts/FeatureGateContext.tsx`** — Como o GPS do Negócio unificou vendas + marketing, substituir os dois gates separados (`no_sales_plan` + `no_marketing_strategy`) por um único gate `no_gps_approved`. Todas as rotas que antes exigiam `salesPlanCompleted` OU `hasActiveStrategy` passam a exigir apenas `hasApprovedGPS` (que é a aprovação do GPS unificado).
 
-Após aprovação, o site pode ser utilizado de 3 formas:
+Rotas bloqueadas sem GPS aprovado:
+- `/cliente/crm`, `/cliente/chat`, `/cliente/agentes-ia`, `/cliente/scripts`
+- `/cliente/disparos`, `/cliente/dashboard`
+- `/cliente/conteudos`, `/cliente/redes-sociais`, `/cliente/sites`, `/cliente/trafego-pago`
 
-1. **Link compartilhável** (principal): O HTML aprovado é salvo no Storage bucket `marketing-assets` como arquivo público. O sistema gera uma URL pública tipo `https://gxrhdpbbxfipeopdyygn.supabase.co/storage/v1/object/public/marketing-assets/sites/{org_id}/{site_id}/index.html`. O usuário copia e compartilha.
+#### 3. Overlay atualizado
 
-2. **Download do código**: Já existe, mantém.
+**`src/components/FeatureGateOverlay.tsx`** — Substituir as duas entradas (`no_sales_plan`, `no_marketing_strategy`) por uma única `no_gps_approved` com mensagem clara: "Complete e aprove o GPS do Negócio para desbloquear esta ferramenta."
 
-3. **Exportar para GitHub**: Botão que gera um arquivo ZIP com o HTML + assets e orienta o deploy via Vercel/Netlify (tutorial já existente no `SiteDeployGuide`).
+#### 4. Animação de "Missão Cumprida" ao aprovar
+
+**`src/pages/cliente/ClienteGPSNegocio.tsx`** — Após `approveStrategy.mutateAsync` ter sucesso, exibir um Dialog/overlay animado com:
+- Ícone de troféu/foguete animado (scale-in + confetti via CSS)
+- Título: "GPS Aprovado! 🎯"
+- Subtítulo: "Todas as ferramentas da plataforma foram desbloqueadas!"
+- Grid com ícones das ferramentas liberadas (CRM, Chat, Conteúdos, Sites, etc.) aparecendo em sequência com `staggerChildren`
+- Botão "Explorar ferramentas" que fecha o modal
+
+**`src/pages/cliente/ClientePlanoMarketingStrategy.tsx`** — Na `StrategyDashboard`, quando `status !== "approved"`, o botão "Aprovar" fica proeminente. Quando `status === "approved"`, o card "Próximos Passos" já aparece (isso já existe).
+
+#### 5. Sidebar badge atualizado
+
+**`src/components/ClienteSidebar.tsx`** — Substituir referências a `no_sales_plan` / `no_marketing_strategy` por `no_gps_approved`.
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteSitesWizardSteps.tsx` | Adicionar step "Tipo de Site" como primeiro passo. Criar perguntas condicionais por tipo. Definir `SITE_TYPES` com seções e perguntas específicas |
-| `src/pages/cliente/ClienteSites.tsx` | Adaptar wizard para novo fluxo com tipo no step 0. Adicionar fase de edição por seção entre geração e aprovação. Implementar upload do HTML aprovado ao Storage para gerar link público |
-| `src/components/sites/SiteSectionEditor.tsx` | **Novo** — Componente de checklist de seções com painel de edição inline (textos, imagens, instruções) |
-| `src/components/sites/SitePreview.tsx` | Adicionar botão "Compartilhar Link" que copia a URL pública do Storage. Adicionar botão "Exportar GitHub" |
-| `supabase/functions/generate-site/index.ts` | Aceitar campo `edit_instructions` (objeto com alterações por seção) + `current_html` para regeneração parcial. Quando presente, o prompt pede para manter o HTML base e aplicar apenas as alterações solicitadas |
+| `src/hooks/useMarketingStrategy.ts` | Verificar `status === "approved"` no `useHasActiveStrategy` |
+| `src/contexts/FeatureGateContext.tsx` | Unificar gates em `no_gps_approved`, remover `salesPlanCompleted` separado |
+| `src/components/FeatureGateOverlay.tsx` | Substituir 2 entries por `no_gps_approved` |
+| `src/components/ClienteSidebar.tsx` | Atualizar label do badge |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | Adicionar animação "Missão Cumprida" após aprovação |
 
-### Detalhes técnicos
+### Resultado
 
-**Tipos de site e seções**: Cada tipo define um `sections: string[]` (ex: `["hero", "sobre", "servicos", "depoimentos", "contato", "footer"]`). O wizard adapta as perguntas e o prompt da IA recebe as seções como instrução obrigatória.
-
-**Edição por seção**: O componente `SiteSectionEditor` parseia o HTML gerado por `<section>` tags (ou `id`s convencionados como `section-hero`, `section-sobre`, etc.) e exibe um resumo de cada. As alterações são coletadas como objeto `{ hero: { titulo: "Novo título", instrucao: "Mude a cor" }, servicos: { adicionar: "Novo serviço X" } }` e enviadas na regeneração.
-
-**Regeneração sem custo**: A Edge Function recebe `edit_mode: true` e não debita créditos. O prompt recebe o HTML atual + instruções de edição, pedindo para manter a estrutura e aplicar apenas as mudanças.
-
-**Link público via Storage**: Ao aprovar, o HTML é uploaded para `marketing-assets/sites/{org_id}/{site_id}/index.html` via `supabase.storage.from('marketing-assets').upload(...)`. A URL pública é salva no campo `url` da tabela `client_sites`.
-
-**Convenção de seções no HTML**: O system prompt da IA será atualizado para gerar `<section id="section-hero">`, `<section id="section-sobre">`, etc., permitindo parsing confiável para o editor.
+- Ferramentas ficam bloqueadas com blur até o GPS ser **aprovado** (não apenas gerado)
+- Mensagem de bloqueio é clara e direciona ao GPS
+- Ao aprovar, animação celebratória mostra que as ferramentas foram liberadas
+- Sistema de gates simplificado com um único check
 
