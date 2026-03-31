@@ -73,6 +73,7 @@ const ClienteNotificacoes = lazy(() => import("./pages/cliente/ClienteNotificaco
 const ClienteGamificacao = lazy(() => import("./pages/cliente/ClienteGamificacao"));
 const ClientePlanoVendas = lazy(() => import("./pages/cliente/ClientePlanoVendas"));
 const ClienteChat = lazy(() => import("./pages/cliente/ClienteChat"));
+const ClienteGPSNegocio = lazy(() => import("./pages/cliente/ClienteGPSNegocio"));
 const ClienteCRM = lazy(() => import("./pages/cliente/ClienteCRM"));
 const CrmConfigPage = lazy(() => import("./components/crm/CrmConfigPage"));
 const ClienteAgentesIA = lazy(() => import("./pages/cliente/ClienteAgentesIA"));
