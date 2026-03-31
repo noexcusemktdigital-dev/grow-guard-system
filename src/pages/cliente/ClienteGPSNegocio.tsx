@@ -149,8 +149,17 @@ export default function ClienteGPSNegocio() {
 
   const handleRafaelComplete = (answers: Record<string, any>) => {
     setRafaelAnswers(answers);
+    // Persist immediately so progress survives page reload
+    saveSalesPlan.mutate({ answers, score: 0 });
     setPhase("transition");
     setTimeout(() => setPhase("chat-sofia"), 2500);
+  };
+
+  const handleResumeFromSofia = () => {
+    if (salesPlan?.answers) {
+      setRafaelAnswers(salesPlan.answers);
+      setPhase("chat-sofia");
+    }
   };
 
   const parseFunnelStages = (text: string) => {
