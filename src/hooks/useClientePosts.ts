@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
@@ -125,7 +126,7 @@ export function useGeneratePost() {
             print_format: payload.print_format,
           },
         });
-        if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
+        if (resp.error) throw await extractEdgeFunctionError(resp.error);
         if (resp.data?.error) throw new Error(resp.data.error);
         result_url = resp.data?.url;
       } else {
@@ -149,7 +150,7 @@ export function useGeneratePost() {
             acao_cena: payload.acao_cena,
           },
         });
-        if (resp.error) throw new Error(resp.error.message || "Erro ao gerar vídeo");
+        if (resp.error) throw await extractEdgeFunctionError(resp.error);
         if (resp.data?.error) throw new Error(resp.data.error);
         result_url = resp.data?.frameUrls?.[0] || null;
         result_data = resp.data;
@@ -196,7 +197,7 @@ export function useGenerateBriefing() {
       const resp = await supabase.functions.invoke("generate-social-briefing", {
         body: payload,
       });
-      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar briefing");
+      if (resp.error) throw await extractEdgeFunctionError(resp.error);
       if (resp.data?.error) throw new Error(resp.data.error);
       return resp.data as {
         headline: string;
@@ -224,7 +225,7 @@ export function useGenerateVideoBriefing() {
       const resp = await supabase.functions.invoke("generate-video-briefing", {
         body: payload,
       });
-      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar briefing de vídeo");
+      if (resp.error) throw await extractEdgeFunctionError(resp.error);
       if (resp.data?.error) throw new Error(resp.data.error);
       return resp.data as {
         plataforma: string;
