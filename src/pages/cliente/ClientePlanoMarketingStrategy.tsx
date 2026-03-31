@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
+import type { ClientePlanoVendasMetasProps } from "./ClientePlanoVendasMetas";
 import { useNavigate } from "react-router-dom";
 import {
   Sparkles, CheckCircle2, RotateCcw, Clock, Target, Users, Lightbulb, HelpCircle,
