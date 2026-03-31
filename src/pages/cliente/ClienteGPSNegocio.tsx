@@ -611,6 +611,119 @@ export default function ClienteGPSNegocio() {
         actionLabel="este diagnóstico"
         creditCost={50}
       />
+
+      {/* Unlock Celebration Dialog */}
+      <AnimatePresence>
+        {showUnlockCelebration && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowUnlockCelebration(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-card border border-border rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl text-center space-y-6"
+            >
+              {/* Confetti dots */}
+              {[...Array(12)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{
+                    opacity: [0, 1, 0],
+                    scale: [0, 1.5, 0],
+                    x: [0, (Math.random() - 0.5) * 200],
+                    y: [0, (Math.random() - 0.5) * 200],
+                  }}
+                  transition={{ duration: 1.5, delay: 0.2 + i * 0.08 }}
+                  className={`absolute top-1/3 left-1/2 w-2 h-2 rounded-full ${
+                    ["bg-amber-400", "bg-emerald-400", "bg-sky-400", "bg-violet-400", "bg-rose-400", "bg-primary"][i % 6]
+                  }`}
+                />
+              ))}
+
+              {/* Trophy */}
+              <motion.div
+                initial={{ scale: 0, rotate: -30 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.1 }}
+                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30"
+              >
+                <Trophy className="w-10 h-10 text-white" />
+              </motion.div>
+
+              <div className="space-y-2">
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-2xl font-bold"
+                >
+                  GPS Aprovado! 🎯
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-sm text-muted-foreground"
+                >
+                  Todas as ferramentas da plataforma foram desbloqueadas!
+                </motion.p>
+              </div>
+
+              {/* Unlocked tools grid */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="grid grid-cols-3 sm:grid-cols-4 gap-3"
+              >
+                {[
+                  { icon: Users, label: "CRM", color: "text-sky-500" },
+                  { icon: MessageCircle, label: "Conversas", color: "text-emerald-500" },
+                  { icon: Bot, label: "Agentes IA", color: "text-violet-500" },
+                  { icon: BookOpen, label: "Scripts", color: "text-amber-500" },
+                  { icon: Video, label: "Roteiros", color: "text-rose-500" },
+                  { icon: Image, label: "Postagem", color: "text-pink-500" },
+                  { icon: Globe, label: "Sites", color: "text-cyan-500" },
+                  { icon: DollarSign, label: "Tráfego", color: "text-orange-500" },
+                ].map((tool, i) => (
+                  <motion.div
+                    key={tool.label}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.6 + i * 0.08, type: "spring", damping: 15 }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-muted/50 border border-border/50"
+                  >
+                    <tool.icon className={`w-5 h-5 ${tool.color}`} />
+                    <span className="text-[10px] font-medium text-muted-foreground">{tool.label}</span>
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2 }}
+              >
+                <Button
+                  size="lg"
+                  className="w-full gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+                  onClick={() => setShowUnlockCelebration(false)}
+                >
+                  <Rocket className="w-4 h-4" /> Explorar ferramentas
+                </Button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

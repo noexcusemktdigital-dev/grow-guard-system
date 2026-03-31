@@ -75,9 +75,7 @@ const GATE_REASON_LABELS: Record<string, string> = {
   trial_expired: "Trial expirado",
   trial_limited: "Disponível no plano pago",
   no_credits: "Sem créditos",
-  no_gps: "Complete o GPS do Negócio",
-  no_sales_plan: "Complete o GPS do Negócio",
-  no_marketing_strategy: "Complete o GPS do Negócio",
+  no_gps_approved: "Complete e aprove o GPS do Negócio",
   admin_only: "Apenas administradores",
 };
 

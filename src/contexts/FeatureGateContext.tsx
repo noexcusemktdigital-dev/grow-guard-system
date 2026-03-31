@@ -3,17 +3,15 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useHasActiveStrategy } from "@/hooks/useMarketingStrategy";
-import { useSalesPlanCompleted } from "@/hooks/useSalesPlan";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEffectiveLimits } from "@/constants/plans";
 
-type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_sales_plan" | "no_marketing_strategy" | "admin_only" | null;
+type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_gps_approved" | "admin_only" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
   hasNoCredits: boolean;
-  salesPlanCompleted: boolean;
-  hasActiveStrategy: boolean;
+  hasApprovedGPS: boolean;
   hasAiAgent: boolean;
   hasWhatsApp: boolean;
   hasDispatches: boolean;
@@ -31,10 +29,11 @@ const ALWAYS_ACCESSIBLE = [
   "/cliente/inicio",
   "/cliente/plano-creditos",
   "/cliente/configuracoes",
+  "/cliente/gps-negocio",
   "/cliente/plano-vendas",
+  "/cliente/plano-marketing",
   "/cliente/checklist",
   "/cliente/gamificacao",
-  "/cliente/plano-marketing",
   "/cliente/avaliacoes",
   "/cliente/integracoes",
 ];
@@ -49,18 +48,14 @@ const CREDIT_REQUIRED = [
   "/cliente/trafego-pago",
 ];
 
-// Routes that require GPS do Negócio (sales plan) to be completed
-const SALES_PLAN_REQUIRED = [
+// Routes that require GPS do Negócio to be approved
+const GPS_REQUIRED = [
   "/cliente/crm",
   "/cliente/chat",
   "/cliente/agentes-ia",
   "/cliente/scripts",
   "/cliente/disparos",
   "/cliente/dashboard",
-];
-
-// Routes that require GPS do Negócio (marketing strategy) to be completed
-const MARKETING_STRATEGY_REQUIRED = [
   "/cliente/conteudos",
   "/cliente/redes-sociais",
   "/cliente/sites",
@@ -83,7 +78,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
 
   const { data: subscription, isLoading: isLoadingSub } = useClienteSubscription();
   const { data: wallet, isLoading: isLoadingWallet } = useClienteWallet();
-  const { hasStrategy: hasActiveStrategy, isLoading: isLoadingStrategy } = useHasActiveStrategy();
+  const { hasStrategy: hasApprovedGPS, isLoading: isLoadingStrategy } = useHasActiveStrategy();
   const isTrial = subscription?.status === "trial";
 
   const planId = subscription?.plan as string | null;
@@ -98,9 +93,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const hasNoCredits =
     simulateNoCredits || (wallet ? wallet.balance <= 0 : false);
 
-  const { completed: salesPlanCompleted, isLoading: isLoadingSalesPlan } = useSalesPlanCompleted();
-
-  const isDataLoading = isLoadingSub || isLoadingWallet || isLoadingStrategy || isLoadingSalesPlan;
+  const isDataLoading = isLoadingSub || isLoadingWallet || isLoadingStrategy;
 
   const isClienteUser = role === "cliente_user";
 
@@ -116,11 +109,8 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
 
     if (isTrialExpired) return "trial_expired";
 
-    if (!salesPlanCompleted && SALES_PLAN_REQUIRED.some((r) => feature.startsWith(r)))
-      return "no_sales_plan";
-
-    if (!hasActiveStrategy && MARKETING_STRATEGY_REQUIRED.some((r) => feature.startsWith(r)))
-      return "no_marketing_strategy";
+    if (!hasApprovedGPS && GPS_REQUIRED.some((r) => feature.startsWith(r)))
+      return "no_gps_approved";
 
     if (hasNoCredits && CREDIT_REQUIRED.some((r) => feature.startsWith(r)))
       return "no_credits";
@@ -133,8 +123,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
       value={{
         isTrialExpired,
         hasNoCredits,
-        salesPlanCompleted,
-        hasActiveStrategy,
+        hasApprovedGPS,
         hasAiAgent: limits.hasAiAgent,
         hasWhatsApp: limits.hasWhatsApp,
         hasDispatches: limits.hasDispatches,
