@@ -13,11 +13,18 @@ import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
+import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useCrmTeams } from "@/hooks/useCrmTeams";
+import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { toast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sounds";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import { AGENTS, GPS_RAFAEL_STEPS, GPS_SOFIA_STEPS } from "@/components/cliente/briefingAgents";
 import { StrategyDashboard, StrategyHistoryItem } from "./ClientePlanoMarketingStrategy";
+import { ClientePlanoVendasMetaDialog, type MetaFormState } from "./ClientePlanoVendasMetaDialog";
+import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
@@ -165,6 +172,21 @@ export default function ClienteGPSNegocio() {
   const { data: existingFunnels } = useCrmFunnels();
   const { createFunnel } = useCrmFunnelMutations();
   const { createScript } = useClienteScriptMutations();
+
+  // ── Metas state ──
+  const [scopeFilter, setScopeFilter] = useState<string>("all");
+  const [novaMetaOpen, setNovaMetaOpen] = useState(false);
+  const [novaMeta, setNovaMeta] = useState<MetaFormState>({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+  const [targetDisplay, setTargetDisplay] = useState("");
+  const [editingGoal, setEditingGoal] = useState<any>(null);
+
+  const { data: activeGoals, isLoading: goalsLoading } = useActiveGoals(scopeFilter);
+  const { data: historicGoals } = useHistoricGoals();
+  const { data: goalProgress } = useGoalProgress(activeGoals);
+  const { createGoal, updateGoal, archiveGoal } = useGoalMutations();
+  const { data: teams } = useCrmTeams();
+  const { data: members } = useCrmTeam();
+  const isMonetaryMetric = (m: string) => ["revenue", "avg_ticket"].includes(m);
 
   const hasResult = !!activeStrategy?.strategy_result;
   const status = activeStrategy?.status || "pending";
@@ -358,6 +380,82 @@ export default function ClienteGPSNegocio() {
     }
   };
 
+  // ── Metas handlers ──
+  const handleAddMeta = () => {
+    if (!novaMeta.title || novaMeta.target_value <= 0 || !novaMeta.mesRef) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      return;
+    }
+    if (novaMeta.scope === "team" && !novaMeta.team_id) {
+      toast({ title: "Selecione o time para a meta de equipe", variant: "destructive" });
+      return;
+    }
+    if (novaMeta.scope === "individual" && !novaMeta.assigned_to) {
+      toast({ title: "Selecione a pessoa responsável pela meta individual", variant: "destructive" });
+      return;
+    }
+    const [y, m] = novaMeta.mesRef.split("-").map(Number);
+    const periodEnd = new Date(y, m, 0, 23, 59, 59);
+    const now = new Date();
+    if (periodEnd < now) {
+      const confirmed = window.confirm(
+        `O período selecionado (${MESES_COMPLETOS[m - 1]} ${y}) já passou. A meta será enviada diretamente para o histórico. Deseja continuar?`
+      );
+      if (!confirmed) return;
+    }
+    const periodStart = new Date(y, m - 1, 1).toISOString();
+    const periodEndISO = periodEnd.toISOString();
+    createGoal.mutate({
+      title: novaMeta.title, target_value: novaMeta.target_value, metric: novaMeta.metric,
+      scope: novaMeta.scope, priority: novaMeta.priority,
+      team_id: novaMeta.scope === "team" && novaMeta.team_id ? novaMeta.team_id : undefined,
+      assigned_to: novaMeta.scope === "individual" && novaMeta.assigned_to ? novaMeta.assigned_to : undefined,
+      period_start: periodStart, period_end: periodEndISO, status: "active",
+    }, {
+      onSuccess: () => {
+        playSound("success");
+        setNovaMeta({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+        setTargetDisplay(""); setNovaMetaOpen(false);
+        toast({ title: "Meta criada com sucesso!" });
+      },
+    });
+  };
+
+  const handleEditMeta = () => {
+    if (!editingGoal || !novaMeta.title || novaMeta.target_value <= 0 || !novaMeta.mesRef) {
+      toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" }); return;
+    }
+    const [y, m] = novaMeta.mesRef.split("-").map(Number);
+    updateGoal.mutate({
+      id: editingGoal.id, title: novaMeta.title, target_value: novaMeta.target_value,
+      metric: novaMeta.metric, scope: novaMeta.scope, priority: novaMeta.priority,
+      team_id: novaMeta.scope === "team" && novaMeta.team_id ? novaMeta.team_id : null,
+      assigned_to: novaMeta.scope === "individual" && novaMeta.assigned_to ? novaMeta.assigned_to : null,
+      period_start: new Date(y, m - 1, 1).toISOString(),
+      period_end: new Date(y, m, 0, 23, 59, 59).toISOString(),
+    }, {
+      onSuccess: () => {
+        playSound("success");
+        setNovaMeta({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+        setTargetDisplay(""); setNovaMetaOpen(false); setEditingGoal(null);
+        toast({ title: "Meta atualizada com sucesso!" });
+      },
+    });
+  };
+
+  const openEditGoal = (goal: Record<string, unknown>) => {
+    const g = goal as Record<string, unknown>;
+    const mesRef = g.period_start ? (g.period_start as string).slice(0, 7) : "";
+    setNovaMeta({
+      title: (g.title as string) || "", metric: (g.metric as string) || "revenue",
+      target_value: (g.target_value as number) || 0, scope: (g.scope as string) || "company",
+      team_id: (g.team_id as string) || "", assigned_to: (g.assigned_to as string) || "",
+      priority: (g.priority as string) || "media", mesRef,
+    });
+    setTargetDisplay(isMonetaryMetric((g.metric as string) || "revenue") ? ((g.target_value as number) || 0).toLocaleString("pt-BR") : "");
+    setEditingGoal(g); setNovaMetaOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -470,6 +568,36 @@ export default function ClienteGPSNegocio() {
               isApproving={approveStrategy.isPending}
               status={status}
               createdAt={activeStrategy?.created_at ?? ""}
+              metasProps={{
+                activeGoals: activeGoals ?? [],
+                historicGoals,
+                goalProgress,
+                goalsLoading,
+                scopeFilter,
+                setScopeFilter,
+                onNewMeta: () => setNovaMetaOpen(true),
+                onEditMeta: openEditGoal,
+                onArchiveMeta: (id: string) => archiveGoal.mutate(id),
+                isMonetaryMetric,
+              }}
+              metasDialog={
+                <ClientePlanoVendasMetaDialog
+                  open={novaMetaOpen}
+                  onOpenChange={(o) => { setNovaMetaOpen(o); if (!o) setEditingGoal(null); }}
+                  editingGoal={editingGoal}
+                  novaMeta={novaMeta}
+                  setNovaMeta={setNovaMeta}
+                  targetDisplay={targetDisplay}
+                  setTargetDisplay={setTargetDisplay}
+                  onAdd={handleAddMeta}
+                  onEdit={handleEditMeta}
+                  isCreating={createGoal.isPending}
+                  isUpdating={updateGoal.isPending}
+                  isMonetaryMetric={isMonetaryMetric}
+                  teams={teams}
+                  members={members}
+                />
+              }
             />
           </motion.div>
         )}

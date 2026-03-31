@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
+import type { ClientePlanoVendasMetasProps } from "./ClientePlanoVendasMetas";
+import { ClientePlanoVendasMetas as ClientePlanoVendasMetasLazy } from "./ClientePlanoVendasMetas";
 import { useNavigate } from "react-router-dom";
 import {
   Sparkles, CheckCircle2, RotateCcw, Clock, Target, Users, Lightbulb, HelpCircle,
@@ -361,6 +363,21 @@ function MktExecucao({ result }: { result: StrategyResult }) {
 }
 
 /* ═══════════════ COMERCIAL: SCORE & RADAR ═══════════════ */
+
+const COMERCIAL_NIVEIS = [
+  { id: 1, label: "Crítico", range: "0-25%", cor: "#dc2626" },
+  { id: 2, label: "Básico", range: "26-50%", cor: "#ea580c" },
+  { id: 3, label: "Intermediário", range: "51-75%", cor: "#eab308" },
+  { id: 4, label: "Avançado", range: "76-100%", cor: "#16a34a" },
+];
+
+function getComercialNivel(score: number) {
+  if (score >= 76) return COMERCIAL_NIVEIS[3];
+  if (score >= 51) return COMERCIAL_NIVEIS[2];
+  if (score >= 26) return COMERCIAL_NIVEIS[1];
+  return COMERCIAL_NIVEIS[0];
+}
+
 function ComScoreRadar({ dc }: { dc: any }) {
   const radarComercial = dc.radar_comercial;
   const radarData = radarComercial ? Object.entries(radarComercial).map(([key, val]) => ({
@@ -369,29 +386,49 @@ function ComScoreRadar({ dc }: { dc: any }) {
   })) : [];
 
   const score = dc.score_comercial ?? 0;
-  const nivelLabel = dc.nivel || (score >= 70 ? "Avançado" : score >= 40 ? "Intermediário" : "Básico");
-  const nivelColor = score >= 70 ? "bg-green-500/10 text-green-700 border-green-500/30" : score >= 40 ? "bg-amber-500/10 text-amber-700 border-amber-500/30" : "bg-red-500/10 text-red-700 border-red-500/30";
-  const barColor = score >= 70 ? "bg-green-500" : score >= 40 ? "bg-amber-500" : "bg-red-500";
+  const nivel = getComercialNivel(score);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Thermometer Card */}
         <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Score Comercial</p>
-                <p className="text-4xl font-black mt-1">{score}<span className="text-lg text-muted-foreground font-normal">/100</span></p>
+          <CardContent className="p-6">
+            {/* Score display */}
+            <div className="text-center mb-6">
+              <p className="text-5xl font-black" style={{ color: nivel.cor }}>{score}<span className="text-lg text-muted-foreground font-normal">/100</span></p>
+              <Badge className="mt-2 text-sm px-4 py-1 text-white" style={{ backgroundColor: nivel.cor }}>
+                {String(nivel.id).padStart(2, "0")} — {nivel.label.toUpperCase()}
+              </Badge>
+              {dc.analise && <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{dc.analise}</p>}
+            </div>
+
+            {/* Thermometer bar */}
+            <div className="relative">
+              <div className="h-6 rounded-full overflow-hidden" style={{ background: "linear-gradient(90deg, #dc2626 0%, #ea580c 33%, #eab308 66%, #16a34a 100%)" }}>
+                <motion.div
+                  className="absolute top-0 w-1.5 h-6 bg-foreground rounded-full shadow-lg"
+                  initial={{ left: "2%" }}
+                  animate={{ left: `${Math.min(Math.max(score, 2), 98)}%` }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  style={{ transform: "translateX(-50%)" }}
+                />
               </div>
-              <Badge className={`text-sm px-3 py-1 border capitalize ${nivelColor}`}>{nivelLabel}</Badge>
+              {/* Phase markers */}
+              <div className="flex justify-between mt-2">
+                {COMERCIAL_NIVEIS.map(n => (
+                  <div key={n.id} className={`text-center flex-1 transition-opacity ${nivel.id === n.id ? "opacity-100" : "opacity-40"}`}>
+                    <div className="w-0.5 h-2 mx-auto mb-1" style={{ backgroundColor: n.cor }} />
+                    <p className="text-[10px] font-bold" style={{ color: n.cor }}>{n.label}</p>
+                    <p className="text-[9px] text-muted-foreground">{n.range}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="w-full h-3 rounded-full bg-muted overflow-hidden">
-              <motion.div className={`h-full rounded-full ${barColor}`} initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 1.2, ease: "easeOut" }} />
-            </div>
-            {dc.analise && <p className="text-sm text-muted-foreground leading-relaxed">{dc.analise}</p>}
           </CardContent>
         </Card>
 
+        {/* Radar */}
         {radarData.length > 0 && (
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Comercial (5 eixos) <InfoTip text="Processo, gestão de leads, ferramentas, canais e performance." /></CardTitle></CardHeader>
@@ -652,9 +689,11 @@ export interface StrategyDashboardProps {
   isApproving: boolean;
   status: string;
   createdAt?: string;
+  metasProps?: ClientePlanoVendasMetasProps;
+  metasDialog?: React.ReactNode;
 }
 
-export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt }: StrategyDashboardProps) {
+export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt, metasProps, metasDialog }: StrategyDashboardProps) {
   const navigate = useNavigate();
   if (!result) return null;
 
@@ -724,6 +763,11 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
               <Briefcase className="w-4 h-4" /> Comercial
             </TabsTrigger>
           )}
+          {metasProps && (
+            <TabsTrigger value="metas" className="flex-1 gap-2 text-sm py-2.5">
+              <Target className="w-4 h-4" /> Metas
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ═══ MARKETING SUB-TABS ═══ */}
@@ -769,6 +813,14 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
               <TabsContent value="com-projecoes"><ComProjecoes dc={result.diagnostico_comercial} /></TabsContent>
               <TabsContent value="com-plano"><ComPlanoAcao dc={result.diagnostico_comercial} /></TabsContent>
             </Tabs>
+          </TabsContent>
+        )}
+
+        {/* ═══ METAS TAB ═══ */}
+        {metasProps && (
+          <TabsContent value="metas" className="mt-4 space-y-6">
+            <ClientePlanoVendasMetasLazy {...metasProps} />
+            {metasDialog}
           </TabsContent>
         )}
       </Tabs>
