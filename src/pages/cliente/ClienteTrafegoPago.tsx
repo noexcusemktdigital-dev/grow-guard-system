@@ -22,7 +22,7 @@ import { useClienteContent } from "@/hooks/useClienteContent";
 import { usePostHistory } from "@/hooks/useClientePosts";
 import { useClienteSitesDB } from "@/hooks/useClienteSitesDB";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
-import { useClienteCampaignsDB } from "@/hooks/useClienteCampaignsDB";
+import { useClienteCampaignsDB, useCreateClientCampaign } from "@/hooks/useClienteCampaignsDB";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
