@@ -218,11 +218,28 @@ export default function ClienteGPSNegocio() {
     }));
   };
 
+  const handleRetryGeneration = () => {
+    if (!salesPlan?.answers) return;
+    setRafaelAnswers(salesPlan.answers);
+    // Use empty sofiaAnswers — everything is already merged in salesPlan.answers
+    runGeneration(salesPlan.answers);
+  };
+
   const handleSofiaComplete = async (sofiaAnswers: Record<string, any>) => {
     if (!orgId) return;
 
-    // Merge all answers
-    const allAnswers = { ...rafaelAnswers, ...sofiaAnswers };
+    // Merge all answers — use salesPlan.answers as base fallback for retry scenarios
+    const baseAnswers = Object.keys(rafaelAnswers).length > 0 ? rafaelAnswers : (salesPlan?.answers || {});
+    const allAnswers = { ...baseAnswers, ...sofiaAnswers };
+
+    // Persist merged answers immediately before generation
+    saveSalesPlan.mutate({ answers: allAnswers, score: 0 });
+
+    runGeneration(allAnswers);
+  };
+
+  const runGeneration = async (allAnswers: Record<string, any>) => {
+    if (!orgId) return;
     setGeneratingStep("marketing-core");
     setPhase("generating");
 
