@@ -1,14 +1,18 @@
 // @ts-nocheck
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   CheckCircle2, ChevronDown, ChevronUp, DollarSign, ExternalLink,
   Eye, Lightbulb, Loader2, MousePointer, PieChart, Sparkles, Target,
-  TrendingUp, Zap,
+  TrendingUp, Zap, Rocket, ArrowLeft, ArrowRight, BookOpen, Save,
 } from "lucide-react";
-import { platformColors, platformIcons, platformLinks } from "./ClienteTrafegoPagoConstants";
+import { platformColors, platformIcons, platformLinks, PLATFORM_TUTORIALS, TutorialStep } from "./ClienteTrafegoPagoConstants";
+import { useCreateClientCampaign } from "@/hooks/useClienteCampaignsDB";
+import { toast } from "@/hooks/use-toast";
 
 interface TrafficStrategy {
   id: string;
@@ -30,6 +34,161 @@ interface ClienteTrafegoPagoResultProps {
   approveMutationIsPending: boolean;
 }
 
+function TutorialDialog({
+  open,
+  onOpenChange,
+  platformKey,
+  platformData,
+  strategyId,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  platformKey: string;
+  platformData: Record<string, unknown>;
+  strategyId?: string;
+}) {
+  const [currentStep, setCurrentStep] = useState(0);
+  const createCampaign = useCreateClientCampaign();
+  const tutorial = PLATFORM_TUTORIALS[platformKey];
+  if (!tutorial) return null;
+
+  const steps = tutorial.steps;
+  const step = steps[currentStep];
+  const isLast = currentStep === steps.length - 1;
+
+  const handleSave = () => {
+    createCampaign.mutate(
+      {
+        name: `${platformKey} Ads — ${String(platformData.objective || "Campanha")}`,
+        type: platformKey,
+        content: {
+          platform: platformKey,
+          objective: platformData.objective,
+          audience: platformData.audience,
+          budget: platformData.budget_suggestion,
+          strategy_id: strategyId,
+          tutorial_completed: true,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Campanha salva!", description: `Campanha ${platformKey} salva no repositório.` });
+          onOpenChange(false);
+          setCurrentStep(0);
+        },
+        onError: () => toast({ title: "Erro ao salvar", variant: "destructive" }),
+      }
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <div className={`p-1.5 rounded-lg ${platformColors[platformKey]}`}>
+              {platformIcons[platformKey]}
+            </div>
+            Tutorial: {tutorial.name}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Progress */}
+        <div className="flex items-center gap-1 mb-2">
+          {steps.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${
+                i <= currentStep ? "bg-primary" : "bg-muted"
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground text-right">
+          Passo {currentStep + 1} de {steps.length}
+        </p>
+
+        {/* Step content */}
+        <div className="space-y-4 mt-2">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
+              {currentStep + 1}
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold">{step.title}</h3>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed whitespace-pre-line">
+                {step.description}
+              </p>
+            </div>
+          </div>
+
+          {step.tip && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/15">
+              <Lightbulb className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[10px] font-semibold text-primary uppercase">Dica da estratégia</p>
+                <p className="text-xs text-muted-foreground mt-1">{step.tip}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Contextual data from strategy */}
+          {currentStep === 0 && platformData.audience && (
+            <div className="p-3 rounded-xl bg-muted/30 border">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase">Público sugerido pela IA</p>
+              <p className="text-xs mt-1">{String(platformData.audience)}</p>
+            </div>
+          )}
+
+          {(currentStep === 4 || currentStep === 3) && platformData.budget_suggestion && (
+            <div className="p-3 rounded-xl bg-muted/30 border">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase">Orçamento sugerido</p>
+              <p className="text-xs mt-1 font-medium">{String(platformData.budget_suggestion)}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center mt-4 pt-3 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs gap-1.5"
+            disabled={currentStep === 0}
+            onClick={() => setCurrentStep((s) => s - 1)}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Anterior
+          </Button>
+
+          {isLast ? (
+            <Button
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={handleSave}
+              disabled={createCampaign.isPending}
+            >
+              {createCampaign.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              Salvar Campanha
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={() => setCurrentStep((s) => s + 1)}
+            >
+              Próximo <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ClienteTrafegoPagoResult({
   loadingStrategy,
   activeStrategy,
@@ -42,6 +201,9 @@ export function ClienteTrafegoPagoResult({
   setStep,
   approveMutationIsPending,
 }: ClienteTrafegoPagoResultProps) {
+  const [tutorialPlatform, setTutorialPlatform] = useState<string | null>(null);
+  const [tutorialPlatformData, setTutorialPlatformData] = useState<Record<string, unknown>>({});
+
   if (loadingStrategy) {
     return (
       <div className="grid gap-4 md:grid-cols-2">
@@ -168,6 +330,7 @@ export function ClienteTrafegoPagoResult({
         {platforms.map((p) => {
           const platformKey = String(p.platform);
           const isOpen = expandedPlatforms[platformKey] ?? false;
+          const hasTutorial = !!PLATFORM_TUTORIALS[platformKey];
           return (
             <Card key={platformKey} className={`border-l-4 ${platformColors[platformKey]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
               <CardContent className="py-5 space-y-3">
@@ -282,18 +445,6 @@ export function ClienteTrafegoPagoResult({
                       </div>
                     )}
 
-                    {(p.tutorial as string[])?.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Tutorial de Execução</p>
-                        {(p.tutorial as string[]).map((step_, i) => (
-                          <div key={i} className="flex items-start gap-2 mb-1">
-                            <span className="text-[10px] font-bold text-primary shrink-0">{i + 1}.</span>
-                            <p className="text-[11px]">{step_}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
                     {(p.tips as string[])?.length > 0 && (
                       <div>
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Dicas</p>
@@ -308,19 +459,34 @@ export function ClienteTrafegoPagoResult({
                   </CollapsibleContent>
                 </Collapsible>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs gap-1.5"
-                  onClick={() => window.open(platformLinks[platformKey], "_blank")}
-                >
-                  <ExternalLink className="w-3.5 h-3.5" /> Abrir {platformKey}
-                </Button>
+                {/* CTA: Criar Campanha */}
+                {hasTutorial && (
+                  <Button
+                    className="w-full text-xs gap-1.5"
+                    onClick={() => {
+                      setTutorialPlatform(platformKey);
+                      setTutorialPlatformData(p);
+                    }}
+                  >
+                    <Rocket className="w-3.5 h-3.5" /> Criar Campanha
+                  </Button>
+                )}
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {/* Tutorial Dialog */}
+      {tutorialPlatform && (
+        <TutorialDialog
+          open={!!tutorialPlatform}
+          onOpenChange={(v) => { if (!v) setTutorialPlatform(null); }}
+          platformKey={tutorialPlatform}
+          platformData={tutorialPlatformData}
+          strategyId={activeStrategy?.id}
+        />
+      )}
     </div>
   );
 }

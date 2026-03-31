@@ -1,12 +1,9 @@
 // @ts-nocheck
 import { useState } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
-import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
-import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
-import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
 import {
-  DollarSign, Sparkles, Target, BarChart3,
-  Loader2, History,
+  DollarSign, Sparkles, Target,
+  Loader2, History, Folder,
   ArrowLeft, ArrowRight, ChevronRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -25,14 +22,15 @@ import { useClienteContent } from "@/hooks/useClienteContent";
 import { usePostHistory } from "@/hooks/useClientePosts";
 import { useClienteSitesDB } from "@/hooks/useClienteSitesDB";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { useClienteCampaignsDB } from "@/hooks/useClienteCampaignsDB";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
-
-// ── Constants ──
 import {
   STEPS,
+  platformColors, platformIcons,
+  campaignStatusLabels, campaignStatusColors,
 } from "./ClienteTrafegoPagoConstants";
 import { ClienteTrafegoPagoWizardStep } from "./ClienteTrafegoPagoWizardStep";
 import { ClienteTrafegoPagoResult } from "./ClienteTrafegoPagoResult";
@@ -45,15 +43,16 @@ export default function ClienteTrafegoPago() {
   const { data: postsData } = usePostHistory();
   const { data: sitesData } = useClienteSitesDB();
   const { data: wallet } = useClienteWallet();
+  const { data: campaigns, isLoading: loadingCampaigns } = useClienteCampaignsDB();
   const generateMutation = useGenerateTrafficStrategy();
   const approveMutation = useApproveTrafficStrategy();
 
   const [activeTab, setActiveTab] = useState("estrategia");
-  const [metricsPeriod, setMetricsPeriod] = useState(30);
   const [step, setStep] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [campaignFilter, setCampaignFilter] = useState<string>("all");
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
@@ -75,7 +74,6 @@ export default function ClienteTrafegoPago() {
     });
   };
 
-  // Auto-detect assets (status values: "approved", "Aprovado", "pending")
   const detectedAssets: string[] = [];
   if (sitesData?.some((s) => s.status === "Aprovado" || s.status === "approved" || s.url)) detectedAssets.push("site");
   if (sitesData?.some((s) => s.type === "landing_page")) detectedAssets.push("landing_page");
@@ -129,6 +127,11 @@ export default function ClienteTrafegoPago() {
   const sourceData = (activeStrategy?.source_data || {}) as Record<string, unknown>;
   const platforms = (activeStrategy?.platforms || []) as Record<string, unknown>[];
 
+  // Filter campaigns by platform type
+  const filteredCampaigns = (campaigns || []).filter((c) => {
+    if (campaignFilter === "all") return ["Google", "Meta", "TikTok", "LinkedIn"].includes(c.type);
+    return c.type === campaignFilter;
+  });
 
   return (
     <div className="w-full space-y-6">
@@ -144,7 +147,7 @@ export default function ClienteTrafegoPago() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
-          <TabsTrigger value="metricas" className="text-xs gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Métricas</TabsTrigger>
+          <TabsTrigger value="campanhas" className="text-xs gap-1.5"><Folder className="w-3.5 h-3.5" /> Campanhas</TabsTrigger>
           <TabsTrigger value="historico" className="text-xs gap-1.5"><History className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
@@ -153,7 +156,6 @@ export default function ClienteTrafegoPago() {
           {showWizard ? (
             <Card>
               <CardContent className="py-6">
-                {/* Stepper */}
                 <div className="flex items-center justify-center gap-1 mb-6 overflow-x-auto pb-2">
                   {STEPS.map((s, i) => (
                     <div key={s.id} className="flex items-center">
@@ -171,7 +173,6 @@ export default function ClienteTrafegoPago() {
                   ))}
                 </div>
 
-                {/* Generate loading */}
                 {generateMutation.isPending ? (
                   <div className="py-16 text-center space-y-3">
                     <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto" />
@@ -225,7 +226,6 @@ export default function ClienteTrafegoPago() {
             </Card>
           ) : (
             <>
-              {/* CTA Card */}
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="py-5">
                   <div className="flex items-start gap-3 mb-4">
@@ -260,34 +260,82 @@ export default function ClienteTrafegoPago() {
           )}
         </TabsContent>
 
-        {/* ═══ MÉTRICAS ═══ */}
-        <TabsContent value="metricas" className="space-y-6 mt-4">
-          {/* Connection Cards */}
-          <div>
-            <p className="text-sm font-semibold mb-3">Contas de Anúncio</p>
-            <AdConnectionCards />
-          </div>
-
-          {/* Period selector */}
-          <div className="flex gap-2">
-            {[7, 30, 90].map((d) => (
+        {/* ═══ CAMPANHAS (REPOSITÓRIO) ═══ */}
+        <TabsContent value="campanhas" className="space-y-4 mt-4">
+          {/* Filter */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: "all", label: "Todas" },
+              { value: "Google", label: "Google" },
+              { value: "Meta", label: "Meta" },
+              { value: "TikTok", label: "TikTok" },
+              { value: "LinkedIn", label: "LinkedIn" },
+            ].map((f) => (
               <Button
-                key={d}
-                variant={metricsPeriod === d ? "default" : "outline"}
+                key={f.value}
+                variant={campaignFilter === f.value ? "default" : "outline"}
                 size="sm"
                 className="text-xs"
-                onClick={() => setMetricsPeriod(d)}
+                onClick={() => setCampaignFilter(f.value)}
               >
-                {d}d
+                {f.label}
               </Button>
             ))}
           </div>
 
-          {/* Metrics Dashboard */}
-          <AdMetricsDashboard period={metricsPeriod} />
-
-          {/* AI Analysis */}
-          <AdAIAnalysis />
+          {loadingCampaigns ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <Card key={i}><CardContent className="p-5 h-20 animate-pulse bg-muted/20" /></Card>
+              ))}
+            </div>
+          ) : filteredCampaigns.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {filteredCampaigns.map((c) => {
+                const content = (c.content || {}) as Record<string, unknown>;
+                return (
+                  <Card key={c.id} className={`border-l-4 ${platformColors[c.type]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
+                    <CardContent className="py-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1.5 rounded-lg ${platformColors[c.type] || "bg-muted"}`}>
+                            {platformIcons[c.type] || <Folder className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold">{c.name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(c.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className={`text-[9px] ${campaignStatusColors[c.status] || ""}`}>
+                          {campaignStatusLabels[c.status] || c.status}
+                        </Badge>
+                      </div>
+                      {content.objective && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Objetivo: {String(content.objective)}
+                        </p>
+                      )}
+                      {content.budget && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Orçamento: {String(content.budget)}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <Folder className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhuma campanha salva</p>
+                <p className="text-xs text-muted-foreground mt-1">Gere uma estratégia e clique em "Criar Campanha" para salvar aqui.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* ═══ HISTÓRICO ═══ */}
