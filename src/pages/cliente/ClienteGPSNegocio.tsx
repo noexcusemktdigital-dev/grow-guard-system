@@ -206,7 +206,7 @@ export default function ClienteGPSNegocio() {
 
     // Merge all answers
     const allAnswers = { ...rafaelAnswers, ...sofiaAnswers };
-    setGeneratingStep("marketing");
+    setGeneratingStep("marketing-core");
     setPhase("generating");
 
     try {
@@ -233,15 +233,23 @@ export default function ClienteGPSNegocio() {
         }
       }
 
-      // 3. Generate strategy via AI — two sequential calls
-      // Call 1: Marketing
-      const marketingResult = await generateStrategy.mutateAsync({ 
+      // 3. Generate strategy via AI — three sequential calls
+      // Call 1: Marketing Core
+      const coreResult = await generateStrategy.mutateAsync({ 
         answers: allAnswers, 
         organization_id: orgId,
-        section: "marketing",
+        section: "marketing-core",
       });
 
-      // Call 2: Comercial
+      // Call 2: Marketing Growth
+      setGeneratingStep("marketing-growth");
+      const growthResult = await generateStrategy.mutateAsync({ 
+        answers: allAnswers, 
+        organization_id: orgId,
+        section: "marketing-growth",
+      });
+
+      // Call 3: Comercial
       setGeneratingStep("comercial");
       const comercialResult = await generateStrategy.mutateAsync({ 
         answers: allAnswers, 
@@ -251,7 +259,8 @@ export default function ClienteGPSNegocio() {
 
       // Merge results
       const unifiedResult = {
-        ...(marketingResult.result || {}),
+        ...(coreResult.result || {}),
+        ...(growthResult.result || {}),
         ...(comercialResult.result || {}),
       };
       
