@@ -137,7 +137,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.whatsapp-send]
     verify_jwt = true
   [functions.whatsapp-setup]
-    verify_jwt = true
+    verify_jwt = false
   [functions.whatsapp-typing]
     verify_jwt = true
   [functions.whatsapp-load-history]
