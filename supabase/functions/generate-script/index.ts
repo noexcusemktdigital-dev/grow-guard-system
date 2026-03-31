@@ -85,7 +85,7 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext } = await req.json();
+    const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext, from_gps } = await req.json();
 
     if (!stage || !stagePrompts[stage]) {
       return new Response(
@@ -96,8 +96,16 @@ serve(async (req) => {
       );
     }
 
-    // Pre-check credits
-    if (organization_id) {
+    // Check if trial — GPS auto-generated scripts are free for trial users
+    let isTrialGps = false;
+    if (from_gps && organization_id) {
+      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: sub } = await adminClient.from("subscriptions").select("status").eq("organization_id", organization_id).maybeSingle();
+      isTrialGps = sub?.status === "trial";
+    }
+
+    // Pre-check credits (skip for trial GPS auto-generation)
+    if (!isTrialGps && organization_id) {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data: wallet } = await adminClient.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
       if (!wallet || wallet.balance < CREDIT_COST) {
@@ -265,16 +273,18 @@ IMPORTANTE:
         model: "google/gemini-3-flash-preview",
       });
 
-      // Debit credits
-      try {
-        await serviceClient.rpc("debit_credits", {
-          _org_id: orgData,
-          _amount: CREDIT_COST,
-          _description: `Geração de script (${stage})`,
-          _source: "generate-script",
-        });
-      } catch (debitErr) {
-        console.error("Debit error (non-blocking):", debitErr);
+      // Debit credits (skip for trial GPS auto-generation)
+      if (!isTrialGps) {
+        try {
+          await serviceClient.rpc("debit_credits", {
+            _org_id: orgData,
+            _amount: CREDIT_COST,
+            _description: `Geração de script (${stage})`,
+            _source: "generate-script",
+          });
+        } catch (debitErr) {
+          console.error("Debit error (non-blocking):", debitErr);
+        }
       }
     }
 

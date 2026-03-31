@@ -606,8 +606,19 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Only check credits on first call (marketing-core)
-    if (section === "marketing-core" && organization_id) {
+    // Check if trial — GPS generation is free for trial users
+    let isTrial = false;
+    if (organization_id) {
+      const { data: sub } = await serviceClient
+        .from("subscriptions")
+        .select("status")
+        .eq("organization_id", organization_id)
+        .maybeSingle();
+      isTrial = sub?.status === "trial";
+    }
+
+    // Only check credits on first call (marketing-core), skip for trial
+    if (!isTrial && section === "marketing-core" && organization_id) {
       const { data: wallet } = await serviceClient
         .from("credit_wallets")
         .select("balance")
