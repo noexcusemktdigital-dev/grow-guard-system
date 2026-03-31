@@ -56,6 +56,8 @@ export default function ClienteTrafegoPago() {
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [campaignFilter, setCampaignFilter] = useState<string>("all");
+  const [tutorialCampaign, setTutorialCampaign] = useState<{ platform: string; data: Record<string, unknown> } | null>(null);
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
