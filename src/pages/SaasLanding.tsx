@@ -106,7 +106,7 @@ const SaasLanding = () => {
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(355,78%,50%)]/10 border border-[hsl(355,78%,50%)]/20 mb-8">
           <Sparkles className="h-4 w-4 text-[hsl(355,78%,50%)]" />
-          <span className="text-sm font-medium text-[hsl(355,78%,60%)]">7 dias grátis · 200 créditos · Sem cartão</span>
+          <span className="text-sm font-medium text-[hsl(355,78%,60%)]">7 dias grátis · 500 créditos · Sem cartão</span>
         </motion.div>
 
         <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1}

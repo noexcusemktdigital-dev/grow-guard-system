@@ -286,7 +286,7 @@ export default function ClienteTrafegoPago() {
                       <p className="text-sm font-semibold">Estratégia de Tráfego com IA</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Wizard guiado de 8 etapas que gera estratégia completa por plataforma.
-                        <Badge variant="outline" className="ml-2 text-[9px]">200 créditos na aprovação</Badge>
+                        <Badge variant="outline" className="ml-2 text-[9px]">25 créditos na aprovação</Badge>
                       </p>
                     </div>
                   </div>
