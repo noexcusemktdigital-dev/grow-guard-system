@@ -177,7 +177,7 @@ export function ClienteTrafegoPagoWizardStep({
       return (
         <div className="space-y-3">
           <p className="text-sm font-medium">Em qual região deseja anunciar?</p>
-          <BrazilMapSelector
+          <BrazilLocationAutocomplete
             value={wizardData.regiao}
             onChange={(v) => setWizardData((p) => ({ ...p, regiao: v }))}
           />
