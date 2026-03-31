@@ -3,12 +3,12 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 50;
 
-// ── MARKETING SCHEMA (seções 1-12) ──────────────────────────────────
-const MARKETING_TOOL_SCHEMA = {
+// ── MARKETING CORE SCHEMA (diagnóstico, ICP, proposta, concorrência, tom, aquisição) ──
+const MARKETING_CORE_SCHEMA = {
   type: "function",
   function: {
     name: "generate_strategy",
-    description: "Gera a estratégia de marketing completa e personalizada com 12 seções.",
+    description: "Gera a parte CORE da estratégia de marketing: diagnóstico, ICP, proposta de valor, concorrência, tom e aquisição.",
     parameters: {
       type: "object",
       properties: {
@@ -20,28 +20,23 @@ const MARKETING_TOOL_SCHEMA = {
             radar: {
               type: "object",
               properties: {
-                autoridade: { type: "number", description: "Score 0-10 de autoridade de marca" },
-                aquisicao: { type: "number", description: "Score 0-10 de capacidade de aquisição" },
-                conversao: { type: "number", description: "Score 0-10 de taxa de conversão" },
-                retencao: { type: "number", description: "Score 0-10 de retenção de clientes" },
-                conteudo: { type: "number", description: "Score 0-10 de qualidade de conteúdo" },
-                branding: { type: "number", description: "Score 0-10 de branding e identidade" },
+                autoridade: { type: "number" }, aquisicao: { type: "number" },
+                conversao: { type: "number" }, retencao: { type: "number" },
+                conteudo: { type: "number" }, branding: { type: "number" },
               },
               required: ["autoridade", "aquisicao", "conversao", "retencao", "conteudo", "branding"],
-              additionalProperties: false,
             },
-            pontos_fortes: { type: "array", items: { type: "string" }, description: "3-5 pontos fortes identificados" },
-            oportunidades: { type: "array", items: { type: "string" }, description: "3-5 oportunidades de crescimento" },
-            riscos: { type: "array", items: { type: "string" }, description: "2-4 riscos identificados" },
+            pontos_fortes: { type: "array", items: { type: "string" } },
+            oportunidades: { type: "array", items: { type: "string" } },
+            riscos: { type: "array", items: { type: "string" } },
           },
           required: ["score_geral", "analise", "radar", "pontos_fortes", "oportunidades", "riscos"],
-          additionalProperties: false,
         },
-        objetivo_principal: { type: "string", description: "Objetivo principal recomendado" },
-        canal_prioritario: { type: "string", description: "Canal prioritário recomendado" },
-        investimento_recomendado: { type: "string", description: "Investimento mensal recomendado em marketing" },
-        potencial_crescimento: { type: "string", description: "Potencial de crescimento estimado" },
-        resumo_executivo: { type: "string", description: "Resumo executivo de 2-3 parágrafos" },
+        objetivo_principal: { type: "string" },
+        canal_prioritario: { type: "string" },
+        investimento_recomendado: { type: "string" },
+        potencial_crescimento: { type: "string" },
+        resumo_executivo: { type: "string" },
         icp: {
           type: "object",
           properties: {
@@ -54,7 +49,6 @@ const MARKETING_TOOL_SCHEMA = {
             gatilhos_compra: { type: "array", items: { type: "string" } },
           },
           required: ["nome_persona", "avatar_emoji", "demografia", "perfil_profissional", "descricao", "comportamento_digital", "dores", "desejos", "objecoes", "gatilhos_compra"],
-          additionalProperties: false,
         },
         proposta_valor: {
           type: "object",
@@ -63,7 +57,6 @@ const MARKETING_TOOL_SCHEMA = {
             metodo: { type: "string" }, resultado: { type: "string" }, prova: { type: "string" },
           },
           required: ["headline", "problema", "metodo", "resultado", "prova"],
-          additionalProperties: false,
         },
         analise_concorrencia: {
           type: "object",
@@ -79,13 +72,11 @@ const MARKETING_TOOL_SCHEMA = {
                   oportunidade_diferenciacao: { type: "string" },
                 },
                 required: ["nome", "pontos_fortes", "pontos_fracos", "oportunidade_diferenciacao"],
-                additionalProperties: false,
               },
             },
             posicionamento_recomendado: { type: "string" },
           },
           required: ["visao_geral", "concorrentes", "posicionamento_recomendado"],
-          additionalProperties: false,
         },
         tom_comunicacao: {
           type: "object",
@@ -101,12 +92,10 @@ const MARKETING_TOOL_SCHEMA = {
                 type: "object",
                 properties: { tipo: { type: "string" }, exemplo: { type: "string" } },
                 required: ["tipo", "exemplo"],
-                additionalProperties: false,
               },
             },
           },
           required: ["tom_principal", "personalidade_marca", "voz_exemplo", "palavras_usar", "palavras_evitar", "exemplos_posts"],
-          additionalProperties: false,
         },
         estrategia_aquisicao: {
           type: "object",
@@ -120,23 +109,41 @@ const MARKETING_TOOL_SCHEMA = {
                   percentual: { type: "number" }, acao_principal: { type: "string" },
                 },
                 required: ["canal", "tipo", "percentual", "acao_principal"],
-                additionalProperties: false,
               },
             },
             funil: {
               type: "object",
               properties: {
-                topo: { type: "object", properties: { estimativa_visitantes: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_visitantes", "objetivo"], additionalProperties: false },
-                meio: { type: "object", properties: { estimativa_leads: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_leads", "objetivo"], additionalProperties: false },
-                fundo: { type: "object", properties: { estimativa_clientes: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_clientes", "objetivo"], additionalProperties: false },
+                topo: { type: "object", properties: { estimativa_visitantes: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_visitantes", "objetivo"] },
+                meio: { type: "object", properties: { estimativa_leads: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_leads", "objetivo"] },
+                fundo: { type: "object", properties: { estimativa_clientes: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_clientes", "objetivo"] },
               },
               required: ["topo", "meio", "fundo"],
-              additionalProperties: false,
             },
           },
           required: ["canais_prioritarios", "funil"],
-          additionalProperties: false,
         },
+      },
+      required: [
+        "diagnostico", "objetivo_principal", "canal_prioritario",
+        "investimento_recomendado", "potencial_crescimento", "resumo_executivo",
+        "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
+        "estrategia_aquisicao",
+      ],
+      additionalProperties: false,
+    },
+  },
+};
+
+// ── MARKETING GROWTH SCHEMA (conteúdo, crescimento, benchmarks, execução, estrutura) ──
+const MARKETING_GROWTH_SCHEMA = {
+  type: "function",
+  function: {
+    name: "generate_strategy",
+    description: "Gera a parte GROWTH da estratégia de marketing: conteúdo, crescimento, benchmarks, execução e estrutura.",
+    parameters: {
+      type: "object",
+      properties: {
         estrategia_conteudo: {
           type: "object",
           properties: {
@@ -150,7 +157,6 @@ const MARKETING_TOOL_SCHEMA = {
                   exemplos: { type: "array", items: { type: "string" } },
                 },
                 required: ["nome", "tipo", "percentual", "descricao", "exemplos"],
-                additionalProperties: false,
               },
             },
             calendario_semanal: {
@@ -159,7 +165,6 @@ const MARKETING_TOOL_SCHEMA = {
                 type: "object",
                 properties: { dia: { type: "string" }, formato: { type: "string" }, sugestao: { type: "string" } },
                 required: ["dia", "formato", "sugestao"],
-                additionalProperties: false,
               },
             },
             ideias_conteudo: {
@@ -168,12 +173,10 @@ const MARKETING_TOOL_SCHEMA = {
                 type: "object",
                 properties: { formato: { type: "string" }, titulo: { type: "string" }, etapa_funil: { type: "string", enum: ["topo", "meio", "fundo"] } },
                 required: ["formato", "titulo", "etapa_funil"],
-                additionalProperties: false,
               },
             },
           },
           required: ["pilares", "calendario_semanal", "ideias_conteudo"],
-          additionalProperties: false,
         },
         plano_crescimento: {
           type: "object",
@@ -184,18 +187,15 @@ const MARKETING_TOOL_SCHEMA = {
                 type: "object",
                 properties: { mes: { type: "number" }, leads: { type: "number" }, clientes: { type: "number" }, receita: { type: "number" }, investimento: { type: "number" } },
                 required: ["mes", "leads", "clientes", "receita", "investimento"],
-                additionalProperties: false,
               },
             },
             indicadores: {
               type: "object",
               properties: { cpc_medio: { type: "string" }, cpl_estimado: { type: "string" }, cac_estimado: { type: "string" }, roi_esperado: { type: "string" }, ltv_estimado: { type: "string" } },
               required: ["cpc_medio", "cpl_estimado", "cac_estimado", "roi_esperado", "ltv_estimado"],
-              additionalProperties: false,
             },
           },
           required: ["projecoes_mensais", "indicadores"],
-          additionalProperties: false,
         },
         benchmarks_setor: {
           type: "object",
@@ -205,7 +205,6 @@ const MARKETING_TOOL_SCHEMA = {
             tendencias: { type: "array", items: { type: "string" } }, insight_competitivo: { type: "string" },
           },
           required: ["setor", "taxa_conversao_media", "cpl_medio_setor", "ticket_medio_setor", "tendencias", "insight_competitivo"],
-          additionalProperties: false,
         },
         plano_execucao: {
           type: "array",
@@ -219,12 +218,10 @@ const MARKETING_TOOL_SCHEMA = {
                   type: "object",
                   properties: { acao: { type: "string" }, ferramenta: { type: "string", enum: ["conteudos", "postagens", "sites", "trafego", "crm", "scripts", "manual"] } },
                   required: ["acao", "ferramenta"],
-                  additionalProperties: false,
                 },
               },
             },
             required: ["mes", "titulo", "passos"],
-            additionalProperties: false,
           },
         },
         estrutura_recomendada: {
@@ -236,15 +233,11 @@ const MARKETING_TOOL_SCHEMA = {
               prioridade: { type: "string", enum: ["alta", "media", "baixa"] }, recomendacao: { type: "string" },
             },
             required: ["item", "status", "prioridade", "recomendacao"],
-            additionalProperties: false,
           },
         },
       },
       required: [
-        "diagnostico", "objetivo_principal", "canal_prioritario",
-        "investimento_recomendado", "potencial_crescimento", "resumo_executivo",
-        "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
-        "estrategia_aquisicao", "estrategia_conteudo", "plano_crescimento",
+        "estrategia_conteudo", "plano_crescimento",
         "benchmarks_setor", "plano_execucao", "estrutura_recomendada",
       ],
       additionalProperties: false,
@@ -264,22 +257,19 @@ const COMERCIAL_TOOL_SCHEMA = {
         diagnostico_comercial: {
           type: "object",
           properties: {
-            score_comercial: { type: "number", description: "Score de maturidade comercial 0-100" },
-            nivel: { type: "string", description: "Nível: Iniciante, Básico, Intermediário, Avançado ou Expert" },
+            score_comercial: { type: "number" },
+            nivel: { type: "string" },
             radar_comercial: {
               type: "object",
               properties: {
-                processo: { type: "number", description: "Score 0-10 de processo de vendas" },
-                gestao_leads: { type: "number", description: "Score 0-10 de gestão de leads" },
-                ferramentas: { type: "number", description: "Score 0-10 de ferramentas e CRM" },
-                canais: { type: "number", description: "Score 0-10 de canais de aquisição" },
-                performance: { type: "number", description: "Score 0-10 de performance e metas" },
+                processo: { type: "number" }, gestao_leads: { type: "number" },
+                ferramentas: { type: "number" }, canais: { type: "number" },
+                performance: { type: "number" },
               },
               required: ["processo", "gestao_leads", "ferramentas", "canais", "performance"],
-              additionalProperties: false,
             },
-            analise_comercial: { type: "string", description: "Análise geral da situação comercial (2-3 parágrafos)" },
-            gaps: { type: "array", items: { type: "string" }, description: "3-5 gaps comerciais identificados" },
+            analise_comercial: { type: "string" },
+            gaps: { type: "array", items: { type: "string" } },
             insights: {
               type: "array",
               items: {
@@ -289,7 +279,6 @@ const COMERCIAL_TOOL_SCHEMA = {
                   tipo: { type: "string", enum: ["success", "warning", "opportunity"] },
                 },
                 required: ["texto", "tipo"],
-                additionalProperties: false,
               },
             },
             estrategias_vendas: {
@@ -302,7 +291,6 @@ const COMERCIAL_TOOL_SCHEMA = {
                   resultado_esperado: { type: "string" },
                 },
                 required: ["nome", "descricao", "passos", "resultado_esperado"],
-                additionalProperties: false,
               },
             },
             funil_reverso: {
@@ -313,7 +301,6 @@ const COMERCIAL_TOOL_SCHEMA = {
                 trafego_necessario: { type: "number" }, taxa_conversao_usada: { type: "string" },
               },
               required: ["meta_faturamento", "ticket_medio", "vendas_necessarias", "leads_necessarios", "trafego_necessario", "taxa_conversao_usada"],
-              additionalProperties: false,
             },
             projecao_leads: {
               type: "array",
@@ -321,7 +308,6 @@ const COMERCIAL_TOOL_SCHEMA = {
                 type: "object",
                 properties: { mes: { type: "string" }, atual: { type: "number" }, com_estrategia: { type: "number" } },
                 required: ["mes", "atual", "com_estrategia"],
-                additionalProperties: false,
               },
             },
             projecao_receita: {
@@ -330,7 +316,6 @@ const COMERCIAL_TOOL_SCHEMA = {
                 type: "object",
                 properties: { mes: { type: "string" }, atual: { type: "number" }, com_estrategia: { type: "number" } },
                 required: ["mes", "atual", "com_estrategia"],
-                additionalProperties: false,
               },
             },
             plano_acao: {
@@ -342,12 +327,10 @@ const COMERCIAL_TOOL_SCHEMA = {
                   items: { type: "array", items: { type: "string" } },
                 },
                 required: ["fase", "periodo", "items"],
-                additionalProperties: false,
               },
             },
           },
           required: ["score_comercial", "nivel", "radar_comercial", "analise_comercial", "gaps", "insights", "estrategias_vendas", "funil_reverso", "projecao_leads", "projecao_receita", "plano_acao"],
-          additionalProperties: false,
         },
       },
       required: ["diagnostico_comercial"],
@@ -357,42 +340,54 @@ const COMERCIAL_TOOL_SCHEMA = {
 };
 
 // ── SYSTEM PROMPTS ──────────────────────────────────────────────────
-const MARKETING_SYSTEM_PROMPT = `Você é uma estrategista de marketing sênior. Sua função é receber as respostas de um briefing de marketing e gerar uma ESTRATÉGIA COMPLETA E PERSONALIZADA.
+const MARKETING_CORE_PROMPT = `Você é uma estrategista de marketing sênior. Sua função é receber as respostas de um briefing de marketing e gerar a PARTE CORE da estratégia.
 
 SEÇÕES A GERAR:
 
 1. DIAGNÓSTICO: Score geral (0-100), radar de 6 dimensões (0-10 cada: autoridade, aquisição, conversão, retenção, conteúdo, branding), análise textual, pontos fortes, oportunidades e riscos.
 
-2. OBJETIVO & CANAL: Objetivo principal recomendado, canal prioritário, investimento recomendado, potencial de crescimento.
+2. OBJETIVO & CANAL: Objetivo principal recomendado, canal prioritário, investimento recomendado, potencial de crescimento, resumo executivo.
 
 3. ICP (CLIENTE IDEAL): Persona detalhada com nome, emoji avatar, demografia, perfil profissional, descrição, comportamento digital, dores (4-6), desejos (4-6), objeções (3-5), gatilhos de compra (3-5).
 
 4. PROPOSTA DE VALOR: Headline impactante, framework Problema → Método → Resultado, prova social.
 
-5. ANÁLISE DE CONCORRÊNCIA: Visão geral, análise de 2-4 concorrentes (inferidos do segmento ou dos URLs fornecidos), posicionamento recomendado.
+5. ANÁLISE DE CONCORRÊNCIA: Visão geral, análise de 2-4 concorrentes (inferidos do segmento), posicionamento recomendado.
 
-6. TOM DE COMUNICAÇÃO: Tom principal, personalidade da marca (adjetivos), exemplo de voz, palavras para usar (8-12), palavras para evitar (5-8), exemplos de posts (3-5).
+6. TOM DE COMUNICAÇÃO: Tom principal, personalidade da marca, exemplo de voz, palavras para usar/evitar, exemplos de posts.
 
 7. ESTRATÉGIA DE AQUISIÇÃO: Canais prioritários com percentuais, funil detalhado (topo/meio/fundo com estimativas).
 
-8. ESTRATÉGIA DE CONTEÚDO: Pilares (3-4 com percentuais), calendário semanal (5-7 dias), ideias de conteúdo (8-12).
-
-9. PROJEÇÃO DE CRESCIMENTO: Projeções de 6 meses (leads, clientes, receita, investimento), indicadores (CPC, CPL, CAC, ROI, LTV).
-
-10. BENCHMARKS DO SETOR: Métricas médias do setor, tendências, insight competitivo.
-
-11. PLANO DE EXECUÇÃO: Roadmap de 3 meses com ações vinculadas às ferramentas da plataforma (conteudos, postagens, sites, trafego, crm, scripts, manual).
-
-12. CHECKLIST DE ESTRUTURA: 6-10 itens com status (tem/nao_tem), prioridade e recomendação.
-
 REGRAS:
 - Seja ESPECÍFICO com base nas respostas — nada genérico
-- Use CÁLCULOS REAIS para projeções financeiras
 - Todas as dores, objeções e gatilhos devem refletir o segmento real
 - Tom de comunicação deve respeitar as preferências informadas
 - Sempre em português brasileiro
 - Valores monetários em R$
-- Os exemplos de posts devem usar o tom definido
+
+Use a ferramenta generate_strategy para retornar.`;
+
+const MARKETING_GROWTH_PROMPT = `Você é uma estrategista de marketing sênior. Sua função é gerar a PARTE DE CRESCIMENTO da estratégia de marketing.
+
+SEÇÕES A GERAR:
+
+1. ESTRATÉGIA DE CONTEÚDO: Pilares (3-4 com percentuais), calendário semanal (5-7 dias), ideias de conteúdo (8-12).
+
+2. PROJEÇÃO DE CRESCIMENTO: Projeções de 6 meses (leads, clientes, receita, investimento), indicadores (CPC, CPL, CAC, ROI, LTV).
+
+3. BENCHMARKS DO SETOR: Métricas médias do setor, tendências, insight competitivo.
+
+4. PLANO DE EXECUÇÃO: Roadmap de 3 meses com ações vinculadas às ferramentas da plataforma (conteudos, postagens, sites, trafego, crm, scripts, manual).
+
+5. CHECKLIST DE ESTRUTURA: 6-10 itens com status (tem/nao_tem), prioridade e recomendação.
+
+REGRAS:
+- Seja ESPECÍFICO com base nas respostas — nada genérico
+- Use CÁLCULOS REAIS para projeções financeiras
+- O calendário semanal deve ser prático e executável
+- O plano de execução deve referenciar ferramentas reais da plataforma
+- Sempre em português brasileiro
+- Valores monetários em R$
 
 Use a ferramenta generate_strategy para retornar.`;
 
@@ -453,7 +448,24 @@ INSTRUÇÕES IMPORTANTES:
 Use a ferramenta generate_strategy para retornar.`;
   }
 
-  return `Com base nas respostas do briefing unificado (GPS do Negócio — parte comercial + parte marketing) abaixo, gere a ESTRATÉGIA DE MARKETING COMPLETA com todas as 12 seções.
+  if (section === "marketing-growth") {
+    return `Com base nas respostas do briefing unificado (GPS do Negócio) abaixo, gere a PARTE DE CRESCIMENTO da estratégia de marketing (conteúdo, projeções, benchmarks, execução e estrutura).
+
+RESPOSTAS DO BRIEFING:
+${answersText}
+${salesPlanContext}
+
+INSTRUÇÕES IMPORTANTES:
+1. Faça projeções financeiras realistas baseadas no ticket médio e faturamento informados
+2. O calendário semanal deve ser prático e executável
+3. O plano de execução deve referenciar ferramentas reais da plataforma (conteudos, postagens, sites, trafego, crm, scripts)
+4. A estrutura recomendada deve avaliar o que o negócio já tem vs o que precisa
+
+Use a ferramenta generate_strategy para retornar.`;
+  }
+
+  // marketing-core (default)
+  return `Com base nas respostas do briefing unificado (GPS do Negócio — parte comercial + parte marketing) abaixo, gere a PARTE CORE da estratégia de marketing (diagnóstico, ICP, proposta de valor, concorrência, tom e aquisição).
 
 RESPOSTAS DO BRIEFING:
 ${answersText}
@@ -462,11 +474,7 @@ ${salesPlanContext}
 INSTRUÇÕES IMPORTANTES:
 1. O ICP deve refletir exatamente o público descrito nas respostas
 2. O tom de comunicação deve respeitar as preferências informadas (incluindo o que NÃO quer)
-3. Faça projeções financeiras realistas baseadas no ticket médio e faturamento informados
-4. Os concorrentes devem ser inferidos do segmento (ou usar URLs se fornecidos)
-5. O calendário semanal deve ser prático e executável
-6. O plano de execução deve referenciar ferramentas reais da plataforma (conteudos, postagens, sites, trafego, crm, scripts)
-7. A estrutura recomendada deve avaliar o que o negócio já tem vs o que precisa
+3. Os concorrentes devem ser inferidos do segmento (ou usar URLs se fornecidos)
 
 Use a ferramenta generate_strategy para retornar.`;
 }
@@ -484,7 +492,7 @@ async function callAI(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -535,6 +543,21 @@ async function callAI(
   return { result, tokensUsed };
 }
 
+// ── Section config map ──────────────────────────────────────────────
+function getSectionConfig(section: string) {
+  switch (section) {
+    case "marketing-core":
+      return { schema: MARKETING_CORE_SCHEMA, prompt: MARKETING_CORE_PROMPT };
+    case "marketing-growth":
+      return { schema: MARKETING_GROWTH_SCHEMA, prompt: MARKETING_GROWTH_PROMPT };
+    case "comercial":
+      return { schema: COMERCIAL_TOOL_SCHEMA, prompt: COMERCIAL_SYSTEM_PROMPT };
+    // Legacy: "marketing" maps to core for backward compat
+    default:
+      return { schema: MARKETING_CORE_SCHEMA, prompt: MARKETING_CORE_PROMPT };
+  }
+}
+
 // ── MAIN HANDLER ────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -564,7 +587,7 @@ Deno.serve(async (req) => {
     }
     const userId = user.id;
 
-    const { answers, organization_id, section = "marketing" } = await req.json();
+    const { answers, organization_id, section = "marketing-core" } = await req.json();
     if (!answers) {
       return new Response(
         JSON.stringify({ error: "Respostas do briefing são obrigatórias" }),
@@ -582,8 +605,8 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Only check credits on marketing call (first call)
-    if (section === "marketing" && organization_id) {
+    // Only check credits on first call (marketing-core)
+    if (section === "marketing-core" && organization_id) {
       const { data: wallet } = await serviceClient
         .from("credit_wallets")
         .select("balance")
@@ -614,9 +637,7 @@ Deno.serve(async (req) => {
     }
 
     // Pick schema & prompt based on section
-    const isComercial = section === "comercial";
-    const toolSchema = isComercial ? COMERCIAL_TOOL_SCHEMA : MARKETING_TOOL_SCHEMA;
-    const systemPrompt = isComercial ? COMERCIAL_SYSTEM_PROMPT : MARKETING_SYSTEM_PROMPT;
+    const { schema: toolSchema, prompt: systemPrompt } = getSectionConfig(section);
     const userPrompt = buildUserPrompt(answers, salesPlanContext, section);
 
     console.log(`Generating ${section} section...`);
@@ -642,7 +663,7 @@ Deno.serve(async (req) => {
         input_message: `[GPS ${section}] Briefing com ${Object.keys(answers).length} respostas`,
         output_message: JSON.stringify(result).substring(0, 500),
         tokens_used: tokensUsed,
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
       });
     }
 

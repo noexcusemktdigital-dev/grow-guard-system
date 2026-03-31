@@ -24,7 +24,7 @@ import { logger } from "@/lib/logger";
 const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
 
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
-type GeneratingStep = "marketing" | "comercial";
+type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
 
 function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void }) {
   return (
@@ -206,7 +206,7 @@ export default function ClienteGPSNegocio() {
 
     // Merge all answers
     const allAnswers = { ...rafaelAnswers, ...sofiaAnswers };
-    setGeneratingStep("marketing");
+    setGeneratingStep("marketing-core");
     setPhase("generating");
 
     try {
@@ -233,15 +233,23 @@ export default function ClienteGPSNegocio() {
         }
       }
 
-      // 3. Generate strategy via AI — two sequential calls
-      // Call 1: Marketing
-      const marketingResult = await generateStrategy.mutateAsync({ 
+      // 3. Generate strategy via AI — three sequential calls
+      // Call 1: Marketing Core
+      const coreResult = await generateStrategy.mutateAsync({ 
         answers: allAnswers, 
         organization_id: orgId,
-        section: "marketing",
+        section: "marketing-core",
       });
 
-      // Call 2: Comercial
+      // Call 2: Marketing Growth
+      setGeneratingStep("marketing-growth");
+      const growthResult = await generateStrategy.mutateAsync({ 
+        answers: allAnswers, 
+        organization_id: orgId,
+        section: "marketing-growth",
+      });
+
+      // Call 3: Comercial
       setGeneratingStep("comercial");
       const comercialResult = await generateStrategy.mutateAsync({ 
         answers: allAnswers, 
@@ -251,7 +259,8 @@ export default function ClienteGPSNegocio() {
 
       // Merge results
       const unifiedResult = {
-        ...(marketingResult.result || {}),
+        ...(coreResult.result || {}),
+        ...(growthResult.result || {}),
         ...(comercialResult.result || {}),
       };
       
@@ -375,14 +384,19 @@ export default function ClienteGPSNegocio() {
                 <div className="text-center">
                   <p className="font-semibold">Gerando seu GPS do Negócio...</p>
                   <p className="text-sm text-muted-foreground">
-                    {generatingStep === "marketing" 
-                      ? "Etapa 1/2 — Analisando marketing, criando ICP, estratégias e plano de conteúdo..."
-                      : "Etapa 2/2 — Gerando diagnóstico comercial, projeções de receita e estratégias de vendas..."
+                    {generatingStep === "marketing-core" 
+                      ? "Etapa 1/3 — Analisando diagnóstico, ICP, proposta de valor e aquisição..."
+                      : generatingStep === "marketing-growth"
+                      ? "Etapa 2/3 — Gerando conteúdo, projeções, benchmarks e plano de execução..."
+                      : "Etapa 3/3 — Gerando diagnóstico comercial, projeções de receita e estratégias de vendas..."
                     }
                   </p>
                   <div className="flex items-center justify-center gap-2 mt-3">
-                    <div className={`w-2 h-2 rounded-full ${generatingStep === "marketing" ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
-                    <span className="text-xs text-muted-foreground">Marketing</span>
+                    <div className={`w-2 h-2 rounded-full ${generatingStep === "marketing-core" ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                    <span className="text-xs text-muted-foreground">Core</span>
+                    <div className="w-6 h-px bg-muted-foreground/30" />
+                    <div className={`w-2 h-2 rounded-full ${generatingStep === "marketing-growth" ? "bg-amber-500 animate-pulse" : generatingStep === "marketing-core" ? "bg-muted-foreground/30" : "bg-emerald-500"}`} />
+                    <span className="text-xs text-muted-foreground">Growth</span>
                     <div className="w-6 h-px bg-muted-foreground/30" />
                     <div className={`w-2 h-2 rounded-full ${generatingStep === "comercial" ? "bg-amber-500 animate-pulse" : "bg-muted-foreground/30"}`} />
                     <span className="text-xs text-muted-foreground">Comercial</span>
