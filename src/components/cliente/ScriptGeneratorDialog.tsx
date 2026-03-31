@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/lib/supabase";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { toast } from "@/hooks/use-toast";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import { funnelStages, stageTutorials } from "./ScriptGeneratorData";
@@ -81,7 +82,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
         },
       });
 
-      if (error) throw new Error(error.message);
+      if (error) throw await extractEdgeFunctionError(error);
       if (data?.error) {
         if (data.error.includes("INSUFFICIENT_CREDITS") || data.error.includes("Créditos insuficientes")) {
           setShowCreditsDialog(true);
