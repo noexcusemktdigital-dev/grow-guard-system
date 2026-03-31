@@ -173,6 +173,21 @@ export default function ClienteGPSNegocio() {
   const { createFunnel } = useCrmFunnelMutations();
   const { createScript } = useClienteScriptMutations();
 
+  // ── Metas state ──
+  const [scopeFilter, setScopeFilter] = useState<string>("all");
+  const [novaMetaOpen, setNovaMetaOpen] = useState(false);
+  const [novaMeta, setNovaMeta] = useState<MetaFormState>({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
+  const [targetDisplay, setTargetDisplay] = useState("");
+  const [editingGoal, setEditingGoal] = useState<any>(null);
+
+  const { data: activeGoals, isLoading: goalsLoading } = useActiveGoals(scopeFilter);
+  const { data: historicGoals } = useHistoricGoals();
+  const { data: goalProgress } = useGoalProgress(activeGoals);
+  const { createGoal, updateGoal, archiveGoal } = useGoalMutations();
+  const { data: teams } = useCrmTeams();
+  const { data: members } = useCrmTeam();
+  const isMonetaryMetric = (m: string) => ["revenue", "avg_ticket"].includes(m);
+
   const hasResult = !!activeStrategy?.strategy_result;
   const status = activeStrategy?.status || "pending";
   const generationCount = (history?.length ?? 0) + (activeStrategy ? 1 : 0);
