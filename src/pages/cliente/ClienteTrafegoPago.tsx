@@ -114,7 +114,42 @@ export default function ClienteTrafegoPago() {
 
   const handleApprove = (id: string) => {
     approveMutation.mutate(id, {
-      onSuccess: () => toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados." }),
+      onSuccess: async () => {
+        toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados. Criando campanhas..." });
+        
+        // Create one campaign per platform
+        try {
+          for (const p of platforms) {
+            const platformKey = String(p.platform);
+            await createCampaignMutation.mutateAsync({
+              name: `${platformKey} Ads — ${String(p.objective || "Campanha")}`,
+              type: platformKey,
+              content: {
+                platform: platformKey,
+                objective: p.objective,
+                audience: p.audience,
+                budget: p.budget_suggestion,
+                creative_formats: p.creative_formats,
+                kpis: p.kpis,
+                ad_copies: p.ad_copies,
+                keywords: p.keywords,
+                interests: p.interests,
+                campaign_structure: p.campaign_structure,
+                optimization_actions: p.optimization_actions,
+                tips: p.tips,
+                strategy_id: id,
+                auto_created: true,
+              },
+            });
+          }
+          toast({ title: "Campanhas criadas!", description: `${platforms.length} campanha(s) adicionada(s) ao repositório.` });
+        } catch {
+          // Campaigns creation is non-blocking
+        }
+        
+        // Redirect to campaigns tab
+        setActiveTab("campanhas");
+      },
       onError: (err: unknown) => {
         if (isInsufficientCreditsError(err)) {
           setShowCreditsDialog(true);
