@@ -53,7 +53,7 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  { q: "Preciso de cartão de crédito para começar?", a: "Não! O trial de 7 dias é 100% gratuito e inclui 200 créditos para você testar todas as funcionalidades." },
+  { q: "Preciso de cartão de crédito para começar?", a: "Não! O trial de 7 dias é 100% gratuito e inclui 500 créditos para você testar todas as funcionalidades." },
   { q: "O que são créditos?", a: "Créditos são a moeda interna da plataforma. Cada ação de IA (gerar conteúdo, arte, resposta do agente) consome créditos. Você pode comprar pacotes extras a qualquer momento." },
   { q: "Posso integrar com meu WhatsApp?", a: "Sim! Nos planos Pro e Enterprise, você conecta seu WhatsApp Business e atende direto pelo CRM com histórico completo." },
   { q: "Quantos usuários posso ter?", a: "Depende do plano: Starter (10), Pro (20) e Enterprise (ilimitados). Usuários adicionais custam R$ 29/mês cada." },
