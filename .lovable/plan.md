@@ -1,51 +1,49 @@
 
 
-## Reformulação do Layout do GPS do Negócio — Resultado Final
+## Plano — Termômetro Comercial detalhado + Metas no GPS do Negócio
 
-### Problemas identificados nas screenshots
+### 1. Score Comercial com Termômetro detalhado
 
-1. **Insights Comerciais**: Exibem JSON bruto `{"tipo":"opportunity","texto":"..."}` — o código busca `insight.descricao` mas a AI retorna `insight.texto`
-2. **Plano de Ação**: Usa `fase.acoes` mas a AI retorna `fase.items`; o label `fase.fase` (ex: "Estruturação e Aquisição") é forçado dentro de um círculo de 32px, causando overflow
-3. **Score Comercial**: O ScoreRing funciona mas o card é pobre — sem termômetro/barra de progresso visual, sem contexto do nível
-4. **9 abas flat**: Confuso — Marketing e Comercial misturados sem hierarquia
+**Problema:** O score comercial é apenas uma barra de progresso simples. O usuário quer um visual tipo "termômetro" igual ao `DiagnosticoTermometro` existente, mostrando fases de 0 a 100.
 
-### Solução: Duas abas principais (Marketing / Comercial)
+**Solução:** Substituir a barra simples no `ComScoreRadar` por um termômetro comercial com 4 fases:
 
-```text
-┌─────────────────────────────────────────────┐
-│  [42/100 Marketing]  [34/100 Comercial]     │
-│  Pendente · 30 mar 2026                     │
-├─────────────────────────────────────────────┤
-│  [ Marketing ]  [ Comercial ]               │ ← 2 abas principais
-├─────────────────────────────────────────────┤
-│  Marketing selecionado:                     │
-│  [Resumo][ICP][Concorrência][Tom][Aquisição]│ ← sub-abas
-│  [Conteúdo][Projeção][Execução]             │
-├─────────────────────────────────────────────┤
-│  Comercial selecionado:                     │
-│  [Score & Radar][Funil Reverso][Insights]   │ ← sub-abas
-│  [Estratégias][Projeções][Plano de Ação]    │
-└─────────────────────────────────────────────┘
-```
+| Fase | Range | Cor |
+|------|-------|-----|
+| Crítico | 0-25 | Vermelho |
+| Básico | 26-50 | Laranja |
+| Intermediário | 51-75 | Amarelo |
+| Avançado | 76-100 | Verde |
 
-### Correções de dados no TabComercial
+O termômetro terá gradiente horizontal (vermelho → verde), ponteiro animado na posição do score, marcadores de fase abaixo, e a fase atual destacada — similar ao componente `DiagnosticoTermometro` já existente no projeto.
 
-| Bug | Campo da AI | Campo no código atual | Correção |
-|-----|-------------|----------------------|----------|
-| Insights JSON | `insight.texto` + `insight.tipo` | `insight.descricao \|\| JSON.stringify` | Adicionar `insight.texto` no fallback |
-| Plano de Ação vazio | `fase.items` (array strings) | `fase.acoes` | Ler `fase.items \|\| fase.acoes` |
-| Label overflow | `fase.fase` = "Estruturação..." | Forçado num `w-8 h-8` círculo | Usar `fase.periodo` (ex: "30 dias") no círculo, `fase.fase` como título texto |
-| colorMap keys | AI retorna `"success"`, `"warning"`, `"opportunity"` | Código mapeia `"sucesso"`, `"alerta"`, `"oportunidade"` | Adicionar ambas as chaves no mapa |
+### 2. Aba "Metas" no GPS do Negócio
 
-### Melhorias visuais no Comercial
+**Problema:** As metas estavam no antigo Plano de Vendas (`ClientePlanoVendas`). Agora que o GPS unificou tudo, o módulo de metas precisa estar dentro do GPS.
 
-- **Score**: Card com barra de progresso horizontal + badge de nível colorido (Básico=vermelho, Intermediário=amber, Avançado=green) + análise textual
-- **Insights**: Cards com ícones por tipo (success=CheckCircle verde, warning=AlertTriangle laranja, opportunity=Lightbulb azul) + bordas coloridas
-- **Plano de Ação**: Timeline vertical com período no badge, fase como título, items como checklist
+**Solução:** Adicionar uma terceira aba principal no `StrategyDashboard`: **Marketing | Comercial | Metas**
 
-### Arquivo a modificar
+A aba Metas reutilizará o componente `ClientePlanoVendasMetas` existente (que já tem todo o sistema de filtro por escopo, cards de progresso, gráficos) e o dialog `ClientePlanoVendasMetaDialog` para criar/editar metas.
 
-| Arquivo | Mudanças |
-|---------|----------|
-| `src/pages/cliente/ClientePlanoMarketingStrategy.tsx` | Reorganizar tabs em 2 níveis (Marketing/Comercial com sub-tabs), corrigir mapeamento de campos nos insights/plano de ação, melhorar layout visual do score e insights comerciais |
+As metas continuam usando os mesmos hooks (`useActiveGoals`, `useGoalMutations`, `useGoalProgress`) que já estão vinculados ao CRM, relatórios e dashboards. Nada muda na integração — apenas a localização na UI.
+
+### Arquivos a modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/cliente/ClientePlanoMarketingStrategy.tsx` | (1) Refazer `ComScoreRadar` com termômetro visual de 4 fases. (2) Adicionar aba principal "Metas" que renderiza o sistema completo de metas (create/edit/filter/progress). |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | Passar props de metas (goals, progress, mutations) para o `StrategyDashboard` |
+
+### Detalhes técnicos
+
+**Termômetro:** Reutilizar o padrão visual do `DiagnosticoTermometro` (gradiente linear + ponteiro absoluto + marcadores), adaptado com fases comerciais (Crítico/Básico/Intermediário/Avançado) em vez de Caótico/Reativo/Estruturado/Analítico.
+
+**Metas:** O `StrategyDashboard` receberá props opcionais para o sistema de metas. O `ClienteGPSNegocio` importará os hooks de goals e passará tudo. A aba "Metas" aparecerá sempre (independente de ter `diagnostico_comercial`), pois metas são relevantes desde o início.
+
+O sistema de metas já suporta:
+- Escopos: empresa, time, individual
+- Métricas: faturamento, contratos, leads, conversões, reuniões, ticket médio
+- Integração com CRM (progresso automático via `useGoalProgress`)
+- Filtro por período mensal
+- Visualização em relatórios e dashboards
 
