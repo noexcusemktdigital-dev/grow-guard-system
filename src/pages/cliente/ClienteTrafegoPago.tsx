@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   DollarSign, Sparkles, Target,
@@ -36,6 +36,7 @@ import { ClienteTrafegoPagoWizardStep } from "./ClienteTrafegoPagoWizardStep";
 import { ClienteTrafegoPagoResult, TutorialDialog } from "./ClienteTrafegoPagoResult";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Rocket, ChevronDown, ChevronUp, Users, Eye, MousePointer, TrendingUp, Zap, Layers } from "lucide-react";
+import { normalizePlatformType, CampaignStructureRenderer } from "./CampaignStructureRenderer";
 
 export default function ClienteTrafegoPago() {
   const { data: activeStrategy, isLoading: loadingStrategy } = useActiveTrafficStrategy();
@@ -58,6 +59,15 @@ export default function ClienteTrafegoPago() {
   const [campaignFilter, setCampaignFilter] = useState<string>("all");
   const [tutorialCampaign, setTutorialCampaign] = useState<{ platform: string; data: Record<string, unknown> } | null>(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
+  const [pendingRedirect, setPendingRedirect] = useState(false);
+
+  // Robust redirect: wait for campaigns query to refetch, then switch tab
+  useEffect(() => {
+    if (pendingRedirect && campaigns && campaigns.length > 0) {
+      setActiveTab("campanhas");
+      setPendingRedirect(false);
+    }
+  }, [pendingRedirect, campaigns]);
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
@@ -124,7 +134,7 @@ export default function ClienteTrafegoPago() {
         // Create one campaign per platform
         try {
           for (const p of platforms) {
-            const platformKey = String(p.platform);
+            const platformKey = normalizePlatformType(String(p.platform));
             await createCampaignMutation.mutateAsync({
               name: `${platformKey} Ads — ${String(p.objective || "Campanha")}`,
               type: platformKey,
@@ -151,8 +161,9 @@ export default function ClienteTrafegoPago() {
           // Campaigns creation is non-blocking
         }
         
-        // Redirect to campaigns tab
+        // Redirect to campaigns tab (immediate + pending for refetch)
         setActiveTab("campanhas");
+        setPendingRedirect(true);
       },
       onError: (err: unknown) => {
         if (isInsufficientCreditsError(err)) {
@@ -167,10 +178,11 @@ export default function ClienteTrafegoPago() {
   const sourceData = (activeStrategy?.source_data || {}) as Record<string, unknown>;
   const platforms = (activeStrategy?.platforms || []) as Record<string, unknown>[];
 
-  // Filter campaigns by platform type
+  // Filter campaigns by platform type (with normalization)
   const filteredCampaigns = (campaigns || []).filter((c) => {
-    if (campaignFilter === "all") return ["Google", "Meta", "TikTok", "LinkedIn"].includes(c.type);
-    return c.type === campaignFilter;
+    const normalized = normalizePlatformType(c.type || "");
+    if (campaignFilter === "all") return ["Google", "Meta", "TikTok", "LinkedIn"].includes(normalized);
+    return normalized === campaignFilter;
   });
 
   return (
@@ -334,7 +346,8 @@ export default function ClienteTrafegoPago() {
               {filteredCampaigns.map((c) => {
                 const content = (c.content || {}) as Record<string, unknown>;
                 const kpis = (content.kpis || {}) as Record<string, unknown>;
-                const hasTutorial = !!PLATFORM_TUTORIALS[c.type];
+                const normalizedType = normalizePlatformType(c.type || "");
+                const hasTutorial = !!PLATFORM_TUTORIALS[normalizedType];
                 const isExpanded = expandedCampaigns[c.id] ?? false;
                 const platformBorderTop: Record<string, string> = {
                   Google: "border-t-emerald-500",
@@ -343,13 +356,13 @@ export default function ClienteTrafegoPago() {
                   LinkedIn: "border-t-sky-500",
                 };
                 return (
-                  <Card key={c.id} className={`border-t-4 ${platformBorderTop[c.type] || ""}`}>
+                  <Card key={c.id} className={`border-t-4 ${platformBorderTop[normalizedType] || ""}`}>
                     <CardContent className="py-4 space-y-3">
                       {/* Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`p-2 rounded-xl ${platformColors[c.type] || "bg-muted"}`}>
-                            {platformIcons[c.type] || <Folder className="w-4 h-4" />}
+                          <div className={`p-2 rounded-xl ${platformColors[normalizedType] || "bg-muted"}`}>
+                            {platformIcons[normalizedType] || <Folder className="w-4 h-4" />}
                           </div>
                           <div>
                             <p className="text-xs font-bold">{c.name}</p>
@@ -410,13 +423,16 @@ export default function ClienteTrafegoPago() {
                         )}
                       </div>
 
-                      {/* Creative formats + Keywords badges */}
+                      {/* Creative formats */}
                       {content.creative_formats && (
                         <div>
                           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Criativos</p>
                           <p className="text-xs text-muted-foreground">{String(content.creative_formats)}</p>
                         </div>
                       )}
+
+                      {/* Campaign Structure */}
+                      <CampaignStructureRenderer structure={content.campaign_structure} />
 
                       {/* Collapsible extras */}
                       <Collapsible open={isExpanded} onOpenChange={() => setExpandedCampaigns(prev => ({ ...prev, [c.id]: !prev[c.id] }))}>
@@ -475,7 +491,7 @@ export default function ClienteTrafegoPago() {
                       {hasTutorial && (
                         <Button
                           className="w-full text-xs gap-1.5"
-                          onClick={() => setTutorialCampaign({ platform: c.type, data: content })}
+                          onClick={() => setTutorialCampaign({ platform: normalizedType, data: content })}
                         >
                           <Rocket className="w-3.5 h-3.5" /> Criar Campanha
                         </Button>
