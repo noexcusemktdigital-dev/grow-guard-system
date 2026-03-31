@@ -1,71 +1,35 @@
 
 
-## Plano — Bloqueio até aprovação do GPS + Animação de desbloqueio
+## Plano — Corrigir erro JWT do Tráfego Pago + Mapa de Regiões
 
-### Problema atual
+### 1. Correção do erro "Invalid JWT"
 
-O `useHasActiveStrategy` retorna `true` quando existe qualquer estratégia ativa (`is_active: true`), **independente do status**. Isso significa que as ferramentas são desbloqueadas assim que o GPS é **gerado**, não quando é **aprovado**. O correto é desbloquear apenas após `status === "approved"`.
+O `supabase/config.toml` tem `verify_jwt = true` para `generate-traffic-strategy`, mas a função já valida auth internamente via `getUser()`. O gateway Supabase rejeita o token antes da função executar.
 
-### Mudanças
+**Correção**: Alterar `verify_jwt = false` no `supabase/config.toml` para `generate-traffic-strategy`.
 
-#### 1. Gate: Exigir aprovação para desbloquear
+### 2. Mapa interativo para seleção de regiões
 
-**`src/hooks/useMarketingStrategy.ts`** — Alterar `useHasActiveStrategy` para verificar `status === "approved"`:
+Substituir o campo de texto livre de região por um seletor visual com mapa do Brasil. Como não há biblioteca de mapas no projeto, a abordagem mais leve é usar um **mapa SVG do Brasil** com estados clicáveis + chips de cidades/estados selecionados.
 
-```typescript
-export function useHasActiveStrategy() {
-  const { data, isLoading } = useActiveStrategy();
-  return { 
-    hasStrategy: !!data && (data as any).status === "approved", 
-    isLoading 
-  };
-}
-```
+O step "regiao" passará a ter:
+- Mapa SVG do Brasil com os 26 estados + DF, cada um clicável
+- Ao clicar num estado, ele fica destacado (cor primária) e é adicionado à lista
+- Abaixo do mapa, campo de busca para digitar cidades específicas (ex: "São Paulo, Campinas")
+- Chips dos estados/cidades selecionados com botão de remover
+- Opção "Brasil inteiro" como toggle rápido
 
-Isso faz com que **todas** as rotas em `MARKETING_STRATEGY_REQUIRED` e `SALES_PLAN_REQUIRED` continuem bloqueadas até o cliente clicar "Aprovar" no GPS.
-
-#### 2. Unificar os dois gates em um só
-
-**`src/contexts/FeatureGateContext.tsx`** — Como o GPS do Negócio unificou vendas + marketing, substituir os dois gates separados (`no_sales_plan` + `no_marketing_strategy`) por um único gate `no_gps_approved`. Todas as rotas que antes exigiam `salesPlanCompleted` OU `hasActiveStrategy` passam a exigir apenas `hasApprovedGPS` (que é a aprovação do GPS unificado).
-
-Rotas bloqueadas sem GPS aprovado:
-- `/cliente/crm`, `/cliente/chat`, `/cliente/agentes-ia`, `/cliente/scripts`
-- `/cliente/disparos`, `/cliente/dashboard`
-- `/cliente/conteudos`, `/cliente/redes-sociais`, `/cliente/sites`, `/cliente/trafego-pago`
-
-#### 3. Overlay atualizado
-
-**`src/components/FeatureGateOverlay.tsx`** — Substituir as duas entradas (`no_sales_plan`, `no_marketing_strategy`) por uma única `no_gps_approved` com mensagem clara: "Complete e aprove o GPS do Negócio para desbloquear esta ferramenta."
-
-#### 4. Animação de "Missão Cumprida" ao aprovar
-
-**`src/pages/cliente/ClienteGPSNegocio.tsx`** — Após `approveStrategy.mutateAsync` ter sucesso, exibir um Dialog/overlay animado com:
-- Ícone de troféu/foguete animado (scale-in + confetti via CSS)
-- Título: "GPS Aprovado! 🎯"
-- Subtítulo: "Todas as ferramentas da plataforma foram desbloqueadas!"
-- Grid com ícones das ferramentas liberadas (CRM, Chat, Conteúdos, Sites, etc.) aparecendo em sequência com `staggerChildren`
-- Botão "Explorar ferramentas" que fecha o modal
-
-**`src/pages/cliente/ClientePlanoMarketingStrategy.tsx`** — Na `StrategyDashboard`, quando `status !== "approved"`, o botão "Aprovar" fica proeminente. Quando `status === "approved"`, o card "Próximos Passos" já aparece (isso já existe).
-
-#### 5. Sidebar badge atualizado
-
-**`src/components/ClienteSidebar.tsx`** — Substituir referências a `no_sales_plan` / `no_marketing_strategy` por `no_gps_approved`.
+O campo `regiao` do `TrafficWizardData` mudará de `string` para `string` (mantém compatibilidade — os estados/cidades selecionados serão concatenados como string separada por vírgula para a Edge Function).
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/useMarketingStrategy.ts` | Verificar `status === "approved"` no `useHasActiveStrategy` |
-| `src/contexts/FeatureGateContext.tsx` | Unificar gates em `no_gps_approved`, remover `salesPlanCompleted` separado |
-| `src/components/FeatureGateOverlay.tsx` | Substituir 2 entries por `no_gps_approved` |
-| `src/components/ClienteSidebar.tsx` | Atualizar label do badge |
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | Adicionar animação "Missão Cumprida" após aprovação |
+| `supabase/config.toml` | `verify_jwt = false` para `generate-traffic-strategy` |
+| `src/components/traffic/BrazilMapSelector.tsx` | **Novo** — Componente SVG do mapa do Brasil com estados clicáveis + campo de cidades + chips |
+| `src/pages/cliente/ClienteTrafegoPagoWizardStep.tsx` | Substituir o Input de região pelo `BrazilMapSelector` |
 
-### Resultado
+### Detalhes do mapa
 
-- Ferramentas ficam bloqueadas com blur até o GPS ser **aprovado** (não apenas gerado)
-- Mensagem de bloqueio é clara e direciona ao GPS
-- Ao aprovar, animação celebratória mostra que as ferramentas foram liberadas
-- Sistema de gates simplificado com um único check
+O componente `BrazilMapSelector` será um SVG inline com paths para cada estado brasileiro. Cada path terá `onClick` para toggle de seleção, `fill` dinâmico (cinza quando não selecionado, cor primária quando selecionado), e tooltip com nome do estado. Abaixo do mapa, um Input com autocomplete para cidades e badges removíveis mostrando a seleção atual.
 
