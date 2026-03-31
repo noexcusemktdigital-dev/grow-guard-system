@@ -26,7 +26,7 @@ const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
 type GeneratingStep = "marketing" | "comercial";
 
-function GPSWelcome({ onStart }: { onStart: () => void }) {
+function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="text-center max-w-2xl mx-auto space-y-4">
