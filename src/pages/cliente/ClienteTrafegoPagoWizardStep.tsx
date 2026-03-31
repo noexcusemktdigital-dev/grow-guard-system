@@ -177,10 +177,9 @@ export function ClienteTrafegoPagoWizardStep({
       return (
         <div className="space-y-3">
           <p className="text-sm font-medium">Em qual região deseja anunciar?</p>
-          <Input
-            placeholder="Ex: São Paulo, Brasil inteiro, Região Sul..."
+          <BrazilMapSelector
             value={wizardData.regiao}
-            onChange={(e) => setWizardData((p) => ({ ...p, regiao: e.target.value }))}
+            onChange={(v) => setWizardData((p) => ({ ...p, regiao: v }))}
           />
         </div>
       );
