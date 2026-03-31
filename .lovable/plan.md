@@ -1,59 +1,38 @@
 
 
-## Plano — Créditos Trial só contam após aprovação do GPS
+## Plano — Adicionar 150 créditos aos usuários trial + corrigir erro runtime
 
-### Problema
+### 1. Adicionar 150 créditos a todos os usuários trial
 
-Usuários trial começam com 500 créditos, mas o fluxo do GPS consome ~110 créditos automaticamente (50 na aprovação + 60 nos 3 scripts gerados). O usuário quer que trial mantenha 500 créditos intactos até o GPS ser aprovado — ou seja, o GPS inteiro é gratuito para trial.
+Executar uma query SQL que identifica todas as organizações com subscription `status = 'trial'` e incrementa o saldo da `credit_wallets` em 150. Também registrar a transação na `credit_transactions`.
 
-### Solução
+```sql
+-- Incrementar 150 créditos nas wallets de orgs trial
+UPDATE credit_wallets cw
+SET balance = balance + 150, updated_at = now()
+FROM subscriptions s
+WHERE s.organization_id = cw.organization_id
+  AND s.status = 'trial';
 
-Adicionar verificação de **trial + GPS** em todos os pontos de débito envolvidos no fluxo do GPS. Se o plano é trial, essas operações não cobram créditos.
+-- Registrar transação
+INSERT INTO credit_transactions (organization_id, type, amount, balance_after, description, metadata)
+SELECT cw.organization_id, 'purchase', 150, cw.balance,
+  'Compensação trial — créditos pré-GPS', '{"source": "trial_compensation"}'::jsonb
+FROM credit_wallets cw
+JOIN subscriptions s ON s.organization_id = cw.organization_id
+WHERE s.status = 'trial';
+```
 
-### Mudanças
+### 2. Corrigir erro "useFeatureGate must be inside FeatureGateProvider"
+
+O `ClienteSidebar` (componente exportado) renderiza `ClienteSidebarContent` que usa `useFeatureGate`, mas o `ClienteSidebar` pode ser montado fora do `FeatureGateProvider` em algum contexto. A correção é envolver o conteúdo do `ClienteSidebar` com `FeatureGateProvider` internamente, ou adicionar um fallback no hook para não lançar erro quando fora do provider.
+
+**Correção**: No `useFeatureGate`, retornar valores default em vez de lançar erro quando fora do provider.
+
+### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/useMarketingStrategy.ts` | No `useApproveStrategy`, pular `debit_credits` se subscription é trial |
-| `supabase/functions/generate-strategy/index.ts` | Pular check de créditos se subscription é trial |
-| `supabase/functions/generate-script/index.ts` | Pular check e debit se subscription é trial E source é GPS (auto-geração) |
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | Passar flag `from_gps: true` nas chamadas de `generate-script` para distinguir scripts auto-gerados |
-
-### Lógica no Edge Function
-
-```typescript
-// Verificar se é trial
-const { data: sub } = await adminClient
-  .from("subscriptions")
-  .select("status")
-  .eq("organization_id", organization_id)
-  .maybeSingle();
-const isTrial = sub?.status === "trial";
-
-// Pular check/debit de créditos se trial
-if (!isTrial) {
-  // check balance + debit normalmente
-}
-```
-
-### Frontend (useApproveStrategy)
-
-```typescript
-// Verificar se é trial antes de debitar
-const { data: sub } = await supabase
-  .from("subscriptions")
-  .select("status")
-  .eq("organization_id", orgId)
-  .maybeSingle();
-
-if (sub?.status !== "trial") {
-  // debit 50 credits
-}
-```
-
-### Resultado
-
-- Trial: GPS inteiro (geração + aprovação + scripts automáticos) = 0 créditos. Saldo permanece 500.
-- Planos pagos: Comportamento mantido — débito normal.
-- Após GPS aprovado, qualquer outra ação (conteúdos, sites, tráfego) debita normalmente, inclusive para trial.
+| SQL via insert tool | Adicionar 150 créditos + transação para todas as orgs trial |
+| `src/contexts/FeatureGateContext.tsx` | Retornar defaults em vez de throw quando fora do provider |
 
