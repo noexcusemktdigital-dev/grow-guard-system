@@ -200,8 +200,9 @@ function App() {
                   <Route path="agenda" element={<ClienteAgenda />} />
                   <Route path="notificacoes" element={<ClienteNotificacoes />} />
                   <Route path="gamificacao" element={<ClienteGamificacao />} />
-                  <Route path="plano-vendas" element={<ClientePlanoVendas />} />
+                  <Route path="plano-vendas" element={<Navigate to="/cliente/gps-negocio" replace />} />
                   <Route path="chat" element={<ClienteChat />} />
+                  <Route path="gps-negocio" element={<ClienteGPSNegocio />} />
                   <Route path="crm" element={<ClienteCRM />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
                   <Route path="agentes-ia" element={<ClienteAgentesIA />} />
