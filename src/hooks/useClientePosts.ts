@@ -126,7 +126,7 @@ export function useGeneratePost() {
             print_format: payload.print_format,
           },
         });
-        if (resp.error) throw new Error(resp.error.message || "Erro ao gerar arte");
+        if (resp.error) throw await extractEdgeFunctionError(resp.error);
         if (resp.data?.error) throw new Error(resp.data.error);
         result_url = resp.data?.url;
       } else {
