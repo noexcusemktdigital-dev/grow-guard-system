@@ -7,7 +7,7 @@ import {
   FileText, Palette, Monitor, Zap, PenTool,
   CheckSquare, XSquare, MessageSquare,
   Trophy, Shield, Flame, Heart, ThumbsUp, ThumbsDown,
-  Calendar,
+  Calendar, Briefcase, AlertTriangle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,12 +66,21 @@ function TabResumo({ result }: { result: StrategyResult }) {
 
   const scoreGeral = result.diagnostico?.score_geral ?? 0;
 
+  const dc = result.diagnostico_comercial;
+  const scoreComercial = dc?.score_comercial ?? 0;
+  const radarComercial = dc?.radar_comercial;
+  const radarComercialData = radarComercial ? Object.entries(radarComercial).map(([key, val]) => ({
+    subject: key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+    value: val as number,
+  })) : [];
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Card className="col-span-2 lg:col-span-1 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4 flex flex-col items-center justify-center gap-1 relative">
-            <ScoreRing score={scoreGeral} label="Score Geral" />
+            <ScoreRing score={scoreGeral} label="Marketing" />
+            {dc && <ScoreRing score={scoreComercial} label="Comercial" size={80} />}
           </CardContent>
         </Card>
         {[
@@ -97,9 +106,9 @@ function TabResumo({ result }: { result: StrategyResult }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {radarData.length > 0 && (
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Radar de Maturidade (6 dimensões) <InfoTip text="Avalia 6 áreas-chave do seu marketing. Nota de 0 a 10 em cada dimensão. Quanto mais preenchido, mais madura é sua estratégia." /></CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Marketing (6D) <InfoTip text="Avalia 6 áreas-chave do seu marketing. Nota de 0 a 10 em cada dimensão." /></CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={260}>
                 <RadarChart data={radarData}>
                   <PolarGrid stroke="hsl(var(--border))" />
                   <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
@@ -111,11 +120,51 @@ function TabResumo({ result }: { result: StrategyResult }) {
           </Card>
         )}
 
+        {radarComercialData.length > 0 ? (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Comercial (5D) <InfoTip text="Avalia 5 áreas-chave do seu processo comercial. Nota de 0 a 10." /></CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={260}>
+                <RadarChart data={radarComercialData}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 10]} tick={{ fontSize: 9 }} />
+                  <Radar name="Score" dataKey="value" stroke={CHART_COLORS[1]} fill={CHART_COLORS[1]} fillOpacity={0.25} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Diagnóstico <InfoTip text="Análise qualitativa do estado atual do seu marketing." /></CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">{result.diagnostico?.analise}</p>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { label: "Pontos Fortes", items: result.diagnostico?.pontos_fortes, icon: Trophy, color: "text-green-600" },
+                  { label: "Oportunidades", items: result.diagnostico?.oportunidades, icon: Lightbulb, color: "text-blue-600" },
+                  { label: "Riscos", items: result.diagnostico?.riscos, icon: Shield, color: "text-orange-600" },
+                ].map((section, i) => section.items?.length > 0 && (
+                  <div key={i}>
+                    <p className={`text-xs font-semibold ${section.color} mb-1 flex items-center gap-1`}>
+                      <section.icon className="w-3 h-3" /> {section.label}
+                    </p>
+                    <TagList items={section.items} variant="outline" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Diagnóstico marketing (shown below radars when comercial radar is present) */}
+      {radarComercialData.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Diagnóstico <InfoTip text="Análise qualitativa do estado atual do seu marketing, identificando pontos fortes, oportunidades e riscos." /></CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Diagnóstico de Marketing</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">{result.diagnostico?.analise}</p>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
                 { label: "Pontos Fortes", items: result.diagnostico?.pontos_fortes, icon: Trophy, color: "text-green-600" },
                 { label: "Oportunidades", items: result.diagnostico?.oportunidades, icon: Lightbulb, color: "text-blue-600" },
@@ -131,7 +180,7 @@ function TabResumo({ result }: { result: StrategyResult }) {
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {result.resumo_executivo && (
         <Card className="bg-muted/30">
@@ -350,6 +399,237 @@ function TabProjecao({ result }: { result: StrategyResult }) {
   );
 }
 
+/* ═══════════════ TAB: COMERCIAL ═══════════════ */
+function TabComercial({ result }: { result: StrategyResult }) {
+  const dc = result.diagnostico_comercial;
+  if (!dc) return <p className="text-sm text-muted-foreground p-4">Diagnóstico comercial não disponível. Regenere a estratégia com as respostas comerciais.</p>;
+
+  const radarComercial = dc.radar_comercial;
+  const radarData = radarComercial ? Object.entries(radarComercial).map(([key, val]) => ({
+    subject: key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+    value: val as number,
+  })) : [];
+
+  const gaps = dc.gaps || [];
+  const insights = dc.insights || [];
+  const estrategias = dc.estrategias_vendas || [];
+  const planoAcao = dc.plano_acao || [];
+  const funilReverso = dc.funil_reverso;
+
+  return (
+    <div className="space-y-4">
+      {/* Score + Radar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="p-6 flex flex-col items-center gap-3">
+            <ScoreRing score={dc.score_comercial ?? 0} label="Score Comercial" size={130} />
+            {dc.nivel && <Badge variant="outline" className="text-sm capitalize">{dc.nivel}</Badge>}
+            {dc.analise && <p className="text-sm text-muted-foreground text-center leading-relaxed mt-2">{dc.analise}</p>}
+          </CardContent>
+        </Card>
+
+        {radarData.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Comercial (5 eixos) <InfoTip text="Avalia processo, gestão de leads, ferramentas, canais e performance comercial." /></CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 10]} tick={{ fontSize: 9 }} />
+                  <Radar name="Score" dataKey="value" stroke={CHART_COLORS[1]} fill={CHART_COLORS[1]} fillOpacity={0.25} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Funil Reverso */}
+      {funilReverso && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" /> Funil Reverso <InfoTip text="Partindo da meta de receita, calcula quantas vendas, propostas, reuniões e leads são necessários." /></CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center gap-2 py-4">
+              {Object.entries(funilReverso).map(([key, val], i, arr) => (
+                <motion.div key={key} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.15 }}
+                  className="text-center rounded-xl py-3 px-6 text-sm font-medium"
+                  style={{ width: `${100 - i * (60 / arr.length)}%`, background: `hsl(var(--primary) / ${0.1 + i * 0.08})`, border: `1px solid hsl(var(--primary) / ${0.2 + i * 0.1})` }}>
+                  <span className="font-bold text-lg">{typeof val === "number" ? val.toLocaleString("pt-BR") : val}</span>
+                  <span className="text-xs text-muted-foreground ml-2 capitalize">{key.replace(/_/g, " ")}</span>
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Gaps */}
+      {gaps.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500" /> Gaps Identificados</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {gaps.map((gap: any, i: number) => (
+                <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                  <AlertTriangle className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
+                  <p className="text-xs">{typeof gap === "string" ? gap : gap.descricao || gap.titulo || JSON.stringify(gap)}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Insights */}
+      {insights.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Lightbulb className="w-4 h-4 text-primary" /> Insights Comerciais</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {insights.map((insight: any, i: number) => {
+                const text = typeof insight === "string" ? insight : insight.descricao || insight.titulo || JSON.stringify(insight);
+                const tipo = typeof insight === "object" ? (insight.tipo || insight.type || "info") : "info";
+                const colorMap: Record<string, string> = { sucesso: "border-green-500/20 bg-green-500/5", alerta: "border-orange-500/20 bg-orange-500/5", oportunidade: "border-blue-500/20 bg-blue-500/5" };
+                return (
+                  <div key={i} className={`p-3 rounded-lg border ${colorMap[tipo] || "border-muted bg-muted/30"}`}>
+                    <p className="text-xs">{text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estratégias de Vendas */}
+      {estrategias.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Estratégias de Vendas</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {estrategias.map((est: any, i: number) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
+                  className="p-4 rounded-lg bg-muted/30 border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{i + 1}</div>
+                    <p className="font-semibold text-sm">{est.titulo || est.nome || `Estratégia ${i + 1}`}</p>
+                  </div>
+                  {est.descricao && <p className="text-xs text-muted-foreground mb-2">{est.descricao}</p>}
+                  {est.passos?.length > 0 && (
+                    <div className="space-y-1 ml-8">
+                      {est.passos.map((p: any, j: number) => (
+                        <p key={j} className="text-xs flex items-start gap-1.5">
+                          <span className="text-primary font-bold">{j + 1}.</span>
+                          {typeof p === "string" ? p : p.acao || p.titulo || JSON.stringify(p)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {est.resultado_esperado && (
+                    <div className="mt-2 p-2 rounded bg-green-500/5 border border-green-500/20">
+                      <p className="text-xs text-green-700">✓ {est.resultado_esperado}</p>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Plano de Ação Comercial (30/60/90) */}
+      {planoAcao.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-muted-foreground">Plano de Ação Comercial</p>
+          {planoAcao.map((fase: any, i: number) => (
+            <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      {fase.fase || fase.mes || `${(i + 1) * 30}d`}
+                    </div>
+                    {fase.titulo || `Fase ${i + 1}`}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {fase.acoes?.length > 0 ? (
+                    <div className="space-y-2">
+                      {fase.acoes.map((acao: any, j: number) => (
+                        <div key={j} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+                          <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{j + 1}</span>
+                          <span className="text-xs">{typeof acao === "string" ? acao : acao.acao || acao.titulo || JSON.stringify(acao)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : fase.descricao ? (
+                    <p className="text-xs text-muted-foreground">{fase.descricao}</p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Projeções de Leads e Receita */}
+      {(dc.projecao_leads?.length > 0 || dc.projecao_receita?.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {dc.projecao_leads?.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Leads</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={dc.projecao_leads.map((p: any) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
+                    <defs>
+                      <linearGradient id="leadsComGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted))" fillOpacity={0.3} name="Atual" strokeWidth={1.5} strokeDasharray="5 5" />
+                    <Area type="monotone" dataKey="estrategia" stroke={CHART_COLORS[1]} fill="url(#leadsComGrad)" name="Com Estratégia" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+          {dc.projecao_receita?.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Receita</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={dc.projecao_receita.map((p: any) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
+                    <defs>
+                      <linearGradient id="receitaComGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: number) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />
+                    <Legend />
+                    <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted))" fillOpacity={0.3} name="Atual" strokeWidth={1.5} strokeDasharray="5 5" />
+                    <Area type="monotone" dataKey="estrategia" stroke="hsl(var(--primary))" fill="url(#receitaComGrad)" name="Com Estratégia" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════ TAB: EXECUÇÃO ═══════════════ */
 function TabExecucao({ result }: { result: StrategyResult }) {
   const plano = result.plano_execucao || [];
@@ -379,6 +659,7 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
 
   const daysSinceCreation = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
   const isStale = daysSinceCreation >= 30;
+  const hasComercial = !!result.diagnostico_comercial;
 
   return (
     <div className="space-y-4">
@@ -386,7 +667,10 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
         <CardContent className="p-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
             <div className="flex items-center gap-4">
-              <div className="relative"><ScoreRing score={result.diagnostico?.score_geral ?? 0} label="" size={80} /></div>
+              <div className="relative flex gap-2">
+                <ScoreRing score={result.diagnostico?.score_geral ?? 0} label="Marketing" size={70} />
+                {hasComercial && <ScoreRing score={result.diagnostico_comercial?.score_comercial ?? 0} label="Comercial" size={70} />}
+              </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={status === "approved" ? "default" : "secondary"} className="gap-1"><CheckCircle2 className="w-3 h-3" /> {status === "approved" ? "Aprovada" : "Pendente"}</Badge>
@@ -435,6 +719,7 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
           <TabsTrigger value="aquisicao" className="text-xs gap-1"><TrendingUp className="w-3.5 h-3.5" /> Aquisição</TabsTrigger>
           <TabsTrigger value="conteudo" className="text-xs gap-1"><Lightbulb className="w-3.5 h-3.5" /> Conteúdo</TabsTrigger>
           <TabsTrigger value="projecao" className="text-xs gap-1"><DollarSign className="w-3.5 h-3.5" /> Projeção</TabsTrigger>
+          {hasComercial && <TabsTrigger value="comercial" className="text-xs gap-1"><Briefcase className="w-3.5 h-3.5" /> Comercial</TabsTrigger>}
           <TabsTrigger value="execucao" className="text-xs gap-1"><Target className="w-3.5 h-3.5" /> Execução</TabsTrigger>
         </TabsList>
         <TabsContent value="resumo"><TabResumo result={result} /></TabsContent>
@@ -444,6 +729,7 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
         <TabsContent value="aquisicao"><TabAquisicao result={result} /></TabsContent>
         <TabsContent value="conteudo"><TabConteudo result={result} /></TabsContent>
         <TabsContent value="projecao"><TabProjecao result={result} /></TabsContent>
+        {hasComercial && <TabsContent value="comercial"><TabComercial result={result} /></TabsContent>}
         <TabsContent value="execucao"><TabExecucao result={result} /></TabsContent>
       </Tabs>
     </div>
