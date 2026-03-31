@@ -13,11 +13,18 @@ import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
+import { useGoalProgress } from "@/hooks/useGoalProgress";
+import { useCrmTeams } from "@/hooks/useCrmTeams";
+import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { toast } from "@/hooks/use-toast";
+import { playSound } from "@/lib/sounds";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import { AGENTS, GPS_RAFAEL_STEPS, GPS_SOFIA_STEPS } from "@/components/cliente/briefingAgents";
 import { StrategyDashboard, StrategyHistoryItem } from "./ClientePlanoMarketingStrategy";
+import { ClientePlanoVendasMetaDialog, type MetaFormState } from "./ClientePlanoVendasMetaDialog";
+import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
