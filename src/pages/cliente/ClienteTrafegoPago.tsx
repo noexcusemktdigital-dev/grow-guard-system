@@ -22,7 +22,7 @@ import { useClienteContent } from "@/hooks/useClienteContent";
 import { usePostHistory } from "@/hooks/useClientePosts";
 import { useClienteSitesDB } from "@/hooks/useClienteSitesDB";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
-import { useClienteCampaignsDB } from "@/hooks/useClienteCampaignsDB";
+import { useClienteCampaignsDB, useCreateClientCampaign } from "@/hooks/useClienteCampaignsDB";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
@@ -46,6 +46,7 @@ export default function ClienteTrafegoPago() {
   const { data: campaigns, isLoading: loadingCampaigns } = useClienteCampaignsDB();
   const generateMutation = useGenerateTrafficStrategy();
   const approveMutation = useApproveTrafficStrategy();
+  const createCampaignMutation = useCreateClientCampaign();
 
   const [activeTab, setActiveTab] = useState("estrategia");
   const [step, setStep] = useState(0);
@@ -113,7 +114,42 @@ export default function ClienteTrafegoPago() {
 
   const handleApprove = (id: string) => {
     approveMutation.mutate(id, {
-      onSuccess: () => toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados." }),
+      onSuccess: async () => {
+        toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados. Criando campanhas..." });
+        
+        // Create one campaign per platform
+        try {
+          for (const p of platforms) {
+            const platformKey = String(p.platform);
+            await createCampaignMutation.mutateAsync({
+              name: `${platformKey} Ads — ${String(p.objective || "Campanha")}`,
+              type: platformKey,
+              content: {
+                platform: platformKey,
+                objective: p.objective,
+                audience: p.audience,
+                budget: p.budget_suggestion,
+                creative_formats: p.creative_formats,
+                kpis: p.kpis,
+                ad_copies: p.ad_copies,
+                keywords: p.keywords,
+                interests: p.interests,
+                campaign_structure: p.campaign_structure,
+                optimization_actions: p.optimization_actions,
+                tips: p.tips,
+                strategy_id: id,
+                auto_created: true,
+              },
+            });
+          }
+          toast({ title: "Campanhas criadas!", description: `${platforms.length} campanha(s) adicionada(s) ao repositório.` });
+        } catch {
+          // Campaigns creation is non-blocking
+        }
+        
+        // Redirect to campaigns tab
+        setActiveTab("campanhas");
+      },
       onError: (err: unknown) => {
         if (isInsufficientCreditsError(err)) {
           setShowCreditsDialog(true);
@@ -293,9 +329,16 @@ export default function ClienteTrafegoPago() {
             <div className="grid gap-3 md:grid-cols-2">
               {filteredCampaigns.map((c) => {
                 const content = (c.content || {}) as Record<string, unknown>;
+                const kpis = (content.kpis || {}) as Record<string, unknown>;
+                const platformBorderTop: Record<string, string> = {
+                  Google: "border-t-emerald-500",
+                  Meta: "border-t-blue-500",
+                  TikTok: "border-t-purple-500",
+                  LinkedIn: "border-t-sky-500",
+                };
                 return (
-                  <Card key={c.id} className={`border-l-4 ${platformColors[c.type]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
-                    <CardContent className="py-4 space-y-2">
+                  <Card key={c.id} className={`border-t-4 ${platformBorderTop[c.type] || ""}`}>
+                    <CardContent className="py-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className={`p-1.5 rounded-lg ${platformColors[c.type] || "bg-muted"}`}>
@@ -312,16 +355,34 @@ export default function ClienteTrafegoPago() {
                           {campaignStatusLabels[c.status] || c.status}
                         </Badge>
                       </div>
+
+                      {/* Objective + Audience */}
                       {content.objective && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Objetivo: {String(content.objective)}
+                        <div className="p-2 rounded-lg bg-muted/30 border">
+                          <p className="text-[10px] font-medium text-muted-foreground">Objetivo: {String(content.objective)}</p>
+                        </div>
+                      )}
+                      {content.audience && (
+                        <p className="text-[10px] text-muted-foreground line-clamp-2">
+                          <span className="font-medium">Público:</span> {String(content.audience)}
                         </p>
                       )}
-                      {content.budget && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Orçamento: {String(content.budget)}
-                        </p>
-                      )}
+
+                      {/* Budget + KPIs row */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {content.budget && (
+                          <div className="p-2 rounded-lg bg-muted/20 border text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">Orçamento</p>
+                            <p className="text-xs font-bold">{String(content.budget)}</p>
+                          </div>
+                        )}
+                        {kpis.estimated_cpl && (
+                          <div className="p-2 rounded-lg bg-muted/20 border text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">CPL Estimado</p>
+                            <p className="text-xs font-bold">{String(kpis.estimated_cpl)}</p>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
