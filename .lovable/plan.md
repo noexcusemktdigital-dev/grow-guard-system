@@ -1,39 +1,59 @@
 
 
-## Plano — Substituir mapa SVG por autocomplete de localidades
+## Plano — Créditos Trial só contam após aprovação do GPS
 
-### Abordagem
+### Problema
 
-A melhor forma é usar uma **base de dados local (hardcoded)** com todos os 26 estados + DF e as ~100 principais cidades do Brasil, embutida no próprio componente. Não precisa de tabela no banco — a lista é estática e pequena o suficiente para ficar no frontend (~5KB).
+Usuários trial começam com 500 créditos, mas o fluxo do GPS consome ~110 créditos automaticamente (50 na aprovação + 60 nos 3 scripts gerados). O usuário quer que trial mantenha 500 créditos intactos até o GPS ser aprovado — ou seja, o GPS inteiro é gratuito para trial.
 
-O usuário digita no campo e vê sugestões filtradas em tempo real (estados e cidades), podendo selecionar múltiplos itens que aparecem como chips removíveis.
+### Solução
 
-### Componente `BrazilLocationAutocomplete`
+Adicionar verificação de **trial + GPS** em todos os pontos de débito envolvidos no fluxo do GPS. Se o plano é trial, essas operações não cobram créditos.
 
-Substituirá o `BrazilMapSelector`. Estrutura:
-
-- Toggle "Brasil inteiro" (mantém)
-- Input de busca com dropdown de sugestões filtradas
-- Sugestões agrupadas: **Estados** e **Cidades** (com UF ao lado, ex: "Campinas - SP")
-- Chips dos itens selecionados com X para remover
-- Base de dados local: array de `{ label: "São Paulo", type: "estado", uf: "SP" }` e `{ label: "Campinas", type: "cidade", uf: "SP" }` com ~150 cidades principais
-
-O valor continua sendo uma string separada por vírgula (compatível com a Edge Function).
-
-### Arquivos a modificar
+### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/traffic/BrazilLocationAutocomplete.tsx` | **Novo** — Autocomplete com base local de estados + cidades |
-| `src/components/traffic/BrazilMapSelector.tsx` | Remover (ou manter para uso futuro) |
-| `src/pages/cliente/ClienteTrafegoPagoWizardStep.tsx` | Trocar import de `BrazilMapSelector` por `BrazilLocationAutocomplete` |
+| `src/hooks/useMarketingStrategy.ts` | No `useApproveStrategy`, pular `debit_credits` se subscription é trial |
+| `supabase/functions/generate-strategy/index.ts` | Pular check de créditos se subscription é trial |
+| `supabase/functions/generate-script/index.ts` | Pular check e debit se subscription é trial E source é GPS (auto-geração) |
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | Passar flag `from_gps: true` nas chamadas de `generate-script` para distinguir scripts auto-gerados |
 
-### Detalhes
+### Lógica no Edge Function
 
-- A base local terá os 27 UFs + ~150 cidades (capitais + cidades com >300k habitantes)
-- Filtro por `includes` case-insensitive no label
-- Dropdown com max 8 resultados, agrupados por tipo (estado primeiro, depois cidade)
-- Ao selecionar um estado (ex: "SP"), adiciona "São Paulo (estado)" ao valor
-- Ao selecionar uma cidade (ex: "Campinas - SP"), adiciona "Campinas - SP"
-- Digitação livre também permitida (Enter adiciona texto customizado caso não encontre na base)
+```typescript
+// Verificar se é trial
+const { data: sub } = await adminClient
+  .from("subscriptions")
+  .select("status")
+  .eq("organization_id", organization_id)
+  .maybeSingle();
+const isTrial = sub?.status === "trial";
+
+// Pular check/debit de créditos se trial
+if (!isTrial) {
+  // check balance + debit normalmente
+}
+```
+
+### Frontend (useApproveStrategy)
+
+```typescript
+// Verificar se é trial antes de debitar
+const { data: sub } = await supabase
+  .from("subscriptions")
+  .select("status")
+  .eq("organization_id", orgId)
+  .maybeSingle();
+
+if (sub?.status !== "trial") {
+  // debit 50 credits
+}
+```
+
+### Resultado
+
+- Trial: GPS inteiro (geração + aprovação + scripts automáticos) = 0 créditos. Saldo permanece 500.
+- Planos pagos: Comportamento mantido — débito normal.
+- Após GPS aprovado, qualquer outra ação (conteúdos, sites, tráfego) debita normalmente, inclusive para trial.
 
