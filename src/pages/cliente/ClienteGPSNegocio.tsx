@@ -371,7 +371,8 @@ export default function ClienteGPSNegocio() {
     if (!activeStrategy?.id) return;
     try {
       await approveStrategy.mutateAsync(activeStrategy.id);
-      toast({ title: "GPS aprovado!", description: "50 créditos foram consumidos. Todas as ferramentas foram desbloqueadas!" });
+      playSound("success");
+      setShowUnlockCelebration(true);
     } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
