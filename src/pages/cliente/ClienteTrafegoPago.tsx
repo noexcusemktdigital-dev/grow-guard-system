@@ -46,6 +46,7 @@ export default function ClienteTrafegoPago() {
   const { data: campaigns, isLoading: loadingCampaigns } = useClienteCampaignsDB();
   const generateMutation = useGenerateTrafficStrategy();
   const approveMutation = useApproveTrafficStrategy();
+  const createCampaignMutation = useCreateClientCampaign();
 
   const [activeTab, setActiveTab] = useState("estrategia");
   const [step, setStep] = useState(0);
