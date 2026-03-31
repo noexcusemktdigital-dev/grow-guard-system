@@ -762,6 +762,11 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
               <Briefcase className="w-4 h-4" /> Comercial
             </TabsTrigger>
           )}
+          {metasProps && (
+            <TabsTrigger value="metas" className="flex-1 gap-2 text-sm py-2.5">
+              <Target className="w-4 h-4" /> Metas
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ═══ MARKETING SUB-TABS ═══ */}
@@ -807,6 +812,14 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
               <TabsContent value="com-projecoes"><ComProjecoes dc={result.diagnostico_comercial} /></TabsContent>
               <TabsContent value="com-plano"><ComPlanoAcao dc={result.diagnostico_comercial} /></TabsContent>
             </Tabs>
+          </TabsContent>
+        )}
+
+        {/* ═══ METAS TAB ═══ */}
+        {metasProps && (
+          <TabsContent value="metas" className="mt-4 space-y-6">
+            <ClientePlanoVendasMetasLazy {...metasProps} />
+            {metasDialog}
           </TabsContent>
         )}
       </Tabs>
