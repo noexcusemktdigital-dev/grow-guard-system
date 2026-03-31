@@ -339,7 +339,19 @@ export default function ClienteGPSNegocio() {
                 </motion.div>
                 <div className="text-center">
                   <p className="font-semibold">Gerando seu GPS do Negócio...</p>
-                  <p className="text-sm text-muted-foreground">Estamos analisando seu comercial e marketing, criando diagnóstico, projeções, estratégias e plano de ação. Isso pode levar até 60 segundos.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {generatingStep === "marketing" 
+                      ? "Etapa 1/2 — Analisando marketing, criando ICP, estratégias e plano de conteúdo..."
+                      : "Etapa 2/2 — Gerando diagnóstico comercial, projeções de receita e estratégias de vendas..."
+                    }
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <div className={`w-2 h-2 rounded-full ${generatingStep === "marketing" ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                    <span className="text-xs text-muted-foreground">Marketing</span>
+                    <div className="w-6 h-px bg-muted-foreground/30" />
+                    <div className={`w-2 h-2 rounded-full ${generatingStep === "comercial" ? "bg-amber-500 animate-pulse" : "bg-muted-foreground/30"}`} />
+                    <span className="text-xs text-muted-foreground">Comercial</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
