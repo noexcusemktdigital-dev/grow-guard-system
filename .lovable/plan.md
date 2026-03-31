@@ -1,49 +1,65 @@
 
 
-## Plano — Termômetro Comercial detalhado + Metas no GPS do Negócio
+## Reformulação — Tráfego Pago focado em Estratégias + Tutoriais + Repositório
 
-### 1. Score Comercial com Termômetro detalhado
+### Visão geral
 
-**Problema:** O score comercial é apenas uma barra de progresso simples. O usuário quer um visual tipo "termômetro" igual ao `DiagnosticoTermometro` existente, mostrando fases de 0 a 100.
+Remover a aba "Métricas" (que depende de integração com Google/Meta) e reestruturar o módulo em 3 abas: **Estratégia** (wizard + resultado), **Campanhas** (repositório salvo) e **Histórico**. Cada plataforma ganha um botão "Criar Campanha" que abre um tutorial detalhado e salva a campanha no repositório.
 
-**Solução:** Substituir a barra simples no `ComScoreRadar` por um termômetro comercial com 4 fases:
+### Estrutura de abas
 
-| Fase | Range | Cor |
-|------|-------|-----|
-| Crítico | 0-25 | Vermelho |
-| Básico | 26-50 | Laranja |
-| Intermediário | 51-75 | Amarelo |
-| Avançado | 76-100 | Verde |
+```text
+┌──────────────────────────────────────────────┐
+│  [Estratégia]  [Campanhas]  [Histórico]      │
+├──────────────────────────────────────────────┤
+│  Estratégia: wizard 8 etapas → resultado     │
+│  por plataforma com CTA "Criar Campanha"     │
+├──────────────────────────────────────────────┤
+│  Campanhas: repositório de campanhas salvas  │
+│  (cards por plataforma, status, data)        │
+├──────────────────────────────────────────────┤
+│  Histórico: estratégias anteriores           │
+└──────────────────────────────────────────────┘
+```
 
-O termômetro terá gradiente horizontal (vermelho → verde), ponteiro animado na posição do score, marcadores de fase abaixo, e a fase atual destacada — similar ao componente `DiagnosticoTermometro` já existente no projeto.
+### Mudanças no resultado da estratégia
 
-### 2. Aba "Metas" no GPS do Negócio
+Cada card de plataforma ganha um botão **"Criar Campanha"** que:
+1. Abre um `Dialog` com tutorial passo-a-passo específico da plataforma
+2. O tutorial é visual com steps numerados, screenshots descritivos, e dicas
+3. Ao final do tutorial, botão **"Salvar Campanha"** persiste na tabela `client_campaigns` com `type = platform`, `content = { strategy data + tutorial }`, `status = "draft"`
 
-**Problema:** As metas estavam no antigo Plano de Vendas (`ClientePlanoVendas`). Agora que o GPS unificou tudo, o módulo de metas precisa estar dentro do GPS.
+### Tutoriais por plataforma
 
-**Solução:** Adicionar uma terceira aba principal no `StrategyDashboard`: **Marketing | Comercial | Metas**
+Cada plataforma terá um tutorial detalhado hardcoded com ~8-12 passos:
 
-A aba Metas reutilizará o componente `ClientePlanoVendasMetas` existente (que já tem todo o sistema de filtro por escopo, cards de progresso, gráficos) e o dialog `ClientePlanoVendasMetaDialog` para criar/editar metas.
+- **Google Ads**: Criar conta → Escolher objetivo → Configurar campanha → Definir público → Definir orçamento → Criar grupos de anúncios → Escrever copies → Configurar extensões → Publicar
+- **Meta Ads**: Acessar Gerenciador → Criar campanha → Escolher objetivo → Definir público (interesses, lookalike) → Definir posicionamentos → Criar criativos → Configurar pixel → Publicar
+- **TikTok Ads**: Criar conta → Escolher objetivo → Configurar público → Criar criativo (vídeo) → Definir orçamento → Publicar
+- **LinkedIn Ads**: Criar Campaign Manager → Escolher objetivo → Definir segmentação (cargo, empresa, setor) → Criar anúncio → Definir orçamento → Publicar
 
-As metas continuam usando os mesmos hooks (`useActiveGoals`, `useGoalMutations`, `useGoalProgress`) que já estão vinculados ao CRM, relatórios e dashboards. Nada muda na integração — apenas a localização na UI.
+Cada passo terá: título, descrição detalhada, dica contextual baseada nos dados da estratégia gerada (ex: "Use o público-alvo: Empresários de São Paulo que a IA sugeriu").
+
+### Aba "Campanhas" (Repositório)
+
+- Lista todas as campanhas salvas em `client_campaigns` filtradas por `type` contendo a plataforma
+- Cards com: nome da plataforma, objetivo, orçamento sugerido, data de criação, status (Rascunho/Ativa/Pausada)
+- Botão para ver detalhes (reabre o tutorial com dados da estratégia)
+- Filtro por plataforma
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClientePlanoMarketingStrategy.tsx` | (1) Refazer `ComScoreRadar` com termômetro visual de 4 fases. (2) Adicionar aba principal "Metas" que renderiza o sistema completo de metas (create/edit/filter/progress). |
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | Passar props de metas (goals, progress, mutations) para o `StrategyDashboard` |
+| `src/pages/cliente/ClienteTrafegoPago.tsx` | Remover aba "Métricas" e imports de `AdConnectionCards`, `AdMetricsDashboard`, `AdAIAnalysis`. Adicionar aba "Campanhas". Adicionar lógica de salvar campanha |
+| `src/pages/cliente/ClienteTrafegoPagoResult.tsx` | Adicionar botão "Criar Campanha" em cada card de plataforma. Adicionar Dialog com tutorial step-by-step por plataforma |
+| `src/pages/cliente/ClienteTrafegoPagoConstants.tsx` | Adicionar `PLATFORM_TUTORIALS` com passos detalhados por plataforma (Google, Meta, TikTok, LinkedIn) |
+| `src/hooks/useClienteCampaignsDB.ts` | Já existe e será reutilizado para o repositório de campanhas |
 
 ### Detalhes técnicos
 
-**Termômetro:** Reutilizar o padrão visual do `DiagnosticoTermometro` (gradiente linear + ponteiro absoluto + marcadores), adaptado com fases comerciais (Crítico/Básico/Intermediário/Avançado) em vez de Caótico/Reativo/Estruturado/Analítico.
-
-**Metas:** O `StrategyDashboard` receberá props opcionais para o sistema de metas. O `ClienteGPSNegocio` importará os hooks de goals e passará tudo. A aba "Metas" aparecerá sempre (independente de ter `diagnostico_comercial`), pois metas são relevantes desde o início.
-
-O sistema de metas já suporta:
-- Escopos: empresa, time, individual
-- Métricas: faturamento, contratos, leads, conversões, reuniões, ticket médio
-- Integração com CRM (progresso automático via `useGoalProgress`)
-- Filtro por período mensal
-- Visualização em relatórios e dashboards
+- **Tutorial Dialog**: Componente com stepper interno (step 1/N), cada step com título + descrição + dica contextual. A dica usa dados da estratégia gerada (público, orçamento, copies)
+- **Salvar campanha**: Usa `useCreateClientCampaign` existente com `content = { platform, objective, audience, budget, tutorial_completed: true, strategy_id }`
+- **Repositório**: Query `client_campaigns` com filtro `type IN ('Google','Meta','TikTok','LinkedIn')`, agrupados visualmente por plataforma
+- Remoção dos componentes `AdConnectionCards`, `AdMetricsDashboard`, `AdAIAnalysis` dos imports (os arquivos ficam para uso futuro se integração for implementada)
 
