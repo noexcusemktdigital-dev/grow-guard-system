@@ -170,6 +170,7 @@ export default function ClienteGPSNegocio() {
 
     // Merge all answers
     const allAnswers = { ...rafaelAnswers, ...sofiaAnswers };
+    setGeneratingStep("marketing");
     setPhase("generating");
 
     try {
@@ -197,14 +198,33 @@ export default function ClienteGPSNegocio() {
         }
       }
 
-      // 3. Generate strategy via AI (sends ALL answers)
-      const aiResult = await generateStrategy.mutateAsync({ answers: allAnswers, organization_id: orgId });
+      // 3. Generate strategy via AI — two sequential calls
+      // Call 1: Marketing
+      const marketingResult = await generateStrategy.mutateAsync({ 
+        answers: allAnswers, 
+        organization_id: orgId,
+        section: "marketing",
+      });
+
+      // Call 2: Comercial
+      setGeneratingStep("comercial");
+      const comercialResult = await generateStrategy.mutateAsync({ 
+        answers: allAnswers, 
+        organization_id: orgId,
+        section: "comercial",
+      });
+
+      // Merge results
+      const unifiedResult = {
+        ...(marketingResult.result || {}),
+        ...(comercialResult.result || {}),
+      };
       
       await saveStrategy.mutateAsync({
         answers: allAnswers,
-        score_percentage: aiResult.result?.diagnostico?.score_geral || 0,
+        score_percentage: (unifiedResult as any)?.diagnostico?.score_geral || 0,
         nivel: "gerado",
-        strategy_result: aiResult.result,
+        strategy_result: unifiedResult,
         status: "pending",
       });
 
