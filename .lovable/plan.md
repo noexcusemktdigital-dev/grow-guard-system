@@ -1,52 +1,69 @@
 
-Corrigir a geração do GPS sem exigir novo preenchimento.
+
+## Diagnóstico — GPS mostra só Marketing, falta Comercial
 
 ### O que encontrei
-- A função `generate-strategy` está configurada com `verify_jwt = true` em `supabase/config.toml`.
-- Ao mesmo tempo, ela já faz autenticação manual dentro do código (`Authorization` + `supabase.auth.getUser()`).
-- Esse padrão está desalinhado com o restante do projeto: funções similares já usam `verify_jwt = false` + validação manual via `getClaims(token)`.
-- O erro que você reportou (`401 Invalid JWT`) é compatível com rejeição no gateway antes da função processar a geração.
-- Há um detalhe extra: o helper `extractEdgeFunctionError` hoje prioriza `body.error`, mas o gateway pode devolver `body.message` (`Invalid JWT`), então a mensagem ao usuário fica ruim.
+
+Os logs da Edge Function confirmam que **as 3 seções foram geradas com sucesso** (marketing-core: 5346 tokens, marketing-growth: 4482 tokens, comercial: 3291 tokens). Os dados comerciais (`diagnostico_comercial`, `estrategias_vendas`, `funil_reverso`, `projecao_leads`, `projecao_receita`) **estão salvos no banco** dentro do `strategy_result`.
+
+O problema é que **o dashboard de resultado não tem abas para exibir os dados comerciais**. O componente `StrategyDashboard` em `ClientePlanoMarketingStrategy.tsx` só tem 8 abas — todas de marketing:
+
+| Aba atual | Dados |
+|-----------|-------|
+| Resumo | Score marketing, radar 6 eixos (marketing), objetivo, canal |
+| Cliente Ideal | ICP/persona |
+| Concorrência | Análise concorrencial |
+| Tom de Voz | Personalidade da marca |
+| Aquisição | Canais e funil |
+| Conteúdo | Pilares e calendário |
+| Projeção | Crescimento (marketing growth) |
+| Execução | Roadmap 3 meses |
+
+**Faltam completamente:**
+- Aba "Comercial" com radar de 5 eixos, score comercial, gaps, insights, estratégias de vendas
+- Aba "Projeção Comercial" com funil reverso, projeção de leads e receita (AreaChart)
+- O "Resumo" não integra o score comercial nem mostra a visão unificada
+
+### Sobre os erros
+
+Os logs mostram várias linhas `shutdown` — indicam que tentativas anteriores sofreram timeout. A geração mais recente (01:28-01:29) funcionou. O erro que o usuário viu foi provavelmente de uma tentativa anterior, mas o resultado parcial (só marketing visível) deu a impressão de falha.
 
 ### Plano de correção
 
-1. **Alinhar a autenticação da função `generate-strategy`**
-   - Em `supabase/config.toml`, trocar:
-     - `[functions.generate-strategy] verify_jwt = true`
-     - para `verify_jwt = false`
-   - Isso evita que o gateway bloqueie a requisição antes do código rodar.
+1. **Adicionar aba "Comercial"** ao `StrategyDashboard`
+   - Radar de 5 eixos (processo, gestão_leads, ferramentas, canais, performance)
+   - Score comercial + nível
+   - Análise textual
+   - Gaps identificados
+   - Insights com badges coloridos (success/warning/opportunity)
+   - Estratégias de vendas com passos e resultado esperado
+   - Plano de ação (3 fases: 30/60/90 dias)
 
-2. **Atualizar a validação dentro da própria função**
-   - Em `supabase/functions/generate-strategy/index.ts`:
-     - manter leitura do header `Authorization`
-     - trocar `supabase.auth.getUser()` por `auth.getClaims(token)`
-     - extrair o usuário via `claimsData.claims.sub`
-   - Seguir o mesmo padrão já usado em `whatsapp-sync-photos`, `whatsapp-sync-chats` e `generate-script`.
+2. **Adicionar aba "Projeções" (comercial)** ou unificar na aba Projeção existente
+   - Funil reverso (meta → vendas → leads → tráfego)
+   - Gráfico AreaChart de projeção de leads (atual vs com estratégia)
+   - Gráfico AreaChart de projeção de receita (atual vs com estratégia)
 
-3. **Manter o modelo de dois clientes**
-   - Continuar com:
-     - cliente em contexto do usuário para validar sessão/token
-     - cliente com service role para créditos, `sales_plans`, logs e demais operações administrativas
-   - Isso preserva a lógica atual sem mexer no fluxo de negócio.
+3. **Atualizar aba "Resumo"** para incluir visão unificada
+   - Mostrar ambos os scores (marketing + comercial)
+   - Integrar radar comercial ao lado do radar marketing
+   - Exibir diagnóstico completo
 
-4. **Melhorar a mensagem de erro no frontend**
-   - Em `src/lib/edgeFunctionError.ts`, ampliar a extração para usar:
-     - `body.error`
-     - senão `body.message`
-     - senão `error.message`
-   - Assim, se houver qualquer novo 401/429/500, o toast mostra a causa real.
+### Arquivos a modificar
 
-5. **Garantir reaproveitamento de quem já respondeu tudo**
-   - O fluxo atual em `ClienteGPSNegocio.tsx` já salva progresso e já tem `Gerar Resultado`.
-   - Depois da correção de autenticação, quem já preencheu comercial + marketing poderá apenas gerar novamente sem responder tudo de novo, desde que os dados já estejam salvos em `sales_plans`.
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/cliente/ClientePlanoMarketingStrategy.tsx` | Adicionar `TabComercial` e `TabProjecaoComercial`, atualizar `TabResumo` com dados comerciais, adicionar abas no TabsList |
+| `src/pages/cliente/ClientePlanoMarketingTypes.ts` | Adicionar types para `DiagnosticoComercial`, `FunilReverso`, `ProjecaoRow` comercial |
 
-### Arquivos a ajustar
-- `supabase/config.toml`
-- `supabase/functions/generate-strategy/index.ts`
-- `src/lib/edgeFunctionError.ts`
+### Detalhes técnicos
 
-### Resultado esperado
-- O GPS volta a gerar a estratégia final.
-- O erro `Invalid JWT` deixa de bloquear a função no gateway.
-- Quem já concluiu comercial e marketing não precisa refazer o briefing.
-- Se ainda houver falha, a mensagem exibida será específica e útil para diagnóstico.
+- Os dados comerciais já estão no `strategy_result` como `diagnostico_comercial` (com sub-campos: `score_comercial`, `radar_comercial`, `gaps`, `insights`, `estrategias_vendas`, `funil_reverso`, `projecao_leads`, `projecao_receita`, `plano_acao`)
+- O `StrategyResult` type precisa incluir `diagnostico_comercial`
+- O radar comercial usa `RadarChart` com 5 eixos (mesmo componente Recharts já importado)
+- As projeções de leads/receita usam `AreaChart` (também já importado)
+
+### Resultado
+
+O GPS do Negócio passará a exibir a entrega completa: Marketing + Comercial, com abas dedicadas para cada área e um resumo unificado mostrando os dois scores lado a lado.
+
