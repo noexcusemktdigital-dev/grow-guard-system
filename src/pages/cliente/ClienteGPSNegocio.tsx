@@ -381,7 +381,7 @@ export default function ClienteGPSNegocio() {
 
       <AnimatePresence mode="wait">
         {phase === "welcome" && (
-          <GPSWelcome key="welcome" onStart={() => setPhase("chat-rafael")} hasPartialProgress={hasPartialProgress} onResume={handleResumeFromSofia} />
+          <GPSWelcome key="welcome" onStart={() => setPhase("chat-rafael")} hasPartialProgress={hasPartialProgress} onResume={handleResumeFromSofia} hasFullProgress={hasFullProgress} onRetryGeneration={handleRetryGeneration} />
         )}
 
         {phase === "chat-rafael" && (
