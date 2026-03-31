@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy, useApproveStrategy, useGenerateStrategy } from "@/hooks/useMarketingStrategy";
 import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
+
 import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -25,7 +26,7 @@ const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
 type GeneratingStep = "marketing" | "comercial";
 
-function GPSWelcome({ onStart }: { onStart: () => void }) {
+function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="text-center max-w-2xl mx-auto space-y-4">
@@ -85,8 +86,25 @@ function GPSWelcome({ onStart }: { onStart: () => void }) {
           </div>
         </div>
 
+        {hasPartialProgress && onResume && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+            <Card className="border-violet-500/30 bg-violet-500/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center text-white text-sm font-bold shrink-0">S</div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">Etapa comercial já concluída!</p>
+                  <p className="text-xs text-muted-foreground">Continue de onde parou com a Sofia (marketing).</p>
+                </div>
+                <Button size="sm" onClick={onResume} className="gap-1.5 bg-violet-500 hover:bg-violet-600 text-white shrink-0">
+                  <ArrowRight className="w-3.5 h-3.5" /> Continuar
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20">
-          <Navigation className="w-4 h-4" /> Iniciar Diagnóstico
+          <Navigation className="w-4 h-4" /> {hasPartialProgress ? "Recomeçar do Início" : "Iniciar Diagnóstico"}
         </Button>
       </div>
     </motion.div>
@@ -118,6 +136,7 @@ export default function ClienteGPSNegocio() {
   const { data: history } = useStrategyHistory();
   const { data: orgId } = useUserOrgId();
   const { data: wallet } = useClienteWallet();
+  const { data: salesPlan, isLoading: isLoadingSalesPlan } = useSalesPlan();
   const saveStrategy = useSaveStrategy();
   const approveStrategy = useApproveStrategy();
   const generateStrategy = useGenerateStrategy();
@@ -130,17 +149,34 @@ export default function ClienteGPSNegocio() {
   const status = activeStrategy?.status || "pending";
   const generationCount = (history?.length ?? 0) + (activeStrategy ? 1 : 0);
 
-  // Auto-detect if result exists → jump to result
+  // Detect if Rafael completed but Sofia/generation hasn't — partial progress
+  const hasPartialProgress = !!(
+    salesPlan?.answers &&
+    Object.keys(salesPlan.answers).length >= 3 &&
+    !hasResult
+  );
+
+  // Auto-detect phase on load
   useEffect(() => {
-    if (!isLoading && hasResult) {
+    if (isLoading || isLoadingSalesPlan) return;
+    if (hasResult) {
       setPhase("result");
     }
-  }, [isLoading, hasResult]);
+  }, [isLoading, isLoadingSalesPlan, hasResult]);
 
   const handleRafaelComplete = (answers: Record<string, any>) => {
     setRafaelAnswers(answers);
+    // Persist immediately so progress survives page reload
+    saveSalesPlan.mutate({ answers, score: 0 });
     setPhase("transition");
     setTimeout(() => setPhase("chat-sofia"), 2500);
+  };
+
+  const handleResumeFromSofia = () => {
+    if (salesPlan?.answers) {
+      setRafaelAnswers(salesPlan.answers);
+      setPhase("chat-sofia");
+    }
   };
 
   const parseFunnelStages = (text: string) => {
@@ -174,8 +210,7 @@ export default function ClienteGPSNegocio() {
     setPhase("generating");
 
     try {
-      // 1. Save sales plan data (Rafael's answers)
-      saveSalesPlan.mutate({ answers: rafaelAnswers, score: 0 });
+      // 1. Sales plan already saved in handleRafaelComplete
 
       // 2. Auto-create CRM funnel from Rafael's answers
       const etapasText = rafaelAnswers.etapas_funil;
@@ -303,7 +338,7 @@ export default function ClienteGPSNegocio() {
 
       <AnimatePresence mode="wait">
         {phase === "welcome" && (
-          <GPSWelcome key="welcome" onStart={() => setPhase("chat-rafael")} />
+          <GPSWelcome key="welcome" onStart={() => setPhase("chat-rafael")} hasPartialProgress={hasPartialProgress} onResume={handleResumeFromSofia} />
         )}
 
         {phase === "chat-rafael" && (
