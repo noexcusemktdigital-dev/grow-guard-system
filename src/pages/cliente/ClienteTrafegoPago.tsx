@@ -125,7 +125,7 @@ export default function ClienteTrafegoPago() {
         // Create one campaign per platform
         try {
           for (const p of platforms) {
-            const platformKey = String(p.platform);
+            const platformKey = normalizePlatformType(String(p.platform));
             await createCampaignMutation.mutateAsync({
               name: `${platformKey} Ads — ${String(p.objective || "Campanha")}`,
               type: platformKey,
