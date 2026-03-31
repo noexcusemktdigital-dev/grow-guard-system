@@ -29,11 +29,13 @@ import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import {
   STEPS,
-  platformColors, platformIcons,
+  platformColors, platformIcons, PLATFORM_TUTORIALS,
   campaignStatusLabels, campaignStatusColors,
 } from "./ClienteTrafegoPagoConstants";
 import { ClienteTrafegoPagoWizardStep } from "./ClienteTrafegoPagoWizardStep";
-import { ClienteTrafegoPagoResult } from "./ClienteTrafegoPagoResult";
+import { ClienteTrafegoPagoResult, TutorialDialog } from "./ClienteTrafegoPagoResult";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Rocket, ChevronDown, ChevronUp, Users, Eye, MousePointer, TrendingUp, Zap, Layers } from "lucide-react";
 
 export default function ClienteTrafegoPago() {
   const { data: activeStrategy, isLoading: loadingStrategy } = useActiveTrafficStrategy();
@@ -54,6 +56,8 @@ export default function ClienteTrafegoPago() {
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [campaignFilter, setCampaignFilter] = useState<string>("all");
+  const [tutorialCampaign, setTutorialCampaign] = useState<{ platform: string; data: Record<string, unknown> } | null>(null);
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Record<string, boolean>>({});
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
@@ -326,10 +330,12 @@ export default function ClienteTrafegoPago() {
               ))}
             </div>
           ) : filteredCampaigns.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {filteredCampaigns.map((c) => {
                 const content = (c.content || {}) as Record<string, unknown>;
                 const kpis = (content.kpis || {}) as Record<string, unknown>;
+                const hasTutorial = !!PLATFORM_TUTORIALS[c.type];
+                const isExpanded = expandedCampaigns[c.id] ?? false;
                 const platformBorderTop: Record<string, string> = {
                   Google: "border-t-emerald-500",
                   Meta: "border-t-blue-500",
@@ -339,13 +345,14 @@ export default function ClienteTrafegoPago() {
                 return (
                   <Card key={c.id} className={`border-t-4 ${platformBorderTop[c.type] || ""}`}>
                     <CardContent className="py-4 space-y-3">
+                      {/* Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-lg ${platformColors[c.type] || "bg-muted"}`}>
+                          <div className={`p-2 rounded-xl ${platformColors[c.type] || "bg-muted"}`}>
                             {platformIcons[c.type] || <Folder className="w-4 h-4" />}
                           </div>
                           <div>
-                            <p className="text-xs font-semibold">{c.name}</p>
+                            <p className="text-xs font-bold">{c.name}</p>
                             <p className="text-[10px] text-muted-foreground">
                               {format(new Date(c.created_at), "dd/MM/yyyy", { locale: ptBR })}
                             </p>
@@ -356,33 +363,123 @@ export default function ClienteTrafegoPago() {
                         </Badge>
                       </div>
 
-                      {/* Objective + Audience */}
+                      {/* Objective */}
                       {content.objective && (
-                        <div className="p-2 rounded-lg bg-muted/30 border">
-                          <p className="text-[10px] font-medium text-muted-foreground">Objetivo: {String(content.objective)}</p>
+                        <div className="p-2.5 rounded-xl bg-muted/30 border">
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase">Objetivo</p>
+                          <p className="text-xs mt-0.5">{String(content.objective)}</p>
                         </div>
                       )}
+
+                      {/* Audience */}
                       {content.audience && (
-                        <p className="text-[10px] text-muted-foreground line-clamp-2">
-                          <span className="font-medium">Público:</span> {String(content.audience)}
-                        </p>
+                        <div className="p-2.5 rounded-xl bg-muted/30 border">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <Users className="w-3 h-3 text-muted-foreground" />
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase">Público-alvo</p>
+                          </div>
+                          <p className="text-xs leading-relaxed line-clamp-3">{String(content.audience)}</p>
+                        </div>
                       )}
 
-                      {/* Budget + KPIs row */}
+                      {/* Budget + KPIs grid */}
                       <div className="grid grid-cols-2 gap-2">
                         {content.budget && (
-                          <div className="p-2 rounded-lg bg-muted/20 border text-center">
+                          <div className="p-2.5 rounded-lg bg-muted/20 border text-center">
                             <p className="text-[9px] text-muted-foreground uppercase">Orçamento</p>
                             <p className="text-xs font-bold">{String(content.budget)}</p>
                           </div>
                         )}
                         {kpis.estimated_cpl && (
-                          <div className="p-2 rounded-lg bg-muted/20 border text-center">
+                          <div className="p-2.5 rounded-lg bg-muted/20 border text-center">
                             <p className="text-[9px] text-muted-foreground uppercase">CPL Estimado</p>
                             <p className="text-xs font-bold">{String(kpis.estimated_cpl)}</p>
                           </div>
                         )}
+                        {kpis.estimated_cpc && (
+                          <div className="p-2.5 rounded-lg bg-muted/20 border text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">CPC Estimado</p>
+                            <p className="text-xs font-bold">{String(kpis.estimated_cpc)}</p>
+                          </div>
+                        )}
+                        {kpis.estimated_reach && (
+                          <div className="p-2.5 rounded-lg bg-muted/20 border text-center">
+                            <p className="text-[9px] text-muted-foreground uppercase">Alcance</p>
+                            <p className="text-xs font-bold">{String(kpis.estimated_reach)}</p>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Creative formats + Keywords badges */}
+                      {content.creative_formats && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Criativos</p>
+                          <p className="text-xs text-muted-foreground">{String(content.creative_formats)}</p>
+                        </div>
+                      )}
+
+                      {/* Collapsible extras */}
+                      <Collapsible open={isExpanded} onOpenChange={() => setExpandedCampaigns(prev => ({ ...prev, [c.id]: !prev[c.id] }))}>
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full text-xs gap-1.5">
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            {isExpanded ? "Menos detalhes" : "Mais detalhes"}
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-3 pt-2">
+                          {Array.isArray(content.keywords) && (content.keywords as string[]).length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Palavras-chave</p>
+                              <div className="flex flex-wrap gap-1">
+                                {(content.keywords as string[]).map((kw, i) => (
+                                  <Badge key={i} variant="outline" className="text-[9px]">{String(kw)}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {Array.isArray(content.interests) && (content.interests as string[]).length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Interesses</p>
+                              <div className="flex flex-wrap gap-1">
+                                {(content.interests as string[]).map((int, i) => (
+                                  <Badge key={i} variant="outline" className="text-[9px]">{String(int)}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {Array.isArray(content.optimization_actions) && (content.optimization_actions as string[]).length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Otimização</p>
+                              {(content.optimization_actions as string[]).map((act, i) => (
+                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-muted/10 border mb-1">
+                                  <Zap className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                                  <p className="text-[11px]">{String(act)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {Array.isArray(content.ad_copies) && (content.ad_copies as string[]).length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Copies de Anúncio</p>
+                              {(content.ad_copies as string[]).map((copy, i) => (
+                                <div key={i} className="p-2.5 rounded-lg bg-muted/20 border mb-1.5">
+                                  <p className="text-xs italic">"{String(copy)}"</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Tutorial CTA */}
+                      {hasTutorial && (
+                        <Button
+                          className="w-full text-xs gap-1.5"
+                          onClick={() => setTutorialCampaign({ platform: c.type, data: content })}
+                        >
+                          <Rocket className="w-3.5 h-3.5" /> Criar Campanha
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -393,7 +490,7 @@ export default function ClienteTrafegoPago() {
               <CardContent className="py-12 text-center">
                 <Folder className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">Nenhuma campanha salva</p>
-                <p className="text-xs text-muted-foreground mt-1">Gere uma estratégia e clique em "Criar Campanha" para salvar aqui.</p>
+                <p className="text-xs text-muted-foreground mt-1">Gere e aprove uma estratégia para criar campanhas automaticamente.</p>
               </CardContent>
             </Card>
           )}
@@ -443,6 +540,15 @@ export default function ClienteTrafegoPago() {
         actionLabel="esta estratégia de tráfego"
         creditCost={200}
       />
+      {/* Tutorial Dialog for Campaigns tab */}
+      {tutorialCampaign && (
+        <TutorialDialog
+          open={!!tutorialCampaign}
+          onOpenChange={(v) => { if (!v) setTutorialCampaign(null); }}
+          platformKey={tutorialCampaign.platform}
+          platformData={tutorialCampaign.data}
+        />
+      )}
     </div>
   );
 }
