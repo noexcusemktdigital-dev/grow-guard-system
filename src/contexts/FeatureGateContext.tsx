@@ -139,8 +139,21 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const DEFAULT_GATE: FeatureGateContextType = {
+  isTrialExpired: false,
+  hasNoCredits: false,
+  hasApprovedGPS: false,
+  hasAiAgent: false,
+  hasWhatsApp: false,
+  hasDispatches: false,
+  getGateReason: () => null,
+  simulateTrialExpired: false,
+  setSimulateTrialExpired: () => {},
+  simulateNoCredits: false,
+  setSimulateNoCredits: () => {},
+};
+
 export function useFeatureGate() {
   const ctx = useContext(FeatureGateContext);
-  if (!ctx) throw new Error("useFeatureGate must be inside FeatureGateProvider");
-  return ctx;
+  return ctx ?? DEFAULT_GATE;
 }
