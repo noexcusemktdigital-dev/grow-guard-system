@@ -120,14 +120,23 @@ export function useApproveStrategy() {
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
-      // Call debit via RPC (server-side)
-      const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_goals_with_parent", {
-        _org_id: orgId,
-        _amount: 50,
-        _description: "Estratégia de marketing aprovada",
-        _source: "marketing-strategy",
-      });
-      if (debitError) throw debitError;
+      // Check if trial — skip debit for trial users (GPS is free)
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("organization_id", orgId)
+        .maybeSingle();
+
+      if (sub?.status !== "trial") {
+        // Call debit via RPC (server-side)
+        const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_goals_with_parent", {
+          _org_id: orgId,
+          _amount: 50,
+          _description: "Estratégia de marketing aprovada",
+          _source: "marketing-strategy",
+        });
+        if (debitError) throw debitError;
+      }
 
       // Update status
       const { data, error } = await supabase

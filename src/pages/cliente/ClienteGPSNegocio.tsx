@@ -347,7 +347,7 @@ export default function ClienteGPSNegocio() {
         for (const stage of ["prospeccao", "diagnostico", "fechamento"]) {
           try {
             const { data, error } = await supabase.functions.invoke("generate-script", {
-              body: { stage, briefing: {}, context, organization_id: orgId },
+              body: { stage, briefing: {}, context, organization_id: orgId, from_gps: true },
             });
             if (error || data?.error) continue;
             if (data?.content) {
