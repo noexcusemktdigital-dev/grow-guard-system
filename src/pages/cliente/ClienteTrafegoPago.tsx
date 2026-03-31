@@ -168,10 +168,11 @@ export default function ClienteTrafegoPago() {
   const sourceData = (activeStrategy?.source_data || {}) as Record<string, unknown>;
   const platforms = (activeStrategy?.platforms || []) as Record<string, unknown>[];
 
-  // Filter campaigns by platform type
+  // Filter campaigns by platform type (with normalization)
   const filteredCampaigns = (campaigns || []).filter((c) => {
-    if (campaignFilter === "all") return ["Google", "Meta", "TikTok", "LinkedIn"].includes(c.type);
-    return c.type === campaignFilter;
+    const normalized = normalizePlatformType(c.type || "");
+    if (campaignFilter === "all") return ["Google", "Meta", "TikTok", "LinkedIn"].includes(normalized);
+    return normalized === campaignFilter;
   });
 
   return (
