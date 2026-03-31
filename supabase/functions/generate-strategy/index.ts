@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
       .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
       .join("\n");
 
-    const userPrompt = `Com base nas respostas do briefing de marketing abaixo, gere a ESTRATÉGIA COMPLETA com todas as 12 seções.
+    const userPrompt = `Com base nas respostas do briefing unificado (GPS do Negócio — parte comercial + parte marketing) abaixo, gere a ESTRATÉGIA COMPLETA com todas as 13 seções, incluindo o DIAGNÓSTICO COMERCIAL detalhado.
 
 RESPOSTAS DO BRIEFING:
 ${answersText}
@@ -563,11 +563,14 @@ ${salesPlanContext}
 INSTRUÇÕES IMPORTANTES:
 1. O ICP deve refletir exatamente o público descrito nas respostas
 2. O tom de comunicação deve respeitar as preferências informadas (incluindo o que NÃO quer)
-3. Faça projeções financeiras realistas baseadas no ticket médio e orçamento informados
+3. Faça projeções financeiras realistas baseadas no ticket médio e faturamento informados
 4. Os concorrentes devem ser inferidos do segmento (ou usar URLs se fornecidos)
 5. O calendário semanal deve ser prático e executável
 6. O plano de execução deve referenciar ferramentas reais da plataforma (conteudos, postagens, sites, trafego, crm, scripts)
 7. A estrutura recomendada deve avaliar o que o negócio já tem vs o que precisa
+8. O DIAGNÓSTICO COMERCIAL deve ter cálculos reais no funil reverso (meta ÷ ticket = vendas, etc.)
+9. As projeções de leads e receita devem ter 6 meses com cenário atual vs com estratégia
+10. As estratégias de vendas devem ser específicas para o segmento e modelo de negócio informado
 
 Use a ferramenta generate_strategy para retornar.`;
 
