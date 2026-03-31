@@ -540,6 +540,15 @@ export default function ClienteTrafegoPago() {
         actionLabel="esta estratégia de tráfego"
         creditCost={200}
       />
+      {/* Tutorial Dialog for Campaigns tab */}
+      {tutorialCampaign && (
+        <TutorialDialog
+          open={!!tutorialCampaign}
+          onOpenChange={(v) => { if (!v) setTutorialCampaign(null); }}
+          platformKey={tutorialCampaign.platform}
+          platformData={tutorialCampaign.data}
+        />
+      )}
     </div>
   );
 }
