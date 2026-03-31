@@ -58,7 +58,7 @@ export function useStrategyHistory() {
 
 export function useHasActiveStrategy(): { hasStrategy: boolean; isLoading: boolean } {
   const { data, isLoading } = useActiveStrategy();
-  return { hasStrategy: !!data, isLoading };
+  return { hasStrategy: !!data && (data as any).status === "approved", isLoading };
 }
 
 export function useSaveStrategy() {

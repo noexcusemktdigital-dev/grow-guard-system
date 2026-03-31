@@ -79,21 +79,11 @@ export function FeatureGateOverlay() {
       accent: "from-amber-500/90 to-orange-500/70",
       iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
     },
-    no_sales_plan: {
+    no_gps_approved: {
       icon: Navigation,
-      title: "Complete o GPS do Negócio",
+      title: "Complete e aprove o GPS do Negócio",
       description:
-        "Para desbloquear esta funcionalidade, você precisa primeiro completar o GPS do Negócio — o diagnóstico estratégico que alimenta toda a plataforma.",
-      cta: "Abrir GPS do Negócio",
-      ctaPath: "/cliente/gps-negocio",
-      accent: "from-amber-500/90 to-amber-600/70",
-      iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
-    },
-    no_marketing_strategy: {
-      icon: Navigation,
-      title: "Complete o GPS do Negócio",
-      description:
-        "Para desbloquear esta funcionalidade, complete primeiro o GPS do Negócio. Ele gera toda a estratégia de marketing e vendas que alimenta as ferramentas.",
+        "Para desbloquear esta funcionalidade, preencha e aprove o GPS do Negócio — o diagnóstico estratégico que direciona toda a estratégia de vendas e marketing da plataforma.",
       cta: "Abrir GPS do Negócio",
       ctaPath: "/cliente/gps-negocio",
       accent: "from-amber-500/90 to-amber-600/70",
