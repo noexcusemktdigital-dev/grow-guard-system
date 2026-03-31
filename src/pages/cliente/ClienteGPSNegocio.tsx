@@ -26,7 +26,7 @@ const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
 type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
 
-function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void }) {
+function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, onRetryGeneration }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void; hasFullProgress?: boolean; onRetryGeneration?: () => void }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="text-center max-w-2xl mx-auto space-y-4">
@@ -86,7 +86,26 @@ function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => 
           </div>
         </div>
 
-        {hasPartialProgress && onResume && (
+        {hasFullProgress && onRetryGeneration && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+            <Card className="border-emerald-500/30 bg-emerald-500/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">Todas as informações já preenchidas!</p>
+                  <p className="text-xs text-muted-foreground">Gere o resultado agora sem precisar responder novamente.</p>
+                </div>
+                <Button size="sm" onClick={onRetryGeneration} className="gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0">
+                  <Rocket className="w-3.5 h-3.5" /> Gerar Resultado
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {hasPartialProgress && !hasFullProgress && onResume && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
             <Card className="border-violet-500/30 bg-violet-500/5">
               <CardContent className="p-4 flex items-center gap-3">
@@ -104,7 +123,7 @@ function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => 
         )}
 
         <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20">
-          <Navigation className="w-4 h-4" /> {hasPartialProgress ? "Recomeçar do Início" : "Iniciar Diagnóstico"}
+          <Navigation className="w-4 h-4" /> {hasPartialProgress || hasFullProgress ? "Recomeçar do Início" : "Iniciar Diagnóstico"}
         </Button>
       </div>
     </motion.div>
