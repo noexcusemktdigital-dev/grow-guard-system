@@ -2,13 +2,15 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2, ChevronDown, ChevronUp, DollarSign, ExternalLink,
-  Eye, Lightbulb, Loader2, MousePointer, PieChart, Sparkles, Target,
+  Eye, Lightbulb, Loader2, MousePointer, Sparkles, Target,
   TrendingUp, Zap, Rocket, ArrowLeft, ArrowRight, BookOpen, Save,
+  PieChart, Users, BarChart3, Layers,
 } from "lucide-react";
 import { platformColors, platformIcons, platformLinks, PLATFORM_TUTORIALS, TutorialStep } from "./ClienteTrafegoPagoConstants";
 import { useCreateClientCampaign } from "@/hooks/useClienteCampaignsDB";
@@ -34,6 +36,7 @@ interface ClienteTrafegoPagoResultProps {
   approveMutationIsPending: boolean;
 }
 
+/* ── Tutorial Dialog (unchanged logic, same as before) ── */
 function TutorialDialog({
   open,
   onOpenChange,
@@ -93,7 +96,6 @@ function TutorialDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Progress */}
         <div className="flex items-center gap-1 mb-2">
           {steps.map((_, i) => (
             <div
@@ -108,7 +110,6 @@ function TutorialDialog({
           Passo {currentStep + 1} de {steps.length}
         </p>
 
-        {/* Step content */}
         <div className="space-y-4 mt-2">
           <div className="flex items-start gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
@@ -132,7 +133,6 @@ function TutorialDialog({
             </div>
           )}
 
-          {/* Contextual data from strategy */}
           {currentStep === 0 && platformData.audience && (
             <div className="p-3 rounded-xl bg-muted/30 border">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase">Público sugerido pela IA</p>
@@ -148,7 +148,6 @@ function TutorialDialog({
           )}
         </div>
 
-        {/* Navigation */}
         <div className="flex justify-between items-center mt-4 pt-3 border-t">
           <Button
             variant="outline"
@@ -189,6 +188,15 @@ function TutorialDialog({
   );
 }
 
+/* ── Helper: platform border color for top accent ── */
+const platformBorderTop: Record<string, string> = {
+  Google: "border-t-emerald-500",
+  Meta: "border-t-blue-500",
+  TikTok: "border-t-purple-500",
+  LinkedIn: "border-t-sky-500",
+};
+
+/* ── Main Component ── */
 export function ClienteTrafegoPagoResult({
   loadingStrategy,
   activeStrategy,
@@ -226,98 +234,158 @@ export function ClienteTrafegoPagoResult({
     );
   }
 
+  const investmentPlan = sourceData.investment_plan as Record<string, unknown> | undefined;
+  const distribution = (investmentPlan?.distribution as Record<string, unknown>[]) || [];
+  const projections = sourceData.projections as Record<string, unknown> | undefined;
+  const totalBudget = distribution.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
+
   return (
     <div className="space-y-5">
-      {/* Status + Approve */}
-      <div className="flex items-center justify-between">
-        <Badge variant={activeStrategy.status === "approved" ? "default" : "secondary"} className="text-xs">
-          {activeStrategy.status === "approved" ? "✅ Aprovada" : "⏳ Pendente de aprovação"}
-        </Badge>
-        <div className="flex gap-2">
-          {activeStrategy.status !== "approved" && (
-            <Button
-              size="sm"
-              className="text-xs gap-1.5"
-              onClick={() => handleApprove(activeStrategy.id)}
-              disabled={approveMutationIsPending}
-            >
-              {approveMutationIsPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              Aprovar (200 créditos)
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs gap-1.5"
-            onClick={() => { setShowWizard(true); setStep(0); }}
-          >
-            <Sparkles className="w-3.5 h-3.5" /> Regerar
-          </Button>
+      {/* ═══ HERO HEADER ═══ */}
+      <Card className="overflow-hidden border-primary/20">
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10">
+                <Target className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold">Estratégia de Tráfego Pago</h3>
+                  <Badge
+                    variant={activeStrategy.status === "approved" ? "default" : "secondary"}
+                    className="text-[10px]"
+                  >
+                    {activeStrategy.status === "approved" ? "✅ Aprovada" : "⏳ Pendente"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {platforms.length} plataforma{platforms.length > 1 ? "s" : ""} •{" "}
+                  {totalBudget > 0
+                    ? `R$ ${totalBudget.toLocaleString("pt-BR")} investimento total`
+                    : "Investimento configurado"}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              {activeStrategy.status !== "approved" && (
+                <Button
+                  size="sm"
+                  className="text-xs gap-1.5"
+                  onClick={() => handleApprove(activeStrategy.id)}
+                  disabled={approveMutationIsPending}
+                >
+                  {approveMutationIsPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  )}
+                  Aprovar (200 créditos)
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1.5"
+                onClick={() => { setShowWizard(true); setStep(0); }}
+              >
+                <Sparkles className="w-3.5 h-3.5" /> Regerar
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Diagnóstico */}
+      {/* ═══ DIAGNÓSTICO ═══ */}
       {sourceData.diagnostico && (
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-primary/15">
           <CardContent className="py-4">
             <div className="flex items-start gap-3">
-              <Lightbulb className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+              <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                <Lightbulb className="w-4 h-4 text-primary" />
+              </div>
               <div>
-                <p className="text-sm font-semibold">Diagnóstico de Mídia</p>
-                <p className="text-xs mt-1 text-muted-foreground">{String(sourceData.diagnostico)}</p>
+                <p className="text-xs font-semibold text-primary uppercase tracking-wider">Diagnóstico de Mídia</p>
+                <p className="text-xs mt-1.5 text-muted-foreground leading-relaxed">{String(sourceData.diagnostico)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Investment Plan */}
-      {(sourceData.investment_plan as Record<string, unknown>)?.distribution && (
+      {/* ═══ PLANO DE INVESTIMENTO ═══ */}
+      {distribution.length > 0 && (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><PieChart className="w-4 h-4" /> Plano de Investimento</CardTitle>
-          </CardHeader>
-          <CardContent className="py-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {((sourceData.investment_plan as Record<string, unknown>).distribution as Record<string, unknown>[]).map((d) => (
-                <div key={String(d.platform)} className={`p-3 rounded-xl border ${platformColors[String(d.platform)] || ""}`}>
-                  <p className="text-xs font-bold">{String(d.platform)}</p>
-                  <p className="text-lg font-bold mt-1">{String(d.percentage)}%</p>
-                  <p className="text-[10px] text-muted-foreground">R$ {Number(d.amount)?.toLocaleString("pt-BR") || "—"}</p>
-                </div>
-              ))}
+          <CardContent className="py-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-bold">Plano de Investimento</h4>
+              {totalBudget > 0 && (
+                <Badge variant="outline" className="ml-auto text-[10px]">
+                  Total: R$ {totalBudget.toLocaleString("pt-BR")}
+                </Badge>
+              )}
+            </div>
+
+            {/* Visual distribution bars */}
+            <div className="space-y-3">
+              {distribution.map((d) => {
+                const pct = Number(d.percentage) || 0;
+                const platformKey = String(d.platform);
+                return (
+                  <div key={platformKey} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1 rounded-md ${platformColors[platformKey] || "bg-muted"}`}>
+                          {platformIcons[platformKey] ? (
+                            <span className="[&>svg]:w-3.5 [&>svg]:h-3.5">{platformIcons[platformKey]}</span>
+                          ) : null}
+                        </div>
+                        <span className="text-xs font-semibold">{platformKey}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          R$ {Number(d.amount)?.toLocaleString("pt-BR") || "—"}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] font-bold min-w-[40px] justify-center">
+                          {pct}%
+                        </Badge>
+                      </div>
+                    </div>
+                    <Progress value={pct} className="h-2" />
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Projections */}
-      {sourceData.projections && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4" /> Projeção de Resultados</CardTitle>
-          </CardHeader>
-          <CardContent className="py-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Leads Estimados", value: (sourceData.projections as Record<string, unknown>).total_leads },
-                { label: "Clientes Estimados", value: (sourceData.projections as Record<string, unknown>).total_clients },
-                { label: "Faturamento", value: (sourceData.projections as Record<string, unknown>).estimated_revenue },
-                { label: "ROI Estimado", value: (sourceData.projections as Record<string, unknown>).estimated_roi },
-              ].map((item) => (
-                <div key={item.label} className="p-3 rounded-xl bg-muted/30 border text-center">
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase">{item.label}</p>
-                  <p className="text-sm font-bold mt-1">{String(item.value || "—")}</p>
+      {/* ═══ PROJEÇÕES ═══ */}
+      {projections && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { icon: Users, label: "Leads Estimados", value: projections.total_leads, color: "text-blue-500 bg-blue-500/10" },
+            { icon: BarChart3, label: "Clientes Estimados", value: projections.total_clients, color: "text-emerald-500 bg-emerald-500/10" },
+            { icon: DollarSign, label: "Faturamento", value: projections.estimated_revenue, color: "text-amber-500 bg-amber-500/10" },
+            { icon: TrendingUp, label: "ROI Estimado", value: projections.estimated_roi, color: "text-purple-500 bg-purple-500/10" },
+          ].map((item) => (
+            <Card key={item.label}>
+              <CardContent className="py-4 text-center space-y-2">
+                <div className={`w-9 h-9 rounded-xl ${item.color} flex items-center justify-center mx-auto`}>
+                  <item.icon className="w-4.5 h-4.5" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <p className="text-sm font-bold">{String(item.value || "—")}</p>
+                <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">{item.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
-      {/* KPI Tracking */}
+      {/* ═══ KPIs SUGERIDOS ═══ */}
       {(sourceData.kpi_tracking as string[])?.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-muted-foreground">KPIs sugeridos:</span>
           {(sourceData.kpi_tracking as string[]).map((kpi) => (
             <Badge key={kpi} variant="outline" className="text-[10px]">{kpi}</Badge>
@@ -325,56 +393,91 @@ export function ClienteTrafegoPagoResult({
         </div>
       )}
 
-      {/* Platform Cards */}
+      {/* ═══ PLATFORM CARDS ═══ */}
       <div className="grid gap-4 md:grid-cols-2">
         {platforms.map((p) => {
           const platformKey = String(p.platform);
           const isOpen = expandedPlatforms[platformKey] ?? false;
           const hasTutorial = !!PLATFORM_TUTORIALS[platformKey];
+          const kpis = (p.kpis || {}) as Record<string, unknown>;
+
           return (
-            <Card key={platformKey} className={`border-l-4 ${platformColors[platformKey]?.split(" ").find((s: string) => s.startsWith("border-")) || ""}`}>
-              <CardContent className="py-5 space-y-3">
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-2 rounded-xl ${platformColors[platformKey]}`}>
+            <Card
+              key={platformKey}
+              className={`border-t-4 ${platformBorderTop[platformKey] || ""} overflow-hidden`}
+            >
+              <CardContent className="py-5 space-y-4">
+                {/* Platform header */}
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl ${platformColors[platformKey]}`}>
                     {platformIcons[platformKey]}
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold">{platformKey} Ads</p>
-                    <Badge className={`text-[9px] mt-0.5 ${platformColors[platformKey]}`}>{String(p.objective)}</Badge>
+                    <Badge className={`text-[9px] mt-0.5 ${platformColors[platformKey]}`}>
+                      {String(p.objective)}
+                    </Badge>
                   </div>
+                  {platformLinks[platformKey] && (
+                    <a
+                      href={platformLinks[platformKey]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
                 </div>
 
+                {/* Audience */}
                 <div className="p-3 rounded-xl bg-muted/30 border">
-                  <p className="text-[10px] font-medium text-muted-foreground">PÚBLICO-ALVO</p>
-                  <p className="text-xs mt-1">{String(p.audience)}</p>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Users className="w-3 h-3 text-muted-foreground" />
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase">Público-alvo</p>
+                  </div>
+                  <p className="text-xs leading-relaxed">{String(p.audience)}</p>
                 </div>
 
+                {/* Budget + Creatives grid */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-3 rounded-xl bg-muted/30 border">
-                    <p className="text-[10px] font-medium text-muted-foreground">ORÇAMENTO</p>
-                    <p className="text-sm font-bold mt-1">{String(p.budget_suggestion)}</p>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <DollarSign className="w-3 h-3 text-muted-foreground" />
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase">Orçamento</p>
+                    </div>
+                    <p className="text-sm font-bold">{String(p.budget_suggestion)}</p>
                   </div>
                   <div className="p-3 rounded-xl bg-muted/30 border">
-                    <p className="text-[10px] font-medium text-muted-foreground">CRIATIVOS</p>
-                    <p className="text-xs mt-1">{String(p.creative_formats)}</p>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Layers className="w-3 h-3 text-muted-foreground" />
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase">Criativos</p>
+                    </div>
+                    <p className="text-xs">{String(p.creative_formats)}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-1.5">
+                {/* KPIs mini-dashboard 2x2 */}
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { icon: Eye, label: "Alcance", value: (p.kpis as Record<string, unknown>)?.estimated_reach },
-                    { icon: MousePointer, label: "Cliques", value: (p.kpis as Record<string, unknown>)?.estimated_clicks },
-                    { icon: TrendingUp, label: "CPC", value: (p.kpis as Record<string, unknown>)?.estimated_cpc },
-                    { icon: DollarSign, label: "CPL", value: (p.kpis as Record<string, unknown>)?.estimated_cpl },
+                    { icon: Eye, label: "Alcance", value: kpis.estimated_reach },
+                    { icon: MousePointer, label: "Cliques", value: kpis.estimated_clicks },
+                    { icon: TrendingUp, label: "CPC", value: kpis.estimated_cpc },
+                    { icon: DollarSign, label: "CPL", value: kpis.estimated_cpl },
                   ].map((kpi) => (
-                    <div key={kpi.label} className="text-center p-2 rounded-lg bg-muted/20">
-                      <kpi.icon className="w-3 h-3 mx-auto text-muted-foreground mb-0.5" />
-                      <p className="text-[10px] font-bold">{String(kpi.value || "—")}</p>
-                      <p className="text-[8px] text-muted-foreground">{kpi.label}</p>
+                    <div key={kpi.label} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted/20 border">
+                      <div className="p-1.5 rounded-md bg-primary/10">
+                        <kpi.icon className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold">{String(kpi.value || "—")}</p>
+                        <p className="text-[9px] text-muted-foreground">{kpi.label}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
 
+                {/* Collapsible details */}
                 <Collapsible open={isOpen} onOpenChange={() => togglePlatformExpand(platformKey)}>
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-full text-xs gap-1.5">
@@ -416,22 +519,23 @@ export function ClienteTrafegoPagoResult({
                       </div>
                     )}
 
-                    {(p.campaign_structure as Record<string, unknown>)?.campaigns && ((p.campaign_structure as Record<string, unknown>).campaigns as Record<string, unknown>[]).length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
-                        {((p.campaign_structure as Record<string, unknown>).campaigns as Record<string, unknown>[]).map((c, ci) => (
-                          <div key={ci} className="p-2.5 rounded-lg bg-muted/10 border mb-1.5">
-                            <p className="text-xs font-bold">{String(c.name)}</p>
-                            {(c.ad_sets as Record<string, unknown>[])?.map((as_, ai) => (
-                              <div key={ai} className="ml-3 mt-1.5 pl-2 border-l-2 border-muted">
-                                <p className="text-[11px] font-medium">{String(as_.name)}</p>
-                                <p className="text-[10px] text-muted-foreground">{String(as_.targeting)}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {(p.campaign_structure as Record<string, unknown>)?.campaigns &&
+                      ((p.campaign_structure as Record<string, unknown>).campaigns as Record<string, unknown>[]).length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Estrutura de Campanhas</p>
+                          {((p.campaign_structure as Record<string, unknown>).campaigns as Record<string, unknown>[]).map((c, ci) => (
+                            <div key={ci} className="p-2.5 rounded-lg bg-muted/10 border mb-1.5">
+                              <p className="text-xs font-bold">{String(c.name)}</p>
+                              {(c.ad_sets as Record<string, unknown>[])?.map((as_, ai) => (
+                                <div key={ai} className="ml-3 mt-1.5 pl-2 border-l-2 border-muted">
+                                  <p className="text-[11px] font-medium">{String(as_.name)}</p>
+                                  <p className="text-[10px] text-muted-foreground">{String(as_.targeting)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                     {(p.optimization_actions as string[])?.length > 0 && (
                       <div>
