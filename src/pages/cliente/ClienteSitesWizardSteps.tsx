@@ -1,24 +1,100 @@
 // @ts-nocheck
 import React from "react";
-import { Check, Info } from "lucide-react";
+import { Check, Info, Globe, FileText, ShoppingCart, Briefcase, Link2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+// ─── Site Types ────────────────────────────────────────────────────────────
+
+export interface SiteTypeConfig {
+  id: string;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+  sections: string[];
+  specificSteps: string[];
+}
+
+export const SITE_TYPES: SiteTypeConfig[] = [
+  {
+    id: "landing_page",
+    label: "Landing Page de Captação",
+    desc: "Página única focada em captar leads com formulário e CTA forte",
+    icon: FileText,
+    sections: ["hero", "problema", "solucao", "beneficios", "prova-social", "formulario", "cta-final", "footer"],
+    specificSteps: ["oferta"],
+  },
+  {
+    id: "institucional",
+    label: "Site Institucional",
+    desc: "Apresente sua empresa, equipe, serviços e valores",
+    icon: Briefcase,
+    sections: ["hero", "sobre", "equipe", "servicos", "valores", "contato", "footer"],
+    specificSteps: ["equipe"],
+  },
+  {
+    id: "vendas",
+    label: "Site de Vendas",
+    desc: "Foco total em conversão: produto, benefícios, preço e garantia",
+    icon: ShoppingCart,
+    sections: ["hero", "produto", "beneficios", "preco", "depoimentos", "garantia", "cta-final", "faq", "footer"],
+    specificSteps: ["produto_vendas"],
+  },
+  {
+    id: "portfolio",
+    label: "Portfólio",
+    desc: "Mostre seus trabalhos, projetos e processo criativo",
+    icon: Globe,
+    sections: ["hero", "projetos", "sobre", "processo", "contato", "footer"],
+    specificSteps: ["projetos"],
+  },
+  {
+    id: "link_bio",
+    label: "Link na Bio",
+    desc: "Página de links para redes sociais e contato rápido",
+    icon: Link2,
+    sections: ["hero", "links", "redes", "mini-sobre", "footer"],
+    specificSteps: ["links_bio"],
+  },
+];
+
+// ─── Steps config ──────────────────────────────────────────────────────────
+
+export const BASE_STEPS = [
+  { id: "tipo_site", label: "Tipo de Site" },
+  { id: "empresa", label: "Empresa" },
+  { id: "publico", label: "Público-alvo" },
+  { id: "servicos", label: "Serviços & Diferenciais" },
+  { id: "provas", label: "Prova Social" },
+  { id: "contato", label: "Contato" },
+  { id: "cta", label: "CTA" },
+  { id: "estilo", label: "Estilo & Tom" },
+  { id: "revisao", label: "Revisão" },
+];
+
+// Specific steps inserted after "empresa"
+const SPECIFIC_STEP_MAP: Record<string, { id: string; label: string }> = {
+  oferta: { id: "oferta", label: "Oferta & Formulário" },
+  equipe: { id: "equipe", label: "Equipe & Missão" },
+  produto_vendas: { id: "produto_vendas", label: "Produto & Preço" },
+  projetos: { id: "projetos", label: "Projetos" },
+  links_bio: { id: "links_bio", label: "Links" },
+};
+
+export function getStepsForType(siteTypeId: string) {
+  const siteType = SITE_TYPES.find(t => t.id === siteTypeId);
+  if (!siteType) return BASE_STEPS;
+
+  const steps = [...BASE_STEPS];
+  // Insert specific steps after "empresa" (index 1)
+  const specificSteps = siteType.specificSteps.map(s => SPECIFIC_STEP_MAP[s]).filter(Boolean);
+  steps.splice(2, 0, ...specificSteps);
+  return steps;
+}
 
 // ─── Re-exported constants ─────────────────────────────────────────────────
-
-export const STEPS = [
-  { id: "empresa", label: "Empresa", icon: null as React.ElementType | null },
-  { id: "objetivo", label: "Objetivo", icon: null as React.ElementType | null },
-  { id: "publico", label: "Público-alvo", icon: null as React.ElementType | null },
-  { id: "servicos", label: "Serviços & Diferenciais", icon: null as React.ElementType | null },
-  { id: "provas", label: "Prova Social", icon: null as React.ElementType | null },
-  { id: "contato", label: "Contato", icon: null as React.ElementType | null },
-  { id: "cta", label: "CTA", icon: null as React.ElementType | null },
-  { id: "paginas", label: "Páginas", icon: null as React.ElementType | null },
-  { id: "estilo", label: "Estilo & Tom", icon: null as React.ElementType | null },
-  { id: "revisao", label: "Revisão", icon: null as React.ElementType | null },
-] as const;
 
 export const SEGMENTO_OPTIONS = [
   { value: "consultoria", label: "Consultoria" },
@@ -28,13 +104,6 @@ export const SEGMENTO_OPTIONS = [
   { value: "franquia", label: "Franquia" },
   { value: "educacao", label: "Educação" },
   { value: "tecnologia", label: "Tecnologia" },
-];
-
-export const OBJETIVO_OPTIONS = [
-  { value: "gerar_leads", label: "Gerar Leads", desc: "Formulários e captação de contatos" },
-  { value: "institucional", label: "Institucional", desc: "Apresentar a empresa e equipe" },
-  { value: "vender_produtos", label: "Vendas", desc: "Foco em conversão e compra" },
-  { value: "portfolio", label: "Portfólio", desc: "Mostrar trabalhos e cases" },
 ];
 
 export const PUBLICO_CHIPS = [
@@ -55,17 +124,6 @@ export const CTA_OPTIONS = [
   { value: "whatsapp", label: "Falar no WhatsApp" },
   { value: "reuniao", label: "Agendar Reunião" },
   { value: "comprar", label: "Comprar Produto" },
-];
-
-export const PAGINA_OPTIONS = [
-  { value: "home", label: "Home" },
-  { value: "sobre", label: "Sobre" },
-  { value: "servicos", label: "Serviços" },
-  { value: "portfolio", label: "Portfólio" },
-  { value: "blog", label: "Blog" },
-  { value: "depoimentos", label: "Depoimentos" },
-  { value: "faq", label: "FAQ" },
-  { value: "contato", label: "Contato" },
 ];
 
 export const ESTILO_OPTIONS = [
@@ -148,19 +206,44 @@ interface WizardStepContentProps {
 }
 
 export function WizardStepContent({
-  stepId,
-  form,
-  updateForm,
-  toggleArray,
-  strategyAnswers,
-  approvedContents,
-  viPalette,
-  viFonts,
-  viStyle,
-  whatsappLink,
-  qualityFields,
+  stepId, form, updateForm, toggleArray, strategyAnswers,
+  approvedContents, viPalette, viFonts, viStyle, whatsappLink, qualityFields,
 }: WizardStepContentProps) {
   switch (stepId) {
+    // ── TYPE SELECTION (new first step)
+    case "tipo_site":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Qual tipo de site você precisa? Isso define a estrutura e as seções.</p>
+          <div className="grid gap-3">
+            {SITE_TYPES.map(t => {
+              const Icon = t.icon;
+              const active = form.tipo_site === t.id;
+              return (
+                <button key={t.id} onClick={() => updateForm("tipo_site", t.id)}
+                  className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                    active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{t.label}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{t.desc}</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {t.sections.map(s => (
+                        <Badge key={s} variant="outline" className="text-[9px] capitalize">{s.replace("-", " ")}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+
+    // ── EMPRESA
     case "empresa":
       return (
         <div className="space-y-3">
@@ -192,25 +275,108 @@ export function WizardStepContent({
         </div>
       );
 
-    case "objetivo":
+    // ── SPECIFIC: Oferta & Formulário (Landing Page)
+    case "oferta":
       return (
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">Qual é o principal objetivo deste site?</p>
-          <div className="grid grid-cols-2 gap-2">
-            {OBJETIVO_OPTIONS.map(o => (
-              <button key={o.value} onClick={() => updateForm("objetivo", o.value)}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  form.objetivo === o.value ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                }`}>
-                <p className="text-xs font-bold">{o.label}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{o.desc}</p>
-              </button>
-            ))}
+          <p className="text-xs text-muted-foreground">Detalhes da oferta e do formulário de captação.</p>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Qual é a oferta principal? *</label>
+            <Input placeholder="Ex: Diagnóstico gratuito, E-book, Consultoria grátis" value={form.oferta_principal} onChange={e => updateForm("oferta_principal", e.target.value)} className="mt-1" />
           </div>
-          {strategyAnswers.objetivo && <AutoBadge label="Objetivo da Estratégia" value={strategyAnswers.objetivo} />}
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Lead magnet (isca digital)</label>
+            <Textarea placeholder="O que o visitante recebe em troca dos dados? Ex: PDF com 10 dicas, acesso a vídeo exclusivo..." value={form.lead_magnet} onChange={e => updateForm("lead_magnet", e.target.value)} rows={2} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Campos do formulário</label>
+            <Input placeholder="Ex: Nome, Email, Telefone, Empresa" value={form.campos_formulario} onChange={e => updateForm("campos_formulario", e.target.value)} className="mt-1" />
+            <p className="text-[10px] text-muted-foreground mt-1">Separe por vírgula. Quanto menos campos, mais conversões.</p>
+          </div>
         </div>
       );
 
+    // ── SPECIFIC: Equipe & Missão (Institucional)
+    case "equipe":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Informações sobre equipe e valores da empresa.</p>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">História da empresa</label>
+            <Textarea placeholder="Conte brevemente a história da empresa, quando foi fundada, motivação..." value={form.historia_empresa} onChange={e => updateForm("historia_empresa", e.target.value)} rows={3} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Membros da equipe</label>
+            <Textarea placeholder="Nome — Cargo (um por linha)&#10;Ex: João Silva — CEO&#10;Maria Santos — Diretora de Marketing" value={form.membros_equipe} onChange={e => updateForm("membros_equipe", e.target.value)} rows={4} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Missão, Visão e Valores</label>
+            <Textarea placeholder="Missão: ...&#10;Visão: ...&#10;Valores: ..." value={form.missao_visao} onChange={e => updateForm("missao_visao", e.target.value)} rows={3} className="mt-1" />
+          </div>
+        </div>
+      );
+
+    // ── SPECIFIC: Produto & Preço (Vendas)
+    case "produto_vendas":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Detalhes do produto ou serviço que será vendido.</p>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Nome do produto/serviço *</label>
+            <Input placeholder="Ex: Curso Completo de Marketing Digital" value={form.produto_nome} onChange={e => updateForm("produto_nome", e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Preço</label>
+            <Input placeholder="Ex: R$ 497 ou 12x de R$ 49,70" value={form.produto_preco} onChange={e => updateForm("produto_preco", e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Garantia</label>
+            <Input placeholder="Ex: 7 dias de garantia incondicional" value={form.produto_garantia} onChange={e => updateForm("produto_garantia", e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Urgência / Escassez</label>
+            <Input placeholder="Ex: Vagas limitadas, Oferta por tempo limitado" value={form.produto_urgencia} onChange={e => updateForm("produto_urgencia", e.target.value)} className="mt-1" />
+          </div>
+        </div>
+      );
+
+    // ── SPECIFIC: Projetos (Portfólio)
+    case "projetos":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Descreva os projetos que deseja destacar.</p>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Quantos projetos destacar?</label>
+            <Input type="number" min={1} max={12} placeholder="Ex: 6" value={form.num_projetos} onChange={e => updateForm("num_projetos", e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Categorias de projeto</label>
+            <Input placeholder="Ex: Branding, Web Design, Fotografia" value={form.categorias_projetos} onChange={e => updateForm("categorias_projetos", e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Descreva seus principais projetos</label>
+            <Textarea placeholder="Projeto 1: Nome — Descrição breve&#10;Projeto 2: Nome — Descrição breve" value={form.descricao_projetos} onChange={e => updateForm("descricao_projetos", e.target.value)} rows={4} className="mt-1" />
+          </div>
+        </div>
+      );
+
+    // ── SPECIFIC: Links (Link na Bio)
+    case "links_bio":
+      return (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">Quais links e redes sociais devem aparecer?</p>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Links importantes (um por linha)</label>
+            <Textarea placeholder="Nome do link — URL&#10;Ex: Meu curso — https://curso.com&#10;Minha loja — https://loja.com" value={form.links_lista} onChange={e => updateForm("links_lista", e.target.value)} rows={5} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-foreground">Redes sociais (URLs)</label>
+            <Textarea placeholder="Instagram: https://instagram.com/...&#10;TikTok: https://tiktok.com/...&#10;YouTube: https://youtube.com/..." value={form.redes_lista} onChange={e => updateForm("redes_lista", e.target.value)} rows={3} className="mt-1" />
+          </div>
+        </div>
+      );
+
+    // ── PÚBLICO
     case "publico":
       return (
         <div className="space-y-3">
@@ -226,6 +392,7 @@ export function WizardStepContent({
         </div>
       );
 
+    // ── SERVIÇOS
     case "servicos":
       return (
         <div className="space-y-4">
@@ -252,6 +419,7 @@ export function WizardStepContent({
         </div>
       );
 
+    // ── PROVAS
     case "provas":
       return (
         <div className="space-y-3">
@@ -269,10 +437,11 @@ export function WizardStepContent({
         </div>
       );
 
+    // ── CONTATO
     case "contato":
       return (
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">Dados de contato reais para o site. Sem isso, o site fica com formulário genérico.</p>
+          <p className="text-xs text-muted-foreground">Dados de contato reais para o site.</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-medium text-foreground">Telefone</label>
@@ -307,6 +476,7 @@ export function WizardStepContent({
         </div>
       );
 
+    // ── CTA
     case "cta":
       return (
         <div className="space-y-3">
@@ -328,21 +498,7 @@ export function WizardStepContent({
         </div>
       );
 
-    case "paginas":
-      return (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">Quais páginas o site deve ter?</p>
-          <ChipSelect options={PAGINA_OPTIONS} selected={form.paginas} onToggle={v => toggleArray("paginas", v)} />
-          <p className="text-[10px] text-muted-foreground">
-            {(form.paginas as string[]).length} página(s) selecionada(s) → Tipo: {
-              (form.paginas as string[]).length <= 1 ? "Landing Page" :
-              (form.paginas as string[]).length <= 3 ? "Site 3 Páginas" :
-              (form.paginas as string[]).length <= 5 ? "Site 5 Páginas" : "Site 8 Páginas"
-            }
-          </p>
-        </div>
-      );
-
+    // ── ESTILO
     case "estilo":
       return (
         <div className="space-y-4">
@@ -384,10 +540,9 @@ export function WizardStepContent({
         </div>
       );
 
+    // ── REVISÃO
     case "revisao":
-      return (
-        <ReviewStep qualityFields={qualityFields} viPalette={viPalette} viFonts={viFonts} />
-      );
+      return <ReviewStep qualityFields={qualityFields} viPalette={viPalette} viFonts={viFonts} siteType={form.tipo_site} />;
 
     default:
       return null;
@@ -396,19 +551,29 @@ export function WizardStepContent({
 
 // ─── Review step ───────────────────────────────────────────────────────────
 
-import { Progress } from "@/components/ui/progress";
-
 interface ReviewStepProps {
   qualityFields: { fields: { label: string; value: string }[]; filled: number; total: number };
   viPalette: string | undefined;
   viFonts: string | undefined;
+  siteType?: string;
 }
 
-function ReviewStep({ qualityFields, viPalette, viFonts }: ReviewStepProps) {
+function ReviewStep({ qualityFields, viPalette, viFonts, siteType }: ReviewStepProps) {
   const pct = Math.round((qualityFields.filled / qualityFields.total) * 100);
   const color = pct >= 80 ? "text-green-500" : pct >= 50 ? "text-yellow-500" : "text-destructive";
+  const selectedType = SITE_TYPES.find(t => t.id === siteType);
+
   return (
     <div className="space-y-4">
+      {selectedType && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <selectedType.icon className="w-5 h-5 text-primary" />
+          <div>
+            <p className="text-xs font-bold text-foreground">{selectedType.label}</p>
+            <p className="text-[10px] text-muted-foreground">{selectedType.sections.length} seções</p>
+          </div>
+        </div>
+      )}
       <div className="space-y-1">
         <div className="flex justify-between items-center">
           <span className="text-[11px] font-medium text-muted-foreground">Qualidade do briefing</span>
