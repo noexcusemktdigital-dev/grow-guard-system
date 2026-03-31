@@ -197,7 +197,7 @@ export function useGenerateBriefing() {
       const resp = await supabase.functions.invoke("generate-social-briefing", {
         body: payload,
       });
-      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar briefing");
+      if (resp.error) throw await extractEdgeFunctionError(resp.error);
       if (resp.data?.error) throw new Error(resp.data.error);
       return resp.data as {
         headline: string;
