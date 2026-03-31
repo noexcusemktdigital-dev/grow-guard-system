@@ -24,7 +24,7 @@ import { logger } from "@/lib/logger";
 const STAGE_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899", "#f97316", "#6366f1", "#14b8a6"];
 
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
-type GeneratingStep = "marketing" | "comercial";
+type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
 
 function GPSWelcome({ onStart, hasPartialProgress, onResume }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void }) {
   return (
