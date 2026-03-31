@@ -273,16 +273,18 @@ IMPORTANTE:
         model: "google/gemini-3-flash-preview",
       });
 
-      // Debit credits
-      try {
-        await serviceClient.rpc("debit_credits", {
-          _org_id: orgData,
-          _amount: CREDIT_COST,
-          _description: `Geração de script (${stage})`,
-          _source: "generate-script",
-        });
-      } catch (debitErr) {
-        console.error("Debit error (non-blocking):", debitErr);
+      // Debit credits (skip for trial GPS auto-generation)
+      if (!isTrialGps) {
+        try {
+          await serviceClient.rpc("debit_credits", {
+            _org_id: orgData,
+            _amount: CREDIT_COST,
+            _description: `Geração de script (${stage})`,
+            _source: "generate-script",
+          });
+        } catch (debitErr) {
+          console.error("Debit error (non-blocking):", debitErr);
+        }
       }
     }
 
