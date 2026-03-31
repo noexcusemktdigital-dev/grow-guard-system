@@ -3,11 +3,12 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 
 const CREDIT_COST = 50;
 
-const TOOL_SCHEMA = {
+// ── MARKETING SCHEMA (seções 1-12) ──────────────────────────────────
+const MARKETING_TOOL_SCHEMA = {
   type: "function",
   function: {
     name: "generate_strategy",
-    description: "Gera uma estratégia de marketing completa e personalizada com 12 seções.",
+    description: "Gera a estratégia de marketing completa e personalizada com 12 seções.",
     parameters: {
       type: "object",
       properties: {
@@ -36,24 +37,21 @@ const TOOL_SCHEMA = {
           required: ["score_geral", "analise", "radar", "pontos_fortes", "oportunidades", "riscos"],
           additionalProperties: false,
         },
-        objetivo_principal: { type: "string", description: "Objetivo principal recomendado (ex: Gerar 50 leads/mês)" },
-        canal_prioritario: { type: "string", description: "Canal prioritário recomendado (ex: Instagram + Tráfego Pago)" },
-        investimento_recomendado: { type: "string", description: "Investimento mensal recomendado em marketing (ex: R$ 3.000 a R$ 5.000/mês)" },
-        potencial_crescimento: { type: "string", description: "Potencial de crescimento estimado (ex: 3x em 12 meses)" },
-        resumo_executivo: { type: "string", description: "Resumo executivo de 2-3 parágrafos da estratégia completa" },
+        objetivo_principal: { type: "string", description: "Objetivo principal recomendado" },
+        canal_prioritario: { type: "string", description: "Canal prioritário recomendado" },
+        investimento_recomendado: { type: "string", description: "Investimento mensal recomendado em marketing" },
+        potencial_crescimento: { type: "string", description: "Potencial de crescimento estimado" },
+        resumo_executivo: { type: "string", description: "Resumo executivo de 2-3 parágrafos" },
         icp: {
           type: "object",
           properties: {
-            nome_persona: { type: "string", description: "Nome da persona (ex: João Empreendedor)" },
-            avatar_emoji: { type: "string", description: "Emoji que representa a persona (ex: 👨‍💼)" },
-            demografia: { type: "string", description: "Dados demográficos (ex: Homem, 35-45 anos, classe A/B)" },
-            perfil_profissional: { type: "string", description: "Perfil profissional (ex: Dono de empresa com 10-50 funcionários)" },
-            descricao: { type: "string", description: "Descrição detalhada da persona (1-2 parágrafos)" },
-            comportamento_digital: { type: "string", description: "Como a persona se comporta no digital" },
-            dores: { type: "array", items: { type: "string" }, description: "4-6 dores da persona" },
-            desejos: { type: "array", items: { type: "string" }, description: "4-6 desejos da persona" },
-            objecoes: { type: "array", items: { type: "string" }, description: "3-5 objeções comuns" },
-            gatilhos_compra: { type: "array", items: { type: "string" }, description: "3-5 gatilhos de compra" },
+            nome_persona: { type: "string" }, avatar_emoji: { type: "string" },
+            demografia: { type: "string" }, perfil_profissional: { type: "string" },
+            descricao: { type: "string" }, comportamento_digital: { type: "string" },
+            dores: { type: "array", items: { type: "string" } },
+            desejos: { type: "array", items: { type: "string" } },
+            objecoes: { type: "array", items: { type: "string" } },
+            gatilhos_compra: { type: "array", items: { type: "string" } },
           },
           required: ["nome_persona", "avatar_emoji", "demografia", "perfil_profissional", "descricao", "comportamento_digital", "dores", "desejos", "objecoes", "gatilhos_compra"],
           additionalProperties: false,
@@ -61,11 +59,8 @@ const TOOL_SCHEMA = {
         proposta_valor: {
           type: "object",
           properties: {
-            headline: { type: "string", description: "Headline da proposta de valor (1 frase impactante)" },
-            problema: { type: "string", description: "O problema que o negócio resolve" },
-            metodo: { type: "string", description: "O método/abordagem único" },
-            resultado: { type: "string", description: "O resultado que o cliente alcança" },
-            prova: { type: "string", description: "Prova social ou evidência" },
+            headline: { type: "string" }, problema: { type: "string" },
+            metodo: { type: "string" }, resultado: { type: "string" }, prova: { type: "string" },
           },
           required: ["headline", "problema", "metodo", "resultado", "prova"],
           additionalProperties: false,
@@ -73,24 +68,21 @@ const TOOL_SCHEMA = {
         analise_concorrencia: {
           type: "object",
           properties: {
-            visao_geral: { type: "string", description: "Visão geral do cenário competitivo (1-2 parágrafos)" },
+            visao_geral: { type: "string" },
             concorrentes: {
               type: "array",
               items: {
                 type: "object",
                 properties: {
-                  nome: { type: "string" },
-                  url: { type: "string", description: "URL do site ou rede social do concorrente (se fornecido pelo usuário)" },
-                  pontos_fortes: { type: "string" },
-                  pontos_fracos: { type: "string" },
+                  nome: { type: "string" }, url: { type: "string" },
+                  pontos_fortes: { type: "string" }, pontos_fracos: { type: "string" },
                   oportunidade_diferenciacao: { type: "string" },
                 },
                 required: ["nome", "pontos_fortes", "pontos_fracos", "oportunidade_diferenciacao"],
                 additionalProperties: false,
               },
-              description: "2-4 concorrentes analisados",
             },
-            posicionamento_recomendado: { type: "string", description: "Posicionamento de mercado recomendado" },
+            posicionamento_recomendado: { type: "string" },
           },
           required: ["visao_geral", "concorrentes", "posicionamento_recomendado"],
           additionalProperties: false,
@@ -98,23 +90,19 @@ const TOOL_SCHEMA = {
         tom_comunicacao: {
           type: "object",
           properties: {
-            tom_principal: { type: "string", description: "Tom principal de comunicação (ex: Educativo e Acessível)" },
-            personalidade_marca: { type: "array", items: { type: "string" }, description: "3-5 adjetivos que definem a personalidade" },
-            voz_exemplo: { type: "string", description: "Exemplo de como a marca falaria em um post" },
-            palavras_usar: { type: "array", items: { type: "string" }, description: "8-12 palavras/expressões para usar" },
-            palavras_evitar: { type: "array", items: { type: "string" }, description: "5-8 palavras/expressões para evitar" },
+            tom_principal: { type: "string" },
+            personalidade_marca: { type: "array", items: { type: "string" } },
+            voz_exemplo: { type: "string" },
+            palavras_usar: { type: "array", items: { type: "string" } },
+            palavras_evitar: { type: "array", items: { type: "string" } },
             exemplos_posts: {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  tipo: { type: "string", description: "Tipo do post (carrossel, reels, stories, etc)" },
-                  exemplo: { type: "string", description: "Exemplo de texto do post" },
-                },
+                properties: { tipo: { type: "string" }, exemplo: { type: "string" } },
                 required: ["tipo", "exemplo"],
                 additionalProperties: false,
               },
-              description: "3-5 exemplos de posts com o tom definido",
             },
           },
           required: ["tom_principal", "personalidade_marca", "voz_exemplo", "palavras_usar", "palavras_evitar", "exemplos_posts"],
@@ -128,10 +116,8 @@ const TOOL_SCHEMA = {
               items: {
                 type: "object",
                 properties: {
-                  canal: { type: "string", description: "Nome do canal (ex: Instagram)" },
-                  tipo: { type: "string", enum: ["organico", "pago", "parceria"], description: "Tipo do canal" },
-                  percentual: { type: "number", description: "Percentual do investimento/esforço (0-100)" },
-                  acao_principal: { type: "string", description: "Ação principal neste canal" },
+                  canal: { type: "string" }, tipo: { type: "string", enum: ["organico", "pago", "parceria"] },
+                  percentual: { type: "number" }, acao_principal: { type: "string" },
                 },
                 required: ["canal", "tipo", "percentual", "acao_principal"],
                 additionalProperties: false,
@@ -140,33 +126,9 @@ const TOOL_SCHEMA = {
             funil: {
               type: "object",
               properties: {
-                topo: {
-                  type: "object",
-                  properties: {
-                    estimativa_visitantes: { type: "number" },
-                    objetivo: { type: "string" },
-                  },
-                  required: ["estimativa_visitantes", "objetivo"],
-                  additionalProperties: false,
-                },
-                meio: {
-                  type: "object",
-                  properties: {
-                    estimativa_leads: { type: "number" },
-                    objetivo: { type: "string" },
-                  },
-                  required: ["estimativa_leads", "objetivo"],
-                  additionalProperties: false,
-                },
-                fundo: {
-                  type: "object",
-                  properties: {
-                    estimativa_clientes: { type: "number" },
-                    objetivo: { type: "string" },
-                  },
-                  required: ["estimativa_clientes", "objetivo"],
-                  additionalProperties: false,
-                },
+                topo: { type: "object", properties: { estimativa_visitantes: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_visitantes", "objetivo"], additionalProperties: false },
+                meio: { type: "object", properties: { estimativa_leads: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_leads", "objetivo"], additionalProperties: false },
+                fundo: { type: "object", properties: { estimativa_clientes: { type: "number" }, objetivo: { type: "string" } }, required: ["estimativa_clientes", "objetivo"], additionalProperties: false },
               },
               required: ["topo", "meio", "fundo"],
               additionalProperties: false,
@@ -183,44 +145,31 @@ const TOOL_SCHEMA = {
               items: {
                 type: "object",
                 properties: {
-                  nome: { type: "string" },
-                  tipo: { type: "string", enum: ["educacao", "autoridade", "prova_social", "oferta"] },
-                  percentual: { type: "number", description: "Percentual do calendário (0-100)" },
-                  descricao: { type: "string" },
-                  exemplos: { type: "array", items: { type: "string" }, description: "3-5 ideias de conteúdo para este pilar" },
+                  nome: { type: "string" }, tipo: { type: "string", enum: ["educacao", "autoridade", "prova_social", "oferta"] },
+                  percentual: { type: "number" }, descricao: { type: "string" },
+                  exemplos: { type: "array", items: { type: "string" } },
                 },
                 required: ["nome", "tipo", "percentual", "descricao", "exemplos"],
                 additionalProperties: false,
               },
-              description: "3-4 pilares de conteúdo",
             },
             calendario_semanal: {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  dia: { type: "string", description: "Dia da semana (Seg, Ter, Qua, etc)" },
-                  formato: { type: "string", description: "Formato (Carrossel, Reels, Stories, Post, etc)" },
-                  sugestao: { type: "string", description: "Sugestão de tema/conteúdo" },
-                },
+                properties: { dia: { type: "string" }, formato: { type: "string" }, sugestao: { type: "string" } },
                 required: ["dia", "formato", "sugestao"],
                 additionalProperties: false,
               },
-              description: "5-7 dias com sugestão de conteúdo",
             },
             ideias_conteudo: {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  formato: { type: "string" },
-                  titulo: { type: "string" },
-                  etapa_funil: { type: "string", enum: ["topo", "meio", "fundo"] },
-                },
+                properties: { formato: { type: "string" }, titulo: { type: "string" }, etapa_funil: { type: "string", enum: ["topo", "meio", "fundo"] } },
                 required: ["formato", "titulo", "etapa_funil"],
                 additionalProperties: false,
               },
-              description: "8-12 ideias de conteúdo para o próximo mês",
             },
           },
           required: ["pilares", "calendario_semanal", "ideias_conteudo"],
@@ -233,27 +182,14 @@ const TOOL_SCHEMA = {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  mes: { type: "number" },
-                  leads: { type: "number" },
-                  clientes: { type: "number" },
-                  receita: { type: "number" },
-                  investimento: { type: "number" },
-                },
+                properties: { mes: { type: "number" }, leads: { type: "number" }, clientes: { type: "number" }, receita: { type: "number" }, investimento: { type: "number" } },
                 required: ["mes", "leads", "clientes", "receita", "investimento"],
                 additionalProperties: false,
               },
-              description: "Projeção de 6 meses",
             },
             indicadores: {
               type: "object",
-              properties: {
-                cpc_medio: { type: "string" },
-                cpl_estimado: { type: "string" },
-                cac_estimado: { type: "string" },
-                roi_esperado: { type: "string" },
-                ltv_estimado: { type: "string" },
-              },
+              properties: { cpc_medio: { type: "string" }, cpl_estimado: { type: "string" }, cac_estimado: { type: "string" }, roi_esperado: { type: "string" }, ltv_estimado: { type: "string" } },
               required: ["cpc_medio", "cpl_estimado", "cac_estimado", "roi_esperado", "ltv_estimado"],
               additionalProperties: false,
             },
@@ -264,12 +200,9 @@ const TOOL_SCHEMA = {
         benchmarks_setor: {
           type: "object",
           properties: {
-            setor: { type: "string" },
-            taxa_conversao_media: { type: "string" },
-            cpl_medio_setor: { type: "string" },
-            ticket_medio_setor: { type: "string" },
-            tendencias: { type: "array", items: { type: "string" }, description: "3-5 tendências do setor" },
-            insight_competitivo: { type: "string" },
+            setor: { type: "string" }, taxa_conversao_media: { type: "string" },
+            cpl_medio_setor: { type: "string" }, ticket_medio_setor: { type: "string" },
+            tendencias: { type: "array", items: { type: "string" } }, insight_competitivo: { type: "string" },
           },
           required: ["setor", "taxa_conversao_media", "cpl_medio_setor", "ticket_medio_setor", "tendencias", "insight_competitivo"],
           additionalProperties: false,
@@ -279,16 +212,12 @@ const TOOL_SCHEMA = {
           items: {
             type: "object",
             properties: {
-              mes: { type: "number" },
-              titulo: { type: "string" },
+              mes: { type: "number" }, titulo: { type: "string" },
               passos: {
                 type: "array",
                 items: {
                   type: "object",
-                  properties: {
-                    acao: { type: "string" },
-                    ferramenta: { type: "string", enum: ["conteudos", "postagens", "sites", "trafego", "crm", "scripts", "manual"] },
-                  },
+                  properties: { acao: { type: "string" }, ferramenta: { type: "string", enum: ["conteudos", "postagens", "sites", "trafego", "crm", "scripts", "manual"] } },
                   required: ["acao", "ferramenta"],
                   additionalProperties: false,
                 },
@@ -297,23 +226,41 @@ const TOOL_SCHEMA = {
             required: ["mes", "titulo", "passos"],
             additionalProperties: false,
           },
-          description: "Roadmap de 3 meses com ações e ferramentas da plataforma",
         },
         estrutura_recomendada: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              item: { type: "string", description: "Item de estrutura (ex: Site profissional, CRM configurado)" },
-              status: { type: "string", enum: ["tem", "nao_tem"], description: "Se o negócio já possui ou não" },
-              prioridade: { type: "string", enum: ["alta", "media", "baixa"] },
-              recomendacao: { type: "string" },
+              item: { type: "string" }, status: { type: "string", enum: ["tem", "nao_tem"] },
+              prioridade: { type: "string", enum: ["alta", "media", "baixa"] }, recomendacao: { type: "string" },
             },
             required: ["item", "status", "prioridade", "recomendacao"],
             additionalProperties: false,
           },
-          description: "6-10 itens de checklist de estrutura",
         },
+      },
+      required: [
+        "diagnostico", "objetivo_principal", "canal_prioritario",
+        "investimento_recomendado", "potencial_crescimento", "resumo_executivo",
+        "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
+        "estrategia_aquisicao", "estrategia_conteudo", "plano_crescimento",
+        "benchmarks_setor", "plano_execucao", "estrutura_recomendada",
+      ],
+      additionalProperties: false,
+    },
+  },
+};
+
+// ── COMERCIAL SCHEMA ────────────────────────────────────────────────
+const COMERCIAL_TOOL_SCHEMA = {
+  type: "function",
+  function: {
+    name: "generate_strategy",
+    description: "Gera o diagnóstico comercial completo com radar, projeções, funil reverso, estratégias de vendas e plano de ação.",
+    parameters: {
+      type: "object",
+      properties: {
         diagnostico_comercial: {
           type: "object",
           properties: {
@@ -344,32 +291,26 @@ const TOOL_SCHEMA = {
                 required: ["texto", "tipo"],
                 additionalProperties: false,
               },
-              description: "3-6 insights personalizados",
             },
             estrategias_vendas: {
               type: "array",
               items: {
                 type: "object",
                 properties: {
-                  nome: { type: "string" },
-                  descricao: { type: "string" },
+                  nome: { type: "string" }, descricao: { type: "string" },
                   passos: { type: "array", items: { type: "string" } },
                   resultado_esperado: { type: "string" },
                 },
                 required: ["nome", "descricao", "passos", "resultado_esperado"],
                 additionalProperties: false,
               },
-              description: "2-3 estratégias de vendas detalhadas",
             },
             funil_reverso: {
               type: "object",
               properties: {
-                meta_faturamento: { type: "string" },
-                ticket_medio: { type: "string" },
-                vendas_necessarias: { type: "number" },
-                leads_necessarios: { type: "number" },
-                trafego_necessario: { type: "number" },
-                taxa_conversao_usada: { type: "string" },
+                meta_faturamento: { type: "string" }, ticket_medio: { type: "string" },
+                vendas_necessarias: { type: "number" }, leads_necessarios: { type: "number" },
+                trafego_necessario: { type: "number" }, taxa_conversao_usada: { type: "string" },
               },
               required: ["meta_faturamento", "ticket_medio", "vendas_necessarias", "leads_necessarios", "trafego_necessario", "taxa_conversao_usada"],
               additionalProperties: false,
@@ -378,63 +319,45 @@ const TOOL_SCHEMA = {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  mes: { type: "string" },
-                  atual: { type: "number" },
-                  com_estrategia: { type: "number" },
-                },
+                properties: { mes: { type: "string" }, atual: { type: "number" }, com_estrategia: { type: "number" } },
                 required: ["mes", "atual", "com_estrategia"],
                 additionalProperties: false,
               },
-              description: "Projeção de leads para 6 meses",
             },
             projecao_receita: {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  mes: { type: "string" },
-                  atual: { type: "number" },
-                  com_estrategia: { type: "number" },
-                },
+                properties: { mes: { type: "string" }, atual: { type: "number" }, com_estrategia: { type: "number" } },
                 required: ["mes", "atual", "com_estrategia"],
                 additionalProperties: false,
               },
-              description: "Projeção de receita para 6 meses",
             },
             plano_acao: {
               type: "array",
               items: {
                 type: "object",
                 properties: {
-                  fase: { type: "string" },
-                  periodo: { type: "string" },
+                  fase: { type: "string" }, periodo: { type: "string" },
                   items: { type: "array", items: { type: "string" } },
                 },
                 required: ["fase", "periodo", "items"],
                 additionalProperties: false,
               },
-              description: "Plano de ação em 3 fases (30/60/90 dias)",
             },
           },
           required: ["score_comercial", "nivel", "radar_comercial", "analise_comercial", "gaps", "insights", "estrategias_vendas", "funil_reverso", "projecao_leads", "projecao_receita", "plano_acao"],
           additionalProperties: false,
         },
       },
-      required: [
-        "diagnostico", "objetivo_principal", "canal_prioritario",
-        "investimento_recomendado", "potencial_crescimento", "resumo_executivo",
-        "icp", "proposta_valor", "analise_concorrencia", "tom_comunicacao",
-        "estrategia_aquisicao", "estrategia_conteudo", "plano_crescimento",
-        "benchmarks_setor", "plano_execucao", "estrutura_recomendada",
-        "diagnostico_comercial",
-      ],
+      required: ["diagnostico_comercial"],
       additionalProperties: false,
     },
   },
 };
 
-const SYSTEM_PROMPT = `Você é uma estrategista de marketing sênior. Sua função é receber as respostas de um briefing de marketing e gerar uma ESTRATÉGIA COMPLETA E PERSONALIZADA.
+// ── SYSTEM PROMPTS ──────────────────────────────────────────────────
+const MARKETING_SYSTEM_PROMPT = `Você é uma estrategista de marketing sênior. Sua função é receber as respostas de um briefing de marketing e gerar uma ESTRATÉGIA COMPLETA E PERSONALIZADA.
 
 SEÇÕES A GERAR:
 
@@ -473,6 +396,146 @@ REGRAS:
 
 Use a ferramenta generate_strategy para retornar.`;
 
+const COMERCIAL_SYSTEM_PROMPT = `Você é um consultor comercial sênior especialista em vendas B2B e B2C. Sua função é analisar o briefing comercial e gerar um DIAGNÓSTICO COMERCIAL COMPLETO.
+
+SEÇÕES A GERAR:
+
+1. SCORE COMERCIAL: Score geral (0-100) e nível (Iniciante/Básico/Intermediário/Avançado/Expert).
+
+2. RADAR COMERCIAL: 5 eixos (0-10 cada: processo de vendas, gestão de leads, ferramentas/CRM, canais de aquisição, performance/metas).
+
+3. ANÁLISE COMERCIAL: Texto de 2-3 parágrafos com diagnóstico detalhado.
+
+4. GAPS: 3-5 gaps comerciais identificados.
+
+5. INSIGHTS: 3-6 insights personalizados com tipo (success/warning/opportunity).
+
+6. ESTRATÉGIAS DE VENDAS: 2-3 estratégias detalhadas com nome, descrição, passos e resultado esperado.
+
+7. FUNIL REVERSO: Cálculos reais — meta de faturamento ÷ ticket médio = vendas necessárias, considerando taxas de conversão para estimar leads e tráfego necessários.
+
+8. PROJEÇÃO DE LEADS: 6 meses com cenário atual vs com estratégia.
+
+9. PROJEÇÃO DE RECEITA: 6 meses com cenário atual vs com estratégia.
+
+10. PLANO DE AÇÃO: 3 fases (30/60/90 dias) com itens específicos.
+
+REGRAS:
+- Seja ESPECÍFICO com base nas respostas — nada genérico
+- Use CÁLCULOS REAIS no funil reverso (meta ÷ ticket = vendas, etc.)
+- As projeções devem ser realistas baseadas no ticket médio e faturamento informados
+- As estratégias de vendas devem ser específicas para o segmento e modelo de negócio
+- Sempre em português brasileiro
+- Valores monetários em R$
+
+Use a ferramenta generate_strategy para retornar.`;
+
+// ── HELPERS ─────────────────────────────────────────────────────────
+function buildUserPrompt(answers: Record<string, unknown>, salesPlanContext: string, section: string): string {
+  const answersText = Object.entries(answers)
+    .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+    .join("\n");
+
+  if (section === "comercial") {
+    return `Com base nas respostas do briefing unificado (GPS do Negócio) abaixo, gere o DIAGNÓSTICO COMERCIAL COMPLETO.
+
+RESPOSTAS DO BRIEFING:
+${answersText}
+${salesPlanContext}
+
+INSTRUÇÕES IMPORTANTES:
+1. O DIAGNÓSTICO COMERCIAL deve ter cálculos reais no funil reverso (meta ÷ ticket = vendas, etc.)
+2. As projeções de leads e receita devem ter 6 meses com cenário atual vs com estratégia
+3. As estratégias de vendas devem ser específicas para o segmento e modelo de negócio informado
+4. Use os dados de ticket médio, faturamento atual, número de vendedores e metas informados
+5. Os gaps devem refletir problemas reais detectados nas respostas
+
+Use a ferramenta generate_strategy para retornar.`;
+  }
+
+  return `Com base nas respostas do briefing unificado (GPS do Negócio — parte comercial + parte marketing) abaixo, gere a ESTRATÉGIA DE MARKETING COMPLETA com todas as 12 seções.
+
+RESPOSTAS DO BRIEFING:
+${answersText}
+${salesPlanContext}
+
+INSTRUÇÕES IMPORTANTES:
+1. O ICP deve refletir exatamente o público descrito nas respostas
+2. O tom de comunicação deve respeitar as preferências informadas (incluindo o que NÃO quer)
+3. Faça projeções financeiras realistas baseadas no ticket médio e faturamento informados
+4. Os concorrentes devem ser inferidos do segmento (ou usar URLs se fornecidos)
+5. O calendário semanal deve ser prático e executável
+6. O plano de execução deve referenciar ferramentas reais da plataforma (conteudos, postagens, sites, trafego, crm, scripts)
+7. A estrutura recomendada deve avaliar o que o negócio já tem vs o que precisa
+
+Use a ferramenta generate_strategy para retornar.`;
+}
+
+async function callAI(
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string,
+  toolSchema: Record<string, unknown>,
+): Promise<{ result: Record<string, unknown> | null; tokensUsed: number }> {
+  const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [toolSchema],
+      tool_choice: { type: "function", function: { name: "generate_strategy" } },
+    }),
+  });
+
+  if (!aiResponse.ok) {
+    const status = aiResponse.status;
+    const errText = await aiResponse.text();
+    console.error("AI gateway error:", status, errText);
+    if (status === 429) throw new Error("RATE_LIMIT");
+    if (status === 402) throw new Error("AI_CREDITS");
+    throw new Error("AI_ERROR");
+  }
+
+  const aiData = await aiResponse.json();
+  const tokensUsed = aiData.usage?.total_tokens || 0;
+
+  let result: Record<string, unknown> | null = null;
+  const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall?.function?.arguments) {
+    try {
+      result = typeof toolCall.function.arguments === "string"
+        ? JSON.parse(toolCall.function.arguments)
+        : toolCall.function.arguments;
+    } catch (e) {
+      console.error("Failed to parse tool call arguments:", e);
+    }
+  }
+
+  // Fallback: try parsing message.content as JSON
+  if (!result) {
+    const messageContent = aiData.choices?.[0]?.message?.content;
+    if (messageContent) {
+      try {
+        const cleaned = messageContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        result = JSON.parse(cleaned);
+        console.log("Parsed result from message.content fallback");
+      } catch (e) {
+        console.error("Fallback JSON parse failed:", e, "Content preview:", messageContent?.substring(0, 300));
+      }
+    }
+  }
+
+  return { result, tokensUsed };
+}
+
+// ── MAIN HANDLER ────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: getCorsHeaders(req) });
@@ -501,7 +564,7 @@ Deno.serve(async (req) => {
     }
     const userId = user.id;
 
-    const { answers, organization_id } = await req.json();
+    const { answers, organization_id, section = "marketing" } = await req.json();
     if (!answers) {
       return new Response(
         JSON.stringify({ error: "Respostas do briefing são obrigatórias" }),
@@ -517,10 +580,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Pre-check credits
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    
-    if (organization_id) {
+
+    // Only check credits on marketing call (first call)
+    if (section === "marketing" && organization_id) {
       const { data: wallet } = await serviceClient
         .from("credit_wallets")
         .select("balance")
@@ -546,119 +609,37 @@ Deno.serve(async (req) => {
         const spText = Object.entries(salesPlan.answers as Record<string, unknown>)
           .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
           .join("\n");
-        salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido):\n${spText}\n\nUse esses dados para enriquecer ICP, proposta de valor e projeções.`;
+        salesPlanContext = `\n\nCONTEXTO DO PLANO DE VENDAS (já preenchido):\n${spText}\n\nUse esses dados para enriquecer a análise.`;
       }
     }
 
-    const answersText = Object.entries(answers)
-      .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-      .join("\n");
+    // Pick schema & prompt based on section
+    const isComercial = section === "comercial";
+    const toolSchema = isComercial ? COMERCIAL_TOOL_SCHEMA : MARKETING_TOOL_SCHEMA;
+    const systemPrompt = isComercial ? COMERCIAL_SYSTEM_PROMPT : MARKETING_SYSTEM_PROMPT;
+    const userPrompt = buildUserPrompt(answers, salesPlanContext, section);
 
-    const userPrompt = `Com base nas respostas do briefing unificado (GPS do Negócio — parte comercial + parte marketing) abaixo, gere a ESTRATÉGIA COMPLETA com todas as 13 seções, incluindo o DIAGNÓSTICO COMERCIAL detalhado.
+    console.log(`Generating ${section} section...`);
 
-RESPOSTAS DO BRIEFING:
-${answersText}
-${salesPlanContext}
-
-INSTRUÇÕES IMPORTANTES:
-1. O ICP deve refletir exatamente o público descrito nas respostas
-2. O tom de comunicação deve respeitar as preferências informadas (incluindo o que NÃO quer)
-3. Faça projeções financeiras realistas baseadas no ticket médio e faturamento informados
-4. Os concorrentes devem ser inferidos do segmento (ou usar URLs se fornecidos)
-5. O calendário semanal deve ser prático e executável
-6. O plano de execução deve referenciar ferramentas reais da plataforma (conteudos, postagens, sites, trafego, crm, scripts)
-7. A estrutura recomendada deve avaliar o que o negócio já tem vs o que precisa
-8. O DIAGNÓSTICO COMERCIAL deve ter cálculos reais no funil reverso (meta ÷ ticket = vendas, etc.)
-9. As projeções de leads e receita devem ter 6 meses com cenário atual vs com estratégia
-10. As estratégias de vendas devem ser específicas para o segmento e modelo de negócio informado
-
-Use a ferramenta generate_strategy para retornar.`;
-
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [TOOL_SCHEMA],
-        tool_choice: { type: "function", function: { name: "generate_strategy" } },
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
-          { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Faça upgrade do seu plano." }),
-          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
-      }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      return new Response(
-        JSON.stringify({ error: "Erro ao gerar estratégia" }),
-        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    const aiData = await aiResponse.json();
-    const tokensUsed = aiData.usage?.total_tokens || 0;
-
-    let result: Record<string, unknown> | null = null;
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        result =
-          typeof toolCall.function.arguments === "string"
-            ? JSON.parse(toolCall.function.arguments)
-            : toolCall.function.arguments;
-      } catch (e) {
-        console.error("Failed to parse tool call arguments:", e);
-      }
-    }
-
-    // Fallback: try parsing message.content as JSON
-    if (!result) {
-      const messageContent = aiData.choices?.[0]?.message?.content;
-      if (messageContent) {
-        try {
-          const cleaned = messageContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          result = JSON.parse(cleaned);
-          console.log("Parsed result from message.content fallback");
-        } catch (e) {
-          console.error("Fallback JSON parse failed:", e, "Content preview:", messageContent?.substring(0, 300));
-        }
-      }
-    }
+    const { result, tokensUsed } = await callAI(LOVABLE_API_KEY, systemPrompt, userPrompt, toolSchema);
 
     if (!result) {
-      console.error("Full AI response:", JSON.stringify(aiData).substring(0, 1000));
       return new Response(
         JSON.stringify({ error: "Falha ao estruturar resposta da IA. Tente novamente." }),
         { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
+    console.log(`${section} section generated successfully. Tokens: ${tokensUsed}`);
+
     // Log usage
     const { data: orgData } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
-
     if (orgData) {
       await serviceClient.from("ai_conversation_logs").insert({
         organization_id: orgData,
         agent_id: "00000000-0000-0000-0000-000000000000",
         contact_id: "00000000-0000-0000-0000-000000000000",
-        input_message: `[Estratégia Marketing] Briefing com ${Object.keys(answers).length} respostas`,
+        input_message: `[GPS ${section}] Briefing com ${Object.keys(answers).length} respostas`,
         output_message: JSON.stringify(result).substring(0, 500),
         tokens_used: tokensUsed,
         model: "google/gemini-2.5-flash",
@@ -671,8 +652,23 @@ Use a ferramenta generate_strategy para retornar.`;
     );
   } catch (err: unknown) {
     console.error("Strategy generation error:", err);
+    const message = err instanceof Error ? err.message : "Erro interno";
+
+    if (message === "RATE_LIMIT") {
+      return new Response(
+        JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
+        { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
+    if (message === "AI_CREDITS") {
+      return new Response(
+        JSON.stringify({ error: "Créditos insuficientes. Faça upgrade do seu plano." }),
+        { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno" }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
