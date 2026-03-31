@@ -8,7 +8,8 @@ export async function extractEdgeFunctionError(error: unknown): Promise<Error> {
   const ctx = (error as any)?.context;
   if (ctx instanceof Response) {
     const body = await ctx.json().catch(() => null);
-    return new Error(body?.error || (error as any)?.message || "Erro desconhecido");
+    const msg = body?.error || body?.message || (error as any)?.message || "Erro desconhecido";
+    return new Error(msg);
   }
   return error instanceof Error ? error : new Error(String(error));
 }
