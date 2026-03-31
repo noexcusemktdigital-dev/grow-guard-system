@@ -7,7 +7,7 @@ import {
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
-  Headphones, Calendar, Video, Image,
+  Headphones, Calendar, Video, Image, Navigation,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
@@ -30,6 +30,7 @@ interface SidebarItem {
   path: string;
   badgeKey?: string;
   adminOnly?: boolean;
+  highlight?: boolean;
 }
 
 const globalSection: SidebarItem[] = [
@@ -39,8 +40,14 @@ const globalSection: SidebarItem[] = [
   { label: "Gamificação", icon: Trophy, path: "/cliente/gamificacao" },
 ];
 
+const gpsItem: SidebarItem = {
+  label: "GPS do Negócio",
+  icon: Navigation,
+  path: "/cliente/gps-negocio",
+  highlight: true,
+};
+
 const vendasSection: SidebarItem[] = [
-  { label: "Plano de Vendas", icon: Target, path: "/cliente/plano-vendas" },
   { label: "CRM", icon: Users, path: "/cliente/crm" },
   { label: "Conversas", icon: MessageCircle, path: "/cliente/chat" },
   { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
@@ -50,8 +57,6 @@ const vendasSection: SidebarItem[] = [
 ];
 
 const marketingSection: SidebarItem[] = [
-  
-  { label: "Plano de Marketing", icon: Megaphone, path: "/cliente/plano-marketing" },
   { label: "Roteiros", icon: Video, path: "/cliente/conteudos" },
   { label: "Postagem", icon: Image, path: "/cliente/redes-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
@@ -70,8 +75,9 @@ const GATE_REASON_LABELS: Record<string, string> = {
   trial_expired: "Trial expirado",
   trial_limited: "Disponível no plano pago",
   no_credits: "Sem créditos",
-  no_sales_plan: "Complete o Plano de Vendas",
-  no_marketing_strategy: "Complete o Plano de Marketing",
+  no_gps: "Complete o GPS do Negócio",
+  no_sales_plan: "Complete o GPS do Negócio",
+  no_marketing_strategy: "Complete o GPS do Negócio",
   admin_only: "Apenas administradores",
   
 };
