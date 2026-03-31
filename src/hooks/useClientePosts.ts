@@ -150,7 +150,7 @@ export function useGeneratePost() {
             acao_cena: payload.acao_cena,
           },
         });
-        if (resp.error) throw new Error(resp.error.message || "Erro ao gerar vídeo");
+        if (resp.error) throw await extractEdgeFunctionError(resp.error);
         if (resp.data?.error) throw new Error(resp.data.error);
         result_url = resp.data?.frameUrls?.[0] || null;
         result_data = resp.data;
