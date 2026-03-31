@@ -129,7 +129,7 @@ export default function ClienteTrafegoPago() {
   const handleApprove = (id: string) => {
     approveMutation.mutate(id, {
       onSuccess: async () => {
-        toast({ title: "Estratégia aprovada!", description: "200 créditos foram debitados. Criando campanhas..." });
+        toast({ title: "Estratégia aprovada!", description: "25 créditos foram debitados. Criando campanhas..." });
         
         // Create one campaign per platform
         try {
