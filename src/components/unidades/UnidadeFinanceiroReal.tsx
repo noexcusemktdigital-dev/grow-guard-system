@@ -143,6 +143,7 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
             <Card className="p-4 text-center text-sm text-muted-foreground">Nenhum pagamento registrado.</Card>
           ) : (
             <Card>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -171,6 +172,7 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </Card>
           )}
         </div>

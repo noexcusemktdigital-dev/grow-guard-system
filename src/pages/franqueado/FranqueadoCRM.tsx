@@ -117,7 +117,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
             </div>
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0" aria-label="Mais opções"><MoreHorizontal className="w-3.5 h-3.5" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent className="w-36" align="end">
                   <DropdownMenuItem className="text-xs gap-2" onClick={onCopyPhone}><Copy className="w-3 h-3" /> Copiar telefone</DropdownMenuItem>
                   {lead.phone && <DropdownMenuItem className="text-xs gap-2" asChild><a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="w-3 h-3" /> WhatsApp</a></DropdownMenuItem>}
@@ -429,7 +429,7 @@ export default function FranqueadoCRM() {
                       </Select>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div><Label className="text-[10px] text-muted-foreground">Data de</Label><Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-8 text-xs" /></div>
                     <div><Label className="text-[10px] text-muted-foreground">Data até</Label><Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="h-8 text-xs" /></div>
                   </div>
@@ -461,7 +461,7 @@ export default function FranqueadoCRM() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div><Label className="text-[10px] text-muted-foreground">Valor mín</Label><Input type="number" value={filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 text-xs" placeholder="0" /></div>
                     <div><Label className="text-[10px] text-muted-foreground">Valor máx</Label><Input type="number" value={filterValueMax} onChange={e => setFilterValueMax(e.target.value)} className="h-8 text-xs" placeholder="∞" /></div>
                   </div>
@@ -582,6 +582,13 @@ export default function FranqueadoCRM() {
               </DragOverlay>
             </DndContext>
           ) : (
+            filteredLeads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Search className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <p className="text-sm font-medium text-muted-foreground">Nenhum lead encontrado</p>
+                <p className="text-xs text-muted-foreground mt-1">Tente ajustar os filtros de busca</p>
+              </div>
+            ) : (
             <Card>
               <CardContent className="p-0">
                 <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30">
@@ -610,6 +617,7 @@ export default function FranqueadoCRM() {
                 </div>
               </CardContent>
             </Card>
+            )
           )}
           </>
           )}

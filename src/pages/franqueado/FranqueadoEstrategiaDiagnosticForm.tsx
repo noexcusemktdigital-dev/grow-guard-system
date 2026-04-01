@@ -131,7 +131,7 @@ export function DiagnosticForm({
             )}
 
             {field.type === "checkbox-group" && (
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                 {field.options?.map((option) => {
                   const checked = Array.isArray(answers[field.key]) && answers[field.key].includes(option);
                   return (

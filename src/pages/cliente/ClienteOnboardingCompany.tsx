@@ -213,7 +213,7 @@ export default function ClienteOnboardingCompany() {
                         <Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="(11) 99999-9999" className="pl-10" />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label className="text-foreground/80">Cidade</Label>
                         <Input value={form.city} onChange={e => set("city", e.target.value)} placeholder="São Paulo" />

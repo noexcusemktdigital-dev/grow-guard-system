@@ -195,7 +195,7 @@ export function ClientePlanoVendasMetas({
         <div className="space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">GRÁFICOS DE ACOMPANHAMENTO</p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {progressChartData.length > 0 && (
               <Card>
                 <CardContent className="py-5">

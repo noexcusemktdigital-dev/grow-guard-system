@@ -114,7 +114,7 @@ export function CrmProductsManager() {
               <div className="flex items-center gap-1">
                 <Switch checked={p.is_active} onCheckedChange={checked => { updateProduct.mutate({ id: p.id, is_active: checked }); }} className="scale-75" />
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Mais opções"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="text-xs">
                     <DropdownMenuItem onClick={() => openEdit(p)}><Pencil className="w-3 h-3 mr-2" />Editar</DropdownMenuItem>
                     <DropdownMenuItem className="text-destructive" onClick={() => { deleteProduct.mutate(p.id); toast({ title: "Produto excluído" }); }}><Trash2 className="w-3 h-3 mr-2" />Excluir</DropdownMenuItem>

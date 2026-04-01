@@ -132,7 +132,7 @@ export function LeadProductsTab({ leadId }: { leadId: string }) {
       )}
 
       {leadProducts && leadProducts.length > 0 && (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-hidden overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -330,7 +330,7 @@ export function ProposalsTab({ leadId, onValueSync }: { leadId: string; onValueS
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Mais opções"><MoreHorizontal className="w-4 h-4" /></Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="text-xs">
                     {p.status === "draft" && <DropdownMenuItem onClick={() => handleStatusChange(p.id, "sent")}>Marcar como Enviada</DropdownMenuItem>}

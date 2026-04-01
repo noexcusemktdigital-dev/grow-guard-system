@@ -266,7 +266,7 @@ export default function ClienteDashboard() {
     return (
       <div className="w-full space-y-6">
         <PageHeader title="Relatórios" subtitle="Análises e métricas" icon={<BarChart3 className="w-5 h-5 text-primary" />} />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>
       </div>
     );
   }
@@ -314,13 +314,13 @@ export default function ClienteDashboard() {
           {(() => {
             const gRecTotal = getKpiGoalData("Receita Total"); const gLeads = getKpiGoalData("Leads Captados"); const gConv = getKpiGoalData("Taxa de Conversão"); const gTicket = getKpiGoalData("Ticket Médio"); const gPipeline = getKpiGoalData("Pipeline Ativo");
             return (<>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <DashboardKpiCard label="Receita Total" value={`R$ ${totalValue.toLocaleString("pt-BR")}`} icon={DollarSign} gradient="from-emerald-500/15 to-emerald-600/5" trend={calcTrend(totalValue, prevTotalValue)} goalStatus={gRecTotal?.status} goalPercent={gRecTotal?.percent} goalTarget={gRecTotal?.targetFormatted} goalDaysLeft={gRecTotal?.daysLeft} />
                 <DashboardKpiCard label="Leads Captados" value={String(allLeads.length)} icon={Users} gradient="from-blue-500/15 to-blue-600/5" trend={calcTrend(allLeads.length, prevLeads.length)} goalStatus={gLeads?.status} goalPercent={gLeads?.percent} goalTarget={gLeads?.targetFormatted} goalDaysLeft={gLeads?.daysLeft} />
                 <DashboardKpiCard label="Taxa de Conversão" value={`${conversionRate}%`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" trend={calcTrend(Number(conversionRate), prevConversionRate)} goalStatus={gConv?.status} goalPercent={gConv?.percent} goalTarget={gConv?.targetFormatted} goalDaysLeft={gConv?.daysLeft} />
                 <DashboardKpiCard label="Ticket Médio" value={`R$ ${ticketMedio.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`} icon={Eye} gradient="from-amber-500/15 to-amber-600/5" goalStatus={gTicket?.status} goalPercent={gTicket?.percent} goalTarget={gTicket?.targetFormatted} goalDaysLeft={gTicket?.daysLeft} />
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <DashboardKpiCard label="Pipeline Ativo" value={`R$ ${pipelineValue.toLocaleString("pt-BR")}`} icon={TrendingUp} gradient="from-sky-500/15 to-sky-600/5" goalStatus={gPipeline?.status} goalPercent={gPipeline?.percent} goalTarget={gPipeline?.targetFormatted} goalDaysLeft={gPipeline?.daysLeft} />
                 <DashboardKpiCard label="Leads Perdidos" value={String(lostLeads.length)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
                 <DashboardKpiCard label="Taxa de Perda" value={`${lossRate}%`} icon={ArrowDownRight} gradient="from-orange-500/15 to-orange-600/5" />
@@ -333,7 +333,7 @@ export default function ClienteDashboard() {
             <Card>
               <CardHeader className="pb-3"><div className="flex items-center justify-between"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Metas do Mês</CardTitle><Button variant="ghost" size="sm" className="text-[10px] h-6" onClick={() => navigate("/metas-ranking")}>Ver todas →</Button></div></CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {activeGoals.map((goal: GoalRow) => {
                     const prog = goalProgress[goal.id]; if (!prog) return null;
                     const statusInfo = getGoalStatusLabel(prog.status);
@@ -362,12 +362,12 @@ export default function ClienteDashboard() {
             <Card className="border-dashed"><CardContent className="flex items-center justify-between py-4"><div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-muted-foreground" /><p className="text-xs text-muted-foreground">Nenhuma meta ativa para este mês.</p></div><Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/metas-ranking")}>Criar metas</Button></CardContent></Card>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Taxa de Conversão</CardTitle></CardHeader><CardContent className="flex flex-col items-center justify-center"><div className="h-40 w-full max-w-xs"><ResponsiveContainer width="100%" height="100%"><RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: "Conversão", value: Number(conversionRate), fill: conversionGoal ? conversionGoal.status === "batida" || conversionGoal.status === "no_ritmo" ? "hsl(142 76% 36%)" : conversionGoal.status === "em_andamento" ? "hsl(45 93% 47%)" : "hsl(0 84% 60%)" : "hsl(var(--primary))" }]} startAngle={90} endAngle={-270}><RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} /></RadialBarChart></ResponsiveContainer></div><div className="text-center -mt-24 relative z-10"><p className="text-3xl font-bold">{conversionRate}%</p><p className="text-[10px] text-muted-foreground uppercase tracking-wider">de conversão</p></div></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Etapa</CardTitle></CardHeader><CardContent>{leadsByStage.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsByStage}><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><ReTooltip /><Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Origem</CardTitle></CardHeader><CardContent>{leadsBySource.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsBySource} layout="vertical"><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} /><ReTooltip /><Bar dataKey="value" radius={[0, 4, 4, 0]}>{leadsBySource.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
             <div className="space-y-4">
               <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Propostas em Aberto</CardTitle></CardHeader><CardContent><div className="flex items-baseline gap-3"><p className="text-2xl font-bold">{openProposals.length}</p><p className="text-xs text-muted-foreground">propostas · R$ {openProposalsValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div></CardContent></Card>
@@ -375,7 +375,7 @@ export default function ClienteDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads Criados por Semana</CardTitle></CardHeader><CardContent>{leadsPerWeek.some(w => w.value > 0) ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><LineChart data={leadsPerWeek}><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><ReTooltip /><Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />{leadsGoal && leadsGoal.target_value && <ReferenceLine y={Math.round(leadsGoal.target_value / 4)} stroke="hsl(45 93% 47%)" strokeDasharray="6 3" label={{ value: "Meta/semana", position: "right", fontSize: 9, fill: "hsl(45 93% 47%)" }} />}</LineChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Motivos de Perda</CardTitle></CardHeader><CardContent>{lostReasons.length > 0 ? <div className="space-y-2">{lostReasons.map((r, i) => <div key={r.name} className="flex items-center justify-between"><div className="flex items-center gap-2 flex-1 min-w-0"><div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} /><span className="text-xs text-muted-foreground truncate">{r.name}</span></div><Badge variant="secondary" className="text-[10px]">{r.value}</Badge></div>)}</div> : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido no período</p>}</CardContent></Card>
           </div>
@@ -392,14 +392,14 @@ export default function ClienteDashboard() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <DashboardKpiCard label="Total Conversas" value={String(allContacts.length)} icon={MessageCircle} gradient="from-emerald-500/15 to-emerald-600/5" />
             <DashboardKpiCard label="Mensagens Hoje" value={String(messagesToday.length)} icon={MessageCircle} gradient="from-blue-500/15 to-blue-600/5" />
             <DashboardKpiCard label="Tempo Médio Resposta" value={`${avgResponseTime}min`} icon={Target} gradient="from-purple-500/15 to-purple-600/5" />
             <DashboardKpiCard label="Sem Resposta" value={String(noResponseCount)} icon={ArrowDownRight} gradient="from-red-500/15 to-red-600/5" />
           </div>
           {allMessagesRaw.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Mensagens por Dia (7 dias)</CardTitle></CardHeader><CardContent><div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={messagesPerDay}><CartesianGrid strokeDasharray="3 3" className="stroke-muted" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><ReTooltip /><Legend wrapperStyle={{ fontSize: 10 }} /><Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} /><Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></CardContent></Card>
               <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Atendimento: IA vs Humano</CardTitle></CardHeader><CardContent className="flex items-center justify-center"><div className="h-48 w-full max-w-xs"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={aiVsHuman} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>{aiVsHuman.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><ReTooltip /></PieChart></ResponsiveContainer></div></CardContent></Card>
             </div>
@@ -418,7 +418,7 @@ export default function ClienteDashboard() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <DashboardKpiCard label="Total Agentes" value={String(allAgents.length)} icon={Bot} gradient="from-emerald-500/15 to-emerald-600/5" />
             <DashboardKpiCard label="Agentes Ativos" value={String(activeAgents.length)} icon={Bot} gradient="from-blue-500/15 to-blue-600/5" />
             <DashboardKpiCard label="Taxa de Handoff" value={`${handoffRate}%`} icon={Users} gradient="from-purple-500/15 to-purple-600/5" />

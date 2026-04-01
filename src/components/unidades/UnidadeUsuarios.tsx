@@ -63,7 +63,7 @@ export function UnidadeUsuarios({ users, unidadeId, onUpdate }: Props) {
         <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> Novo Usuário</Button>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

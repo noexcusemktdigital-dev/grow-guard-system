@@ -173,10 +173,10 @@ export function SitePreview({ html, siteId, siteStatus, siteUrl, onRegenerate, o
                 value={siteUrl}
                 className="flex-1 text-xs bg-transparent outline-none text-foreground font-mono"
               />
-              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleCopyLink}>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleCopyLink} aria-label="Copiar">
                 <Copy className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => window.open(siteUrl, "_blank")}>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => window.open(siteUrl, "_blank")} aria-label="Abrir em nova aba">
                 <ExternalLink className="w-3.5 h-3.5" />
               </Button>
             </div>

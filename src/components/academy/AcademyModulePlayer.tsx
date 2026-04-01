@@ -69,7 +69,7 @@ export function AcademyModulePlayer({ moduleId }: { moduleId: string }) {
       </div>
       <Progress value={modProgress} className="h-2" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Lesson list */}
         <div className="lg:col-span-1 space-y-1">
           <p className="text-xs font-semibold text-muted-foreground mb-2">Aulas ({sortedLessons.length})</p>

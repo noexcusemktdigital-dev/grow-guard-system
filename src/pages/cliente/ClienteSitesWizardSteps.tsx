@@ -442,7 +442,7 @@ export function WizardStepContent({
       return (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">Dados de contato reais para o site.</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-medium text-foreground">Telefone</label>
               <Input placeholder="(11) 99999-9999" value={form.telefone} onChange={e => updateForm("telefone", e.target.value)} className="mt-1" />

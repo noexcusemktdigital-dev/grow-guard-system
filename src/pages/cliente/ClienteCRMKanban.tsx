@@ -85,7 +85,7 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" aria-label="Mais opções"><MoreHorizontal className="w-3.5 h-3.5" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-36" align="end">
                   <DropdownMenuItem className="text-xs gap-2" onClick={onCopyPhone}>

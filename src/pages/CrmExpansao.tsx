@@ -89,7 +89,7 @@ function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMarkLost,
             </div>
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreHorizontal className="w-3.5 h-3.5" /></Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0" aria-label="Mais opções"><MoreHorizontal className="w-3.5 h-3.5" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent className="w-36" align="end">
                   <DropdownMenuItem className="text-xs gap-2" onClick={onCopyPhone}><Copy className="w-3 h-3" /> Copiar telefone</DropdownMenuItem>
                   {lead.phone && <DropdownMenuItem className="text-xs gap-2" asChild><a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="w-3 h-3" /> WhatsApp</a></DropdownMenuItem>}

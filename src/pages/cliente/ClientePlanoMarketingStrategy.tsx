@@ -95,7 +95,7 @@ function MktResumo({ result }: { result: StrategyResult }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {radarData.length > 0 && (
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Marketing (6D) <InfoTip text="Avalia 6 áreas-chave do seu marketing. Nota de 0 a 10." /></CardTitle></CardHeader>
@@ -308,7 +308,7 @@ function MktAquisicao({ result }: { result: StrategyResult }) {
   return (
     <div className="space-y-4">
       {funnelData.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Funil de Aquisição</CardTitle></CardHeader><CardContent><div className="flex flex-col items-center gap-2 py-4">{funnelData.map((stage, i) => <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.2 }} className="text-center rounded-xl py-3 px-6 text-sm font-medium" style={{ width: `${100 - i * 20}%`, background: `hsl(var(--primary) / ${0.15 + i * 0.1})`, border: `1px solid hsl(var(--primary) / ${0.3 + i * 0.1})` }}><span className="font-bold text-lg">{stage.value.toLocaleString("pt-BR")}</span><span className="text-xs text-muted-foreground ml-2">{stage.name}</span></motion.div>)}</div></CardContent></Card>}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {pieData.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Distribuição de Canais</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={220}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}%`}>{pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>}
         {ea?.canais_prioritarios?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Canais Prioritários</CardTitle></CardHeader><CardContent><div className="space-y-2">{ea.canais_prioritarios.map((c: CanalRow, i: number) => <div key={i} className="p-3 rounded-lg bg-muted/30"><div className="flex items-center justify-between mb-1"><Badge variant="outline" className="text-xs">{c.canal}</Badge><span className="text-xs font-bold">{c.percentual}%</span></div><Progress value={c.percentual} className="h-1.5 mb-1" /><p className="text-xs text-muted-foreground">{c.acao_principal}</p></div>)}</div></CardContent></Card>}
       </div>
@@ -344,7 +344,7 @@ function MktProjecao({ result }: { result: StrategyResult }) {
   return (
     <div className="space-y-4">
       {ind && <div className="grid grid-cols-2 md:grid-cols-5 gap-3">{[{ label: "CPC Médio", value: ind.cpc_medio, tip: "Custo Por Clique." }, { label: "CPL", value: ind.cpl_estimado, tip: "Custo Por Lead." }, { label: "CAC", value: ind.cac_estimado, tip: "Custo de Aquisição de Cliente." }, { label: "ROI", value: ind.roi_esperado, tip: "Retorno sobre Investimento." }, { label: "LTV", value: ind.ltv_estimado || "—", tip: "Lifetime Value." }].map((kpi, i) => <Card key={i}><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">{kpi.label} <InfoTip text={kpi.tip} /></p><p className="font-bold text-sm mt-0.5">{kpi.value}</p></CardContent></Card>)}</div>}
-      {chartData.length > 0 && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads & Clientes</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><AreaChart data={chartData}><defs><linearGradient id="leadsGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip /><Legend /><Area type="monotone" dataKey="leads" stroke="hsl(var(--primary))" fill="url(#leadsGrad)" name="Leads" strokeWidth={2} /><Line type="monotone" dataKey="clientes" stroke={CHART_COLORS[1]} name="Clientes" strokeWidth={2} /></AreaChart></ResponsiveContainer></CardContent></Card><Card><CardHeader className="pb-2"><CardTitle className="text-sm">Receita vs Investimento</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} /><Tooltip formatter={(v: number) => `R$ ${Number(v).toLocaleString("pt-BR")}`} /><Legend /><Bar dataKey="receita" fill="hsl(var(--primary))" name="Receita" radius={[4, 4, 0, 0]} /><Bar dataKey="investimento" fill={CHART_COLORS[2]} name="Investimento" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card></div>}
+      {chartData.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads & Clientes</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><AreaChart data={chartData}><defs><linearGradient id="leadsGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip /><Legend /><Area type="monotone" dataKey="leads" stroke="hsl(var(--primary))" fill="url(#leadsGrad)" name="Leads" strokeWidth={2} /><Line type="monotone" dataKey="clientes" stroke={CHART_COLORS[1]} name="Clientes" strokeWidth={2} /></AreaChart></ResponsiveContainer></CardContent></Card><Card><CardHeader className="pb-2"><CardTitle className="text-sm">Receita vs Investimento</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} /><Tooltip formatter={(v: number) => `R$ ${Number(v).toLocaleString("pt-BR")}`} /><Legend /><Bar dataKey="receita" fill="hsl(var(--primary))" name="Receita" radius={[4, 4, 0, 0]} /><Bar dataKey="investimento" fill={CHART_COLORS[2]} name="Investimento" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></CardContent></Card></div>}
       {bench && <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /> Benchmarks: {bench.setor}</CardTitle></CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 md:grid-cols-3 gap-3"><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">Taxa Conversão</p><p className="font-bold text-sm">{bench.taxa_conversao_media}</p></div><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">CPL Médio</p><p className="font-bold text-sm">{bench.cpl_medio_setor}</p></div><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">Ticket Médio</p><p className="font-bold text-sm">{bench.ticket_medio_setor}</p></div></div>{bench.tendencias?.length > 0 && <div><p className="text-xs font-semibold mb-1.5">Tendências do Setor</p><TagList items={bench.tendencias} variant="outline" /></div>}{bench.insight_competitivo && <div className="p-3 rounded-lg bg-primary/5 border border-primary/20"><p className="text-xs font-semibold text-primary mb-0.5">Insight</p><p className="text-sm">{bench.insight_competitivo}</p></div>}</CardContent></Card>}
     </div>
   );
@@ -390,7 +390,7 @@ function ComScoreRadar({ dc }: { dc: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Thermometer Card */}
         <Card>
           <CardContent className="p-6">
@@ -572,7 +572,7 @@ function ComProjecoes({ dc }: { dc: any }) {
   if (!hasLeads && !hasReceita) return <p className="text-sm text-muted-foreground p-4">Projeções não disponíveis.</p>;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {hasLeads && (
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Leads</CardTitle></CardHeader>

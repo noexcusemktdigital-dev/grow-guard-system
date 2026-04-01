@@ -62,7 +62,7 @@ export function UnidadeDocumentos({ docs, unidadeId, onUpdate }: Props) {
         <Button onClick={() => setOpen(true)} className="gap-2"><Plus className="w-4 h-4" /> Novo Documento</Button>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

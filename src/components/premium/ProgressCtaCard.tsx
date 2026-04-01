@@ -30,7 +30,7 @@ export const ProgressCtaCard = React.memo(React.forwardRef<HTMLDivElement, Progr
   onCtaClick,
 }, ref) {
   return (
-    <div ref={ref} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div ref={ref} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* Progress Card */}
       <div className="lg:col-span-2 glass-card p-6 lg:p-8 relative overflow-hidden">
         {/* Decorative shape */}

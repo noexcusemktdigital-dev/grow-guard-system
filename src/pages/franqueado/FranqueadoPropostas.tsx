@@ -93,7 +93,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
 
   return (
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
-      <SheetContent className="sm:max-w-3xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
@@ -130,7 +130,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
               </SelectContent>
             </Select>
           </div>
-          <Button size="sm" variant="outline" onClick={handleLinkLead} disabled={!linkLeadId || linkLeadId === "none"}>
+          <Button size="sm" variant="outline" onClick={handleLinkLead} disabled={!linkLeadId || linkLeadId === "none"} aria-label="Vincular lead">
             <Link className="w-4 h-4" />
           </Button>
         </div>
@@ -362,6 +362,7 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string
         </div>
       ) : (
         <Card className="glass-card">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -397,6 +398,7 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string
               ))}
             </TableBody>
           </Table>
+          </div>
         </Card>
       )}
     </div>

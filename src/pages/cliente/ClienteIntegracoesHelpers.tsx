@@ -329,10 +329,10 @@ export function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, on
                   <Webhook className="w-3.5 h-3.5" /> Webhook
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar">
+              <Button variant="outline" size="sm" onClick={onEdit} disabled={isPending} title="Editar" aria-label="Editar">
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="outline" size="sm" onClick={onCheckStatus} disabled={isPending} title="Verificar status">
+              <Button variant="outline" size="sm" onClick={onCheckStatus} disabled={isPending} title="Verificar status" aria-label="Atualizar">
                 <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin" : ""}`} />
               </Button>
               <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)} disabled={isPending} title="Desconectar e remover" className="gap-1">

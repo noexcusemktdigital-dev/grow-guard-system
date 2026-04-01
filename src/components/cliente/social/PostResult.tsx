@@ -90,7 +90,7 @@ export function PostResult({
                       {idx + 1}/{allResults.length}
                     </Badge>
                     {result.result_url && (
-                      <Button variant="ghost" size="sm" asChild>
+                      <Button variant="ghost" size="sm" asChild aria-label="Baixar">
                         <a href={result.result_url} download target="_blank" rel="noopener noreferrer">
                           <Download className="w-3.5 h-3.5" />
                         </a>

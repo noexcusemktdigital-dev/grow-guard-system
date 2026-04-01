@@ -210,7 +210,7 @@ export default function FranqueadoDashboard() {
           )}
 
           {/* Goals + Pipeline */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Goals */}
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
@@ -241,7 +241,11 @@ export default function FranqueadoDashboard() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Nenhuma meta ativa definida pela matriz.</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Target className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Nenhuma meta ativa</p>
+                  <p className="text-xs text-muted-foreground mt-1">Metas definidas pela matriz aparecerão aqui</p>
+                </div>
               )}
               <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/estrategia")}>
                 Ver metas →
@@ -279,7 +283,13 @@ export default function FranqueadoDashboard() {
                   })()}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Nenhum lead registrado. <button onClick={() => navigate("/franqueado/crm")} className="text-primary hover:underline">Comece a prospectar.</button></p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <TrendingUp className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Nenhum lead registrado</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <button onClick={() => navigate("/franqueado/crm")} className="text-primary hover:underline">Comece a prospectar</button>
+                  </p>
+                </div>
               )}
               <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/crm")}>
                 Acessar CRM →
@@ -288,7 +298,7 @@ export default function FranqueadoDashboard() {
           </div>
 
           {/* Agenda + Comunicados */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">📅 Próximos Compromissos</h3>
@@ -311,7 +321,13 @@ export default function FranqueadoDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Agenda vazia. <button onClick={() => navigate("/franqueado/agenda")} className="text-primary hover:underline">Criar evento.</button></p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Calendar className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                    <p className="text-sm font-medium text-muted-foreground">Agenda vazia</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <button onClick={() => navigate("/franqueado/agenda")} className="text-primary hover:underline">Criar evento</button>
+                    </p>
+                  </div>
                 );
               })()}
               <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/agenda")}>
@@ -346,7 +362,11 @@ export default function FranqueadoDashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Nenhum comunicado ativo.</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Megaphone className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Nenhum comunicado ativo</p>
+                  <p className="text-xs text-muted-foreground mt-1">Comunicados da matriz aparecerão aqui</p>
+                </div>
               )}
               <Button variant="ghost" size="sm" className="mt-3 text-xs w-full" onClick={() => navigate("/franqueado/comunicados")}>
                 Ver todos →

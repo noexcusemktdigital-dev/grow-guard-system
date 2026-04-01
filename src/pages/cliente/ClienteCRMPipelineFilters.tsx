@@ -166,7 +166,7 @@ export function ClienteCRMPipelineFilters({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[10px] text-muted-foreground">Data de</Label>
                   <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
@@ -214,7 +214,7 @@ export function ClienteCRMPipelineFilters({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[10px] text-muted-foreground">Valor mín</Label>
                   <Input type="number" value={filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 text-xs" placeholder="0" />

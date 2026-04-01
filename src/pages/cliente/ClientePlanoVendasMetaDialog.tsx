@@ -50,7 +50,7 @@ export function ClientePlanoVendasMetaDialog({
             <Label className="text-xs">Nome da meta</Label>
             <Input value={novaMeta.title} onChange={e => setNovaMeta(p => ({ ...p, title: e.target.value }))} placeholder="Ex: Faturar R$ 50 mil em março" className="text-sm" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Métrica</Label>
               <Select value={novaMeta.metric} onValueChange={v => setNovaMeta(p => ({ ...p, metric: v }))}>
@@ -74,7 +74,7 @@ export function ClientePlanoVendasMetaDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Valor alvo {isMonetaryMetric(novaMeta.metric) && <span className="text-muted-foreground">(R$)</span>}</Label>
               {isMonetaryMetric(novaMeta.metric) ? (

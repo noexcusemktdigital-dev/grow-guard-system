@@ -317,7 +317,7 @@ export function CrmIntegrationHub() {
                     <label className="text-xs font-medium">Sua URL de webhook:</label>
                     <div className="flex gap-2">
                       <Input value={webhookUrl} readOnly className="text-xs font-mono" />
-                      <Button size="sm" variant="outline" onClick={copyUrl}>
+                      <Button size="sm" variant="outline" onClick={copyUrl} aria-label="Copiar">
                         <Copy className="w-3.5 h-3.5" />
                       </Button>
                     </div>

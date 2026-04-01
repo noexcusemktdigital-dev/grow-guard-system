@@ -84,6 +84,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
         </Card>
       ) : (
         <Card>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -131,6 +132,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
               })}
             </TableBody>
           </Table>
+          </div>
         </Card>
       )}
 

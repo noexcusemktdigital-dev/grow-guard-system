@@ -267,7 +267,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
             </div>
             <div className="flex gap-1 mt-1">
               <Input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Nova tag..." className="h-7 text-xs" onKeyDown={e => e.key === "Enter" && handleAddTag()} />
-              <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={handleAddTag}><Plus className="w-3 h-3" /></Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={handleAddTag} aria-label="Adicionar tag"><Plus className="w-3 h-3" /></Button>
             </div>
           </div>
 

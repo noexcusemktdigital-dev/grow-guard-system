@@ -204,7 +204,7 @@ export function ChatBriefingInputArea({
                   onKeyDown={e => e.key === "Enter" && addCustomMultiValue()}
                   autoFocus
                 />
-                <Button size="sm" onClick={addCustomMultiValue} disabled={!textValue.trim()}>
+                <Button size="sm" onClick={addCustomMultiValue} disabled={!textValue.trim()} aria-label="Enviar">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -236,7 +236,7 @@ export function ChatBriefingInputArea({
             className="flex-1 text-sm"
             onKeyDown={e => e.key === "Enter" && handleTextSubmit()}
           />
-          <Button size="sm" onClick={handleTextSubmit} disabled={!textValue.trim() && !currentStep.optional}>
+          <Button size="sm" onClick={handleTextSubmit} disabled={!textValue.trim() && !currentStep.optional} aria-label="Enviar">
             <Send className="w-4 h-4" />
           </Button>
         </div>

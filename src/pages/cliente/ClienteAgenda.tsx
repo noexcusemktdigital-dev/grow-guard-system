@@ -545,12 +545,12 @@ export default function ClienteAgenda() {
               <Label htmlFor="allday">Dia todo</Label>
             </div>
             {allDay ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>Data início</Label><Input type="date" value={startAt.slice(0, 10)} onChange={e => { setStartAt(e.target.value + "T00:00"); setEndAt(e.target.value + "T23:59"); }} /></div>
                 <div><Label>Data fim</Label><Input type="date" value={endAt.slice(0, 10)} onChange={e => setEndAt(e.target.value + "T23:59")} /></div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>Início</Label><Input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} /></div>
                 <div><Label>Fim</Label><Input type="datetime-local" value={endAt} onChange={e => setEndAt(e.target.value)} /></div>
               </div>

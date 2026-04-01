@@ -100,7 +100,7 @@ export function ClientePlanoVendasDiagnostico({
             </div>
 
             {/* Termômetro + Radar */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DiagnosticoTermometro pontuacao={percentage} nivel={nivel} />
               <Card className="glass-card">
                 <CardContent className="py-6">
@@ -120,7 +120,7 @@ export function ClientePlanoVendasDiagnostico({
             </div>
 
             {/* Bar Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="glass-card">
                 <CardContent className="py-6">
                   <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">SCORE POR CATEGORIA <InfoTip text="Barra horizontal mostrando o percentual atingido em cada área. Verde (≥70%), Amarelo (≥40%), Vermelho (<40%)." /></p>

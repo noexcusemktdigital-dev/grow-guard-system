@@ -53,6 +53,7 @@ export function AtendimentoConfig() {
           <Clock className="w-4 h-4 text-primary" />
           <h3 className="font-semibold text-sm">SLA por Prioridade</h3>
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -76,6 +77,7 @@ export function AtendimentoConfig() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       {/* Responsáveis */}

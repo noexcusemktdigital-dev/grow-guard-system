@@ -117,7 +117,7 @@ export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: Cli
 
       {/* History Detail Dialog */}
       <Dialog open={historyDialogOpen} onOpenChange={(o) => { setHistoryDialogOpen(o); if (!o) setSelectedHistoryItem(null); }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <Activity className="w-4 h-4 text-primary" />

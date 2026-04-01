@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Download, Eye, Users, Loader2 } from "lucide-react";
+import { Search, Download, Eye, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useFranchiseCandidates, type FranchiseCandidate } from "@/hooks/useFranchiseCandidates";
 import { getLogoBase64 } from "@/lib/contractPdfTemplate";
 
@@ -196,15 +197,19 @@ export default function FranqueadoraCandidatos() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Nenhum candidato encontrado.
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Users className="h-12 w-12 text-muted-foreground/40 mb-4" />
+          <p className="text-sm font-medium text-muted-foreground">Nenhum candidato encontrado</p>
+          <p className="text-xs text-muted-foreground mt-1">Tente ajustar os filtros ou aguarde novos candidatos</p>
         </div>
       ) : (
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -82,7 +82,7 @@ export const ContentVisualCard = memo(function ContentVisualCard({
             <ExternalLink className="w-4 h-4 mr-1" /> Postagem
           </Button>
           {onExpand && (
-            <Button variant="ghost" size="sm" onClick={onExpand}>
+            <Button variant="ghost" size="sm" onClick={onExpand} aria-label="Visualizar">
               <Eye className="w-4 h-4" />
             </Button>
           )}

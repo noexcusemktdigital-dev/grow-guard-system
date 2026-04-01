@@ -49,7 +49,7 @@ function VisaoGeralTab() {
         <KpiCard label="Últimas 24h" value={String(stats?.last24h || 0)} icon={Clock} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader><CardTitle className="text-sm">Erros por Dia (últimos 7 dias)</CardTitle></CardHeader>
           <CardContent className="h-[260px]">
@@ -175,7 +175,7 @@ function ErrosTab() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

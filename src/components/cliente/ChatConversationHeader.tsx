@@ -73,7 +73,7 @@ export function ChatConversationHeader({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full text-white hover:bg-white/10" onClick={onToggleSearch}>
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full text-white hover:bg-white/10" onClick={onToggleSearch} aria-label="Buscar">
             <Search className="w-3.5 h-3.5" />
           </Button>
           {attendingMode && (
@@ -134,7 +134,7 @@ export function ChatConversationHeader({
                         {linkedLead.value != null && <span className="text-[10px] font-medium text-primary">R$ {Number(linkedLead.value).toLocaleString()}</span>}
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onNavigateCrm}>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onNavigateCrm} aria-label="Abrir em nova aba">
                       <ExternalLink className="w-3 h-3" />
                     </Button>
                   </CardContent>

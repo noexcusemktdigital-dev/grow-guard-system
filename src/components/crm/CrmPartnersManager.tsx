@@ -88,7 +88,7 @@ export function CrmPartnersManager() {
                 </div>
               </div>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Mais opções"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="text-xs">
                   <DropdownMenuItem onClick={() => openEdit(p)}><Pencil className="w-3 h-3 mr-2" />Editar</DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive" onClick={() => { deletePartner.mutate(p.id); toast({ title: "Parceiro excluído" }); }}><Trash2 className="w-3 h-3 mr-2" />Excluir</DropdownMenuItem>

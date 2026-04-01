@@ -270,6 +270,7 @@ export default function FranqueadoContratos() {
             </div>
           ) : (
             <Card className="glass-card">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -328,6 +329,7 @@ export default function FranqueadoContratos() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </Card>
           )}
         </TabsContent>

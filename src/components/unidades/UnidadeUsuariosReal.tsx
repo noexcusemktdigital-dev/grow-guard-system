@@ -130,6 +130,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
             <p>Nenhum membro vinculado a esta unidade.</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -173,6 +174,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </Card>
 

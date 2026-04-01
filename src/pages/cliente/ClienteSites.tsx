@@ -29,6 +29,7 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { InsufficientCreditsDialog } from "@/components/cliente/InsufficientCreditsDialog";
 import { WizardStepContent, getStepsForType, SITE_TYPES } from "./ClienteSitesWizardSteps";
+import { WizardProgress } from "@/components/ui/wizard-progress";
 
 const STEP_ICONS: Record<string, any> = {
   tipo_site: Globe,
@@ -441,6 +442,12 @@ export default function ClienteSites() {
         <PageHeader title="Criar Novo Site" subtitle={`Etapa ${stepIdx + 1} de ${STEPS.length} — ${currentStep?.label}`} icon={<Globe className="w-5 h-5 text-primary" />} />
 
         <Progress value={((stepIdx + 1) / STEPS.length) * 100} className="h-2" />
+
+        <WizardProgress
+          steps={STEPS.map(s => s.label)}
+          currentStep={stepIdx}
+          className="mb-2"
+        />
 
         <div className="flex gap-1 overflow-x-auto pb-1">
           {STEPS.map((s, i) => {

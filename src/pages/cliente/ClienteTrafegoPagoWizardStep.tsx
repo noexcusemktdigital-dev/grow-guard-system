@@ -106,7 +106,7 @@ export function ClienteTrafegoPagoWizardStep({
               <p className="text-xs mt-1 text-muted-foreground">{sitesData.map((s) => s.name).join(", ")}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {DESTINATIONS.map((d) => (
               <Card
                 key={d.value}
@@ -150,7 +150,7 @@ export function ClienteTrafegoPagoWizardStep({
       return (
         <div className="space-y-3">
           <p className="text-sm font-medium">Em quais plataformas deseja anunciar?</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {PLATFORMS.map((p) => {
               const selected = wizardData.plataformas.includes(p.value);
               return (
@@ -194,7 +194,7 @@ export function ClienteTrafegoPagoWizardStep({
               <p className="text-xs mt-1 text-muted-foreground">{detectedAssets.join(", ")}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {ASSETS.map((a) => {
               const selected = wizardData.ativos.includes(a.value);
               return (

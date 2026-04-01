@@ -150,7 +150,7 @@ export function SiteHistory({ sites, onPreview, onApprove }: Props) {
                 </>
               )}
               {s.url && (
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild aria-label="Abrir em nova aba">
                   <a href={s.url} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>

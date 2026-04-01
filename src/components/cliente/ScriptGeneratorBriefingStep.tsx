@@ -130,7 +130,7 @@ export function ScriptGeneratorBriefingStep({
             onChange={e => setNewLink(e.target.value)}
             onKeyDown={e => e.key === "Enter" && addLink()}
           />
-          <Button size="sm" variant="outline" onClick={addLink} disabled={!newLink.trim()}>
+          <Button size="sm" variant="outline" onClick={addLink} disabled={!newLink.trim()} aria-label="Adicionar">
             <Plus className="w-3.5 h-3.5" />
           </Button>
         </div>

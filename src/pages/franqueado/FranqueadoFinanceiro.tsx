@@ -199,6 +199,7 @@ export default function FranqueadoFinanceiro() {
             <Card className="glass-card">
               <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Contratos Ativos</CardTitle></CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -225,10 +226,15 @@ export default function FranqueadoFinanceiro() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           ) : (
-            <div className="text-center py-16"><Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground">Nenhum contrato ativo.</p></div>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FileSignature className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">Nenhum contrato ativo</p>
+              <p className="text-xs text-muted-foreground mt-1">Contratos ativos aparecerão aqui</p>
+            </div>
           )}
 
           <Card className="glass-card">
@@ -269,9 +275,14 @@ export default function FranqueadoFinanceiro() {
           </div>
 
           {filteredPayments.length === 0 ? (
-            <div className="text-center py-16"><Receipt className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground">Nenhum pagamento esperado neste período.</p></div>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Receipt className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">Nenhum pagamento esperado</p>
+              <p className="text-xs text-muted-foreground mt-1">Tente selecionar outro período ou status</p>
+            </div>
           ) : (
             <Card className="glass-card">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -311,6 +322,7 @@ export default function FranqueadoFinanceiro() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </Card>
           )}
         </TabsContent>
@@ -329,7 +341,11 @@ export default function FranqueadoFinanceiro() {
         <TabsContent value="fechamentos" className="space-y-4">
           <p className="text-sm text-muted-foreground">Arquivos de fechamento (DRE) enviados pela franqueadora.</p>
           {(closings ?? []).length === 0 ? (
-            <div className="text-center py-16"><Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" /><p className="text-sm text-muted-foreground font-medium">Nenhum fechamento disponível</p></div>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Inbox className="h-12 w-12 text-muted-foreground/40 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">Nenhum fechamento disponível</p>
+              <p className="text-xs text-muted-foreground mt-1">Fechamentos (DRE) enviados pela franqueadora aparecerão aqui</p>
+            </div>
           ) : (
             <div className="grid gap-3">
               {(closings ?? []).map(cl => (
@@ -392,6 +408,7 @@ function SaasClientsTab() {
         <CardTitle className="text-sm font-semibold">Clientes SaaS Vinculados ({clients.length})</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -422,6 +439,7 @@ function SaasClientsTab() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -462,6 +480,7 @@ function SaasCommissionsTab() {
         <KpiCard label="Pagamentos" value={String(commissions.length)} icon={Receipt} />
       </div>
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -490,6 +509,7 @@ function SaasCommissionsTab() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
   );

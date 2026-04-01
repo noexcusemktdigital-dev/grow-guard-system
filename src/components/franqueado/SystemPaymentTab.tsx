@@ -89,6 +89,7 @@ export function SystemPaymentTab() {
             <CardTitle className="text-sm font-semibold">Histórico de Pagamentos</CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -119,6 +120,7 @@ export function SystemPaymentTab() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       ) : (
