@@ -134,6 +134,17 @@ export default function FranqueadoraCandidatos() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<FranchiseCandidate | null>(null);
   const [editNotes, setEditNotes] = useState("");
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadPdf = async (candidate: FranchiseCandidate) => {
+    if (pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      await downloadCandidatePdf(candidate);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const filtered = (candidates || []).filter((c) => {
     const matchesSearch =
@@ -234,8 +245,9 @@ export default function FranqueadoraCandidatos() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); downloadCandidatePdf(c); }}
+                          onClick={(e) => { e.stopPropagation(); handleDownloadPdf(c); }}
                           title="Baixar ficha PDF"
+                          disabled={pdfLoading}
                          aria-label="Baixar">
                           <Download className="w-4 h-4" />
                         </Button>
@@ -310,18 +322,19 @@ export default function FranqueadoraCandidatos() {
                   <Button
                     size="sm"
                     className="mt-2"
+                    disabled={updateNotes.isPending}
                     onClick={() => {
                       updateNotes.mutate({ id: selected.id, notes: editNotes });
                       setSelected({ ...selected, notes: editNotes });
                     }}
                   >
-                    Salvar observações
+                    {updateNotes.isPending ? "Salvando..." : "Salvar observações"}
                   </Button>
                 </div>
 
                 {/* PDF */}
-                <Button variant="outline" className="w-full" onClick={() => downloadCandidatePdf(selected)}>
-                  <Download className="w-4 h-4 mr-2" /> Baixar Ficha em PDF
+                <Button variant="outline" className="w-full" disabled={pdfLoading} onClick={() => handleDownloadPdf(selected)}>
+                  <Download className="w-4 h-4 mr-2" /> {pdfLoading ? "Gerando PDF..." : "Baixar Ficha em PDF"}
                 </Button>
               </div>
             </>

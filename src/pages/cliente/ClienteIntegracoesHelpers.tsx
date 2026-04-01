@@ -20,7 +20,7 @@ export const WEBHOOK_EVENTS = [
   { value: "lead_lost", label: "Lead perdido" },
 ];
 
-interface OutboundWebhook {
+export interface OutboundWebhook {
   name: string;
   url: string;
   events: string[];
@@ -155,7 +155,7 @@ export function DiagnosticsDialog({ open, onOpenChange, instances, setupMutation
         const foundResult = res?.results?.find((r: Record<string, unknown>) => r.instance_id === inst.instance_id) || res;
         newResults[inst.id] = { status: foundResult?.status || res?.status || "unknown", checking: false };
       } catch (err: unknown) {
-        newResults[inst.id] = { status: "error", checking: false, error: err.message };
+        newResults[inst.id] = { status: "error", checking: false, error: err instanceof Error ? err.message : String(err) };
       }
       setResults({ ...newResults });
     }

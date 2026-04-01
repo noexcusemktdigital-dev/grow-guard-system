@@ -117,10 +117,11 @@ export default function ClienteTrafegoPago() {
         setStep(0);
       },
       onError: (err: unknown) => {
-        if (err.code === "RATE_LIMIT") {
+        const errObj = err as { code?: string; message?: string };
+        if (errObj.code === "RATE_LIMIT") {
           toast({ title: "Limite de requisições", description: "Aguarde alguns minutos e tente novamente.", variant: "destructive" });
         } else {
-          toast({ title: "Erro ao gerar estratégia", description: err.message, variant: "destructive" });
+          toast({ title: "Erro ao gerar estratégia", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
         }
       },
     });
@@ -169,7 +170,7 @@ export default function ClienteTrafegoPago() {
         if (isInsufficientCreditsError(err)) {
           setShowCreditsDialog(true);
         } else {
-          toast({ title: "Erro ao aprovar", description: err?.message || "Erro desconhecido", variant: "destructive" });
+          toast({ title: "Erro ao aprovar", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
         }
       },
     });

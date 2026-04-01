@@ -91,6 +91,18 @@ export function useGoalProgress(goals: GoalInput[] | undefined) {
       const today = startOfDay(new Date());
       const results: Record<string, GoalProgressResult> = {};
 
+      // Pre-fetch active contracts count once (avoid N+1 inside the goal loop)
+      let activeContractsCount: number | null = null;
+      const needsActiveContracts = goals.some(g => g.metric === "contratos_ativos");
+      if (needsActiveContracts) {
+        const { data: activeContracts } = await supabase
+          .from("contracts")
+          .select("id")
+          .eq("organization_id", orgId!)
+          .eq("status", "active");
+        activeContractsCount = activeContracts?.length ?? 0;
+      }
+
       for (const goal of goals) {
         const periodStart = goal.period_start ? parseISO(goal.period_start) : today;
         const periodEnd = goal.period_end ? parseISO(goal.period_end) : today;
@@ -147,12 +159,7 @@ export function useGoalProgress(goals: GoalInput[] | undefined) {
             currentValue = scopedWon.length;
             break;
           case "contratos_ativos": {
-            const { data: activeContracts } = await supabase
-              .from("contracts")
-              .select("id")
-              .eq("organization_id", orgId!)
-              .eq("status", "active");
-            currentValue = activeContracts?.length || 0;
+            currentValue = activeContractsCount ?? 0;
             break;
           }
           case "meetings":

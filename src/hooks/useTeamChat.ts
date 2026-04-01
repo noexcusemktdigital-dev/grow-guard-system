@@ -102,17 +102,22 @@ export function useTeamChat() {
     enabled: !!orgId,
   });
 
-  // Fetch all channel memberships (for unread + DM names)
+  // Fetch channel memberships scoped to this org's channels only
   const channelMembersQuery = useQuery({
     queryKey: ["team-chat-all-members", orgId],
     queryFn: async () => {
+      // Only fetch memberships for channels that belong to this org
+      const channels = channelsQuery.data || [];
+      if (channels.length === 0) return [] as ChannelMembership[];
+      const channelIds = channels.map((c) => c.id);
       const { data, error } = await supabase
         .from("team_chat_members")
-        .select("channel_id, user_id, last_read_at, role");
+        .select("channel_id, user_id, last_read_at, role")
+        .in("channel_id", channelIds);
       if (error) throw error;
       return (data || []) as ChannelMembership[];
     },
-    enabled: !!orgId,
+    enabled: !!orgId && (channelsQuery.data?.length ?? 0) > 0,
   });
 
   // Fetch last message timestamp per channel (for unread calc)

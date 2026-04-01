@@ -409,8 +409,8 @@ export default function FranqueadoPropostas() {
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("lead_id") ? "calculadora" : "propostas";
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [editingProposal, setEditingProposal] = useState<any>(null);
-  const [viewingProposal, setViewingProposal] = useState<any>(null);
+  const [editingProposal, setEditingProposal] = useState<Record<string, unknown> | null>(null);
+  const [viewingProposal, setViewingProposal] = useState<Record<string, unknown> | null>(null);
 
   const handleEditProposal = (proposal: Record<string, unknown>) => { setEditingProposal(proposal); setActiveTab("calculadora"); };
 

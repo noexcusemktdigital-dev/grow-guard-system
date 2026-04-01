@@ -64,7 +64,11 @@ export default function FranqueadoraPerfil() {
   const daysOperating = profile?.created_at ? differenceInDays(new Date(), new Date(profile.created_at)) : 0;
 
   const handleSave = () => {
-    update.mutate(form);
+    if (!form.full_name.trim()) {
+      toast.error("Nome completo é obrigatório");
+      return;
+    }
+    update.mutate({ ...form, full_name: form.full_name.trim() });
     setEditing(false);
   };
 

@@ -12,7 +12,7 @@ export function useStrategyData() {
   const { data: strategy, isLoading } = useActiveStrategy();
   const { data: salesPlan, isLoading: salesLoading } = useSalesPlan();
   const result = strategy?.strategy_result;
-  const spAnswers = (salesPlan?.answers || {}) as Record<string, any>;
+  const spAnswers = (salesPlan?.answers || {}) as Record<string, unknown>;
 
   return {
     isLoading: isLoading || salesLoading,

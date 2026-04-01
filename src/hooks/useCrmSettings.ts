@@ -26,7 +26,7 @@ export function useCrmSettingsMutations() {
   const { data: orgId } = useUserOrgId();
 
   const upsertSettings = useMutation({
-    mutationFn: async (settings: Record<string, any>) => {
+    mutationFn: async (settings: Record<string, unknown>) => {
       const { data: existing } = await supabase
         .from("crm_settings")
         .select("id")

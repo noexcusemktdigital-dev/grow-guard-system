@@ -16,6 +16,7 @@ import {
   RefreshCw, Unlink, CheckCircle2,
 } from "lucide-react";
 import GoogleSetupWizard from "@/components/agenda/GoogleSetupWizard";
+import type { AgendaEvent } from "@/types/agenda";
 import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/hooks/useCalendar";
 import {
   useGoogleCalendarConnection,
@@ -211,8 +212,8 @@ export default function FranqueadoAgenda() {
   }
 
   const [formOpen, setFormOpen] = useState(false);
-  const [detailEvent, setDetailEvent] = useState<any>(null);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [detailEvent, setDetailEvent] = useState<AgendaEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<AgendaEvent | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startAt, setStartAt] = useState("");

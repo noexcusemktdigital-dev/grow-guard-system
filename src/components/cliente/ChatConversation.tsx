@@ -294,7 +294,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           }
         );
       } catch (err: unknown) {
-        toast({ title: "Erro no upload do áudio", description: (err as any)?.message, variant: "destructive" });
+        toast({ title: "Erro no upload do áudio", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       } finally {
         setSendingAudio(false);
       }
@@ -351,7 +351,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
           setPendingMessages(prev =>
             prev.map(m => m.id === tempId ? { ...m, status: "failed" } : m)
           );
-          toast({ title: "Erro ao enviar", description: (err as any)?.message, variant: "destructive" });
+          toast({ title: "Erro ao enviar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
         },
       }
     );
@@ -422,7 +422,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         }
       );
     } catch (err: unknown) {
-      toast({ title: "Erro no upload", description: (err as any)?.message, variant: "destructive" });
+      toast({ title: "Erro no upload", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -452,7 +452,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
         toast({ title: "Lead criado e vinculado!" });
       }
     } catch (err: unknown) {
-      toast({ title: "Erro ao criar lead", description: (err as any)?.message, variant: "destructive" });
+      toast({ title: "Erro ao criar lead", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
   };
 
@@ -510,7 +510,7 @@ export function ChatConversation({ contact, messages, isLoading, agents = [], in
 
   const handleReact = useCallback((message: WhatsAppMessage, emoji: string) => {
     // Store reaction in metadata - update optimistically
-    const currentReactions = ((message.metadata as Record<string, unknown>)?.reactions || []) as Array<{ emoji: string; from: string }>;
+    const currentReactions = (((message.metadata as Record<string, unknown>)?.reactions || []) as Array<{ emoji: string; from: string }>);
     const newReactions = [...currentReactions, { emoji, from: "user" }];
     // Update via supabase directly
     supabase

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import GoogleSetupWizard from "@/components/agenda/GoogleSetupWizard";
 import { useCalendarEvents, useCalendarEventMutations } from "@/hooks/useCalendar";
+import type { AgendaEvent } from "@/types/agenda";
 import {
   useGoogleCalendarConnection,
   useGoogleCalendarExchangeCode,

@@ -222,7 +222,7 @@ export default function ClienteRedesSociais() {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
       } else {
-        toast({ title: "Erro na geração", description: err.message, variant: "destructive" });
+        toast({ title: "Erro na geração", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       }
       setView("art-wizard");
     } finally {
@@ -248,7 +248,7 @@ export default function ClienteRedesSociais() {
       toast({ title: "Campos preenchidos com IA!" });
       return result;
     } catch (err: unknown) {
-      toast({ title: "Erro ao preencher com IA", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao preencher com IA", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       return null;
     }
   };
@@ -266,7 +266,7 @@ export default function ClienteRedesSociais() {
       if (isInsufficientCreditsError(err)) {
         setShowCreditsDialog(true);
       } else {
-        toast({ title: "Erro ao aprovar", description: err.message, variant: "destructive" });
+        toast({ title: "Erro ao aprovar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       }
     }
   };

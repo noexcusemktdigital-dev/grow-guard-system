@@ -39,16 +39,15 @@ import {
   TrendingUp,
   BarChart3,
   FileText,
-  Package,
   AlertTriangle,
   Layers,
-  Map,
   Calculator,
   Download,
   Upload,
   FileUp,
 } from "lucide-react";
 import { useState, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 import { DiagnosticForm } from "./FranqueadoEstrategiaDiagnosticForm";
 import { StrategyResultView } from "./FranqueadoEstrategiaResultViews";
 import type { DiagSection } from "./FranqueadoEstrategiaData";
@@ -66,19 +65,29 @@ import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+} from "recharts";
+import { Progress } from "@/components/ui/progress";
 
 const diagnosticSections: DiagSection[] = [
   {
-    title: "Informações do Negócio",
-    subtitle: "Contexto geral",
-    icon: <Package className="w-4 h-4 text-primary" />,
+    title: "Contexto do Negócio",
+    subtitle: "SPIN – Situação",
+    icon: <FileText className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "nome_empresa", label: "Qual é o nome da empresa?", type: "text", placeholder: "Ex: Empresa XYZ" },
-      { key: "segmento", label: "Qual é o segmento de atuação?", type: "text", placeholder: "Ex: Varejo, SaaS, Consultoria..." },
-      { key: "tempo_mercado", label: "Há quanto tempo a empresa existe?", type: "text", placeholder: "Ex: 5 anos" },
-      { key: "faturamento_atual", label: "Qual é o faturamento mensal médio atual? (R$)", type: "text", placeholder: "Ex: 80000" },
-      { key: "ticket_medio", label: "Qual é o ticket médio? (R$)", type: "text", placeholder: "Ex: 2500" },
-      { key: "clientes_ativos", label: "Quantos clientes ativos possui hoje?", type: "text", placeholder: "Ex: 40" },
+      { key: "nome_empresa", label: "Nome da empresa", type: "text", placeholder: "Ex: Empresa Exemplo LTDA" },
+      { key: "segmento", label: "Qual é o segmento/nicho de mercado?", type: "text", placeholder: "Ex: Marketing digital, Saúde, Educação..." },
+      { key: "tempo_mercado", label: "Há quanto tempo está no mercado?", type: "select", options: ["Menos de 1 ano", "1 a 2 anos", "2 a 5 anos", "Mais de 5 anos"] },
+      { key: "faturamento_atual", label: "Qual é o faturamento mensal atual? (R$)", type: "text", placeholder: "Ex: 50000" },
+      { key: "ticket_medio_atual", label: "Qual é o ticket médio atual? (R$)", type: "text", placeholder: "Ex: 2000" },
+      { key: "clientes_ativos", label: "Quantos clientes ativos possui hoje?", type: "text", placeholder: "Ex: 20" },
+      { key: "modelo_negocio", label: "Como é o modelo de negócio principal?", type: "select", options: ["Prestação de serviços", "Produto físico", "SaaS/Digital", "Recorrência/Assinatura", "Consultoria", "Outro"] },
     ],
   },
   {

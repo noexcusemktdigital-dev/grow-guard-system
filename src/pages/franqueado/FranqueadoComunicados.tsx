@@ -30,7 +30,7 @@ export default function FranqueadoComunicados() {
   const [filterPriority, setFilterPriority] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [search, setSearch] = useState("");
-  const [detailItem, setDetailItem] = useState<any>(null);
+  const [detailItem, setDetailItem] = useState<Record<string, unknown> | null>(null);
 
   const viewedIds = useMemo(() => new Set((views ?? []).map(v => v.announcement_id)), [views]);
   const confirmedIds = useMemo(() => new Set((views ?? []).filter(v => v.confirmed_at).map(v => v.announcement_id)), [views]);

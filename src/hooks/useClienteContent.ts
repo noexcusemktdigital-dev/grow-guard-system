@@ -34,31 +34,9 @@ export function useClienteCampaigns() {
   });
 }
 
-export function useClienteScripts() {
-  const { data: orgId } = useUserOrgId();
-  return useQuery({
-    queryKey: ["client-scripts", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("client_scripts").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!orgId,
-  });
-}
-
-export function useClienteDispatches() {
-  const { data: orgId } = useUserOrgId();
-  return useQuery({
-    queryKey: ["client-dispatches", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("client_dispatches").select("*").eq("organization_id", orgId!).order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!orgId,
-  });
-}
+// NOTE: useClienteScripts and useClienteDispatches are defined in their own
+// dedicated files (useClienteScripts.ts, useClienteDispatches.ts) with richer
+// APIs. Import from those files directly.
 
 export function useClienteSites() {
   const { data: orgId } = useUserOrgId();

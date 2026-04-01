@@ -26,6 +26,7 @@ import {
 import {
   SUPPORT_LINK, WEBHOOK_EVENTS, PLATFORMS,
   EditInstanceDialog, DiagnosticsDialog, QrCodeDialog, InstanceCard,
+  type OutboundWebhook,
 } from "./ClienteIntegracoesHelpers";
 
 export default function ClienteIntegracoes() {
@@ -231,7 +232,7 @@ export default function ClienteIntegracoes() {
         toast.warning("Webhook pode não ter sido configurado corretamente");
       }
     } catch (err: unknown) {
-      toast.error("Erro ao reconfigurar webhook: " + err.message);
+      toast.error("Erro ao reconfigurar webhook: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 

@@ -126,7 +126,7 @@ export default function ClienteChat() {
         toast({ title: "Lead criado e vinculado!" });
       }
     } catch (err: unknown) {
-      toast({ title: "Erro ao criar lead", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao criar lead", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
   };
 

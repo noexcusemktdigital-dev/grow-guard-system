@@ -200,6 +200,9 @@ export function useApproveBatch() {
     mutationFn: async (contentIds: string[]) => {
       if (!orgId) throw new Error("Org not found");
 
+      // Process each content item: debit credits then mark approved.
+      // If a debit succeeds but the update fails, we throw immediately to
+      // surface the error rather than silently skipping remaining items.
       for (const id of contentIds) {
         const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_parent_org_id", {
           _org_id: orgId,
@@ -207,13 +210,13 @@ export function useApproveBatch() {
           _description: "Conteúdo aprovado (lote)",
           _source: "approve-content",
         });
-        if (debitError) throw debitError;
+        if (debitError) throw new Error(`Erro ao debitar créditos: ${debitError.message}`);
 
         const { error } = await supabase
           .from("client_content")
           .update({ status: "approved" } as Record<string, unknown>)
           .eq("id", id);
-        if (error) throw error;
+        if (error) throw new Error(`Erro ao aprovar conteúdo ${id}: ${error.message}`);
       }
     },
     onSuccess: () => {

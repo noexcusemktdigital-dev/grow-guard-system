@@ -392,7 +392,7 @@ export function SubscriptionDialog({
       setPaymentResult(data);
     },
     onError: (err: unknown) => {
-      const msg = err?.message || "Erro desconhecido";
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
       if (msg.includes("Unauthorized") || msg.includes("401")) {
         toast.error("Sessão expirada. Recarregue a página e tente novamente.");
       } else {

@@ -71,7 +71,7 @@ function VisaoGeralTab() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={stats.bySource} dataKey="count" nameKey="source" cx="50%" cy="50%" outerRadius={90} label={({ source, percent }) => `${source} (${(percent * 100).toFixed(0)}%)`}>
-                    {stats.bySource.map((_: any, i: number) => (
+                    {stats.bySource.map((_: { source: string; count: number }, i: number) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>

@@ -61,7 +61,7 @@ export default function FranqueadoSuporte() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [createDialog, setCreateDialog] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Record<string, unknown> | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [msgAttachments, setMsgAttachments] = useState<File[]>([]);

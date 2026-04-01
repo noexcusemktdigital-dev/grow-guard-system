@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/KpiCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   FileText, DollarSign, Inbox, Calculator, Copy, Trash2, Send, Eye, Pencil, Download, Link, CheckCircle, FileSignature,
 } from "lucide-react";
@@ -35,10 +36,10 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
   const { updateProposal } = useCrmProposalMutations();
   const navigate = useNavigate();
   const previewRef = useRef<HTMLDivElement>(null);
-  const [linkLeadId, setLinkLeadId] = useState(proposal?.lead_id || "");
+  const [linkLeadId, setLinkLeadId] = useState(String(proposal?.lead_id || ""));
 
   useEffect(() => {
-    if (proposal) setLinkLeadId(proposal.lead_id || "");
+    if (proposal) setLinkLeadId(String(proposal.lead_id || ""));
   }, [proposal]);
 
   if (!proposal) return null;
@@ -140,7 +141,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
               {content.client_name ? `Cliente: ${content.client_name}` : ""} 
               {content.duration ? ` | Duração: ${content.duration} ${content.duration === 1 ? "mês" : "meses"}` : ""}
             </p>
-            <p className="text-xs text-gray-400 mt-1">Gerada em {new Date(proposal.created_at).toLocaleDateString("pt-BR")}</p>
+            <p className="text-xs text-gray-400 mt-1">Gerada em {proposal.created_at ? new Date(proposal.created_at as string).toLocaleDateString("pt-BR") : "—"}</p>
           </div>
 
           {items.length > 0 && (
@@ -327,6 +328,7 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
 function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string, unknown>) => void; onView: (proposal: Record<string, unknown>) => void }) {
   const { data: proposals, isLoading } = useCrmProposals();
   const { deleteProposal, duplicateProposal, updateProposal } = useCrmProposalMutations();
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   if (isLoading) return <Skeleton className="h-96" />;
 
@@ -383,7 +385,7 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string
                           <Send className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteProposal.mutate(p.id)} title="Excluir" aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(p.id)} title="Excluir" aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -392,6 +394,24 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string
           </Table>
         </Card>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir proposta?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação é irreversível. A proposta será removida permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deleteTarget) { deleteProposal.mutate(deleteTarget); setDeleteTarget(null); } }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -400,10 +420,10 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string
 
 export default function FranqueadoraPropostas() {
   const [searchParams] = useSearchParams();
-  const defaultTab = searchParams.get("lead_id") ? "calculadora" : "calculadora";
+  const defaultTab = searchParams.get("lead_id") ? "calculadora" : "propostas";
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [editingProposal, setEditingProposal] = useState<any>(null);
-  const [viewingProposal, setViewingProposal] = useState<any>(null);
+  const [editingProposal, setEditingProposal] = useState<Record<string, unknown> | null>(null);
+  const [viewingProposal, setViewingProposal] = useState<Record<string, unknown> | null>(null);
 
   const handleEditProposal = (proposal: Record<string, unknown>) => { setEditingProposal(proposal); setActiveTab("calculadora"); };
 

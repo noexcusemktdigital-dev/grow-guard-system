@@ -96,7 +96,7 @@ export default function ClienteDisparos() {
           onError: (err: unknown) => {
             toast({
               title: "Erro no envio",
-              description: err.message,
+              description: err instanceof Error ? err.message : String(err),
               variant: "destructive",
             });
           },
@@ -117,7 +117,7 @@ export default function ClienteDisparos() {
       await deleteDispatch.mutateAsync(deleteId);
       toast({ title: "Disparo excluído" });
     } catch (err: unknown) {
-      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     }
     setDeleteId(null);
   };
@@ -132,7 +132,7 @@ export default function ClienteDisparos() {
         toast({ title: "Disparo enviado!", description: `${data?.stats?.sent || 0} mensagens enviadas.` });
       },
       onError: (err: unknown) => {
-        toast({ title: "Erro no envio", description: err.message, variant: "destructive" });
+        toast({ title: "Erro no envio", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
       },
     });
     toast({ title: "Enviando...", description: "Disparo em andamento." });

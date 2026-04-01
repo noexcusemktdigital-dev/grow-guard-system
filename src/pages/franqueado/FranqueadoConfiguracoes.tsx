@@ -117,7 +117,7 @@ function TeamTab() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "franqueado" });
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
-  const [editMember, setEditMember] = useState<any>(null);
+  const [editMember, setEditMember] = useState<Record<string, unknown> | null>(null);
   const qc = useQueryClient();
 
   const FRANQUEADO_ROLE_OPTIONS = [
@@ -146,7 +146,7 @@ function TeamTab() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success("Convite enviado! O funcionário receberá um e-mail para definir sua senha.");
       setInviteOpen(false);
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
@@ -378,7 +378,7 @@ function ReferralTab() {
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
-      return data as Record<string, unknown>[];
+      return data as Record<string, unknown> | null;
     },
     enabled: !!orgId,
   });

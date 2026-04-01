@@ -103,7 +103,7 @@ export default function FranqueadoraChat() {
   const otherMembers = members.filter((m) => m.user_id !== user?.id);
 
   const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+    name.split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "?";
 
   const renderChannelButton = (ch: TeamChannel, label: string, icon: React.ReactNode) => {
     const unread = unreadCounts[ch.id] || 0;

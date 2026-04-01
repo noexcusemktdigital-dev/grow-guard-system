@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export interface SalesPlan {
   id: string;
   organization_id: string;
-  answers: Record<string, any>;
+  answers: Record<string, unknown>;
   score: number;
   created_by: string | null;
   created_at: string;
@@ -17,7 +17,7 @@ export interface SalesPlan {
 export interface SalesPlanHistoryItem {
   id: string;
   organization_id: string;
-  answers: Record<string, any>;
+  answers: Record<string, unknown>;
   score: number;
   created_by: string | null;
   created_at: string;
@@ -75,7 +75,7 @@ export function useArchiveSalesPlan() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ answers, score }: { answers: Record<string, any>; score: number }) => {
+    mutationFn: async ({ answers, score }: { answers: Record<string, unknown>; score: number }) => {
       if (!orgId) throw new Error("No org");
       const { error } = await supabase
         .from("sales_plan_history")
@@ -99,7 +99,7 @@ export function useSaveSalesPlan() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ answers, score }: { answers: Record<string, any>; score: number }) => {
+    mutationFn: async ({ answers, score }: { answers: Record<string, unknown>; score: number }) => {
       if (!orgId) throw new Error("No org");
       const { data, error } = await supabase
         .from("sales_plans")
