@@ -1,38 +1,24 @@
 
 
-## Plano — Corrigir erro na geração de postagens
+## Plano — Restaurar preview
 
-### Problema
+### Diagnóstico
 
-A edge function `generate-social-briefing` (e outras funções de redes sociais) não estavam deployadas no servidor, causando erro 401/500 genérico. Já deployei as funções: `generate-social-briefing`, `generate-social-image`, `generate-social-concepts`, `generate-social-video-frames`, `generate-video-briefing`.
+Não há erros de runtime, console logs ou session replay disponíveis. O código frontend está sintaticamente correto — todas as importações existem e os arquivos estão presentes. Isso indica um problema transitório do dev-server (Vite), não um bug de código.
 
-Além disso, o tratamento de erros no hook `useClientePosts.ts` usa `throw new Error(resp.error.message)` que mostra a mensagem genérica "Edge Function returned a non-2xx status code" em vez de extrair a mensagem real do backend.
+### Ação
 
-### Mudanças no código
+1. **Forçar rebuild do dev-server** — vou fazer uma edição mínima (adicionar um comentário inofensivo) em `src/App.tsx` para forçar o Vite a reiniciar o hot-reload e recompilar o projeto.
 
-Atualizar `src/hooks/useClientePosts.ts` para usar `extractEdgeFunctionError` (já existe em `src/lib/edgeFunctionError.ts`) em todas as chamadas de edge functions:
-
-- Linha 128: `generate-social-image` — usar `extractEdgeFunctionError`
-- Linha 152: `generate-social-video-frames` — usar `extractEdgeFunctionError`
-- Linha 199: `generate-social-briefing` — usar `extractEdgeFunctionError`
-- Linha 227 (aprox): `generate-video-briefing` — usar `extractEdgeFunctionError`
-
-Padrão a aplicar:
-```typescript
-if (resp.error) {
-  const realError = await extractEdgeFunctionError(resp.error);
-  throw realError;
-}
-```
+2. **Se persistir**, verificar o log do dev-server (`/tmp/dev-server-logs/dev-server.log`) para identificar a causa real do travamento.
 
 ### Arquivos a modificar
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/useClientePosts.ts` | Importar `extractEdgeFunctionError` e usar em todas as 4 chamadas de edge function |
+| `src/App.tsx` | Adicionar comentário para forçar rebuild |
 
-### Resultado
+### Nota sobre Edge Functions
 
-- Funções já deployadas e funcionando
-- Erros reais do backend (créditos insuficientes, rate limit, etc.) serão exibidos corretamente ao usuário em vez da mensagem genérica
+Os erros de TypeScript em `ads-analyze`, `ads-disconnect`, `ads-sync-metrics` e `agent-followup-cron` (uso de `err.message` em `unknown`) afetam apenas o deploy das edge functions, não o preview do frontend. Esses podem ser corrigidos em um próximo passo separado.
 
