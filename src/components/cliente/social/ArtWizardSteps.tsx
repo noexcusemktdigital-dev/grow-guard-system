@@ -13,6 +13,8 @@ import {
   PRINT_FORMATS, PRINT_TYPES, LAYOUT_TYPES,
 } from "./constants";
 import type { SmartSuggestions } from "@/utils/smartSuggestions";
+import type { ReferenceMemory } from "@/hooks/useReferenceMemory";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { LayoutPicker } from "./LayoutPicker";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
