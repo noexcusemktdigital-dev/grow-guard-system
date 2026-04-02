@@ -851,6 +851,28 @@ Output ONLY the extracted logo image.`,
       fullPrompt += `\n\n${layoutInstructions}`;
     }
 
+    // Inject negative constraints / restrictions
+    if (restrictions) {
+      fullPrompt += `\n\nNEGATIVE CONSTRAINTS — STRICTLY AVOID:\n${restrictions}`;
+    }
+
+    // Inject objective-based style direction
+    const objectiveStyleMap: Record<string, string> = {
+      sales: "OBJECTIVE STYLE: High contrast, bold headline, aggressive layout, prominent CTA. Colors should be vibrant and attention-grabbing.",
+      leads: "OBJECTIVE STYLE: Clean and clear layout, objective message, clean visual, focus on action. CTA must be the most prominent element.",
+      engagement: "OBJECTIVE STYLE: Eye-catching visual, dynamic rhythm, appealing imagery. Layout should invite interaction.",
+      authority: "OBJECTIVE STYLE: Minimal clutter, elegant, well-organized, generous breathing room. Premium and refined feel.",
+      informative: "OBJECTIVE STYLE: Clear hierarchy of information, blocks of content, logical organization. Easy to scan and digest.",
+    };
+    if (objective && objectiveStyleMap[objective]) {
+      fullPrompt += `\n\n${objectiveStyleMap[objective]}`;
+    }
+
+    // Inject audience context
+    if (audience) {
+      fullPrompt += `\n\nTARGET AUDIENCE: ${audience}. Adapt visual language, tone, and imagery to resonate with this audience.`;
+    }
+
     // Instruct the model to RESERVE SPACE for the logo instead of rendering it
     if (logo_url) {
       fullPrompt += `\n\nBRAND LOGO PLACEMENT: Leave a CLEAN, EMPTY rectangular space (approximately 10-15% of image width) in the top-left corner of the design for the brand logo. This space must have a solid, uniform background matching the surrounding design — do NOT place any text, graphics, or busy patterns there. The logo will be composited in post-production. DO NOT render any logo, logotype, brand mark, or brand name text ANYWHERE in the image.`;
