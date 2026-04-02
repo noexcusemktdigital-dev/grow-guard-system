@@ -394,6 +394,7 @@ export function ArtWizard({
           baseImageUrl={baseImageUrl} setBaseImageUrl={setBaseImageUrl}
           characterImageUrl={characterImageUrl} setCharacterImageUrl={setCharacterImageUrl}
           backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
+          suggestions={suggestions}
         />
       );
     }
