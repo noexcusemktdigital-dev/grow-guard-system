@@ -209,6 +209,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
