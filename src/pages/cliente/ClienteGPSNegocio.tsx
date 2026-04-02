@@ -267,28 +267,7 @@ export default function ClienteGPSNegocio() {
     try {
       // 1. Sales plan already saved in handleRafaelComplete
 
-      // 2. Auto-create CRM funnel from Rafael's answers
-      const etapasText = rafaelAnswers.etapas_funil;
-      if (!existingFunnels || existingFunnels.length === 0) {
-        let funnelStages = [];
-        if (typeof etapasText === "string" && etapasText.trim().length > 0) {
-          funnelStages = parseFunnelStages(etapasText);
-        } else {
-          funnelStages = getDefaultFunnelStages(rafaelAnswers.modelo_negocio || "ambos");
-        }
-        if (funnelStages.length >= 2) {
-          try {
-            await createFunnel.mutateAsync({
-              name: "Funil Principal",
-              description: "Criado automaticamente pelo GPS do Negócio",
-              stages: funnelStages,
-              is_default: true,
-            });
-          } catch (e) { logger.error("Auto-funnel error:", e); }
-        }
-      }
-
-      // 3. Generate strategy via AI — three sequential calls
+      // 2. Generate strategy via AI — three sequential calls
       // Call 1: Marketing Core
       const coreResult = await generateStrategy.mutateAsync({ 
         answers: allAnswers, 

@@ -28,9 +28,6 @@ import { ClientePlanoVendasHistorico } from "./ClientePlanoVendasHistorico";
 import { ClientePlanoVendasMetas } from "./ClientePlanoVendasMetas";
 import { ClientePlanoVendasMetaDialog, type MetaFormState } from "./ClientePlanoVendasMetaDialog";
 
-import { STAGE_COLORS as CRM_STAGE_COLORS } from "@/components/crm/CrmStageSystem";
-const COLOR_NAMES = CRM_STAGE_COLORS.map(c => c.name);
-const STAGE_ICON_CYCLE = ["circle-plus", "phone-outgoing", "search-check", "clipboard", "handshake", "shield-check", "star", "sparkles", "target", "crosshair"];
 
 export default function ClientePlanoVendas() {
   // ── Sales Plan from DB ──
