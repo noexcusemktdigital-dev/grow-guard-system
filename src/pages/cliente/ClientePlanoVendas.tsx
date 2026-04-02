@@ -75,33 +75,9 @@ export default function ClientePlanoVendas() {
   const revenueProjection = useMemo(() => getRevenueProjection(answers, percentage), [answers, percentage]);
   const actionPlan = useMemo(() => generateActionPlan(scoreMap, maxMap, answers), [scoreMap, maxMap, answers]);
 
-  // ── Auto funnel + scripts hooks ──
-  const { data: existingFunnels } = useCrmFunnels();
-  const { createFunnel } = useCrmFunnelMutations();
+  // ── Scripts hooks ──
   const { createScript } = useClienteScriptMutations();
   const { data: orgId } = useUserOrgId();
-
-  const parseFunnelStages = (text: string) => {
-    const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
-    return parts.map((name, i) => ({
-      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-      label: name,
-      color: COLOR_NAMES[i % COLOR_NAMES.length],
-      icon: i === 0 ? "circle-plus" : i === parts.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
-    }));
-  };
-
-  const getDefaultFunnelStages = (modelo: string) => {
-    const b2bStages = ["Prospecção", "Qualificação", "Reunião", "Proposta", "Negociação", "Fechamento", "Perdido"];
-    const b2cStages = ["Novo Lead", "Primeiro Contato", "Apresentação", "Proposta", "Venda", "Perdido"];
-    const stages = modelo === "b2b" ? b2bStages : modelo === "b2c" ? b2cStages : [...b2bStages.slice(0, -1), "Pós-venda", "Perdido"];
-    return stages.map((name, i) => ({
-      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-      label: name,
-      color: COLOR_NAMES[i % COLOR_NAMES.length],
-      icon: i === 0 ? "circle-plus" : i === stages.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
-    }));
-  };
 
   const handleChatComplete = async (chatAnswers: Record<string, any>) => {
     const ans = chatAnswers as Answers;
