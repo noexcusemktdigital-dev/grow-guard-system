@@ -15,6 +15,7 @@ import Auth from "./pages/Auth";
 import SaasAuth from "./pages/SaasAuth";
 import SaasLanding from "./pages/SaasLanding";
 import ResetPassword from "./pages/ResetPassword";
+import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
 
 // Lazy: everything else
@@ -131,6 +132,7 @@ function App() {
               <Route path="/termos" element={<TermosDeUso />} />
               <Route path="/privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/welcome" element={<Welcome />} />
 
               <Route path="/" element={<SaasLanding />} />
 

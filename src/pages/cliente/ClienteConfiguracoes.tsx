@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight } from "lucide-react";
+import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
-import { useOrgMembers } from "@/hooks/useOrgMembers";
+import { useOrgMembers, usePendingInvitations } from "@/hooks/useOrgMembers";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
@@ -166,6 +166,7 @@ function OrgTab() {
 function UsersAndTeamsTab() {
   const { user } = useAuth();
   const { data: members, isLoading } = useOrgMembers();
+  const { data: pendingInvitations, isLoading: pendingLoading } = usePendingInvitations();
   const { data: subscription } = useClienteSubscription();
   const { data: orgId } = useUserOrgId();
   const { data: teams } = useOrgTeams();
@@ -202,6 +203,34 @@ function UsersAndTeamsTab() {
       qc.invalidateQueries({ queryKey: ["org-members"] });
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async (inv: { email: string; full_name: string | null; role: string; team_ids: string[] }) => {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: { email: inv.email, full_name: inv.full_name, role: inv.role, organization_id: orgId, team_ids: inv.team_ids },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Convite reenviado!");
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  const cancelInviteMutation = useMutation({
+    mutationFn: async (invId: string) => {
+      const { error } = await supabase.from("pending_invitations").delete().eq("id", invId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Convite cancelado");
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
+    },
+    onError: () => toast.error("Erro ao cancelar convite"),
   });
 
   const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };
@@ -305,6 +334,56 @@ function UsersAndTeamsTab() {
               ))}
             </div>
           </div>
+
+          {/* Pending Invitations section */}
+          {pendingInvitations && pendingInvitations.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Convites Pendentes ({pendingInvitations.length})</span>
+              </div>
+              <div className="space-y-2 ml-6">
+                {pendingInvitations.map(inv => (
+                  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg border border-amber-200/50 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-500/5">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-xs font-bold">
+                          {(inv.full_name || inv.email[0] || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{inv.full_name || inv.email}</p>
+                        {inv.full_name && <p className="text-[10px] text-muted-foreground">{inv.email}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="gap-1 bg-amber-100/50 text-amber-700 border-amber-300/50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30">
+                        <Clock className="w-3 h-3" />Pendente
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 gap-1"
+                        disabled={resendMutation.isPending}
+                        onClick={() => resendMutation.mutate({ email: inv.email, full_name: inv.full_name, role: inv.role, team_ids: inv.team_ids })}
+                      >
+                        <RefreshCw className="w-3 h-3" />Reenviar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 text-destructive hover:text-destructive"
+                        disabled={cancelInviteMutation.isPending}
+                        onClick={() => cancelInviteMutation.mutate(inv.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Permissions summary */}
           <Card className="bg-muted/30 border-dashed">

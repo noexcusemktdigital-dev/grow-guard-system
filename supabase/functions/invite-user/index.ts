@@ -11,12 +11,12 @@ function buildInviteHtml(confirmationUrl: string): string {
 <body style="margin:0;padding:0;background:#ffffff;font-family:'Inter',Arial,sans-serif;">
   <div style="padding:40px 25px;max-width:560px;margin:0 auto;">
     <img src="https://gxrhdpbbxfipeopdyygn.supabase.co/storage/v1/object/public/email-assets/logo-noexcuse.png" alt="NoExcuse Digital" width="160" style="margin:0 0 24px;display:block;" />
-    <h1 style="font-size:22px;font-weight:bold;color:#141a24;margin:0 0 20px;">Você foi convidado</h1>
+    <h1 style="font-size:22px;font-weight:bold;color:#141a24;margin:0 0 20px;">Você foi convidado(a)</h1>
     <p style="font-size:14px;color:#6c7280;line-height:1.6;margin:0 0 25px;">
-      Você foi convidado para a plataforma <strong>NoExcuse Digital</strong>. Clique no botão abaixo para definir sua senha e começar a usar o sistema.
+      Você foi convidado para a plataforma <strong>NoExcuse Digital</strong>. Clique no botão abaixo para criar sua conta e começar a usar o sistema.
     </p>
     <a href="${confirmationUrl}" style="display:inline-block;background-color:#E2233B;color:#ffffff;font-size:14px;border-radius:12px;padding:12px 24px;text-decoration:none;font-weight:500;">
-      Definir minha senha
+      Criar minha conta
     </a>
     <p style="font-size:12px;color:#999999;margin:30px 0 0;">
       Se você não esperava este convite, pode ignorar este e-mail com segurança.
@@ -83,7 +83,7 @@ async function findUserByEmail(adminClient: ReturnType<typeof createClient>, ema
     if (!users || users.length === 0) break;
     const found = users.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
     if (found) return found;
-    if (users.length < perPage) break; // last page
+    if (users.length < perPage) break;
     page++;
   }
   return null;
@@ -107,20 +107,19 @@ Deno.serve(async (req) => {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
-    const token = authHeader.replace("Bearer ", "");
 
-    // Use getClaims for compatibility with signing-keys system
+    // Use getUser for reliable auth
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      console.error("[invite-user] Claims error:", claimsError);
+    const { data: { user: callerUser }, error: authErr } = await anonClient.auth.getUser();
+    if (authErr || !callerUser) {
+      console.error("[invite-user] Auth error:", authErr);
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
-    const user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+    const user = { id: callerUser.id, email: callerUser.email };
     const callerId = user.id;
 
     const { email, full_name, role, organization_id, team_ids } = await req.json();
@@ -131,7 +130,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ---- Prevent self-invite EARLY (before any user creation) ----
+    // Prevent self-invite
     if (email.toLowerCase().trim() === user.email?.toLowerCase()) {
       return new Response(
         JSON.stringify({ error: "Você não pode convidar a si mesmo." }),
@@ -139,7 +138,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify caller is member of the org (or parent org for franqueadora)
+    // Verify caller is member of the org
     const { data: isMember } = await adminClient.rpc("is_member_or_parent_of_org", {
       _user_id: callerId,
       _org_id: organization_id,
@@ -150,30 +149,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ---- Determine org type for contextual redirect and limits ----
+    // Determine org type
     const { data: orgData } = await adminClient
       .from("organizations")
       .select("type, name")
       .eq("id", organization_id)
       .single();
-    const orgType = orgData?.type; // 'franqueadora' | 'franqueado' | 'cliente'
+    const orgType = orgData?.type;
     const orgName = orgData?.name || "Organização";
 
-    // ---- Validate maxUsers server-side ----
-    let maxUsers = 9999; // default for franchise orgs without subscriptions
+    // Validate maxUsers server-side
+    let maxUsers = 9999;
     if (orgType === "cliente") {
       const { data: sub } = await adminClient
         .from("subscriptions")
         .select("plan, status")
         .eq("organization_id", organization_id)
         .maybeSingle();
-
       const planLimits: Record<string, number> = { starter: 10, pro: 20, enterprise: 9999, trial: 2 };
       maxUsers = planLimits[sub?.plan ?? ""] ?? 10;
     } else if (orgType === "franqueado") {
-      maxUsers = 50; // reasonable limit for franchise units
+      maxUsers = 50;
     } else if (orgType === "franqueadora") {
-      maxUsers = 200; // reasonable limit for franqueadora
+      maxUsers = 200;
     }
 
     const { count: currentMembers } = await adminClient
@@ -188,7 +186,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ---- Create user (try-first approach) ----
+    // Create user (try-first approach)
     console.log("[invite-user] Attempting to create user:", email);
     const tempPassword = crypto.randomUUID() + "Aa1!";
     const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
@@ -201,7 +199,6 @@ Deno.serve(async (req) => {
     let userId: string;
     let isNewUser = true;
 
-    // Robust detection of "user already exists" across Supabase JS versions
     const isEmailExists = createErr && (
       (createErr as any).code === "email_exists" ||
       (createErr as any).code === "user_already_exists" ||
@@ -217,7 +214,6 @@ Deno.serve(async (req) => {
       const existing = await findUserByEmail(adminClient, email);
       if (!existing) throw new Error("Usuário existe mas não foi encontrado na listagem");
 
-      // Check if already member of this org
       const { data: existingMembership } = await adminClient
         .from("organization_memberships")
         .select("id")
@@ -226,6 +222,19 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existingMembership) {
+        // Already a member — update pending_invitations and resend
+        await adminClient
+          .from("pending_invitations")
+          .upsert({
+            email: email.toLowerCase().trim(),
+            organization_id,
+            invited_by: callerId,
+            role: role || "cliente_user",
+            team_ids: team_ids || [],
+            full_name: full_name || null,
+            accepted_at: null,
+          }, { onConflict: "email,organization_id" });
+
         return new Response(
           JSON.stringify({ error: "Este usuário já é membro desta organização." }),
           { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
@@ -235,18 +244,17 @@ Deno.serve(async (req) => {
       userId = existing.id as string;
     } else if (createErr) {
       console.error("[invite-user] Unrecognized createUser error:", JSON.stringify(createErr, null, 2));
-      console.error("[invite-user] Error code:", (createErr as any).code, "| status:", (createErr as any).status, "| message:", (createErr as any).message);
       throw createErr;
     } else {
       userId = newUser.user.id;
     }
 
-    // ---- Send appropriate email ----
+    // Send appropriate email
     const siteUrl = Deno.env.get("SITE_URL") || "https://sistema.noexcusedigital.com.br";
 
     if (isNewUser) {
-      // New user: send recovery link so they can set their password
-      const redirectPath = "/reset-password";
+      // New user: redirect to /welcome instead of /reset-password
+      const redirectPath = "/welcome";
       const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
         type: "recovery",
         email,
@@ -279,7 +287,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update profile only for new users (don't overwrite existing profiles)
+    // Update profile only for new users
     if (isNewUser) {
       await adminClient
         .from("profiles")
@@ -287,37 +295,33 @@ Deno.serve(async (req) => {
         .eq("id", userId);
     }
 
-    // Create membership (ignore if already exists)
+    // Create membership
     await adminClient.from("organization_memberships").upsert({
       user_id: userId,
       organization_id,
     }, { onConflict: "user_id,organization_id", ignoreDuplicates: true });
 
-    // Determine role based on org type
+    // Determine role
     const allowedRoles = ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
     let validRole: string;
     if (allowedRoles.includes(role)) {
       validRole = role;
     } else {
       validRole = (orgType === "franqueadora" || orgType === "franqueado") ? "franqueado" : "cliente_user";
-      console.log(`[invite-user] No explicit role, org type=${orgType}, defaulting to ${validRole}`);
     }
 
-    // Multi-role support: INSERT new role, ON CONFLICT do nothing (user may already have this role)
+    // Insert role
     const { error: roleInsertErr } = await adminClient
       .from("user_roles")
       .insert({ user_id: userId, role: validRole })
       .select()
       .maybeSingle();
 
-    // If conflict (already has this role), that's fine
     if (roleInsertErr && !roleInsertErr.message?.includes("duplicate")) {
       console.error("[invite-user] Role insert error:", roleInsertErr);
-    } else {
-      console.log(`[invite-user] Role ensured: ${validRole} for user ${userId} (isNew=${isNewUser})`);
     }
 
-    // Assign to teams if provided (with ON CONFLICT to avoid duplicate key errors)
+    // Assign to teams
     if (Array.isArray(team_ids) && team_ids.length > 0) {
       for (const tid of team_ids) {
         await adminClient.from("org_team_memberships")
@@ -325,7 +329,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`User invited: ${email} -> org ${organization_id} as ${validRole} (teams: ${team_ids?.length ?? 0})`);
+    // Save pending invitation record
+    await adminClient
+      .from("pending_invitations")
+      .upsert({
+        email: email.toLowerCase().trim(),
+        organization_id,
+        invited_by: callerId,
+        role: validRole,
+        team_ids: team_ids || [],
+        full_name: full_name || null,
+        accepted_at: isNewUser ? null : new Date().toISOString(), // existing users are already "accepted"
+      }, { onConflict: "email,organization_id" });
+
+    console.log(`User invited: ${email} -> org ${organization_id} as ${validRole}`);
 
     return new Response(
       JSON.stringify({ success: true, user_id: userId }),

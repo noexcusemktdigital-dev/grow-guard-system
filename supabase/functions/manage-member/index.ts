@@ -20,25 +20,26 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const token = authHeader.replace("Bearer ", "");
 
-    const authClient = createClient(supabaseUrl, anonKey);
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    const callerId = claimsData?.claims?.sub;
+    // Use getUser instead of getClaims for reliable auth
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller }, error: authErr } = await userClient.auth.getUser();
 
-    console.log("[manage-member] Claims result", {
-      hasClaims: !!claimsData?.claims,
-      claimsError: claimsError?.message ?? null,
-      callerId: callerId ?? null,
+    console.log("[manage-member] Auth result", {
+      callerId: caller?.id ?? null,
+      authErr: authErr?.message ?? null,
     });
 
-    if (claimsError || !callerId) {
+    if (authErr || !caller) {
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
         status: 200,
         headers: responseHeaders,
       });
     }
 
+    const callerId = caller.id;
     const { user_id, organization_id, action = "update", role, full_name, job_title } = await req.json();
     console.log("[manage-member] Payload", { callerId, user_id, organization_id, action, hasRole: !!role });
 
@@ -63,7 +64,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: callerRole } = await admin.rpc("get_user_role", { _user_id: callerId });
+    // Determine portal context from org type
+    const { data: orgData } = await admin
+      .from("organizations")
+      .select("type")
+      .eq("id", organization_id)
+      .single();
+    const portal = orgData?.type === "cliente" ? "saas" : "franchise";
+
+    const { data: callerRole } = await admin.rpc("get_user_role", { _user_id: callerId, _portal: portal });
     const adminRoles = ["super_admin", "admin", "franqueado", "cliente_admin"];
 
     if (!adminRoles.includes(callerRole)) {
@@ -133,7 +142,7 @@ Deno.serve(async (req) => {
 
     if (role) {
       if (role !== "super_admin") {
-        const { data: targetRole } = await admin.rpc("get_user_role", { _user_id: user_id });
+        const { data: targetRole } = await admin.rpc("get_user_role", { _user_id: user_id, _portal: portal });
         if (targetRole === "super_admin") {
           const { data: orgMembers } = await admin
             .from("organization_memberships")
