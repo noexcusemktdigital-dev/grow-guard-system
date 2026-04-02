@@ -140,8 +140,8 @@ const Welcome = () => {
       const msg = error.message?.toLowerCase() || "";
       if (msg.includes("same_password") || msg.includes("different_password")) {
         toast.error("A nova senha deve ser diferente da senha atual.");
-      } else if (msg.includes("weak_password") || msg.includes("password")) {
-        toast.error("Senha muito fraca. Tente uma senha mais forte.");
+      } else if (msg.includes("weak_password") || msg.includes("leaked") || msg.includes("pwned") || msg.includes("breached")) {
+        toast.error("Essa senha foi encontrada em vazamentos de dados. Por segurança, escolha uma senha diferente que não tenha sido exposta.");
       } else if (error.status === 401 || msg.includes("not authenticated") || msg.includes("session")) {
         toast.error("Sessão expirada. Peça ao administrador para reenviar o convite.");
       } else if (error.status === 403) {
@@ -249,6 +249,13 @@ const Welcome = () => {
                     );
                   })}
                 </div>
+               )}
+
+              {password.length > 0 && allRulesPass && (
+                <p className="text-xs text-white/40 flex items-center gap-1.5 px-1">
+                  <Lock className="h-3 w-3 shrink-0" />
+                  A senha também não pode ter sido exposta em vazamentos conhecidos
+                </p>
               )}
 
               <div className="space-y-2">
