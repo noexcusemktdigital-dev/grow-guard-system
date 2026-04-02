@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ChevronLeft, ChevronRight, Lightbulb, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Lightbulb, Sparkles, Target } from "lucide-react";
 import type { FeatureTutorial } from "@/constants/featureTutorials";
+import { useStrategyData } from "@/hooks/useStrategyData";
+import { getPersonalizedTips } from "@/utils/personalizedTutorialTips";
 
 interface FeatureTutorialDialogProps {
   tutorial: FeatureTutorial;
@@ -12,9 +14,14 @@ interface FeatureTutorialDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const TAB_LABELS = ["O que é", "Como usar", "Benefícios", "Para você"];
+
 export function FeatureTutorialDialog({ tutorial, open, onOpenChange }: FeatureTutorialDialogProps) {
   const [step, setStep] = useState(0);
-  const totalSteps = 3; // whatIs, steps, benefits
+  const totalSteps = 4;
+  const strategyData = useStrategyData();
+  const personalizedTips = getPersonalizedTips(tutorial.slug, strategyData);
+  const hasPersonalized = personalizedTips.length > 0;
 
   useEffect(() => {
     if (open) setStep(0);
@@ -45,16 +52,17 @@ export function FeatureTutorialDialog({ tutorial, open, onOpenChange }: FeatureT
           </DialogHeader>
           {/* Step indicators */}
           <div className="flex items-center gap-2 mt-4">
-            {["O que é", "Como usar", "Benefícios"].map((label, i) => (
+            {TAB_LABELS.map((label, i) => (
               <button
                 key={label}
                 onClick={() => setStep(i)}
-                className={`text-[10px] font-semibold px-3 py-1.5 rounded-full transition-all ${
+                className={`text-[10px] font-semibold px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
                   step === i
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted"
                 }`}
               >
+                {i === 3 && <Sparkles className="w-3 h-3" />}
                 {label}
               </button>
             ))}
@@ -99,6 +107,34 @@ export function FeatureTutorialDialog({ tutorial, open, onOpenChange }: FeatureT
                   <p className="text-sm text-foreground/90">{b}</p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-3 mt-2 animate-in fade-in-0 slide-in-from-right-4 duration-300">
+              {hasPersonalized ? (
+                <>
+                  <Badge variant="outline" className="gap-1.5 text-primary border-primary/30 mb-2">
+                    <Target className="w-3 h-3" /> Personalizado para o seu negócio
+                  </Badge>
+                  {personalizedTips.map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <p className="text-sm text-foreground/90">{tip}</p>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <div className="rounded-lg bg-muted/50 border border-border p-5 text-center space-y-3 mt-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                    <Target className="w-6 h-6 text-primary" />
+                  </div>
+                  <p className="text-sm font-semibold">Recomendações personalizadas</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Complete o <strong>GPS do Negócio</strong> para receber dicas específicas de como usar esta ferramenta para gerar mais resultados pro seu negócio.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
