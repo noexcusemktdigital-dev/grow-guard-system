@@ -83,7 +83,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.generate-video-briefing]
     verify_jwt = true
   [functions.generate-daily-checklist]
-    verify_jwt = true
+    verify_jwt = false
 
   # --- Utility functions (require auth) ---
   [functions.get-outbound-ip]
