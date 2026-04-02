@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
 import { useSalesPlan, useSaveSalesPlan, useSalesPlanHistory, useArchiveSalesPlan } from "@/hooks/useSalesPlan";
-import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
