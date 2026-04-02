@@ -396,7 +396,16 @@ function Step8Layout({ layoutType, setLayoutType }: StepProps) {
 }
 
 /* ── Step 9: References ── */
-function Step9References({ referenceUrls, setReferenceUrls, orgId, uploading, setUploading, visualIdentity, primaryRefIndex, setPrimaryRefIndex }: StepProps) {
+function Step9References({ referenceUrls, setReferenceUrls, orgId, uploading, setUploading, visualIdentity, primaryRefIndex, setPrimaryRefIndex, referenceMemory }: StepProps) {
+  const addRef = (url: string) => {
+    if (!referenceUrls.includes(url)) {
+      setReferenceUrls([...referenceUrls, url]);
+    }
+  };
+
+  const hasFrequent = referenceMemory && referenceMemory.frequentRefs.length > 0;
+  const hasApproved = referenceMemory && referenceMemory.approvedArts.length > 0;
+
   return (
     <div className="space-y-5">
       <div>
@@ -417,6 +426,78 @@ function Step9References({ referenceUrls, setReferenceUrls, orgId, uploading, se
           </div>
         </CardContent>
       </Card>
+
+      {/* Memory: frequent references */}
+      {hasFrequent && (
+        <Collapsible defaultOpen>
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors w-full">
+            <span>🧠 Referências que você já usou</span>
+            <Badge variant="secondary" className="text-xs">{referenceMemory.frequentRefs.length}</Badge>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3">
+            <div className="grid grid-cols-4 gap-2">
+              {referenceMemory.frequentRefs.map((url, i) => {
+                const alreadyAdded = referenceUrls.includes(url);
+                return (
+                  <div key={i} className="relative group">
+                    <img src={url} alt={`Ref ${i + 1}`} className={`w-full h-20 object-cover rounded-lg border ${alreadyAdded ? "opacity-40 border-primary" : "border-border"}`} />
+                    {!alreadyAdded && (
+                      <button
+                        onClick={() => addRef(url)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+                      >
+                        <Plus className="w-5 h-5 text-white" />
+                      </button>
+                    )}
+                    {alreadyAdded && (
+                      <div className="absolute top-1 right-1">
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Memory: approved arts */}
+      {hasApproved && (
+        <Collapsible>
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors w-full">
+            <span>✅ Artes aprovadas</span>
+            <Badge variant="secondary" className="text-xs">{referenceMemory.approvedArts.length}</Badge>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3">
+            <p className="text-xs text-muted-foreground mb-2">A IA aprendeu com suas artes aprovadas. Clique para usar como referência.</p>
+            <div className="grid grid-cols-4 gap-2">
+              {referenceMemory.approvedArts.map((url, i) => {
+                const alreadyAdded = referenceUrls.includes(url);
+                return (
+                  <div key={i} className="relative group">
+                    <img src={url} alt={`Arte ${i + 1}`} className={`w-full h-20 object-cover rounded-lg border ${alreadyAdded ? "opacity-40 border-primary" : "border-border"}`} />
+                    {!alreadyAdded && (
+                      <button
+                        onClick={() => addRef(url)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+                      >
+                        <Plus className="w-5 h-5 text-white" />
+                      </button>
+                    )}
+                    {alreadyAdded && (
+                      <div className="absolute top-1 right-1">
+                        <Check className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       <RefUploader
         referenceUrls={referenceUrls}
         setReferenceUrls={setReferenceUrls}
