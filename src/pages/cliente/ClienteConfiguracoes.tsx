@@ -335,6 +335,56 @@ function UsersAndTeamsTab() {
             </div>
           </div>
 
+          {/* Pending Invitations section */}
+          {pendingInvitations && pendingInvitations.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Convites Pendentes ({pendingInvitations.length})</span>
+              </div>
+              <div className="space-y-2 ml-6">
+                {pendingInvitations.map(inv => (
+                  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg border border-amber-200/50 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-500/5">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-xs font-bold">
+                          {(inv.full_name || inv.email[0] || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{inv.full_name || inv.email}</p>
+                        {inv.full_name && <p className="text-[10px] text-muted-foreground">{inv.email}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="gap-1 bg-amber-100/50 text-amber-700 border-amber-300/50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30">
+                        <Clock className="w-3 h-3" />Pendente
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 gap-1"
+                        disabled={resendMutation.isPending}
+                        onClick={() => resendMutation.mutate({ email: inv.email, full_name: inv.full_name, role: inv.role, team_ids: inv.team_ids })}
+                      >
+                        <RefreshCw className="w-3 h-3" />Reenviar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 text-destructive hover:text-destructive"
+                        disabled={cancelInviteMutation.isPending}
+                        onClick={() => cancelInviteMutation.mutate(inv.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Permissions summary */}
           <Card className="bg-muted/30 border-dashed">
             <CardContent className="py-3">
