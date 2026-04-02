@@ -10,6 +10,7 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 import { ArtWizardStep, ArtWizardStepReview } from "./ArtWizardSteps";
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { getSmartSuggestions } from "@/utils/smartSuggestions";
+import { useReferenceMemory } from "@/hooks/useReferenceMemory";
 
 interface ArtWizardProps {
   orgId: string | undefined;
@@ -100,6 +101,7 @@ export function ArtWizard({
   const [step, setStep] = useState(1);
   const strategyData = useStrategyData();
   const suggestions = useMemo(() => getSmartSuggestions(strategyData), [strategyData]);
+  const referenceMemory = useReferenceMemory(orgId);
 
   // Step 1: Material type
   const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
@@ -172,6 +174,13 @@ export function ArtWizard({
       setLogoUrl(visualIdentity.logo_url);
     }
   }, [visualIdentity]);
+
+  // Pre-fill logo from reference memory (last used)
+  useEffect(() => {
+    if (!logoUrl && !visualIdentity?.logo_url && referenceMemory.lastLogoUrl) {
+      setLogoUrl(referenceMemory.lastLogoUrl);
+    }
+  }, [referenceMemory.lastLogoUrl]);
 
   const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
 
@@ -395,6 +404,7 @@ export function ArtWizard({
           characterImageUrl={characterImageUrl} setCharacterImageUrl={setCharacterImageUrl}
           backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
           suggestions={suggestions}
+          referenceMemory={referenceMemory}
         />
       );
     }
