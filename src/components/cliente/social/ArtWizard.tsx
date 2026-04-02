@@ -10,6 +10,7 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 import { ArtWizardStep, ArtWizardStepReview } from "./ArtWizardSteps";
 import { useStrategyData } from "@/hooks/useStrategyData";
 import { getSmartSuggestions } from "@/utils/smartSuggestions";
+import { useReferenceMemory } from "@/hooks/useReferenceMemory";
 
 interface ArtWizardProps {
   orgId: string | undefined;
