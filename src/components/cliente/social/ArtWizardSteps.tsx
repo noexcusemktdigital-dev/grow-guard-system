@@ -292,7 +292,7 @@ function Step5Topic({ topic, setTopic, suggestions }: StepProps) {
         <p className="text-sm text-muted-foreground">Descreva o assunto principal</p>
       </div>
       <Textarea
-        placeholder={props.suggestions?.topicPlaceholder || "Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."}
+        placeholder={suggestions?.topicPlaceholder || "Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."}
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
         rows={3}
