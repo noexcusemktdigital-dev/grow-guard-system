@@ -165,7 +165,7 @@ export default function ClienteRedesSociais() {
           ? (i === 0 ? "capa_carrossel" : i === totalPieces - 1 ? "cta_carrossel" : "slide_carrossel")
           : payload.tipoPostagem;
 
-        try {
+          try {
           const result = await generatePost.mutateAsync({
             type: "art",
             format: pieceFormat,
@@ -192,6 +192,15 @@ export default function ClienteRedesSociais() {
             photo_image_urls: payload.photoUrls,
             output_mode: payload.outputMode,
             print_format: payload.printFormat,
+            // New art direction engine fields
+            topic: payload.topic,
+            audience: payload.audience,
+            text_mode: payload.textMode,
+            restrictions: payload.restrictions,
+            elements: payload.elements,
+            base_image_url: payload.baseImageUrl,
+            character_image_url: payload.characterImageUrl,
+            background_image_url: payload.backgroundImageUrl,
           });
           results.push(result);
         } catch (slideErr: unknown) {
