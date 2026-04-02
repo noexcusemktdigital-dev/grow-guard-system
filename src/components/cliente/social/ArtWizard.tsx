@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -8,6 +8,8 @@ import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { ArtWizardStep, ArtWizardStepReview } from "./ArtWizardSteps";
+import { useStrategyData } from "@/hooks/useStrategyData";
+import { getSmartSuggestions } from "@/utils/smartSuggestions";
 
 interface ArtWizardProps {
   orgId: string | undefined;
