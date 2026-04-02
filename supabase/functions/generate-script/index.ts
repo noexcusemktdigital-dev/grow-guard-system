@@ -112,7 +112,7 @@ serve(async (req) => {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data: wallet } = await adminClient.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
       if (!wallet || wallet.balance < CREDIT_COST) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos.", code: "INSUFFICIENT_CREDITS" }), { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
     }
 

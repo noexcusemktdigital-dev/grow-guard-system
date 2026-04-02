@@ -130,7 +130,10 @@ export function useGenerateContent() {
         },
       });
 
-      if (resp.error) throw new Error(resp.error.message || "Erro ao gerar conteúdo");
+      if (resp.error) {
+        const realError = await extractEdgeFunctionError(resp.error);
+        throw realError;
+      }
       const result = resp.data as Record<string, unknown>;
       if (result?.error) throw new Error(result.error as string);
 
