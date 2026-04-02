@@ -353,7 +353,7 @@ function Step6TextMode({ textMode, setTextMode, briefingText, setBriefingText, m
 }
 
 /* ── Step 7: Audience ── */
-function Step7Audience({ audience, setAudience }: StepProps) {
+function Step7Audience({ audience, setAudience, suggestions }: StepProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -361,12 +361,12 @@ function Step7Audience({ audience, setAudience }: StepProps) {
         <p className="text-sm text-muted-foreground">Defina o público-alvo para a IA adaptar linguagem e visual</p>
       </div>
       <Input
-        placeholder="Ex: empresários, mulheres 25-45, médicos, público geral..."
+        placeholder={suggestions?.audiencePlaceholder || "Ex: empresários, mulheres 25-45, médicos, público geral..."}
         value={audience}
         onChange={(e) => setAudience(e.target.value)}
       />
       <div className="flex flex-wrap gap-1.5">
-        {AUDIENCE_SUGGESTIONS.map(s => (
+        {(suggestions?.audiences || []).map(s => (
           <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setAudience(s)}>
             {s}
           </Badge>
