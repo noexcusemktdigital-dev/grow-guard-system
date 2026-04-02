@@ -1,7 +1,9 @@
 // @ts-nocheck
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import { DEFAULT_STAGES } from "@/components/crm/CrmStageSystem";
 
 export function useCrmFunnels() {
   const { data: orgId } = useUserOrgId();
@@ -69,4 +71,23 @@ export function useCrmFunnelMutations() {
   });
 
   return { createFunnel, updateFunnel, deleteFunnel };
+}
+
+export function useEnsureDefaultFunnel() {
+  const { data: funnels, isLoading } = useCrmFunnels();
+  const { createFunnel } = useCrmFunnelMutations();
+  const created = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || created.current) return;
+    if (funnels && funnels.length === 0) {
+      created.current = true;
+      createFunnel.mutate({
+        name: "Funil de Vendas",
+        description: "Funil padrão do CRM",
+        stages: DEFAULT_STAGES as Record<string, unknown>[],
+        is_default: true,
+      });
+    }
+  }, [funnels, isLoading]);
 }

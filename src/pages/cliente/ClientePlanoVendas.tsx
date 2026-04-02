@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
 import { useSalesPlan, useSaveSalesPlan, useSalesPlanHistory, useArchiveSalesPlan } from "@/hooks/useSalesPlan";
-import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
@@ -29,9 +28,6 @@ import { ClientePlanoVendasHistorico } from "./ClientePlanoVendasHistorico";
 import { ClientePlanoVendasMetas } from "./ClientePlanoVendasMetas";
 import { ClientePlanoVendasMetaDialog, type MetaFormState } from "./ClientePlanoVendasMetaDialog";
 
-import { STAGE_COLORS as CRM_STAGE_COLORS } from "@/components/crm/CrmStageSystem";
-const COLOR_NAMES = CRM_STAGE_COLORS.map(c => c.name);
-const STAGE_ICON_CYCLE = ["circle-plus", "phone-outgoing", "search-check", "clipboard", "handshake", "shield-check", "star", "sparkles", "target", "crosshair"];
 
 export default function ClientePlanoVendas() {
   // ── Sales Plan from DB ──
@@ -79,33 +75,9 @@ export default function ClientePlanoVendas() {
   const revenueProjection = useMemo(() => getRevenueProjection(answers, percentage), [answers, percentage]);
   const actionPlan = useMemo(() => generateActionPlan(scoreMap, maxMap, answers), [scoreMap, maxMap, answers]);
 
-  // ── Auto funnel + scripts hooks ──
-  const { data: existingFunnels } = useCrmFunnels();
-  const { createFunnel } = useCrmFunnelMutations();
+  // ── Scripts hooks ──
   const { createScript } = useClienteScriptMutations();
   const { data: orgId } = useUserOrgId();
-
-  const parseFunnelStages = (text: string) => {
-    const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
-    return parts.map((name, i) => ({
-      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-      label: name,
-      color: COLOR_NAMES[i % COLOR_NAMES.length],
-      icon: i === 0 ? "circle-plus" : i === parts.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
-    }));
-  };
-
-  const getDefaultFunnelStages = (modelo: string) => {
-    const b2bStages = ["Prospecção", "Qualificação", "Reunião", "Proposta", "Negociação", "Fechamento", "Perdido"];
-    const b2cStages = ["Novo Lead", "Primeiro Contato", "Apresentação", "Proposta", "Venda", "Perdido"];
-    const stages = modelo === "b2b" ? b2bStages : modelo === "b2c" ? b2cStages : [...b2bStages.slice(0, -1), "Pós-venda", "Perdido"];
-    return stages.map((name, i) => ({
-      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-      label: name,
-      color: COLOR_NAMES[i % COLOR_NAMES.length],
-      icon: i === 0 ? "circle-plus" : i === stages.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
-    }));
-  };
 
   const handleChatComplete = async (chatAnswers: Record<string, any>) => {
     const ans = chatAnswers as Answers;
@@ -114,29 +86,8 @@ export default function ClientePlanoVendas() {
     const { percentage: pct } = computeScores(ans);
     saveSalesPlan.mutate({ answers: ans, score: Math.round(pct) });
 
-    // Auto-create CRM funnel
-    const etapasText = ans.etapas_funil;
-    if (!existingFunnels || existingFunnels.length === 0) {
-      let funnelStages: { key: string; label: string; color: string; icon: string }[] = [];
-      if (typeof etapasText === "string" && etapasText.trim().length > 0) {
-        funnelStages = parseFunnelStages(etapasText);
-      } else {
-        funnelStages = getDefaultFunnelStages((ans.modelo_negocio as string) || "ambos");
-      }
-      if (funnelStages.length >= 2) {
-        try {
-          await createFunnel.mutateAsync({
-            name: "Funil Principal",
-            description: "Criado automaticamente a partir do Plano de Vendas",
-            stages: funnelStages,
-            is_default: true,
-          });
-          toast({ title: "Funil CRM criado automaticamente!", description: `${funnelStages.length} etapas configuradas.` });
-        } catch (e) {
-          logger.error("Auto-funnel error:", e);
-        }
-      }
-    }
+
+
 
     // Auto-generate initial scripts (background)
     if (orgId) {

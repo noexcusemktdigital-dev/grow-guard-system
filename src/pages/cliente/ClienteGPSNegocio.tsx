@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy, useApproveStrategy, useGenerateStrategy } from "@/hooks/useMarketingStrategy";
 import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
 
-import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
@@ -28,9 +27,6 @@ import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
-import { STAGE_COLORS as CRM_STAGE_COLORS } from "@/components/crm/CrmStageSystem";
-const COLOR_NAMES = CRM_STAGE_COLORS.map(c => c.name);
-const STAGE_ICON_CYCLE = ["circle-plus", "phone-outgoing", "search-check", "clipboard", "handshake", "shield-check", "star", "sparkles", "target", "crosshair"];
 
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
 type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
@@ -170,8 +166,6 @@ export default function ClienteGPSNegocio() {
   const approveStrategy = useApproveStrategy();
   const generateStrategy = useGenerateStrategy();
   const saveSalesPlan = useSaveSalesPlan();
-  const { data: existingFunnels } = useCrmFunnels();
-  const { createFunnel } = useCrmFunnelMutations();
   const { createScript } = useClienteScriptMutations();
 
   // ── Metas state ──
@@ -221,27 +215,6 @@ export default function ClienteGPSNegocio() {
     }
   };
 
-  const parseFunnelStages = (text: string) => {
-    const parts = text.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean);
-    return parts.map((name, i) => ({
-      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-      label: name,
-      color: COLOR_NAMES[i % COLOR_NAMES.length],
-      icon: i === 0 ? "circle-plus" : i === parts.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
-    }));
-  };
-
-  const getDefaultFunnelStages = (modelo: string) => {
-    const b2bStages = ["Prospecção", "Qualificação", "Reunião", "Proposta", "Negociação", "Fechamento", "Perdido"];
-    const b2cStages = ["Novo Lead", "Primeiro Contato", "Apresentação", "Proposta", "Venda", "Perdido"];
-    const stages = modelo === "b2b" ? b2bStages : modelo === "b2c" ? b2cStages : [...b2bStages.slice(0, -1), "Pós-venda", "Perdido"];
-    return stages.map((name, i) => ({
-      key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-      label: name,
-      color: COLOR_NAMES[i % COLOR_NAMES.length],
-      icon: i === 0 ? "circle-plus" : i === stages.length - 1 ? "ban" : STAGE_ICON_CYCLE[i % STAGE_ICON_CYCLE.length],
-    }));
-  };
 
   const handleRetryGeneration = () => {
     if (!salesPlan?.answers) return;
@@ -271,28 +244,7 @@ export default function ClienteGPSNegocio() {
     try {
       // 1. Sales plan already saved in handleRafaelComplete
 
-      // 2. Auto-create CRM funnel from Rafael's answers
-      const etapasText = rafaelAnswers.etapas_funil;
-      if (!existingFunnels || existingFunnels.length === 0) {
-        let funnelStages = [];
-        if (typeof etapasText === "string" && etapasText.trim().length > 0) {
-          funnelStages = parseFunnelStages(etapasText);
-        } else {
-          funnelStages = getDefaultFunnelStages(rafaelAnswers.modelo_negocio || "ambos");
-        }
-        if (funnelStages.length >= 2) {
-          try {
-            await createFunnel.mutateAsync({
-              name: "Funil Principal",
-              description: "Criado automaticamente pelo GPS do Negócio",
-              stages: funnelStages,
-              is_default: true,
-            });
-          } catch (e) { logger.error("Auto-funnel error:", e); }
-        }
-      }
-
-      // 3. Generate strategy via AI — three sequential calls
+      // 2. Generate strategy via AI — three sequential calls
       // Call 1: Marketing Core
       const coreResult = await generateStrategy.mutateAsync({ 
         answers: allAnswers, 
