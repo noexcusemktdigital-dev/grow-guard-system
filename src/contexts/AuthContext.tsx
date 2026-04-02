@@ -222,6 +222,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
           await fetchProfileAndRole(newSession.user, _event === "SIGNED_IN");
+
+          // Fallback: mark any pending invitations as accepted on login
+          if (_event === "SIGNED_IN" && newSession.user.email) {
+            try {
+              supabase.functions.invoke("manage-member", {
+                body: { action: "accept_invitation", email: newSession.user.email },
+              }).catch((e: unknown) => logger.warn("[Auth] accept_invitation fallback error:", e));
+            } catch {}
+          }
         } else {
           setProfile(null);
           setRole(null);
