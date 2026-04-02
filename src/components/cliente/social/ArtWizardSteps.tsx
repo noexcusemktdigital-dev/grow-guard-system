@@ -292,14 +292,14 @@ function Step5Topic({ topic, setTopic }: StepProps) {
         <p className="text-sm text-muted-foreground">Descreva o assunto principal</p>
       </div>
       <Textarea
-        placeholder="Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."
+        placeholder={props.suggestions?.topicPlaceholder || "Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."}
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
         rows={3}
         className="resize-none"
       />
       <div className="flex flex-wrap gap-1.5">
-        {["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"].map(s => (
+        {(props.suggestions?.topics || ["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"]).map(s => (
           <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setTopic(s)}>
             {s}
           </Badge>
