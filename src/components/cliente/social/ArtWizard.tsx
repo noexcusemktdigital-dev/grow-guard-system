@@ -404,6 +404,7 @@ export function ArtWizard({
           characterImageUrl={characterImageUrl} setCharacterImageUrl={setCharacterImageUrl}
           backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
           suggestions={suggestions}
+          referenceMemory={referenceMemory}
         />
       );
     }
