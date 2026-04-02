@@ -57,6 +57,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
       if (data?.error) throw new Error(data.error);
       toast({ title: "Membro atualizado!" });
       qc.invalidateQueries({ queryKey: ["org-members"] });
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
       onSuccess?.();
       onOpenChange(false);
     } catch (err: unknown) {
@@ -77,6 +78,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
       if (data?.error) throw new Error(data.error);
       toast({ title: "Membro removido!" });
       qc.invalidateQueries({ queryKey: ["org-members"] });
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
       onSuccess?.();
       onOpenChange(false);
     } catch (err: unknown) {
