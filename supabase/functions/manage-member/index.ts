@@ -10,13 +10,6 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     console.log("[manage-member] Request received", { hasAuth: !!authHeader, method: req.method });
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Sessão expirada. Faça login novamente." }), {
-        status: 200,
-        headers: responseHeaders,
-      });
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
