@@ -175,6 +175,13 @@ export function ArtWizard({
     }
   }, [visualIdentity]);
 
+  // Pre-fill logo from reference memory (last used)
+  useEffect(() => {
+    if (!logoUrl && !visualIdentity?.logo_url && referenceMemory.lastLogoUrl) {
+      setLogoUrl(referenceMemory.lastLogoUrl);
+    }
+  }, [referenceMemory.lastLogoUrl]);
+
   const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
 
   const handleAutoFillTexts = async () => {
