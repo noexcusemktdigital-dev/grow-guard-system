@@ -205,6 +205,34 @@ function UsersAndTeamsTab() {
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
+  const resendMutation = useMutation({
+    mutationFn: async (inv: { email: string; full_name: string | null; role: string; team_ids: string[] }) => {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: { email: inv.email, full_name: inv.full_name, role: inv.role, organization_id: orgId, team_ids: inv.team_ids },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Convite reenviado!");
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
+    },
+    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  const cancelInviteMutation = useMutation({
+    mutationFn: async (invId: string) => {
+      const { error } = await supabase.from("pending_invitations").delete().eq("id", invId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Convite cancelado");
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
+    },
+    onError: () => toast.error("Erro ao cancelar convite"),
+  });
+
   const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };
   const roleColors: Record<string, string> = { cliente_admin: "bg-primary/10 text-primary border-primary/20", cliente_user: "bg-muted text-muted-foreground border-muted" };
 
