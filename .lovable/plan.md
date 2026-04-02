@@ -1,108 +1,98 @@
 
+## Diagnóstico
 
-## Plano — Corrigir exclusão de membros + melhorar fluxo de convite + status "Pendente"
+Revisei o fluxo das 4 ferramentas e encontrei um problema estrutural combinado, não um único bug:
 
-### Problemas identificados
+1. Há **autenticação inconsistente** entre as funções de geração:
+- algumas dependem da validação no gateway (`generate-site`, `generate-social-briefing`, `generate-video-briefing`, `generate-social-image`, `generate-social-video-frames`, `generate-content`)
+- outras validam manualmente no código (`generate-script`, `generate-traffic-strategy`)
 
-1. **Admin não consegue excluir usuários**: A edge function `manage-member` usa `getClaims()` para autenticar o caller, mas essa API pode não estar disponível em todas as versões do SDK do Supabase. Se falhar, retorna "Sessão inválida" silenciosamente (status 200). Além disso, a RPC `get_user_role` aceita parâmetro `_portal` mas o `manage-member` chama sem ele — pode retornar a role errada se o usuário tem roles multi-contexto.
+2. Já há evidência real de falha de autenticação:
+- `generate-social-briefing` retornando **401**
+- `generate-traffic-strategy` retornando **401**
+- `generate-script` entrando na função, mas respondendo **"Sessão inválida"**
 
-2. **E-mail de convite leva para "Redefinir senha" em vez de "Criar conta"**: O convite atual gera um link de recovery (`type: "recovery"`) que redireciona para `/reset-password`. A experiência diz "Definir minha senha", mas a página diz "Redefinir senha" — confuso para novos usuários.
+3. O frontend ainda esconde parte do erro real em alguns fluxos:
+- `src/pages/cliente/ClienteSites.tsx`
+- `src/hooks/useClienteContentV2.ts`
 
-3. **Sem status "Pendente" para convites**: Não existe rastreamento de convites pendentes. Usuários convidados que nunca logaram aparecem como membros normais.
+4. As operações mais pesadas continuam síncronas dentro da requisição (site, artes/vídeo, lote de conteúdos, tráfego), o que deixa o sistema frágil para **rate limit / timeout** mesmo depois do ajuste principal.
 
-4. **Sem opção de reenviar convite**: Não há funcionalidade para reenviar o e-mail de convite.
+## Plano
 
----
+### 1. Padronizar autenticação das funções de geração
+Vou unificar o modelo de autenticação das funções que hoje estão quebrando, para que todas validem a sessão do mesmo jeito e parem de falhar de forma aleatória/gateway.
 
-### Mudanças
+Funções alvo:
+- `generate-script`
+- `generate-site`
+- `generate-social-briefing`
+- `generate-video-briefing`
+- `generate-social-image`
+- `generate-social-video-frames`
+- `generate-traffic-strategy`
+- `generate-content`
 
-#### 1. Corrigir `manage-member` — autenticação e exclusão
+### 2. Padronizar respostas de erro do backend
+Todas essas funções vão responder com JSON consistente, por exemplo:
+- `401` sessão/autorização
+- `402` créditos
+- `429` limite/rate limit
+- `500` falha interna/IA
 
-**Arquivo**: `supabase/functions/manage-member/index.ts`
+Isso elimina casos como o `generate-script` responder erro de autenticação com status 200.
 
-- Substituir `getClaims()` por `getUser()` com o token do header Authorization (mesmo padrão usado em `invite-user` que funciona)
-- Passar `_portal` contextual na chamada de `get_user_role` para garantir que a role correta seja retornada
+### 3. Corrigir o frontend para mostrar o motivo real
+Vou aplicar o mesmo padrão de leitura de erro real nas telas que ainda mostram mensagem genérica:
 
-#### 2. Melhorar e-mail de convite — "Criar conta" em vez de "Redefinir senha"
+- `src/hooks/useClienteContentV2.ts`
+- `src/pages/cliente/ClienteSites.tsx`
 
-**Arquivo**: `supabase/functions/invite-user/index.ts`
+E revisar os fluxos de roteiro/postagem/tráfego para garantir que nenhum deles volte a exibir apenas “Edge Function returned a non-2xx status code”.
 
-- Manter o fluxo técnico (recovery link), mas alterar o redirect para uma rota dedicada `/welcome` em vez de `/reset-password`
-- Alterar o template HTML do e-mail: "Criar minha conta" em vez de "Definir minha senha"
+### 4. Adicionar rastreabilidade mínima
+Vou deixar logs curtos e objetivos nas funções para diferenciar claramente:
+- sessão ausente/expirada
+- créditos insuficientes
+- rate limit
+- erro de parsing da IA
+- erro interno
 
-**Novo arquivo**: `src/pages/Welcome.tsx`
+Isso resolve também a parte de “entender o porquê do erro”.
 
-- Página dedicada para novos usuários vindos do convite
-- Título: "Bem-vindo! Crie sua senha para acessar a plataforma"
-- Formulário de nova senha com validação (mesmas regras: 8+ chars, maiúscula, minúscula, número, especial)
-- Após definir senha, redireciona para a tela de login com mensagem de sucesso
+### 5. Fazer uma segunda camada de estabilização
+Depois do ajuste de autenticação + erro real, vou deixar os fluxos mais pesados preparados para estabilização estrutural.
 
-**Arquivo**: `src/App.tsx` — adicionar rota `/welcome`
+Se os logs ainda mostrarem falhas por tempo de execução, o próximo passo será migrar os geradores mais pesados para **fila de processamento** em vez de esperar tudo dentro da mesma requisição.
 
-#### 3. Rastrear convites pendentes
+## Arquivos a ajustar
 
-**Migração SQL**: Criar tabela `pending_invitations`
+- `supabase/config.toml`
+- `supabase/functions/generate-script/index.ts`
+- `supabase/functions/generate-site/index.ts`
+- `supabase/functions/generate-social-briefing/index.ts`
+- `supabase/functions/generate-video-briefing/index.ts`
+- `supabase/functions/generate-social-image/index.ts`
+- `supabase/functions/generate-social-video-frames/index.ts`
+- `supabase/functions/generate-traffic-strategy/index.ts`
+- `supabase/functions/generate-content/index.ts`
+- `src/hooks/useClienteContentV2.ts`
+- `src/pages/cliente/ClienteSites.tsx`
 
-```sql
-CREATE TABLE public.pending_invitations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  email text NOT NULL,
-  organization_id uuid REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
-  invited_by uuid NOT NULL,
-  role text NOT NULL DEFAULT 'cliente_user',
-  team_ids text[] DEFAULT '{}',
-  full_name text,
-  created_at timestamptz DEFAULT now(),
-  expires_at timestamptz DEFAULT (now() + interval '7 days'),
-  accepted_at timestamptz,
-  UNIQUE(email, organization_id)
-);
-ALTER TABLE public.pending_invitations ENABLE ROW LEVEL SECURITY;
-```
+## Detalhes técnicos
 
-**Arquivo**: `supabase/functions/invite-user/index.ts`
+- `generate-social-briefing` hoje falha antes de executar a lógica interna, por isso nem produz logs úteis.
+- `generate-traffic-strategy` está no mesmo cenário de autorização quebrada.
+- `generate-script` já entra na função, mas a checagem manual atual está rejeitando a sessão.
+- `ClienteSites.tsx` e `useClienteContentV2.ts` ainda mascaram o erro real.
+- `generate-site`, `generate-social-image`, `generate-social-video-frames` e `generate-content` são os principais candidatos a fila se, após o hotfix, ainda houver instabilidade por duração.
 
-- Após criar o convite com sucesso, inserir registro em `pending_invitations`
-- Na rota `/welcome`, ao definir a senha, marcar `accepted_at = now()`
+## Resultado esperado
 
-**Arquivo**: `src/hooks/useOrgMembers.ts`
-
-- Buscar também os `pending_invitations` da organização (onde `accepted_at IS NULL` e `expires_at > now()`)
-- Retornar com flag `status: "pending"` para diferenciar de membros ativos
-
-#### 4. Exibir status "Pendente" + botão "Reenviar convite"
-
-**Arquivo**: `src/pages/cliente/ClienteConfiguracoes.tsx` — `UsersAndTeamsTab`
-
-- Adicionar seção "Convites Pendentes" abaixo dos usuários
-- Cada convite pendente mostra: nome, e-mail, data do convite, badge "Pendente"
-- Botão "Reenviar" que chama `invite-user` novamente com os mesmos dados (a edge function já trata `email_exists` e reenvia o link)
-- Botão "Cancelar" que remove o registro de `pending_invitations`
-
-#### 5. Ao aceitar convite, remover do pendente
-
-**Arquivo**: `supabase/functions/invite-user/index.ts`
-
-- Se o usuário já existe E já é membro (convite duplicado de reenvio), atualizar `pending_invitations` e reenviar o link de recovery
-
----
-
-### Resumo de arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/manage-member/index.ts` | Trocar `getClaims` por `getUser`, fix portal param |
-| `supabase/functions/invite-user/index.ts` | Redirect para `/welcome`, salvar em `pending_invitations` |
-| `src/pages/Welcome.tsx` | Nova página de criação de senha para convidados |
-| `src/App.tsx` | Adicionar rota `/welcome` |
-| `src/hooks/useOrgMembers.ts` | Incluir convites pendentes na query |
-| `src/pages/cliente/ClienteConfiguracoes.tsx` | Seção "Pendentes" com reenvio e cancelamento |
-| Migração SQL | Criar tabela `pending_invitations` |
-
-### Resultado esperado
-
-- Admin consegue excluir membros sem erro
-- Novos convidados recebem e-mail com "Criar minha conta" e veem página de boas-vindas
-- Convites pendentes aparecem na aba Usuários & Times com badge "Pendente"
-- Admin pode reenviar ou cancelar convites pendentes
-
+Após essa correção:
+- gerar roteiro volta a funcionar com erro claro quando houver bloqueio real
+- gerar postagem deixa de cair em erro genérico
+- gerar site para de mascarar a causa da falha
+- gerar tráfego pago volta a autenticar corretamente
+- vocês passam a enxergar exatamente o motivo do problema quando algo falhar
+- o sistema fica pronto para uma fase 2 com fila, se ainda houver falhas por processamento pesado
