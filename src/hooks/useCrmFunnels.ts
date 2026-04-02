@@ -72,3 +72,22 @@ export function useCrmFunnelMutations() {
 
   return { createFunnel, updateFunnel, deleteFunnel };
 }
+
+export function useEnsureDefaultFunnel() {
+  const { data: funnels, isLoading } = useCrmFunnels();
+  const { createFunnel } = useCrmFunnelMutations();
+  const created = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || created.current) return;
+    if (funnels && funnels.length === 0) {
+      created.current = true;
+      createFunnel.mutate({
+        name: "Funil de Vendas",
+        description: "Funil padrão do CRM",
+        stages: DEFAULT_STAGES as Record<string, unknown>[],
+        is_default: true,
+      });
+    }
+  }, [funnels, isLoading]);
+}
