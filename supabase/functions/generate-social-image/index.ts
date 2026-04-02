@@ -630,6 +630,9 @@ serve(async (req) => {
       photo_images,
       output_mode,
       print_format,
+      // New art direction engine fields
+      topic, audience, text_mode, restrictions, elements,
+      base_image_url, character_image_url, background_image_url,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
