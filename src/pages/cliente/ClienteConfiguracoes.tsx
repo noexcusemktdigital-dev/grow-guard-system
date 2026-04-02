@@ -243,8 +243,14 @@ function UsersAndTeamsTab() {
     return teams.filter(t => teamIds.includes(t.id));
   };
 
-  const admins = members?.filter(m => m.role === "cliente_admin" || m.role === "admin" || m.role === "super_admin") ?? [];
-  const users = members?.filter(m => m.role === "cliente_user") ?? [];
+  // Filter out members who still have a pending invitation (not yet accepted)
+  const pendingEmails = new Set(
+    (pendingInvitations ?? []).filter(inv => !inv.accepted_at).map(inv => inv.email.toLowerCase())
+  );
+  const activeMembers = members?.filter(m => !pendingEmails.has(m.email?.toLowerCase())) ?? [];
+
+  const admins = activeMembers.filter(m => m.role === "cliente_admin" || m.role === "admin" || m.role === "super_admin");
+  const users = activeMembers.filter(m => m.role === "cliente_user");
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 

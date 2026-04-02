@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Use getUser instead of getClaims for reliable auth
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -40,8 +39,29 @@ Deno.serve(async (req) => {
     }
 
     const callerId = caller.id;
-    const { user_id, organization_id, action = "update", role, full_name, job_title } = await req.json();
+    const body = await req.json();
+    const { user_id, organization_id, action = "update", role, full_name, job_title } = body;
     console.log("[manage-member] Payload", { callerId, user_id, organization_id, action, hasRole: !!role });
+
+    const admin = createClient(supabaseUrl, serviceKey);
+
+    // ── accept_invitation: called from Welcome page after password set ──
+    if (action === "accept_invitation") {
+      const email = body.email?.toLowerCase();
+      if (!email) {
+        return new Response(JSON.stringify({ error: "email required" }), { status: 200, headers: responseHeaders });
+      }
+      console.log("[manage-member] Accepting invitation for", email);
+      const { error: upErr } = await admin
+        .from("pending_invitations")
+        .update({ accepted_at: new Date().toISOString() })
+        .eq("email", email)
+        .is("accepted_at", null);
+      if (upErr) {
+        console.warn("[manage-member] Error updating pending_invitations:", upErr.message);
+      }
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: responseHeaders });
+    }
 
     if (!user_id || !organization_id) {
       return new Response(JSON.stringify({ error: "user_id and organization_id required" }), {
@@ -49,8 +69,6 @@ Deno.serve(async (req) => {
         headers: responseHeaders,
       });
     }
-
-    const admin = createClient(supabaseUrl, serviceKey);
 
     const { data: isMember } = await admin.rpc("is_member_or_parent_of_org", {
       _user_id: callerId,
@@ -90,6 +108,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "remove") {
+      // Clean up team memberships for this org
       const { data: orgTeams } = await admin
         .from("org_teams")
         .select("id")
@@ -105,12 +124,29 @@ Deno.serve(async (req) => {
           .in("team_id", orgTeamIds);
       }
 
+      // Remove org membership
       await admin
         .from("organization_memberships")
         .delete()
         .eq("user_id", user_id)
         .eq("organization_id", organization_id);
 
+      // Clean up pending_invitations for this user in this org
+      try {
+        const { data: userData } = await admin.auth.admin.getUserById(user_id);
+        if (userData?.user?.email) {
+          await admin
+            .from("pending_invitations")
+            .delete()
+            .eq("email", userData.user.email.toLowerCase())
+            .eq("organization_id", organization_id);
+          console.log("[manage-member] Cleaned pending_invitations for", userData.user.email);
+        }
+      } catch (cleanupErr) {
+        console.warn("[manage-member] Failed to clean pending_invitations:", cleanupErr);
+      }
+
+      // Check if user has other memberships
       const { count: otherMemberships } = await admin
         .from("organization_memberships")
         .select("*", { count: "exact", head: true })
@@ -131,6 +167,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: responseHeaders });
     }
 
+    // ── action === "update" ──
     const updates: Promise<unknown>[] = [];
 
     if (full_name !== undefined || job_title !== undefined) {

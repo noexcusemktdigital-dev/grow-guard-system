@@ -93,8 +93,9 @@ export default function Matriz() {
       setInviteRole("admin");
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
     } catch (err: unknown) {
-      toast({ title: "Erro ao convidar", description: err.message, variant: "destructive" });
+      toast({ title: "Erro ao convidar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setInviteLoading(false);
     }

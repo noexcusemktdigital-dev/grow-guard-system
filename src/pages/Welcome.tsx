@@ -153,14 +153,13 @@ const Welcome = () => {
       setSuccess(true);
       toast.success("Conta criada com sucesso!");
 
-      // Mark invitation as accepted
+      // Mark invitation as accepted via edge function (bypasses RLS)
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
-          await supabase
-            .from("pending_invitations")
-            .update({ accepted_at: new Date().toISOString() })
-            .eq("email", user.email.toLowerCase());
+          await supabase.functions.invoke("manage-member", {
+            body: { action: "accept_invitation", email: user.email },
+          });
         }
       } catch (e) {
         console.warn("[Welcome] Failed to mark invitation as accepted:", e);
