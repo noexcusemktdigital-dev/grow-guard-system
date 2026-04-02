@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import MatrizEmpresa from "@/components/matriz/MatrizEmpresa";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { TeamSelector, TEAM_COLORS } from "@/components/TeamSelector";
-import { useOrgMembers } from "@/hooks/useOrgMembers";
+import { useOrgMembers, usePendingInvitations } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { supabase } from "@/lib/supabase";
