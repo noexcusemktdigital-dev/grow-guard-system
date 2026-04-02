@@ -81,6 +81,15 @@ export function useGeneratePost() {
       // Print mode fields
       output_mode?: "digital" | "print";
       print_format?: string;
+      // Art direction engine fields
+      topic?: string;
+      audience?: string;
+      text_mode?: "ai" | "manual";
+      restrictions?: string;
+      elements?: string[];
+      base_image_url?: string;
+      character_image_url?: string;
+      background_image_url?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
