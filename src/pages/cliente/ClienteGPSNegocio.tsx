@@ -27,9 +27,6 @@ import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
-import { STAGE_COLORS as CRM_STAGE_COLORS } from "@/components/crm/CrmStageSystem";
-const COLOR_NAMES = CRM_STAGE_COLORS.map(c => c.name);
-const STAGE_ICON_CYCLE = ["circle-plus", "phone-outgoing", "search-check", "clipboard", "handshake", "shield-check", "star", "sparkles", "target", "crosshair"];
 
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
 type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
