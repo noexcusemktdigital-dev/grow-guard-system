@@ -1,67 +1,46 @@
 
 
-## Plano — Memória de referências e aprendizado com artes aprovadas
+## Plano — Corrigir erro de "link inválido/expirado" no reset de senha
 
-### O que muda
+### Diagnóstico
 
-Atualmente, toda vez que o usuário cria uma nova arte, precisa enviar as referências do zero. O sistema não lembra das referências anteriores nem aprende com as artes aprovadas. Queremos que:
+O problema é idêntico ao que já foi corrigido no fluxo de convite (`invite-user`):
 
-1. O wizard sugira referências já usadas anteriormente (extraídas do histórico de posts)
-2. Artes aprovadas apareçam como referências recomendadas ("A IA aprendeu com suas artes aprovadas")
-3. O logo usado na última geração seja pré-carregado automaticamente
+- A edge function `request-password-reset` usa `generateLink({ type: "recovery" })` e envia o `action_link` direto no e-mail
+- Esse `action_link` é uma URL do Supabase (`/auth/v1/verify?token=...`) que consome o OTP via GET
+- Scanners de e-mail (Gmail, Outlook, anti-phishing) fazem prefetch desse link, consumindo o token antes do usuário clicar
+- Quando o usuário clica, o token já foi usado → erro `otp_expired` / "link inválido"
 
-### Abordagem
+A solução já foi implementada com sucesso no `invite-user`: extrair o `hashed_token` do `generateLink` e montar uma URL segura com `token_hash` como query param. O frontend então faz `verifyOtp` explicitamente.
 
-Criar um hook `useReferenceMemory` que consulta `client_posts` da organização, extrai as `reference_image_urls` e `result_url` de posts com `status = 'approved'`, e retorna:
-- **Referências recorrentes**: URLs que aparecem em 2+ posts (as que o cliente mais usa)
-- **Artes aprovadas recentes**: `result_url` dos últimos posts aprovados (máx 12)
-- **Último logo usado**: extrair do `result_data` ou do histórico
+### Correções
 
-### Mudanças
+#### 1. Edge Function `request-password-reset`
 
-#### 1. Novo hook `useReferenceMemory`
+Mesmo padrão do `invite-user`:
+- Extrair `linkData.properties.hashed_token` em vez de `action_link`
+- Montar URL: `/reset-password?token_hash={hash}&type=recovery&email={email}&portal={portal}`
+- Fallback para `action_link` se `hashed_token` não disponível
 
-**Arquivo**: `src/hooks/useReferenceMemory.ts` (novo)
+#### 2. Página `/reset-password` (ResetPassword.tsx)
 
-Consulta `client_posts` filtrado por `organization_id` e `status = 'approved'`. Retorna:
-- `frequentRefs: string[]` — URLs de referência usadas em 2+ posts aprovados
-- `approvedArts: string[]` — `result_url` dos últimos 12 posts aprovados
-- `lastLogoUrl: string | null` — logo do post mais recente (se existir no result_data)
-
-#### 2. Seção "Referências anteriores" no Step 9 (Referências)
-
-**Arquivo**: `src/components/cliente/social/ArtWizardSteps.tsx`
-
-Antes do RefUploader, mostrar duas seções colapsáveis:
-- **"Referências que você já usou"** — grid de thumbnails das `frequentRefs`, clicáveis para adicionar
-- **"Artes aprovadas"** — grid de thumbnails das `approvedArts`, clicáveis para adicionar como referência
-
-Cada thumbnail com botão "+" para adicionar à lista de referências atual.
-
-#### 3. Pré-carregar logo da última geração
-
-**Arquivo**: `src/components/cliente/social/ArtWizard.tsx`
-
-No `useEffect` inicial, se `logoUrl` estiver vazio e `referenceMemory.lastLogoUrl` existir, pré-preencher o campo de logo.
-
-#### 4. Passar dados para o wizard
-
-**Arquivo**: `src/components/cliente/social/ArtWizard.tsx`
-
-Importar `useReferenceMemory`, passar os dados para `ArtWizardSteps` como prop `referenceMemory`.
+Adicionar lógica de verificação explícita como a `/welcome`:
+- Ler `token_hash`, `type`, `email` dos searchParams
+- Se `token_hash` presente: chamar `supabase.auth.verifyOtp({ token_hash, type })` explicitamente
+- Se hash URL contém `error=`: verificar se tem `token_hash` nos params e tentar verificação explícita (ignorar erro do hash)
+- Manter fallback para o fluxo atual (onAuthStateChange) para links antigos que já estejam em circulação
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/useReferenceMemory.ts` | **Novo** — hook que extrai referências frequentes e artes aprovadas |
-| `src/components/cliente/social/ArtWizardSteps.tsx` | Adicionar seção de referências anteriores + artes aprovadas no Step 9 |
-| `src/components/cliente/social/ArtWizard.tsx` | Consumir `useReferenceMemory`, pré-preencher logo, passar dados ao steps |
+| `supabase/functions/request-password-reset/index.ts` | Extrair `hashed_token`, montar URL com `token_hash` |
+| `src/pages/ResetPassword.tsx` | Adicionar verificação explícita via `verifyOtp` com `token_hash` |
 
 ### Resultado
 
-- Na segunda vez que o usuário gera arte, já vê suas referências anteriores e artes aprovadas como sugestão
-- Um clique adiciona a referência, sem precisar fazer upload novamente
-- Logo é pré-carregada automaticamente
-- O sistema "aprende" com o que o cliente aprovou, priorizando essas referências
+- Links de reset de senha não são mais consumidos por scanners de e-mail
+- O token só é verificado quando o usuário interage com a página
+- Links antigos (action_link) continuam funcionando via fallback
+- Mesmo padrão robusto já validado no fluxo de convites
 
