@@ -1,68 +1,49 @@
 
-Problema real identificado: o erro não está mais na tela `/welcome` em si. O convite está chegando com um link que já consome o token no clique (`action_link` gerado por `generateLink({ type: "recovery" })`). Nos logs de autenticação há `GET /verify` com `403: Email link is invalid or has expired` e `One-time token not found`, o que indica que o OTP já foi invalidado antes do app conseguir abrir a sessão. Isso é compatível com consumo único do token por pré-leitura/escaneamento do link do e-mail. Além disso, a tela `Welcome.tsx` hoje trata qualquer `422` do `updateUser` como “convite expirado”, mascarando a causa real.
 
-Plano de correção:
+## Plano — Corrigir erro de "senha fraca" e revisar fluxo completo de convite
 
-1. Corrigir o fluxo de convite para não depender do `action_link` consumível
-- Arquivo: `supabase/functions/invite-user/index.ts`
-- Em vez de mandar no e-mail o `linkData.properties.action_link`, passar a montar um link próprio para `/welcome`.
-- Esse link próprio deve carregar os dados necessários para a tela concluir a autenticação de forma explícita, em vez de depender do `/verify` automático.
-- Objetivo: evitar que scanners de e-mail “gastem” o token antes do usuário real abrir.
+### Diagnóstico
 
-2. Tornar a página `/welcome` responsável por validar o convite explicitamente
-- Arquivo: `src/pages/Welcome.tsx`
-- Adicionar tratamento do cenário em que a URL chega com erro no hash (`error=access_denied`, `error_code=otp_expired`), mostrando mensagem correta.
-- Adicionar lógica explícita de troca/validação do token na chegada, antes de renderizar o formulário.
-- Só liberar `updateUser({ password })` quando a sessão de recuperação/convite estiver realmente confirmada.
-- Separar estados:
-  - link inválido/consumido
-  - sessão pronta
-  - erro de senha fraca / senha igual / outra falha de atualização
+Os logs confirmam que o fluxo de convite **está funcionando corretamente agora**:
+- Usuária "jmfferiato2@gmail.com" foi criada com sucesso
+- O OTP foi verificado com sucesso (status 200 no `/verify`)
+- A sessão foi estabelecida corretamente
 
-3. Parar de mascarar erro 422 como “convite expirado”
-- Arquivo: `src/pages/Welcome.tsx`
-- Hoje:
-  - `422` => “Link de convite expirado...”
-- Ajuste:
-  - inspecionar `error.message` / `error.code`
-  - mapear apenas erro real de sessão/token para “convite expirado”
-  - manter erros de validação de senha com mensagem apropriada
-- Isso melhora o diagnóstico e evita falso positivo.
+O problema é específico: o `PUT /user` (updateUser) retorna **422** duas vezes. Isso acontece porque o projeto tem a **proteção HIBP (Have I Been Pwned)** ativada. A senha "Juliana12345@" aparece em bases de dados de vazamentos conhecidos, então o Supabase a rejeita como comprometida — mesmo atendendo todos os requisitos visuais de complexidade.
 
-4. Revisar o template/CTA do e-mail de convite
-- Arquivo: `supabase/functions/invite-user/index.ts`
-- O botão “Criar minha conta” deve apontar para o novo link seguro do onboarding, e não para o link direto de verificação consumível.
-- Manter branding atual, mas trocar a URL de destino.
+O erro no código está na linha 143 do `Welcome.tsx`:
+```
+msg.includes("weak_password") || msg.includes("password")
+```
+Essa condição é genérica demais — qualquer erro contendo "password" cai nela, e a mensagem "Senha muito fraca" não explica o motivo real.
 
-5. Manter e reforçar o status de convite pendente
-- Arquivos:
-  - `supabase/functions/invite-user/index.ts`
-  - `src/hooks/useOrgMembers.ts`
-  - tela de configurações de usuários, se necessário
-- Garantir que convites novos continuem gravando `pending_invitations` com `accepted_at: null`
-- Quando o onboarding concluir com sucesso, `accepted_at` é preenchido
-- Se o link falhar antes disso, o convite continua aparecendo como pendente para reenvio
+### Correções
 
-6. Validar a política de update da tabela de convites
-- Arquivo: migração SQL
-- A policy criada recentemente usa subquery em `auth.users`; vou revisar para garantir que ela realmente permite ao convidado marcar `accepted_at` sem criar bloqueios de RLS.
-- Se necessário, ajustar a policy para ficar compatível com o fluxo real de aceite.
+#### 1. Melhorar mensagem de erro para senhas comprometidas (`src/pages/Welcome.tsx`)
 
-Arquivos envolvidos:
-- `supabase/functions/invite-user/index.ts`
-- `src/pages/Welcome.tsx`
-- `src/hooks/useOrgMembers.ts`
-- `src/pages/cliente/ClienteConfiguracoes.tsx` (se precisar ajuste visual/revalidação)
-- nova migração SQL apenas se a policy atual precisar correção
+Separar o tratamento de `weak_password` para explicar que a senha foi encontrada em vazamentos:
 
-Resultado esperado após a implementação:
-- o usuário recebe o convite
-- ao clicar, não cai mais em `/welcome?...otp_expired`
-- ele consegue criar a senha normalmente
-- o administrador continua vendo o convite como “pendente” até o aceite real
-- os erros passam a mostrar a causa correta, sem confundir senha inválida com convite expirado
+- Se `msg` contém "weak_password" ou "leaked" ou "pwned" → mostrar: **"Essa senha foi encontrada em vazamentos de dados. Por segurança, escolha uma senha diferente que não tenha sido exposta."**
+- Se `msg` contém "same_password" → manter mensagem atual
+- Remover a condição genérica `msg.includes("password")` que captura erros não relacionados
+- Para erros 422 não mapeados → mostrar a mensagem original do servidor em vez de mascarar
 
-Detalhe técnico importante:
-- O log atual prova que o token está morrendo no `/verify` antes da aplicação assumir o fluxo.
-- Portanto, a correção principal não é “mais timeout” nem “mais retries” no frontend.
-- A correção precisa mudar o modelo do link enviado no e-mail e a forma como `/welcome` estabelece a sessão de convite.
+#### 2. Adicionar dica visual sobre HIBP no checklist de senha (`src/pages/Welcome.tsx`)
+
+Após as 5 regras atuais, adicionar uma nota informativa:
+- Texto: "A senha também não pode ter sido exposta em vazamentos conhecidos"
+- Exibida como texto informativo (não como regra de validação, pois não dá para checar no frontend)
+
+### Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/Welcome.tsx` | Refinar mapeamento de erros 422 e adicionar nota sobre HIBP |
+
+### Resultado
+
+- Senhas vazadas mostram mensagem clara explicando o motivo da rejeição
+- Usuário entende que precisa escolher uma senha que nunca apareceu em vazamentos
+- Outros erros de senha param de ser mascarados como "senha fraca"
+- O fluxo de convite em si continua funcionando normalmente (confirmado pelos logs)
+
