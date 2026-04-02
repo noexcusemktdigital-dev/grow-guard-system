@@ -65,11 +65,6 @@ Deno.serve(async (req) => {
 
     const callerId = caller.id;
     console.log("[manage-member] Payload", { callerId, user_id, organization_id, action, hasRole: !!role });
-      if (upErr) {
-        console.warn("[manage-member] Error updating pending_invitations:", upErr.message);
-      }
-      return new Response(JSON.stringify({ success: true }), { status: 200, headers: responseHeaders });
-    }
 
     if (!user_id || !organization_id) {
       return new Response(JSON.stringify({ error: "user_id and organization_id required" }), {
