@@ -1,49 +1,85 @@
 
 
-## Plano — Corrigir erro de "senha fraca" e revisar fluxo completo de convite
+## Plano — Correção drástica do fluxo de Usuários & Times
 
 ### Diagnóstico
 
-Os logs confirmam que o fluxo de convite **está funcionando corretamente agora**:
-- Usuária "jmfferiato2@gmail.com" foi criada com sucesso
-- O OTP foi verificado com sucesso (status 200 no `/verify`)
-- A sessão foi estabelecida corretamente
+Após análise do banco e do código, identifiquei 5 problemas interligados:
 
-O problema é específico: o `PUT /user` (updateUser) retorna **422** duas vezes. Isso acontece porque o projeto tem a **proteção HIBP (Have I Been Pwned)** ativada. A senha "Juliana12345@" aparece em bases de dados de vazamentos conhecidos, então o Supabase a rejeita como comprometida — mesmo atendendo todos os requisitos visuais de complexidade.
+1. **Usuários fantasma**: A edge function `invite-user` cria o `organization_membership` **imediatamente** ao convidar. O convidado aparece como membro ativo na lista E como convite pendente ao mesmo tempo.
 
-O erro no código está na linha 143 do `Welcome.tsx`:
-```
-msg.includes("weak_password") || msg.includes("password")
-```
-Essa condição é genérica demais — qualquer erro contendo "password" cai nela, e a mensagem "Senha muito fraca" não explica o motivo real.
+2. **Convites aceitos não atualizam**: A página Welcome tenta fazer `supabase.from("pending_invitations").update({ accepted_at })` direto pelo client SDK. Confirmei no banco que Juliana (`jmfferiato2@gmail.com`) tem `accepted_at: null` mesmo tendo criado a senha com sucesso. O update silenciosamente não afeta nenhuma linha (provavelmente a sessão de recovery não carrega o JWT completo para satisfazer a policy RLS).
+
+3. **Usuários removidos permanecem**: O `manage-member` remove de `organization_memberships` e `user_roles`, mas **não limpa** a entrada de `pending_invitations`. O convidado removido continua aparecendo como "Pendente".
+
+4. **HIBP rejeita senhas válidas**: A proteção Have I Been Pwned está ativa no servidor. Senhas como "Juliana12345@" são rejeitadas por estarem em bases de vazamentos, mesmo cumprindo todas as regras visuais. O usuário quer que qualquer senha que siga as regras definidas seja aceita.
+
+5. **Sem invalidação cruzada de cache**: Ao remover membro, apenas `["org-members"]` é invalidado. O cache de `["pending-invitations"]` continua stale.
 
 ### Correções
 
-#### 1. Melhorar mensagem de erro para senhas comprometidas (`src/pages/Welcome.tsx`)
+#### 1. Desduplicar membros ativos vs pendentes no UI
 
-Separar o tratamento de `weak_password` para explicar que a senha foi encontrada em vazamentos:
+**Arquivos**: `src/pages/cliente/ClienteConfiguracoes.tsx`, `src/pages/Matriz.tsx`
 
-- Se `msg` contém "weak_password" ou "leaked" ou "pwned" → mostrar: **"Essa senha foi encontrada em vazamentos de dados. Por segurança, escolha uma senha diferente que não tenha sido exposta."**
-- Se `msg` contém "same_password" → manter mensagem atual
-- Remover a condição genérica `msg.includes("password")` que captura erros não relacionados
-- Para erros 422 não mapeados → mostrar a mensagem original do servidor em vez de mascarar
+Na `UsersAndTeamsTab`, cruzar a lista de `members` com `pendingInvitations`:
+- Se o email do membro aparece em `pendingInvitations` com `accepted_at = null` → **excluir** da lista ativa (admins/users)
+- Esse membro já aparece na seção "Convites Pendentes"
+- Resultado: sem duplicação
 
-#### 2. Adicionar dica visual sobre HIBP no checklist de senha (`src/pages/Welcome.tsx`)
+#### 2. Marcar accepted_at via edge function (não via client SDK)
 
-Após as 5 regras atuais, adicionar uma nota informativa:
-- Texto: "A senha também não pode ter sido exposta em vazamentos conhecidos"
-- Exibida como texto informativo (não como regra de validação, pois não dá para checar no frontend)
+**Arquivo**: `supabase/functions/invite-user/index.ts` (adicionar ação "accept"), ou criar endpoint dedicado
+
+Em vez de o Welcome.tsx tentar `update` direto (que falha por RLS), criar uma ação `accept-invitation` na edge function `manage-member` (que já usa service role):
+- Welcome.tsx chama `supabase.functions.invoke("manage-member", { body: { action: "accept_invitation" } })`
+- A edge function usa adminClient para atualizar `accepted_at` e garantir que funcione
+
+**Arquivo**: `src/pages/Welcome.tsx` — trocar o update direto pelo invoke da edge function
+
+#### 3. Limpar pending_invitations na remoção de membro
+
+**Arquivo**: `supabase/functions/manage-member/index.ts`
+
+No bloco `action === "remove"`, adicionar:
+- Buscar o email do user via `auth.admin.getUserById(user_id)`
+- Deletar de `pending_invitations` onde `email = userEmail AND organization_id = organization_id`
+- Invalidar cache de pending no frontend
+
+#### 4. Desabilitar HIBP
+
+Usar `cloud--configure_auth` para desabilitar a verificação de senhas vazadas, permitindo que qualquer senha que cumpra as regras de complexidade seja aceita.
+
+#### 5. Invalidação completa de cache
+
+**Arquivos**: `src/components/EditMemberDialog.tsx`, `src/pages/Matriz.tsx`
+
+Em todos os pontos onde membros são modificados (save, remove, invite), invalidar AMBOS:
+- `["org-members"]`
+- `["pending-invitations"]`
+
+#### 6. Mesma lógica na Matriz (franqueadora)
+
+**Arquivo**: `src/pages/Matriz.tsx`
+
+Aplicar a mesma deduplicação: importar `usePendingInvitations`, filtrar membros ativos excluindo emails pendentes, e mostrar seção "Convites Pendentes" com reenvio/cancelamento (como já existe em ClienteConfiguracoes).
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/Welcome.tsx` | Refinar mapeamento de erros 422 e adicionar nota sobre HIBP |
+| `src/pages/cliente/ClienteConfiguracoes.tsx` | Filtrar membros ativos excluindo pendentes |
+| `src/pages/Matriz.tsx` | Adicionar seção pendentes + mesma deduplicação |
+| `src/pages/Welcome.tsx` | Trocar update direto por invoke de edge function |
+| `supabase/functions/manage-member/index.ts` | Adicionar ação `accept_invitation` + limpar pending na remoção |
+| `src/components/EditMemberDialog.tsx` | Invalidar `pending-invitations` no remove |
+| Auth config | Desabilitar HIBP |
 
 ### Resultado
 
-- Senhas vazadas mostram mensagem clara explicando o motivo da rejeição
-- Usuário entende que precisa escolher uma senha que nunca apareceu em vazamentos
-- Outros erros de senha param de ser mascarados como "senha fraca"
-- O fluxo de convite em si continua funcionando normalmente (confirmado pelos logs)
+- Convidados pendentes aparecem APENAS na seção "Pendentes", não como ativos
+- Ao aceitar convite (criar senha), status muda para ativo automaticamente
+- Ao remover membro, ele some completamente (de membros E de pendentes)
+- Senhas que seguem as regras são sempre aceitas
+- Cache sempre atualizado em todas as operações
 
