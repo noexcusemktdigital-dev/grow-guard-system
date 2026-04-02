@@ -153,13 +153,20 @@ const Welcome = () => {
       setSuccess(true);
       toast.success("Conta criada com sucesso!");
 
-      // Mark invitation as accepted via edge function (bypasses RLS)
+      // Mark invitation as accepted via edge function (no auth needed)
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          await supabase.functions.invoke("manage-member", {
-            body: { action: "accept_invitation", email: user.email },
+        const email = tokenEmail || (await supabase.auth.getUser()).data?.user?.email;
+        if (email) {
+          const { data: respData, error: fnErr } = await supabase.functions.invoke("manage-member", {
+            body: { action: "accept_invitation", email },
           });
+          if (fnErr) {
+            console.warn("[Welcome] manage-member invoke error:", fnErr);
+          } else if (respData?.error) {
+            console.warn("[Welcome] manage-member returned error:", respData.error);
+          } else {
+            console.log("[Welcome] Invitation marked as accepted");
+          }
         }
       } catch (e) {
         console.warn("[Welcome] Failed to mark invitation as accepted:", e);
