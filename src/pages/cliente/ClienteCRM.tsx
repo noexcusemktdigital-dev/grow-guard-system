@@ -34,6 +34,7 @@ export default function ClienteCRM() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
+  useEnsureDefaultFunnel();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
   const { activeLeadCount, maxLeads, atLimit, planName } = useLeadQuota();
