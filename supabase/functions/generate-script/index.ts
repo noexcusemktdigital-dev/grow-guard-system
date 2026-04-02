@@ -65,7 +65,9 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      console.error("[generate-script] Missing auth header");
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -76,14 +78,15 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("[generate-script] Auth failed:", userError?.message);
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext, from_gps } = await req.json();
 
@@ -109,7 +112,7 @@ serve(async (req) => {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data: wallet } = await adminClient.from("credit_wallets").select("balance").eq("organization_id", organization_id).maybeSingle();
       if (!wallet || wallet.balance < CREDIT_COST) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos." }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos.", code: "INSUFFICIENT_CREDITS" }), { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
       }
     }
 

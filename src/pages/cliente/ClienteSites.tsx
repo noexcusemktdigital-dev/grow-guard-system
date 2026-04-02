@@ -249,12 +249,38 @@ export default function ClienteSites() {
       const { data, error } = await supabase.functions.invoke("generate-site", { body });
       clearInterval(interval);
 
-      if (error || data?.error) {
-        const isCredits = data?.code === "INSUFFICIENT_CREDITS" || data?.error?.includes("Créditos insuficientes");
+      if (error) {
+        // Extract real error from edge function response
+        let errorMsg = "Tente novamente.";
+        let errorCode = "";
+        try {
+          const ctx = (error as any)?.context;
+          if (ctx instanceof Response) {
+            const body = await ctx.json().catch(() => null);
+            errorMsg = body?.error || error.message || errorMsg;
+            errorCode = body?.code || "";
+          } else {
+            errorMsg = error.message || errorMsg;
+          }
+        } catch { /* ignore */ }
+        
+        const isCredits = errorCode === "INSUFFICIENT_CREDITS" || errorMsg.includes("Créditos insuficientes");
         if (isCredits) {
           setShowCreditsDialog(true);
         } else {
-          toast({ title: "Erro ao gerar site", description: data?.error || "Tente novamente.", variant: "destructive" });
+          toast({ title: "Erro ao gerar site", description: errorMsg, variant: "destructive" });
+        }
+        setGenerating(false);
+        setGenProgress(0);
+        return;
+      }
+
+      if (data?.error) {
+        const isCredits = data.code === "INSUFFICIENT_CREDITS" || data.error?.includes("Créditos insuficientes");
+        if (isCredits) {
+          setShowCreditsDialog(true);
+        } else {
+          toast({ title: "Erro ao gerar site", description: data.error, variant: "destructive" });
         }
         setGenerating(false);
         setGenProgress(0);

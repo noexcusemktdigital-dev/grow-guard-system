@@ -55,35 +55,35 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.crm-run-automations]
     verify_jwt = true
 
-  # --- AI generate functions (require authenticated user session) ---
+  # --- AI generate functions (verify_jwt=false, auth validated in code) ---
   [functions.extract-strategy-answers]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-content]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-prospection]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-script]
     verify_jwt = false
   [functions.generate-site]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-social-briefing]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-social-concepts]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-social-image]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-social-video-frames]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-strategy]
     verify_jwt = false
   [functions.generate-template-layout]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-traffic-strategy]
     verify_jwt = false
   [functions.generate-video-briefing]
-    verify_jwt = true
+    verify_jwt = false
   [functions.generate-daily-checklist]
-    verify_jwt = true
+    verify_jwt = false
 
   # --- Utility functions (require auth) ---
   [functions.get-outbound-ip]
