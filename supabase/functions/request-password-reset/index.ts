@@ -4,7 +4,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
 
-function buildRecoveryHtml(confirmationUrl: string): string {
+function buildRecoveryHtml(resetUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -15,7 +15,7 @@ function buildRecoveryHtml(confirmationUrl: string): string {
     <p style="font-size:14px;color:#6c7280;line-height:1.6;margin:0 0 25px;">
       Recebemos uma solicitação para redefinir sua senha na <strong>NoExcuse Digital</strong>. Clique no botão abaixo para escolher uma nova senha.
     </p>
-    <a href="${confirmationUrl}" style="display:inline-block;background-color:#E2233B;color:#ffffff;font-size:14px;border-radius:12px;padding:12px 24px;text-decoration:none;font-weight:500;">
+    <a href="${resetUrl}" style="display:inline-block;background-color:#E2233B;color:#ffffff;font-size:14px;border-radius:12px;padding:12px 24px;text-decoration:none;font-weight:500;">
       Redefinir senha
     </a>
     <p style="font-size:12px;color:#999999;margin:30px 0 0;">
@@ -52,7 +52,6 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Generate recovery link via Admin API
     const portalParam = portal === "saas" ? "saas" : "franchise";
     const redirectTo = `${siteUrl}/reset-password?portal=${portalParam}`;
 
@@ -64,13 +63,27 @@ Deno.serve(async (req) => {
 
     if (linkErr) {
       console.error("[request-password-reset] generateLink error:", linkErr);
-      // Don't reveal whether user exists — always return success
       return new Response(JSON.stringify({ success: true }), { headers });
     }
 
-    const recoveryUrl = linkData?.properties?.action_link;
-    if (!recoveryUrl) {
-      console.error("[request-password-reset] No action_link returned");
+    // Use hashed_token pattern (same as invite-user) to prevent
+    // email security scanners from consuming the one-time token.
+    const hashedToken = linkData?.properties?.hashed_token;
+    const actionLink = linkData?.properties?.action_link;
+
+    let resetUrl: string;
+
+    if (hashedToken) {
+      // Safe URL: token is only verified when the user loads the page
+      const encodedEmail = encodeURIComponent(email);
+      resetUrl = `${siteUrl}/reset-password?token_hash=${hashedToken}&type=recovery&email=${encodedEmail}&portal=${portalParam}`;
+      console.log("[request-password-reset] Using hashed_token pattern for", email);
+    } else if (actionLink) {
+      // Fallback to action_link (less safe but functional)
+      resetUrl = actionLink;
+      console.warn("[request-password-reset] Falling back to action_link for", email);
+    } else {
+      console.error("[request-password-reset] No hashed_token or action_link returned");
       return new Response(JSON.stringify({ success: true }), { headers });
     }
 
@@ -85,7 +98,7 @@ Deno.serve(async (req) => {
         from: FROM_ADDRESS,
         to: [email],
         subject: "Redefinir sua senha — NoExcuse Digital",
-        html: buildRecoveryHtml(recoveryUrl),
+        html: buildRecoveryHtml(resetUrl),
       }),
     });
 
@@ -96,7 +109,6 @@ Deno.serve(async (req) => {
       console.log("[request-password-reset] Recovery email sent to", email);
     }
 
-    // Always return success (don't reveal user existence)
     return new Response(JSON.stringify({ success: true }), { headers });
   } catch (err) {
     console.error("[request-password-reset] Error:", err);
