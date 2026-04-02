@@ -29,14 +29,41 @@ const ResetPassword = () => {
   const [searchParams] = useSearchParams();
 
   const portal = searchParams.get("portal") || "";
+  const tokenHash = searchParams.get("token_hash");
+  const otpType = searchParams.get("type") || "recovery";
 
   const allRulesPass = useMemo(() => PASSWORD_RULES.every((r) => r.test(password)), [password]);
   const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY / SIGNED_IN events — these confirm
-    // the recovery token from the URL hash has been processed.
+    let cancelled = false;
+
+    // --- Method 1: Explicit token_hash verification (scanner-proof) ---
+    if (tokenHash) {
+      console.log("[ResetPassword] Verifying token_hash explicitly…");
+      supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: otpType as any,
+      }).then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("[ResetPassword] verifyOtp error:", error.message);
+          setSessionError(true);
+        } else if (data?.session) {
+          console.log("[ResetPassword] verifyOtp success, session established");
+          setSessionReady(true);
+          setRecoveryConfirmed(true);
+        } else {
+          console.warn("[ResetPassword] verifyOtp returned no session");
+          setSessionError(true);
+        }
+      });
+      return () => { cancelled = true; };
+    }
+
+    // --- Method 2: Fallback for old-style action_link URLs ---
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
       console.log("[ResetPassword] onAuthStateChange:", event);
       if (event === "PASSWORD_RECOVERY" && session) {
         setSessionReady(true);
@@ -48,16 +75,12 @@ const ResetPassword = () => {
       }
     });
 
-    // Fallback: check if a session already exists (e.g. page refresh).
-    // We mark sessionReady so the form renders, but do NOT mark
-    // recoveryConfirmed — it will be set by onAuthStateChange above.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      if (!cancelled && session) {
         setSessionReady(true);
       }
     });
 
-    // Timeout: if no session after 15s, show error
     const timeout = setTimeout(() => {
       setSessionReady((ready) => {
         if (!ready) setSessionError(true);
@@ -66,10 +89,11 @@ const ResetPassword = () => {
     }, 15000);
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  }, []);
+  }, [tokenHash, otpType]);
 
   const getRedirectPath = () => {
     if (portal === "franchise") return "/acessofranquia";
@@ -92,7 +116,6 @@ const ResetPassword = () => {
 
     if (!recoveryConfirmed) {
       console.warn("[ResetPassword] Recovery event not yet confirmed. Waiting…");
-      // Give a small window for the event to arrive
       await new Promise((r) => setTimeout(r, 2000));
     }
 
@@ -115,7 +138,6 @@ const ResetPassword = () => {
     } else {
       setSuccess(true);
       toast.success("Senha definida com sucesso!");
-      // Logout to clear any ghost session, then redirect to login
       await supabase.auth.signOut({ scope: "local" });
       const dest = getRedirectPath();
       setTimeout(() => navigate(dest), 2000);
@@ -178,7 +200,6 @@ const ResetPassword = () => {
                 </div>
               </div>
 
-              {/* Password requirements checklist */}
               {password.length > 0 && (
                 <div className="space-y-1.5 rounded-lg bg-white/5 p-3">
                   {PASSWORD_RULES.map((rule) => {
