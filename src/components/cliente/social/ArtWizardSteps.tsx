@@ -11,8 +11,8 @@ import { RefUploader } from "./RefUploader";
 import {
   ART_FORMATS, POST_TYPES, ART_OBJECTIVES, TEXT_MODES,
   PRINT_FORMATS, PRINT_TYPES, LAYOUT_TYPES,
-  AUDIENCE_SUGGESTIONS, ELEMENT_SUGGESTIONS,
 } from "./constants";
+import type { SmartSuggestions } from "@/utils/smartSuggestions";
 import { LayoutPicker } from "./LayoutPicker";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
