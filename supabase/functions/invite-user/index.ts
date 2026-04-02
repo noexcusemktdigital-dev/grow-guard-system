@@ -330,6 +330,8 @@ Deno.serve(async (req) => {
     }
 
     // Save pending invitation record
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
     await adminClient
       .from("pending_invitations")
       .upsert({
@@ -339,7 +341,8 @@ Deno.serve(async (req) => {
         role: validRole,
         team_ids: team_ids || [],
         full_name: full_name || null,
-        accepted_at: isNewUser ? null : new Date().toISOString(), // existing users are already "accepted"
+        accepted_at: isNewUser ? null : new Date().toISOString(),
+        expires_at: expiresAt,
       }, { onConflict: "email,organization_id" });
 
     console.log(`User invited: ${email} -> org ${organization_id} as ${validRole}`);
