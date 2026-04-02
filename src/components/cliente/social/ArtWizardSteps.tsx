@@ -9,14 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RefUploader } from "./RefUploader";
 import {
-  ART_FORMATS, POST_TYPES, ART_OBJECTIVES,
-  PRINT_FORMATS, PRINT_TYPES,
+  ART_FORMATS, POST_TYPES, ART_OBJECTIVES, TEXT_MODES,
+  PRINT_FORMATS, PRINT_TYPES, LAYOUT_TYPES,
+  AUDIENCE_SUGGESTIONS, ELEMENT_SUGGESTIONS,
 } from "./constants";
+import { LayoutPicker } from "./LayoutPicker";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
-  Check, X, Loader2, Sparkles, Plus, Upload, Star, Camera, Info, Pencil, Wand2,
+  Check, X, Loader2, Plus, Upload, Star, Camera, Info, Pencil, Wand2,
 } from "lucide-react";
-import type { ArtTextItem, ArtBriefingResult } from "./ArtWizard";
+import type { ArtTextItem } from "./ArtWizard";
 
 interface SelectCardProps {
   selected: boolean;
@@ -34,9 +36,10 @@ const SelectCard = ({ selected, onClick, children, className }: SelectCardProps)
   </Card>
 );
 
-/* ─── Steps 1-7 ─── */
+/* ─── Steps 1-13 ─── */
 
 interface StepProps {
+  step: number;
   outputMode: "digital" | "print";
   setOutputMode: (v: "digital" | "print") => void;
   printType: string;
@@ -75,29 +78,55 @@ interface StepProps {
   setPrintFormat: (v: string) => void;
   totalPieces: number;
   onLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, category?: "base" | "character" | "background") => void;
   contentData: Record<string, unknown>;
+  // New fields
+  topic: string;
+  setTopic: (v: string) => void;
+  audience: string;
+  setAudience: (v: string) => void;
+  textMode: "ai" | "manual";
+  setTextMode: (v: "ai" | "manual") => void;
+  layoutType: string;
+  setLayoutType: (v: string) => void;
+  restrictions: string;
+  setRestrictions: (v: string) => void;
+  elements: string[];
+  setElements: (v: string[]) => void;
+  baseImageUrl: string;
+  setBaseImageUrl: (v: string) => void;
+  characterImageUrl: string;
+  setCharacterImageUrl: (v: string) => void;
+  backgroundImageUrl: string;
+  setBackgroundImageUrl: (v: string) => void;
 }
 
-export function ArtWizardStep({ step, ...props }: StepProps & { step: number }) {
-  switch (step) {
-    case 1: return <Step1OutputMode {...props} />;
-    case 2: return <Step2Briefing {...props} />;
-    case 3: return <Step3Type {...props} />;
-    case 4: return <Step4Logo {...props} />;
-    case 5: return <Step5References {...props} />;
-    case 6: return <Step6Photos {...props} />;
-    case 7: return <Step7Format {...props} />;
+export function ArtWizardStep(props: StepProps) {
+  switch (props.step) {
+    case 1: return <Step1MaterialType {...props} />;
+    case 2: return <Step2Format {...props} />;
+    case 3: return <Step3TypeQuantity {...props} />;
+    case 4: return <Step4Objective {...props} />;
+    case 5: return <Step5Topic {...props} />;
+    case 6: return <Step6TextMode {...props} />;
+    case 7: return <Step7Audience {...props} />;
+    case 8: return <Step8Layout {...props} />;
+    case 9: return <Step9References {...props} />;
+    case 10: return <Step10Logo {...props} />;
+    case 11: return <Step11Images {...props} />;
+    case 12: return <Step12Elements {...props} />;
+    case 13: return <Step13Restrictions {...props} />;
     default: return null;
   }
 }
 
-function Step1OutputMode({ outputMode, setOutputMode, printType, setPrintType }: StepProps) {
+/* ── Step 1: Material Type ── */
+function Step1MaterialType({ outputMode, setOutputMode, printType, setPrintType }: StepProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-base font-semibold mb-1">🎯 Onde será usada?</h3>
-        <p className="text-sm text-muted-foreground">Escolha o destino da arte para otimizar formato e cores</p>
+        <h3 className="text-base font-semibold mb-1">🎯 Onde essa arte será usada?</h3>
+        <p className="text-sm text-muted-foreground">Escolha o destino para otimizar formato e cores</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <SelectCard selected={outputMode === "digital"} onClick={() => setOutputMode("digital")}>
@@ -135,264 +164,8 @@ function Step1OutputMode({ outputMode, setOutputMode, printType, setPrintType }:
   );
 }
 
-function Step2Briefing({ briefingText, setBriefingText, objective, setObjective, mandatoryPhrase, setMandatoryPhrase }: StepProps) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-base font-semibold mb-1">💡 O que você quer comunicar?</h3>
-        <p className="text-sm text-muted-foreground">
-          Descreva livremente. A nossa IA vai gerar todos os textos, cena e composição para você.
-        </p>
-      </div>
-      <Textarea
-        placeholder="Ex: Quero divulgar que investir em imóveis exige estratégia, não sorte. Para a marca Klir, tom profissional e sofisticado."
-        value={briefingText}
-        onChange={(e) => setBriefingText(e.target.value)}
-        rows={4}
-        className="resize-none"
-      />
-      <div>
-        <Label className="text-xs font-semibold">Qual resultado quer gerar?</Label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-          {ART_OBJECTIVES.map((obj) => (
-            <SelectCard key={obj.value} selected={objective === obj.value} onClick={() => setObjective(obj.value)}>
-              <CardContent className="p-2.5 text-center">
-                <p className="font-semibold text-xs">{obj.label}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{obj.desc}</p>
-              </CardContent>
-            </SelectCard>
-          ))}
-        </div>
-      </div>
-      <div>
-        <Label className="text-xs">Frase obrigatória (opcional)</Label>
-        <Input
-          placeholder="Ex: Investir não é sorte"
-          value={mandatoryPhrase}
-          onChange={(e) => setMandatoryPhrase(e.target.value)}
-          className="mt-1"
-        />
-      </div>
-    </div>
-  );
-}
-
-function Step3Type({ tipoPostagem, setTipoPostagem, quantity, setQuantity, carouselSlides, setCarouselSlides, creditCost }: StepProps) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-base font-semibold mb-1">📋 O que vamos criar?</h3>
-        <p className="text-sm text-muted-foreground">Escolha o tipo de postagem e quantas peças gerar</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {POST_TYPES.map((t) => (
-          <SelectCard key={t.value} selected={tipoPostagem === t.value} onClick={() => setTipoPostagem(t.value)}>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl mb-1">{t.icon}</p>
-              <p className="font-semibold text-sm">{t.label}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t.desc}</p>
-            </CardContent>
-          </SelectCard>
-        ))}
-      </div>
-      {tipoPostagem === "carrossel" && (
-        <div>
-          <Label className="text-xs">Quantos slides no carrossel?</Label>
-          <div className="flex gap-2 mt-2">
-            {[3, 5, 7, 10].map(n => (
-              <Button key={n} variant={carouselSlides === n ? "default" : "outline"} size="sm" onClick={() => setCarouselSlides(n)}>
-                {n} slides
-              </Button>
-            ))}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Cada slide será gerado individualmente ({creditCost} créditos/slide)
-          </p>
-        </div>
-      )}
-      {tipoPostagem !== "carrossel" && (
-        <div>
-          <Label className="text-xs">Quantas peças gerar de uma vez?</Label>
-          <div className="flex gap-2 mt-2">
-            {[1, 2, 3, 4, 5].map(n => (
-              <Button key={n} variant={quantity === n ? "default" : "outline"} size="sm" onClick={() => setQuantity(n)}>
-                {n}
-              </Button>
-            ))}
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Custo total: {quantity * creditCost} créditos
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Step4Logo({ logoUrl, setLogoUrl, onLogoUpload }: StepProps) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-base font-semibold mb-1">🏷️ Logo da marca</h3>
-        <p className="text-sm text-muted-foreground">
-          Sua logo será aplicada automaticamente na arte final gerada pela nossa IA.
-        </p>
-      </div>
-      <Card className="bg-accent/30 border-accent">
-        <CardContent className="p-4 flex items-start gap-3">
-          <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground">Por que a logo é importante?</p>
-            <p>A nossa IA reserva um espaço limpo na arte e sobrepõe sua logo original, sem redesenhá-la. Isso garante fidelidade visual total da sua marca.</p>
-            <p className="text-xs">Formatos aceitos: PNG (fundo transparente recomendado), JPG, SVG</p>
-          </div>
-        </CardContent>
-      </Card>
-      {logoUrl ? (
-        <div className="flex items-center gap-4 p-4 rounded-xl border bg-card">
-          <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-primary bg-white p-1 flex items-center justify-center">
-            <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-primary flex items-center gap-1.5">
-              <Check className="w-4 h-4" /> Logo carregada
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Será aplicada em todas as peças geradas</p>
-            <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={() => setLogoUrl("")}>
-              Trocar logo
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
-          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-          <p className="text-sm font-medium">Clique para enviar sua logo</p>
-          <p className="text-xs text-muted-foreground mt-1">PNG com fundo transparente recomendado</p>
-          <input type="file" accept="image/*" className="hidden" onChange={onLogoUpload} />
-        </label>
-      )}
-    </div>
-  );
-}
-
-function Step5References({ referenceUrls, setReferenceUrls, orgId, uploading, setUploading, visualIdentity, primaryRefIndex, setPrimaryRefIndex }: StepProps) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-base font-semibold mb-1">🎨 Referências visuais</h3>
-        <p className="text-sm text-muted-foreground">
-          A nossa IA extrai <strong>cores, fontes e estilo</strong> das referências para criar artes no mesmo padrão visual.
-        </p>
-      </div>
-      <Card className="bg-accent/30 border-accent">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-start gap-3">
-            <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p className="font-medium text-foreground">O que são referências visuais?</p>
-              <p>São <strong>exemplos de artes que você gosta</strong> — posts de outras marcas, materiais antigos, paletas de cores ou qualquer imagem que represente o estilo desejado.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-                <div className="p-2 rounded-lg bg-background border text-xs text-center">
-                  <p className="text-lg mb-1">🎨</p>
-                  <p className="font-medium">Cores e paletas</p>
-                  <p className="text-muted-foreground">Posts com cores que você quer</p>
-                </div>
-                <div className="p-2 rounded-lg bg-background border text-xs text-center">
-                  <p className="text-lg mb-1">📐</p>
-                  <p className="font-medium">Estilos de layout</p>
-                  <p className="text-muted-foreground">Composições que te agradam</p>
-                </div>
-                <div className="p-2 rounded-lg bg-background border text-xs text-center">
-                  <p className="text-lg mb-1">✨</p>
-                  <p className="font-medium">Materiais da marca</p>
-                  <p className="text-muted-foreground">Artes antigas, cartões etc.</p>
-                </div>
-              </div>
-              <p className="text-xs mt-1">
-                <strong>Dica:</strong> Marque com ⭐ a referência que mais representa o estilo desejado. <strong>Envie pelo menos 3 referências.</strong>
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="p-3 flex items-start gap-2">
-          <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <p className="text-xs text-primary">
-            <strong>A diagramação e o layout da arte serão criados com base na sua referência principal ⭐.</strong> Escolha referências que representem o estilo de composição desejado.
-          </p>
-        </CardContent>
-      </Card>
-      <RefUploader
-        referenceUrls={referenceUrls}
-        setReferenceUrls={setReferenceUrls}
-        orgId={orgId}
-        uploading={uploading}
-        setUploading={setUploading}
-        required
-        min={3}
-        visualIdentity={visualIdentity}
-        primaryRefIndex={primaryRefIndex}
-        setPrimaryRefIndex={setPrimaryRefIndex}
-      />
-    </div>
-  );
-}
-
-function Step6Photos({ photoUrls, setPhotoUrls, uploadingPhotos, onPhotoUpload }: StepProps) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-base font-semibold mb-1">📷 Fotos para incluir na arte</h3>
-        <Badge variant="outline" className="text-[10px] ml-2">Opcional</Badge>
-        <p className="text-sm text-muted-foreground mt-1">
-          Fotos reais que devem aparecer na composição — produto, imóvel, pessoa, etc.
-        </p>
-      </div>
-      <Card className="bg-accent/30 border-accent">
-        <CardContent className="p-3 flex items-start gap-2">
-          <Camera className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-          <div className="text-xs text-muted-foreground">
-            <strong>Diferença entre referência e foto:</strong> Referências definem o <strong>estilo visual</strong> (cores, layout). Fotos são <strong>inseridas diretamente</strong> na arte final (produto, pessoa, imóvel).
-          </div>
-        </CardContent>
-      </Card>
-      <div className="flex flex-wrap gap-2">
-        {photoUrls.map((url, i) => (
-          <div key={i} className="relative group w-20 h-20 rounded-xl overflow-hidden border-2 border-border">
-            <img src={url} alt="Referência visual" className="w-full h-full object-cover" />
-            <button
-              className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              onClick={() => setPhotoUrls(photoUrls.filter((_, j) => j !== i))}
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
-        ))}
-        <button
-          className="w-20 h-20 rounded-xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors gap-1"
-          onClick={() => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = "image/*";
-            input.multiple = true;
-            input.onchange = (ev) => onPhotoUpload(ev as unknown as React.ChangeEvent<HTMLInputElement>);
-            input.click();
-          }}
-          disabled={uploadingPhotos}
-        >
-          {uploadingPhotos ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-          <span className="text-[10px]">Foto</span>
-        </button>
-      </div>
-      {photoUrls.length === 0 && (
-        <p className="text-xs text-muted-foreground">Nenhuma foto adicionada. Você pode pular esta etapa.</p>
-      )}
-    </div>
-  );
-}
-
-function Step7Format({ outputMode, printType, printFormat, setPrintFormat, artFormat, setArtFormat, artFormats, setArtFormats, totalPieces, tipoPostagem }: StepProps) {
+/* ── Step 2: Format ── */
+function Step2Format({ outputMode, printType, printFormat, setPrintFormat, artFormat, setArtFormat }: StepProps) {
   if (outputMode === "print") {
     const printFormatsForType = PRINT_FORMATS.filter(f => {
       if (printType === "cartao") return f.value.startsWith("cartao");
@@ -404,7 +177,7 @@ function Step7Format({ outputMode, printType, printFormat, setPrintFormat, artFo
       <div className="space-y-4">
         <div>
           <h3 className="text-base font-semibold mb-1">📐 Formato de impressão</h3>
-          <p className="text-sm text-muted-foreground">Dimensões em centímetros a 300dpi (CMYK)</p>
+          <p className="text-sm text-muted-foreground">Dimensões em centímetros a 300dpi</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {printFormatsForType.map((f) => (
@@ -420,51 +193,11 @@ function Step7Format({ outputMode, printType, printFormat, setPrintFormat, artFo
       </div>
     );
   }
-
-  const pieces = totalPieces;
-  if (pieces > 1 && tipoPostagem !== "carrossel") {
-    if (artFormats.length !== pieces) {
-      setArtFormats(Array(pieces).fill(artFormat));
-    }
-    return (
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-base font-semibold mb-1">📐 Formato por peça</h3>
-          <p className="text-sm text-muted-foreground">Escolha o formato de cada peça individualmente</p>
-        </div>
-        {Array.from({ length: pieces }, (_, i) => (
-          <div key={i} className="space-y-1">
-            <Label className="text-xs font-medium">Peça {i + 1}</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {ART_FORMATS.map((f) => (
-                <SelectCard
-                  key={f.value}
-                  selected={(artFormats[i] || artFormat) === f.value}
-                  onClick={() => {
-                    const newFormats = [...(artFormats.length === pieces ? artFormats : Array(pieces).fill(artFormat))];
-                    newFormats[i] = f.value;
-                    setArtFormats(newFormats);
-                  }}
-                >
-                  <CardContent className="p-2 flex flex-col items-center text-center gap-1">
-                    <f.icon className="w-4 h-4 text-primary" />
-                    <p className="font-semibold text-[11px]">{f.label}</p>
-                    <p className="text-[10px] text-muted-foreground">{f.desc}</p>
-                  </CardContent>
-                </SelectCard>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-base font-semibold mb-1">📐 Formato da imagem</h3>
-        <p className="text-sm text-muted-foreground">Escolha o enquadramento ideal para onde vai publicar</p>
+        <h3 className="text-base font-semibold mb-1">📐 Qual formato você quer?</h3>
+        <p className="text-sm text-muted-foreground">Escolha o enquadramento ideal</p>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {ART_FORMATS.map((f) => (
@@ -482,9 +215,386 @@ function Step7Format({ outputMode, printType, printFormat, setPrintFormat, artFo
   );
 }
 
-/* ─── Step 8: Review ─── */
+/* ── Step 3: Type + Quantity ── */
+function Step3TypeQuantity({ tipoPostagem, setTipoPostagem, quantity, setQuantity, carouselSlides, setCarouselSlides, creditCost }: StepProps) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-semibold mb-1">📋 O que vamos criar?</h3>
+        <p className="text-sm text-muted-foreground">Escolha o tipo e quantas peças gerar</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {POST_TYPES.map((t) => (
+          <SelectCard key={t.value} selected={tipoPostagem === t.value} onClick={() => setTipoPostagem(t.value)}>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl mb-1">{t.icon}</p>
+              <p className="font-semibold text-sm">{t.label}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t.desc}</p>
+            </CardContent>
+          </SelectCard>
+        ))}
+      </div>
+      {tipoPostagem === "carrossel" && (
+        <div>
+          <Label className="text-xs">Quantos slides no carrossel?</Label>
+          <div className="flex gap-2 mt-2">
+            {[2, 3, 5, 7, 10].map(n => (
+              <Button key={n} variant={carouselSlides === n ? "default" : "outline"} size="sm" onClick={() => setCarouselSlides(n)}>{n}</Button>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">{creditCost} créditos/slide</p>
+        </div>
+      )}
+      {tipoPostagem !== "carrossel" && (
+        <div>
+          <Label className="text-xs">Quantas peças gerar?</Label>
+          <div className="flex gap-2 mt-2">
+            {[1, 2, 3, 4, 5].map(n => (
+              <Button key={n} variant={quantity === n ? "default" : "outline"} size="sm" onClick={() => setQuantity(n)}>{n}</Button>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">Custo: {quantity * creditCost} créditos</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
-interface Step8ReviewProps {
+/* ── Step 4: Objective ── */
+function Step4Objective({ objective, setObjective }: StepProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">🎯 O que você quer que essa arte gere?</h3>
+        <p className="text-sm text-muted-foreground">O objetivo define o estilo e a abordagem visual</p>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {ART_OBJECTIVES.map((obj) => (
+          <SelectCard key={obj.value} selected={objective === obj.value} onClick={() => setObjective(obj.value)}>
+            <CardContent className="p-3 text-center">
+              <p className="font-semibold text-sm">{obj.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{obj.desc}</p>
+            </CardContent>
+          </SelectCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Step 5: Topic ── */
+function Step5Topic({ topic, setTopic }: StepProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">💡 Sobre o que é essa arte?</h3>
+        <p className="text-sm text-muted-foreground">Descreva o assunto principal</p>
+      </div>
+      <Textarea
+        placeholder="Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."
+        value={topic}
+        onChange={(e) => setTopic(e.target.value)}
+        rows={3}
+        className="resize-none"
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"].map(s => (
+          <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setTopic(s)}>
+            {s}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Step 6: Text Mode ── */
+function Step6TextMode({ textMode, setTextMode, briefingText, setBriefingText, mandatoryPhrase, setMandatoryPhrase }: StepProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">✍️ Quem vai escrever o texto da arte?</h3>
+        <p className="text-sm text-muted-foreground">A IA pode criar os textos ou você escreve manualmente</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {TEXT_MODES.map((m) => (
+          <SelectCard key={m.value} selected={textMode === m.value} onClick={() => setTextMode(m.value as "ai" | "manual")}>
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl mb-1">{m.icon}</p>
+              <p className="font-semibold text-sm">{m.label}</p>
+              <p className="text-xs text-muted-foreground mt-1">{m.desc}</p>
+            </CardContent>
+          </SelectCard>
+        ))}
+      </div>
+      {textMode === "manual" && (
+        <div className="space-y-3">
+          <Textarea
+            placeholder="Descreva o que quer comunicar na arte..."
+            value={briefingText}
+            onChange={(e) => setBriefingText(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+      )}
+      <div>
+        <Label className="text-xs">Frase obrigatória (opcional)</Label>
+        <Input
+          placeholder="Ex: Investir não é sorte"
+          value={mandatoryPhrase}
+          onChange={(e) => setMandatoryPhrase(e.target.value)}
+          className="mt-1"
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Step 7: Audience ── */
+function Step7Audience({ audience, setAudience }: StepProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">👤 Para quem é essa arte?</h3>
+        <p className="text-sm text-muted-foreground">Defina o público-alvo para a IA adaptar linguagem e visual</p>
+      </div>
+      <Input
+        placeholder="Ex: empresários, mulheres 25-45, médicos, público geral..."
+        value={audience}
+        onChange={(e) => setAudience(e.target.value)}
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {AUDIENCE_SUGGESTIONS.map(s => (
+          <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setAudience(s)}>
+            {s}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Step 8: Layout ── */
+function Step8Layout({ layoutType, setLayoutType }: StepProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">📐 Escolha como sua arte será organizada</h3>
+        <p className="text-sm text-muted-foreground">A diagramação define o posicionamento dos elementos</p>
+      </div>
+      <LayoutPicker
+        selected={[layoutType]}
+        onSelect={(v) => setLayoutType(v[0] || "hero_center")}
+      />
+    </div>
+  );
+}
+
+/* ── Step 9: References ── */
+function Step9References({ referenceUrls, setReferenceUrls, orgId, uploading, setUploading, visualIdentity, primaryRefIndex, setPrimaryRefIndex }: StepProps) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-semibold mb-1">🎨 Referências visuais</h3>
+        <p className="text-sm text-muted-foreground">
+          Envie pelo menos <strong>3 referências</strong> para a IA entender o estilo da sua marca
+        </p>
+      </div>
+      <Card className="bg-accent/30 border-accent">
+        <CardContent className="p-4 space-y-2">
+          <div className="flex items-start gap-3">
+            <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">O que são referências visuais?</p>
+              <p>São <strong>exemplos de artes que você gosta</strong> — posts de outras marcas, materiais antigos, paletas de cores.</p>
+              <p className="text-xs"><strong>Dica:</strong> Marque com ⭐ a referência principal. Mínimo 3 referências.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <RefUploader
+        referenceUrls={referenceUrls}
+        setReferenceUrls={setReferenceUrls}
+        orgId={orgId}
+        uploading={uploading}
+        setUploading={setUploading}
+        required
+        min={3}
+        visualIdentity={visualIdentity}
+        primaryRefIndex={primaryRefIndex}
+        setPrimaryRefIndex={setPrimaryRefIndex}
+      />
+      {referenceUrls.length < 3 && (
+        <p className="text-xs text-destructive">Envie pelo menos 3 referências para continuar</p>
+      )}
+    </div>
+  );
+}
+
+/* ── Step 10: Logo ── */
+function Step10Logo({ logoUrl, setLogoUrl, onLogoUpload }: StepProps) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-semibold mb-1">🏷️ Logo da sua empresa</h3>
+        <p className="text-sm text-muted-foreground">
+          Sua logo será aplicada na arte final sem ser redesenhada ou alterada.
+        </p>
+      </div>
+      <Card className="bg-accent/30 border-accent">
+        <CardContent className="p-3 flex items-start gap-2">
+          <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            <strong>PNG com fundo transparente</strong> é o ideal. A IA reserva espaço na arte e sobrepõe sua logo original, garantindo fidelidade total.
+          </p>
+        </CardContent>
+      </Card>
+      {logoUrl ? (
+        <div className="flex items-center gap-4 p-4 rounded-xl border bg-card">
+          <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-primary bg-white p-1 flex items-center justify-center">
+            <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-primary flex items-center gap-1.5">
+              <Check className="w-4 h-4" /> Logo carregada
+            </p>
+            <Button variant="outline" size="sm" className="mt-2 h-7 text-xs" onClick={() => setLogoUrl("")}>
+              Trocar logo
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center w-full h-40 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+          <p className="text-sm font-medium">Clique para enviar sua logo</p>
+          <p className="text-xs text-muted-foreground mt-1">PNG, JPG ou SVG</p>
+          <input type="file" accept="image/*" className="hidden" onChange={onLogoUpload} />
+        </label>
+      )}
+    </div>
+  );
+}
+
+/* ── Step 11: Images (3 categories) ── */
+function Step11Images({ baseImageUrl, setBaseImageUrl, characterImageUrl, setCharacterImageUrl, backgroundImageUrl, setBackgroundImageUrl, onPhotoUpload, uploadingPhotos }: StepProps) {
+  const renderImageSlot = (label: string, desc: string, url: string, onClear: () => void, category: "base" | "character" | "background") => (
+    <div className="space-y-2">
+      <Label className="text-xs font-semibold">{label}</Label>
+      <p className="text-[10px] text-muted-foreground">{desc}</p>
+      {url ? (
+        <div className="relative group w-24 h-24 rounded-xl overflow-hidden border-2 border-primary">
+          <img src={url} alt={label} className="w-full h-full object-cover" />
+          <button
+            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            onClick={onClear}
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      ) : (
+        <label className="flex flex-col items-center justify-center w-24 h-24 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary cursor-pointer">
+          <Plus className="w-5 h-5 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">Enviar</span>
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhotoUpload(e, category)} />
+        </label>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-semibold mb-1">📷 Imagens para a arte</h3>
+        <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+        <p className="text-sm text-muted-foreground mt-1">
+          Fotos reais que devem aparecer na composição
+        </p>
+      </div>
+      <Card className="bg-accent/30 border-accent">
+        <CardContent className="p-3 flex items-start gap-2">
+          <Camera className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            <strong>Diferença de referência vs foto:</strong> Referências definem o estilo visual. Fotos são inseridas diretamente na arte final.
+          </p>
+        </CardContent>
+      </Card>
+      <div className="grid grid-cols-3 gap-4">
+        {renderImageSlot("Imagem base", "Foto principal / produto", baseImageUrl, () => setBaseImageUrl(""), "base")}
+        {renderImageSlot("Pessoa / Rosto", "Foto de pessoa para incluir", characterImageUrl, () => setCharacterImageUrl(""), "character")}
+        {renderImageSlot("Fundo", "Imagem de fundo específica", backgroundImageUrl, () => setBackgroundImageUrl(""), "background")}
+      </div>
+      <p className="text-xs text-muted-foreground">Você pode pular esta etapa se não tiver fotos.</p>
+    </div>
+  );
+}
+
+/* ── Step 12: Elements ── */
+function Step12Elements({ elements, setElements }: StepProps) {
+  const toggleElement = (el: string) => {
+    if (elements.includes(el)) setElements(elements.filter(e => e !== el));
+    else setElements([...elements, el]);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">🧩 O que você quer que apareça na arte?</h3>
+        <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+        <p className="text-sm text-muted-foreground mt-1">Selecione elementos visuais desejados</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {ELEMENT_SUGGESTIONS.map(el => (
+          <Badge
+            key={el}
+            variant={elements.includes(el) ? "default" : "outline"}
+            className="cursor-pointer text-xs py-1.5 px-3"
+            onClick={() => toggleElement(el)}
+          >
+            {elements.includes(el) && <Check className="w-3 h-3 mr-1" />}
+            {el}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Step 13: Restrictions ── */
+function Step13Restrictions({ restrictions, setRestrictions }: StepProps) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold mb-1">🚫 Tem algo que você NÃO quer na arte?</h3>
+        <Badge variant="outline" className="text-[10px]">Opcional</Badge>
+        <p className="text-sm text-muted-foreground mt-1">A IA vai evitar esses elementos</p>
+      </div>
+      <Textarea
+        placeholder="Ex: não usar vermelho, não colocar pessoas, não usar fundo escuro, não deixar poluído..."
+        value={restrictions}
+        onChange={(e) => setRestrictions(e.target.value)}
+        rows={3}
+        className="resize-none"
+      />
+      <div className="flex flex-wrap gap-1.5">
+        {["Sem vermelho", "Sem pessoas", "Sem fundo escuro", "Sem poluição visual", "Sem visual infantil"].map(s => (
+          <Badge
+            key={s}
+            variant="outline"
+            className="cursor-pointer hover:bg-destructive/10 text-xs"
+            onClick={() => setRestrictions(prev => prev ? `${prev}, ${s.toLowerCase()}` : s.toLowerCase())}
+          >
+            {s}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Step 14: Review ─── */
+
+interface StepReviewProps {
   artTexts: ArtTextItem[];
   updateArtText: (index: number, field: keyof ArtTextItem, value: string | boolean) => void;
   editingPieceIndex: number | null;
@@ -503,18 +613,20 @@ interface Step8ReviewProps {
   artFormat: string;
   tipoPostagem: string;
   visualIdentity: VisualIdentity | null | undefined;
+  textMode: "ai" | "manual";
   onRegenerateTexts: () => void;
   setBriefingFilled: (v: boolean) => void;
   setArtTexts: (v: ArtTextItem[]) => void;
 }
 
-export function ArtWizardStep8Review({
+export function ArtWizardStepReview({
   artTexts, updateArtText, editingPieceIndex, setEditingPieceIndex,
   totalPieces, creditCost, isFillingAI, briefingFilled, allTextsApproved,
   referenceUrls, logoUrl, photoUrls, primaryRefIndex,
   outputMode, printFormat, artFormat, tipoPostagem, visualIdentity,
+  textMode,
   onRegenerateTexts, setBriefingFilled, setArtTexts,
-}: Step8ReviewProps) {
+}: StepReviewProps) {
   const reviewTotalCost = totalPieces * creditCost;
   const selectedFormat = outputMode === "print"
     ? PRINT_FORMATS.find(f => f.value === printFormat)
@@ -524,12 +636,15 @@ export function ArtWizardStep8Review({
     acc + (t.approvedHeadline ? 1 : 0) + (t.approvedSub ? 1 : 0) + (t.approvedSupport ? 1 : 0) + (t.approvedCta ? 1 : 0), 0);
   const totalApprovals = artTexts.length * 4;
 
+  // For manual mode, always show editing
+  const isManual = textMode === "manual";
+
   return (
     <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold mb-1">✅ Revisão final</h3>
         <p className="text-sm text-muted-foreground">
-          {isFillingAI ? "A nossa IA está gerando os textos..." : "Revise e aprove os textos de cada peça individualmente."}
+          {isFillingAI ? "A nossa IA está gerando os textos..." : isManual ? "Escreva e aprove os textos de cada peça." : "Revise e aprove os textos gerados pela IA."}
         </p>
       </div>
 
@@ -544,7 +659,6 @@ export function ArtWizardStep8Review({
 
       {!isFillingAI && briefingFilled && artTexts.length > 0 && (
         <>
-          {/* Approval progress */}
           <div className="flex items-center gap-2">
             <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
               <div
@@ -555,30 +669,23 @@ export function ArtWizardStep8Review({
             <span className="text-xs text-muted-foreground">{approvedCount}/{totalApprovals} aprovados</span>
           </div>
 
-          {/* Per-art cards */}
           {artTexts.map((art, i) => {
-            const isEditing = editingPieceIndex === i;
+            const isEditing = isManual || editingPieceIndex === i;
             const pieceApproved = art.approvedHeadline && art.approvedSub && art.approvedSupport && art.approvedCta;
 
             return (
               <Card key={i} className={pieceApproved ? "border-primary/40 bg-primary/5" : ""}>
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={pieceApproved ? "default" : "outline"} className="text-[10px]">
-                        {pieceApproved && <Check className="w-3 h-3 mr-1" />}
-                        Peça {i + 1} de {totalPieces}
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs gap-1"
-                      onClick={() => setEditingPieceIndex(isEditing ? null : i)}
-                    >
-                      <Pencil className="w-3 h-3" />
-                      {isEditing ? "Fechar" : "Editar"}
-                    </Button>
+                    <Badge variant={pieceApproved ? "default" : "outline"} className="text-[10px]">
+                      {pieceApproved && <Check className="w-3 h-3 mr-1" />}
+                      Peça {i + 1} de {totalPieces}
+                    </Badge>
+                    {!isManual && (
+                      <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={() => setEditingPieceIndex(isEditing ? null : i)}>
+                        <Pencil className="w-3 h-3" />{isEditing ? "Fechar" : "Editar"}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Headline */}
@@ -598,7 +705,7 @@ export function ArtWizardStep8Review({
                   <div className="flex items-start gap-2">
                     <Checkbox checked={art.approvedSub} onCheckedChange={(v) => updateArtText(i, "approvedSub", !!v)} className="mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-medium text-muted-foreground">Subheadline</p>
+                      <p className="text-[10px] font-medium text-muted-foreground">Subtítulo</p>
                       {isEditing ? (
                         <Input value={art.subheadline} onChange={(e) => updateArtText(i, "subheadline", e.target.value)} className="mt-0.5 h-8 text-xs" />
                       ) : (
@@ -642,7 +749,7 @@ export function ArtWizardStep8Review({
             <CardContent className="p-4 space-y-2">
               {referenceUrls.length > 0 && (
                 <div className="mb-2">
-                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Referências ({referenceUrls.length}){logoUrl ? " + Logo" : ""}{photoUrls.length > 0 ? ` + ${photoUrls.length} fotos` : ""}</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Referências ({referenceUrls.length}){logoUrl ? " + Logo" : ""}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {logoUrl && (
                       <div className="w-10 h-10 rounded-md overflow-hidden border-2 border-primary">
@@ -651,7 +758,7 @@ export function ArtWizardStep8Review({
                     )}
                     {referenceUrls.slice(0, 5).map((url, i) => (
                       <div key={i} className={`w-10 h-10 rounded-md overflow-hidden border ${primaryRefIndex === i ? "border-primary border-2" : "border-border"}`}>
-                        <img src={url} alt="Referência visual" className="w-full h-full object-cover" />
+                        <img src={url} alt="Referência" className="w-full h-full object-cover" />
                       </div>
                     ))}
                   </div>
@@ -663,11 +770,7 @@ export function ArtWizardStep8Review({
                 <span className="text-muted-foreground">Quantidade:</span>
                 <span>{totalPieces} {tipoPostagem === "carrossel" ? "slides" : "peça(s)"}</span>
                 <span className="text-muted-foreground">Formato:</span>
-                <span>{selectedFormat?.label} ({(selectedFormat as unknown as { ratio?: string; cm?: string })?.ratio || (selectedFormat as unknown as { ratio?: string; cm?: string })?.cm})</span>
-                {visualIdentity && <>
-                  <span className="text-muted-foreground">Identidade:</span>
-                  <span className="text-primary">✓ Aplicada</span>
-                </>}
+                <span>{selectedFormat?.label}</span>
               </div>
               <div className="pt-2 border-t mt-2">
                 <div className="flex items-center justify-between">
@@ -678,15 +781,11 @@ export function ArtWizardStep8Review({
             </CardContent>
           </Card>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRegenerateTexts}
-            disabled={isFillingAI}
-            className="w-full"
-          >
-            <Wand2 className="w-3 h-3 mr-1" /> Regenerar textos com a nossa IA
-          </Button>
+          {textMode === "ai" && (
+            <Button variant="outline" size="sm" onClick={onRegenerateTexts} disabled={isFillingAI} className="w-full">
+              <Wand2 className="w-3 h-3 mr-1" /> Regenerar textos com IA
+            </Button>
+          )}
         </>
       )}
     </div>

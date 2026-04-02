@@ -630,6 +630,9 @@ serve(async (req) => {
       photo_images,
       output_mode,
       print_format,
+      // New art direction engine fields
+      topic, audience, text_mode, restrictions, elements,
+      base_image_url, character_image_url, background_image_url,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -740,8 +743,12 @@ Output ONLY the extracted logo image.`,
 
     // Build enriched prompt for CoT (in English labels)
     let enrichedPrompt = prompt || "";
+    if (topic) enrichedPrompt += `\nTopic/Subject: ${topic}`;
+    if (audience) enrichedPrompt += `\nTarget Audience: ${audience}`;
+    if (objective) enrichedPrompt += `\nObjective: ${objective}`;
     if (cena) enrichedPrompt += `\nScene: ${cena}`;
     if (elementos_visuais) enrichedPrompt += `\nVisual elements: ${elementos_visuais}`;
+    if (elements && elements.length > 0) enrichedPrompt += `\nDesired elements: ${elements.join(", ")}`;
     if (headline) enrichedPrompt += `\nHeadline: ${headline}`;
     if (subheadline) enrichedPrompt += `\nSubheadline: ${subheadline}`;
     if (supporting_text) enrichedPrompt += `\nSupporting text: ${supporting_text}`;
@@ -750,8 +757,8 @@ Output ONLY the extracted logo image.`,
     if (tipo_postagem) enrichedPrompt += `\nPost type: ${tipo_postagem}`;
     if (brand_name) enrichedPrompt += `\nBrand: ${brand_name}`;
     if (layout_type) enrichedPrompt += `\nLayout type: ${layout_type}`;
-    if (objective) enrichedPrompt += `\nObjective: ${objective}`;
     if (logo_url) enrichedPrompt += `\nBrand logo: provided as separate image`;
+    if (restrictions) enrichedPrompt += `\nNEGATIVE CONSTRAINTS (AVOID): ${restrictions}`;
     if (feedbackContext) enrichedPrompt += feedbackContext;
 
     // Convert reference images to base64 EARLY so CoT can use them too
@@ -842,6 +849,28 @@ Output ONLY the extracted logo image.`,
     // Append layout instructions to prompt if not already in CoT
     if (layoutInstructions && !optimized) {
       fullPrompt += `\n\n${layoutInstructions}`;
+    }
+
+    // Inject negative constraints / restrictions
+    if (restrictions) {
+      fullPrompt += `\n\nNEGATIVE CONSTRAINTS — STRICTLY AVOID:\n${restrictions}`;
+    }
+
+    // Inject objective-based style direction
+    const objectiveStyleMap: Record<string, string> = {
+      sales: "OBJECTIVE STYLE: High contrast, bold headline, aggressive layout, prominent CTA. Colors should be vibrant and attention-grabbing.",
+      leads: "OBJECTIVE STYLE: Clean and clear layout, objective message, clean visual, focus on action. CTA must be the most prominent element.",
+      engagement: "OBJECTIVE STYLE: Eye-catching visual, dynamic rhythm, appealing imagery. Layout should invite interaction.",
+      authority: "OBJECTIVE STYLE: Minimal clutter, elegant, well-organized, generous breathing room. Premium and refined feel.",
+      informative: "OBJECTIVE STYLE: Clear hierarchy of information, blocks of content, logical organization. Easy to scan and digest.",
+    };
+    if (objective && objectiveStyleMap[objective]) {
+      fullPrompt += `\n\n${objectiveStyleMap[objective]}`;
+    }
+
+    // Inject audience context
+    if (audience) {
+      fullPrompt += `\n\nTARGET AUDIENCE: ${audience}. Adapt visual language, tone, and imagery to resonate with this audience.`;
     }
 
     // Instruct the model to RESERVE SPACE for the logo instead of rendering it

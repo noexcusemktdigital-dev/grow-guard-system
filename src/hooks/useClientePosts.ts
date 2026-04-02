@@ -81,6 +81,15 @@ export function useGeneratePost() {
       // Print mode fields
       output_mode?: "digital" | "print";
       print_format?: string;
+      // Art direction engine fields
+      topic?: string;
+      audience?: string;
+      text_mode?: "ai" | "manual";
+      restrictions?: string;
+      elements?: string[];
+      base_image_url?: string;
+      character_image_url?: string;
+      background_image_url?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
@@ -124,6 +133,15 @@ export function useGeneratePost() {
             // Print mode
             output_mode: payload.output_mode,
             print_format: payload.print_format,
+            // Art direction engine
+            topic: payload.topic,
+            audience: payload.audience,
+            text_mode: payload.text_mode,
+            restrictions: payload.restrictions,
+            elements: payload.elements,
+            base_image_url: payload.base_image_url,
+            character_image_url: payload.character_image_url,
+            background_image_url: payload.background_image_url,
           },
         });
         if (resp.error) throw await extractEdgeFunctionError(resp.error);

@@ -3,13 +3,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import {
-  ART_FORMATS, PRINT_FORMATS,
-} from "./constants";
+import { ART_FORMATS, PRINT_FORMATS } from "./constants";
 import { ContentItem } from "@/hooks/useClienteContentV2";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import { Sparkles, ArrowLeft } from "lucide-react";
-import { ArtWizardStep, ArtWizardStep8Review } from "./ArtWizardSteps";
+import { ArtWizardStep, ArtWizardStepReview } from "./ArtWizardSteps";
 
 interface ArtWizardProps {
   orgId: string | undefined;
@@ -56,6 +54,15 @@ export interface ArtGeneratePayload {
   outputMode?: "digital" | "print";
   printFormat?: string;
   artTexts?: ArtTextItem[];
+  // New fields from the art direction engine
+  topic?: string;
+  audience?: string;
+  textMode?: "ai" | "manual";
+  restrictions?: string;
+  elements?: string[];
+  baseImageUrl?: string;
+  characterImageUrl?: string;
+  backgroundImageUrl?: string;
 }
 
 export interface ArtBriefingResult {
@@ -81,7 +88,7 @@ export interface ArtTextItem {
   approvedCta: boolean;
 }
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 14;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -89,37 +96,60 @@ export function ArtWizard({
   onGenerate, onFillWithAI, isFillingAI, canAfford, creditCost, onBack,
 }: ArtWizardProps) {
   const [step, setStep] = useState(1);
-  const [briefingText, setBriefingText] = useState("");
-  const [objective, setObjective] = useState("vender");
-  const [mandatoryPhrase, setMandatoryPhrase] = useState("");
 
-  // Step 1: Output mode
+  // Step 1: Material type
   const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
   const [printType, setPrintType] = useState("flyer");
+
+  // Step 2: Format
+  const [artFormat, setArtFormat] = useState("portrait");
+  const [artFormats, setArtFormats] = useState<string[]>([]);
+  const [printFormat, setPrintFormat] = useState("flyer_a5");
 
   // Step 3: Type + quantity
   const [tipoPostagem, setTipoPostagem] = useState("post_unico");
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
 
-  // Step 4: Logo (dedicated)
-  const [logoUrl, setLogoUrl] = useState("");
+  // Step 4: Objective
+  const [objective, setObjective] = useState("sales");
 
-  // Step 5: References (with tutorial)
+  // Step 5: Topic
+  const [topic, setTopic] = useState("");
+
+  // Step 6: Text mode
+  const [textMode, setTextMode] = useState<"ai" | "manual">("ai");
+  const [briefingText, setBriefingText] = useState("");
+  const [mandatoryPhrase, setMandatoryPhrase] = useState("");
+
+  // Step 7: Audience
+  const [audience, setAudience] = useState("");
+
+  // Step 8: Layout
+  const [layoutType, setLayoutType] = useState("hero_center");
+
+  // Step 9: References
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [primaryRefIndex, setPrimaryRefIndex] = useState(0);
 
-  // Step 6: Photos
+  // Step 10: Logo
+  const [logoUrl, setLogoUrl] = useState("");
+
+  // Step 11: Images (3 categories)
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [baseImageUrl, setBaseImageUrl] = useState("");
+  const [characterImageUrl, setCharacterImageUrl] = useState("");
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
 
-  // Step 7: Format
-  const [artFormat, setArtFormat] = useState("portrait");
-  const [artFormats, setArtFormats] = useState<string[]>([]);
-  const [printFormat, setPrintFormat] = useState("flyer_a5");
+  // Step 12: Elements
+  const [elements, setElements] = useState<string[]>([]);
 
-  // Step 8: Per-art texts with individual approval
+  // Step 13: Restrictions
+  const [restrictions, setRestrictions] = useState("");
+
+  // Step 14: Review texts
   const [artTexts, setArtTexts] = useState<ArtTextItem[]>([]);
   const [brandName, setBrandName] = useState("");
   const [cena, setCena] = useState("");
@@ -142,7 +172,9 @@ export function ArtWizard({
   const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
 
   const handleAutoFillTexts = async () => {
-    const enrichedBriefing = `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}\nQuantidade de peças: ${totalPieces}`;
+    const enrichedBriefing = textMode === "ai"
+      ? `Tema: ${topic}\nObjetivo: ${objective}\nPúblico: ${audience}\nElementos: ${elements.join(", ")}\nRestrições: ${restrictions}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}\nQuantidade de peças: ${totalPieces}`
+      : `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}\nQuantidade de peças: ${totalPieces}`;
     const result = await onFillWithAI(enrichedBriefing, contentData);
     if (result) {
       const baseTexts: ArtTextItem[] = Array.from({ length: totalPieces }, (_, i) => ({
@@ -173,92 +205,65 @@ export function ArtWizard({
 
   const canProceed = () => {
     switch (step) {
-      case 1: return true;
-      case 2: return !!(briefingText.trim() || contentData);
-      case 3: return true;
-      case 4: return !!logoUrl;
-      case 5: return referenceUrls.length >= 3;
-      case 6: return true; // photos optional
-      case 7: return true;
-      case 8: return allTextsApproved;
+      case 1: return true; // material type
+      case 2: return true; // format
+      case 3: return true; // type + quantity
+      case 4: return true; // objective
+      case 5: return !!topic.trim(); // topic required
+      case 6: return textMode === "ai" || !!(briefingText.trim()); // text mode
+      case 7: return true; // audience optional
+      case 8: return true; // layout
+      case 9: return referenceUrls.length >= 3; // min 3 references
+      case 10: return !!logoUrl; // logo required
+      case 11: return true; // images optional
+      case 12: return true; // elements optional
+      case 13: return true; // restrictions optional
+      case 14: return allTextsApproved; // all texts approved
       default: return true;
     }
   };
 
   const handleStepChange = (nextStep: number) => {
-    if (nextStep === 8 && !briefingFilled) {
-      handleAutoFillTexts();
+    if (nextStep === 14 && !briefingFilled) {
+      if (textMode === "ai") {
+        handleAutoFillTexts();
+      } else {
+        // Manual mode: create text slots for manual editing
+        if (artTexts.length === 0) {
+          setArtTexts(Array.from({ length: totalPieces }, () => ({
+            headline: mandatoryPhrase || "",
+            subheadline: "",
+            supportingText: "",
+            cta: "",
+            approvedHeadline: false,
+            approvedSub: false,
+            approvedSupport: false,
+            approvedCta: false,
+          })));
+          setBriefingFilled(true);
+        }
+      }
     }
     setStep(nextStep);
   };
 
-  const handleGenerate = () => {
-    if (!allTextsApproved) {
-      toast({ title: "Aprove todos os textos de todas as peças", variant: "destructive" });
-      return;
-    }
-    if (referenceUrls.length < 3) {
-      toast({ title: "Envie pelo menos 3 referências", variant: "destructive" });
-      return;
-    }
-
-    const finalFormats = outputMode === "print"
-      ? Array(totalPieces).fill(printFormat)
-      : (artFormats.length === totalPieces ? artFormats : Array(totalPieces).fill(artFormat));
-
-    onGenerate({
-      format: outputMode === "print" ? printFormat : artFormat,
-      formats: totalPieces > 1 ? finalFormats : undefined,
-      style: "auto",
-      tipoPostagem,
-      headline: artTexts[0]?.headline || "",
-      subheadline: artTexts[0]?.subheadline || "",
-      cta: artTexts[0]?.cta || "",
-      cena, elementosVisuais,
-      manualColors: "", manualStyle: "",
-      brandName, supportingText: artTexts[0]?.supportingText || "", bulletPoints,
-      referenceUrls, contentId, quantity,
-      carouselSlides: tipoPostagem === "carrossel" ? carouselSlides : 0,
-      layoutTypes: ["auto"],
-      logoUrl,
-      primaryRefIndex,
-      objective,
-      photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
-      outputMode,
-      printFormat: outputMode === "print" ? printFormat : undefined,
-      artTexts,
-    });
-  };
-
-  const goBack = () => {
-    if (step > 1) setStep(step - 1);
-    else onBack();
-  };
-
-  const StepProgress = () => (
-    <div className="flex items-center gap-1.5 mb-4">
-      {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-        <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i + 1 <= step ? "bg-primary" : "bg-muted"}`} />
-      ))}
-      <span className="text-xs text-muted-foreground ml-2">{step}/{TOTAL_STEPS}</span>
-    </div>
-  );
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, category?: "base" | "character" | "background") => {
     const files = e.target.files;
     if (!files || !orgId) return;
     setUploadingPhotos(true);
-    const newUrls: string[] = [];
     for (const file of Array.from(files)) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `photos/${orgId}/${Date.now()}_${safeName}`;
       const { error } = await (await import("@/lib/supabase")).supabase.storage.from("social-arts").upload(path, file);
       if (!error) {
         const { data: urlData } = (await import("@/lib/supabase")).supabase.storage.from("social-arts").getPublicUrl(path);
-        newUrls.push(urlData.publicUrl);
+        const url = urlData.publicUrl;
+        if (category === "base") setBaseImageUrl(url);
+        else if (category === "character") setCharacterImageUrl(url);
+        else if (category === "background") setBackgroundImageUrl(url);
+        else setPhotoUrls(prev => [...prev, url]);
       }
     }
-    setPhotoUrls(prev => [...prev, ...newUrls]);
     setUploadingPhotos(false);
   };
 
@@ -275,8 +280,81 @@ export function ArtWizard({
     }
   };
 
+  const handleGenerate = () => {
+    if (!allTextsApproved) {
+      toast({ title: "Aprove todos os textos de todas as peças", variant: "destructive" });
+      return;
+    }
+    if (referenceUrls.length < 3) {
+      toast({ title: "Envie pelo menos 3 referências", variant: "destructive" });
+      return;
+    }
+
+    const finalFormats = outputMode === "print"
+      ? Array(totalPieces).fill(printFormat)
+      : (artFormats.length === totalPieces ? artFormats : Array(totalPieces).fill(artFormat));
+
+    // Combine all photo URLs
+    const allPhotos = [...photoUrls];
+    if (baseImageUrl) allPhotos.unshift(baseImageUrl);
+    if (characterImageUrl) allPhotos.push(characterImageUrl);
+    if (backgroundImageUrl) allPhotos.push(backgroundImageUrl);
+
+    onGenerate({
+      format: outputMode === "print" ? printFormat : artFormat,
+      formats: totalPieces > 1 ? finalFormats : undefined,
+      style: layoutType,
+      tipoPostagem,
+      headline: artTexts[0]?.headline || "",
+      subheadline: artTexts[0]?.subheadline || "",
+      cta: artTexts[0]?.cta || "",
+      cena, elementosVisuais,
+      manualColors: "", manualStyle: "",
+      brandName, supportingText: artTexts[0]?.supportingText || "", bulletPoints,
+      referenceUrls, contentId, quantity,
+      carouselSlides: tipoPostagem === "carrossel" ? carouselSlides : 0,
+      layoutTypes: [layoutType],
+      logoUrl,
+      primaryRefIndex,
+      objective,
+      photoUrls: allPhotos.length > 0 ? allPhotos : undefined,
+      outputMode,
+      printFormat: outputMode === "print" ? printFormat : undefined,
+      artTexts,
+      topic,
+      audience,
+      textMode,
+      restrictions,
+      elements,
+      baseImageUrl: baseImageUrl || undefined,
+      characterImageUrl: characterImageUrl || undefined,
+      backgroundImageUrl: backgroundImageUrl || undefined,
+    });
+  };
+
+  const goBack = () => {
+    if (step > 1) setStep(step - 1);
+    else onBack();
+  };
+
+  const StepProgress = () => (
+    <div className="flex items-center gap-1 mb-4">
+      {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+        <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i + 1 <= step ? "bg-primary" : "bg-muted"}`} />
+      ))}
+      <span className="text-xs text-muted-foreground ml-2">{step}/{TOTAL_STEPS}</span>
+    </div>
+  );
+
+  const stepLabels: Record<number, string> = {
+    1: "Destino", 2: "Formato", 3: "Tipo", 4: "Objetivo",
+    5: "Tema", 6: "Texto", 7: "Público", 8: "Diagramação",
+    9: "Referências", 10: "Logo", 11: "Imagens", 12: "Elementos",
+    13: "Restrições", 14: "Revisão",
+  };
+
   const renderStep = () => {
-    if (step >= 1 && step <= 7) {
+    if (step >= 1 && step <= 13) {
       return (
         <ArtWizardStep
           step={step}
@@ -303,13 +381,22 @@ export function ArtWizard({
           onLogoUpload={handleLogoUpload}
           onPhotoUpload={handlePhotoUpload}
           contentData={contentData}
+          topic={topic} setTopic={setTopic}
+          audience={audience} setAudience={setAudience}
+          textMode={textMode} setTextMode={setTextMode}
+          layoutType={layoutType} setLayoutType={setLayoutType}
+          restrictions={restrictions} setRestrictions={setRestrictions}
+          elements={elements} setElements={setElements}
+          baseImageUrl={baseImageUrl} setBaseImageUrl={setBaseImageUrl}
+          characterImageUrl={characterImageUrl} setCharacterImageUrl={setCharacterImageUrl}
+          backgroundImageUrl={backgroundImageUrl} setBackgroundImageUrl={setBackgroundImageUrl}
         />
       );
     }
 
-    if (step === 8) {
+    if (step === 14) {
       return (
-        <ArtWizardStep8Review
+        <ArtWizardStepReview
           artTexts={artTexts} updateArtText={updateArtText}
           editingPieceIndex={editingPieceIndex} setEditingPieceIndex={setEditingPieceIndex}
           totalPieces={totalPieces} creditCost={creditCost}
@@ -320,6 +407,7 @@ export function ArtWizard({
           outputMode={outputMode} printFormat={printFormat}
           artFormat={artFormat} tipoPostagem={tipoPostagem}
           visualIdentity={visualIdentity}
+          textMode={textMode}
           onRegenerateTexts={() => {
             setBriefingFilled(false);
             setArtTexts([]);
@@ -343,7 +431,7 @@ export function ArtWizard({
         <Button variant="ghost" size="icon" onClick={goBack} aria-label="Voltar"><ArrowLeft className="w-4 h-4" /></Button>
         <div>
           <h2 className="text-lg font-bold">Criar Arte</h2>
-          <p className="text-xs text-muted-foreground">Passo {step} de {TOTAL_STEPS}</p>
+          <p className="text-xs text-muted-foreground">Passo {step} de {TOTAL_STEPS} — {stepLabels[step]}</p>
         </div>
       </div>
 
