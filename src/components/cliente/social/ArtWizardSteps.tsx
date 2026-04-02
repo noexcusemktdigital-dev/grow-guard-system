@@ -545,7 +545,7 @@ function Step12Elements({ elements, setElements }: StepProps) {
         <p className="text-sm text-muted-foreground mt-1">Selecione elementos visuais desejados</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {ELEMENT_SUGGESTIONS.map(el => (
+        {(props.suggestions?.elements || []).map(el => (
           <Badge
             key={el}
             variant={elements.includes(el) ? "default" : "outline"}
