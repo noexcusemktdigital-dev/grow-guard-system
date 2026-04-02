@@ -1,98 +1,44 @@
 
-## Diagnóstico
 
-Revisei o fluxo das 4 ferramentas e encontrei um problema estrutural combinado, não um único bug:
+## Plano — Funil padrão convencional no CRM (sem criação automática pelo GPS)
 
-1. Há **autenticação inconsistente** entre as funções de geração:
-- algumas dependem da validação no gateway (`generate-site`, `generate-social-briefing`, `generate-video-briefing`, `generate-social-image`, `generate-social-video-frames`, `generate-content`)
-- outras validam manualmente no código (`generate-script`, `generate-traffic-strategy`)
+### O que muda
 
-2. Já há evidência real de falha de autenticação:
-- `generate-social-briefing` retornando **401**
-- `generate-traffic-strategy` retornando **401**
-- `generate-script` entrando na função, mas respondendo **"Sessão inválida"**
+O CRM vai ter um funil padrão convencional criado automaticamente quando o usuário acessar o CRM pela primeira vez (se não existir nenhum funil). A criação automática de funil pelo GPS do Negócio e pelo Plano de Vendas será removida.
 
-3. O frontend ainda esconde parte do erro real em alguns fluxos:
-- `src/pages/cliente/ClienteSites.tsx`
-- `src/hooks/useClienteContentV2.ts`
+### Mudanças
 
-4. As operações mais pesadas continuam síncronas dentro da requisição (site, artes/vídeo, lote de conteúdos, tráfego), o que deixa o sistema frágil para **rate limit / timeout** mesmo depois do ajuste principal.
+#### 1. Remover auto-criação de funil do GPS e Plano de Vendas
 
-## Plano
+**`src/pages/cliente/ClienteGPSNegocio.tsx`** — Remover o bloco (linhas ~274-293) que cria funil automaticamente após aprovação do GPS.
 
-### 1. Padronizar autenticação das funções de geração
-Vou unificar o modelo de autenticação das funções que hoje estão quebrando, para que todas validem a sessão do mesmo jeito e parem de falhar de forma aleatória/gateway.
+**`src/pages/cliente/ClientePlanoVendas.tsx`** — Remover o bloco (linhas ~117-139) que cria funil automaticamente ao salvar o plano de vendas.
 
-Funções alvo:
-- `generate-script`
-- `generate-site`
-- `generate-social-briefing`
-- `generate-video-briefing`
-- `generate-social-image`
-- `generate-social-video-frames`
-- `generate-traffic-strategy`
-- `generate-content`
+Ambos os arquivos deixam de importar `useCrmFunnels`, `useCrmFunnelMutations`, `parseFunnelStages`, `getDefaultFunnelStages`.
 
-### 2. Padronizar respostas de erro do backend
-Todas essas funções vão responder com JSON consistente, por exemplo:
-- `401` sessão/autorização
-- `402` créditos
-- `429` limite/rate limit
-- `500` falha interna/IA
+#### 2. Criar funil padrão convencional automaticamente no CRM
 
-Isso elimina casos como o `generate-script` responder erro de autenticação com status 200.
+**`src/hooks/useCrmFunnels.ts`** — Adicionar um hook `useEnsureDefaultFunnel()` que:
+- Verifica se já existem funis para a org
+- Se não existir nenhum, cria automaticamente um "Funil de Vendas" com as etapas padrão do `DEFAULT_STAGES` (Novo Lead → Contato → Qualificação → Proposta → Negociação → Fechado → Perdido)
+- Marca como `is_default: true`
+- Executa apenas uma vez (com flag `useRef`)
 
-### 3. Corrigir o frontend para mostrar o motivo real
-Vou aplicar o mesmo padrão de leitura de erro real nas telas que ainda mostram mensagem genérica:
+**`src/pages/cliente/ClienteCRM.tsx`** (ou componente raiz do CRM) — Chamar `useEnsureDefaultFunnel()` para garantir que o funil padrão exista ao entrar no CRM.
 
-- `src/hooks/useClienteContentV2.ts`
-- `src/pages/cliente/ClienteSites.tsx`
+### Detalhes técnicos
 
-E revisar os fluxos de roteiro/postagem/tráfego para garantir que nenhum deles volte a exibir apenas “Edge Function returned a non-2xx status code”.
+O funil padrão usará as etapas já definidas em `DEFAULT_STAGES` de `CrmStageSystem.tsx`:
+- Novo Lead (azul), Contato (âmbar), Qualificação (ciano), Proposta (roxo), Negociação (laranja), Fechado (verde), Perdido (vermelho)
 
-### 4. Adicionar rastreabilidade mínima
-Vou deixar logs curtos e objetivos nas funções para diferenciar claramente:
-- sessão ausente/expirada
-- créditos insuficientes
-- rate limit
-- erro de parsing da IA
-- erro interno
+O hook `useEnsureDefaultFunnel` só cria se `funnelsData` estiver carregado e vazio, evitando duplicações.
 
-Isso resolve também a parte de “entender o porquê do erro”.
+### Arquivos
 
-### 5. Fazer uma segunda camada de estabilização
-Depois do ajuste de autenticação + erro real, vou deixar os fluxos mais pesados preparados para estabilização estrutural.
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | Remover bloco de auto-criação de funil |
+| `src/pages/cliente/ClientePlanoVendas.tsx` | Remover bloco de auto-criação de funil |
+| `src/hooks/useCrmFunnels.ts` | Adicionar `useEnsureDefaultFunnel()` |
+| Componente raiz do CRM | Chamar `useEnsureDefaultFunnel()` |
 
-Se os logs ainda mostrarem falhas por tempo de execução, o próximo passo será migrar os geradores mais pesados para **fila de processamento** em vez de esperar tudo dentro da mesma requisição.
-
-## Arquivos a ajustar
-
-- `supabase/config.toml`
-- `supabase/functions/generate-script/index.ts`
-- `supabase/functions/generate-site/index.ts`
-- `supabase/functions/generate-social-briefing/index.ts`
-- `supabase/functions/generate-video-briefing/index.ts`
-- `supabase/functions/generate-social-image/index.ts`
-- `supabase/functions/generate-social-video-frames/index.ts`
-- `supabase/functions/generate-traffic-strategy/index.ts`
-- `supabase/functions/generate-content/index.ts`
-- `src/hooks/useClienteContentV2.ts`
-- `src/pages/cliente/ClienteSites.tsx`
-
-## Detalhes técnicos
-
-- `generate-social-briefing` hoje falha antes de executar a lógica interna, por isso nem produz logs úteis.
-- `generate-traffic-strategy` está no mesmo cenário de autorização quebrada.
-- `generate-script` já entra na função, mas a checagem manual atual está rejeitando a sessão.
-- `ClienteSites.tsx` e `useClienteContentV2.ts` ainda mascaram o erro real.
-- `generate-site`, `generate-social-image`, `generate-social-video-frames` e `generate-content` são os principais candidatos a fila se, após o hotfix, ainda houver instabilidade por duração.
-
-## Resultado esperado
-
-Após essa correção:
-- gerar roteiro volta a funcionar com erro claro quando houver bloqueio real
-- gerar postagem deixa de cair em erro genérico
-- gerar site para de mascarar a causa da falha
-- gerar tráfego pago volta a autenticar corretamente
-- vocês passam a enxergar exatamente o motivo do problema quando algo falhar
-- o sistema fica pronto para uma fase 2 com fila, se ainda houver falhas por processamento pesado
