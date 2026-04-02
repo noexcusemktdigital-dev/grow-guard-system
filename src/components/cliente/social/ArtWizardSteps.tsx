@@ -284,7 +284,7 @@ function Step4Objective({ objective, setObjective }: StepProps) {
 }
 
 /* ── Step 5: Topic ── */
-function Step5Topic({ topic, setTopic }: StepProps) {
+function Step5Topic({ topic, setTopic, suggestions }: StepProps) {
   return (
     <div className="space-y-4">
       <div>
