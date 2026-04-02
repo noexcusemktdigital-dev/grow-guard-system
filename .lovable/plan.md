@@ -1,71 +1,40 @@
 
 
-## Plano — Refazer a Landing Page focada em conversão e soluções reais
+## Plano — Corrigir convites que permanecem "pendentes" após aceitação
 
-### Problema atual
+### Diagnóstico
 
-A landing page atual é genérica: fala de "CRM", "WhatsApp", "automação" de forma superficial, sem comunicar o real diferencial do sistema — que é um **ecossistema completo de gestão comercial com IA** que diagnostica, estrategiza e executa marketing + vendas de forma personalizada para cada negócio.
+O fluxo atual na página `/welcome` (Welcome.tsx) tenta marcar o convite como aceito chamando `manage-member` com `action: "accept_invitation"` **após** o `updateUser`. Porém, há dois problemas:
 
-### Abordagem
+1. **Sessão de recovery instável**: Após `verifyOtp` + `updateUser` numa sessão de recuperação, o token JWT pode estar inválido ou expirado para chamadas subsequentes. A edge function `manage-member` valida o JWT via `userClient.auth.getUser()` — se falhar, retorna erro silencioso (status 200 com `{ error }`) e o `catch` no frontend não captura.
 
-Reescrever `SaasLanding.tsx` inteiramente, mantendo a mesma estrutura técnica (React + Framer Motion + Tailwind) mas com **copy focada em conversão** e **seções que comunicam as soluções reais**.
+2. **Falha silenciosa**: O `try/catch` em Welcome.tsx (linhas 156-166) só captura exceções de rede. Se a edge function retorna `{ error: "Sessão inválida" }` com status 200, o frontend ignora — o convite nunca é marcado como aceito.
 
-### Nova estrutura da página
+### Correção
 
-#### 1. Nav (mantém)
-Logo + "Entrar" + "Começar grátis"
+#### 1. Edge Function `manage-member` — aceitar sem exigir sessão válida
 
-#### 2. Hero — Proposta de valor clara
-- Headline: foco no resultado (gestão comercial completa com IA que diagnostica e executa)
-- Sub: "Do diagnóstico à execução — marketing, vendas e estratégia personalizada em um só lugar"
-- Badges: GPS do Negócio · CRM Inteligente · Marketing com IA · Agente de Vendas 24/7
-- CTA principal + "Teste grátis por 7 dias"
+Para a ação `accept_invitation`, não faz sentido exigir autenticação completa — o usuário acabou de criar a senha e está prestes a fazer signOut. Mover o tratamento de `accept_invitation` para **antes** da validação de auth, usando apenas o `email` com o service role key (já é o que faz internamente).
 
-#### 3. Problema → Solução (nova seção)
-3 colunas mostrando dores reais vs como o sistema resolve:
-- "Sem estratégia clara" → GPS do Negócio analisa e cria estratégia personalizada
-- "Marketing sem resultado" → IA gera conteúdos, artes e campanhas alinhados ao negócio
-- "Vendas desorganizadas" → CRM com funis, metas, scripts e acompanhamento em tempo real
+#### 2. Welcome.tsx — verificar resposta da edge function
 
-#### 4. O ecossistema completo (substituir features genéricas)
-Cards maiores organizados por "jornada":
-- **Diagnosticar**: GPS do Negócio — análise completa, score comercial, plano de ação
-- **Planejar**: Estratégia de Marketing + Plano de Vendas com IA
-- **Executar Marketing**: Conteúdos, Artes, Sites, Tráfego Pago — tudo gerado pela IA
-- **Executar Vendas**: CRM, Scripts, Metas, Ranking, Prospecção
-- **Automatizar**: Agente de IA 24/7, disparos, follow-ups, WhatsApp
-- **Acompanhar**: Dashboards, relatórios, checklist diário, alertas inteligentes
+Verificar se a resposta contém `error` e logar adequadamente. Também garantir que a chamada acontece **antes** do `signOut`.
 
-#### 5. Como funciona (refinar)
-- Passo 1: Crie sua conta e responda o GPS do Negócio (5 min)
-- Passo 2: A IA cria sua estratégia personalizada de marketing e vendas
-- Passo 3: Execute com as ferramentas integradas e acompanhe resultados em tempo real
+#### 3. Fallback: marcar como aceito no primeiro login
 
-#### 6. Diferenciais (nova seção)
-"Por que a NoExcuse é diferente?"
-- Tudo em um só lugar (não precisa de 5 ferramentas separadas)
-- IA que entende SEU negócio (não genérica)
-- Do diagnóstico à execução (não só ferramenta, é estratégia)
-- Para empresas, equipes e setores diferentes
-
-#### 7. Social proof (números + depoimentos — mantém estrutura, refinar copy)
-
-#### 8. Pricing (mantém com UNIFIED_PLANS)
-
-#### 9. FAQ (atualizar perguntas para refletir soluções reais)
-
-#### 10. CTA Final + Footer (mantém)
+Adicionar lógica no `AuthContext` ou no fluxo de login: quando um usuário faz login e existe um `pending_invitation` com seu email e `accepted_at IS NULL`, marcá-lo automaticamente como aceito. Isso cobre casos onde o Welcome.tsx falhou.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/SaasLanding.tsx` | Reescrever completo — nova copy, novas seções, mesma base técnica |
+| `supabase/functions/manage-member/index.ts` | Mover `accept_invitation` para antes da validação de auth |
+| `src/pages/Welcome.tsx` | Verificar resposta da edge function, logar erros |
+| `src/contexts/AuthContext.tsx` | Fallback: marcar convites pendentes como aceitos no login |
 
 ### Resultado
 
-- Landing page comunica as soluções reais do sistema, não features genéricas
-- Foco em conversão: dor → solução → prova social → preço → CTA
-- Mantém design dark com a identidade visual atual (cores, logo, animações)
-- Responsiva e performática (mesma stack)
+- Convites são marcados como aceitos de forma confiável ao criar senha
+- Fallback no login garante que mesmo se o Welcome falhar, o próximo login corrige
+- Sem mais usuários "fantasma pendentes" após aceitar convite
 
