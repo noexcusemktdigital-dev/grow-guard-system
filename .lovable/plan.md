@@ -1,44 +1,33 @@
 
 
-## Plano — Corrigir erro de pagamento (assinatura de planos)
+## Plano — Integrar metas do GPS com vendas do CRM
 
 ### Diagnóstico
 
-Dois problemas encontrados:
+O problema é que quando um lead é marcado como vendido no CRM (`markAsWon`, `markAsLost`, `updateLead`, `createLead`), nenhuma dessas mutations invalida a query `goal-progress`. Ou seja, o cálculo de progresso das metas **já funciona corretamente** (ele busca leads com `won_at` dentro do período) — mas o cache do React Query não é atualizado quando uma venda acontece no CRM.
 
-1. **`verify_jwt = true` no config.toml** — A edge function `asaas-create-subscription` está configurada com `verify_jwt = true`, o que faz o Supabase validar o JWT na infraestrutura antes de o código rodar. Com o sistema de signing-keys do Lovable Cloud, isso causa falha silenciosa (non-2xx status). Os logs mostram boot/shutdown sem nenhum log de request, confirmando que a requisição nunca chega ao código.
-
-2. **Preços desatualizados na edge function** — O frontend usa `UNIFIED_PLANS` com preços R$349, R$739, R$1429, mas a edge function tem hardcoded `starter: 397, pro: 797, enterprise: 1497`. Isso causaria erro "Invalid plan tier" ou cobrança com valor errado.
+O `useGoalProgress` calcula o progresso corretamente com base nos leads ganhos (`won_at`) dentro do período da meta. O problema é puramente de **invalidação de cache**: as mutations do CRM não avisam ao React Query que os dados de progresso das metas mudaram.
 
 ### Correção
 
-#### 1. Remover `verify_jwt = true` das funções de pagamento no config.toml
+Adicionar `qc.invalidateQueries({ queryKey: ["goal-progress"] })` em todas as mutations do CRM que afetam dados usados pelo cálculo de metas:
 
-Remover (ou setar para `false`) as entradas de `verify_jwt` para:
-- `asaas-create-subscription`
-- `asaas-create-charge`
-- Qualquer outra função de pagamento com `verify_jwt = true`
+- `createLead` → afeta métrica "leads"
+- `updateLead` → afeta valor, assigned_to, stage
+- `markAsWon` → afeta métricas "revenue", "contracts", "conversions", "avg_ticket"
+- `markAsLost` → afeta taxa de conversão
+- `bulkUpdateLeads` → pode afetar qualquer campo
+- `deleteLead` / `bulkDeleteLeads` → remove leads do cálculo
 
-A autenticação já é feita manualmente no código via `userClient.auth.getUser()`.
-
-#### 2. Atualizar PLAN_PRICES na edge function
-
-Sincronizar os preços com os valores reais:
-```
-starter: 349
-pro: 739
-enterprise: 1429
-```
-
-### Arquivos
+### Arquivo
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/config.toml` | Remover `verify_jwt = true` das funções de pagamento |
-| `supabase/functions/asaas-create-subscription/index.ts` | Atualizar `PLAN_PRICES` para 349/739/1429 |
+| `src/hooks/useCrmLeads.ts` | Adicionar invalidação de `goal-progress` em todos os `onSuccess` das mutations |
 
 ### Resultado
 
-- Clientes e franqueados conseguem assinar planos via PIX, Boleto e Cartão
-- Preços cobrados correspondem aos exibidos na interface
+- Quando um lead é marcado como vendido no CRM, a meta atualiza automaticamente o progresso
+- Dashboard, GPS do Negócio e página de Metas refletem vendas em tempo real
+- Sem mudanças no banco de dados — apenas sincronização de cache no frontend
 
