@@ -6,9 +6,9 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
 const PLAN_PRICES: Record<string, number> = {
-  starter: 397,
-  pro: 797,
-  enterprise: 1497,
+  starter: 349,
+  pro: 739,
+  enterprise: 1429,
 };
 
 Deno.serve(async (req) => {

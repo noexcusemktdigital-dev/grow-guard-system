@@ -16,23 +16,23 @@ project_id = "gxrhdpbbxfipeopdyygn"
 
   # --- Asaas payment functions (require authenticated user session) ---
   [functions.asaas-buy-credits]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-cancel-subscription]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-charge-client]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-charge-franchisee]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-charge-system-fee]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-create-charge]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-create-subscription]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-get-pix]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-list-payments]
-    verify_jwt = true
+    verify_jwt = false
   [functions.asaas-manage-payment]
     verify_jwt = false
   [functions.asaas-test-connection]
