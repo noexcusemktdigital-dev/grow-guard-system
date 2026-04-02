@@ -99,6 +99,7 @@ interface StepProps {
   setCharacterImageUrl: (v: string) => void;
   backgroundImageUrl: string;
   setBackgroundImageUrl: (v: string) => void;
+  suggestions?: SmartSuggestions;
 }
 
 export function ArtWizardStep(props: StepProps) {
