@@ -1,85 +1,107 @@
 
 
-## Plano — Correção drástica do fluxo de Usuários & Times
+## Plano — Refatoração completa da ferramenta de Postagem: Motor de Direção de Arte Controlada
 
-### Diagnóstico
+### Visão geral
 
-Após análise do banco e do código, identifiquei 5 problemas interligados:
+Transformar a ferramenta de geração de artes de um "gerador de imagem livre" para um **motor de direção de arte controlada**, onde o usuário responde perguntas simples e o sistema converte em prompts técnicos altamente estruturados. A mudança é grande mas pode ser feita de forma incremental reaproveitando a estrutura existente.
 
-1. **Usuários fantasma**: A edge function `invite-user` cria o `organization_membership` **imediatamente** ao convidar. O convidado aparece como membro ativo na lista E como convite pendente ao mesmo tempo.
+### O que já existe e será reaproveitado
 
-2. **Convites aceitos não atualizam**: A página Welcome tenta fazer `supabase.from("pending_invitations").update({ accepted_at })` direto pelo client SDK. Confirmei no banco que Juliana (`jmfferiato2@gmail.com`) tem `accepted_at: null` mesmo tendo criado a senha com sucesso. O update silenciosamente não afeta nenhuma linha (provavelmente a sessão de recovery não carrega o JWT completo para satisfazer a policy RLS).
+- Estrutura de wizard em 8 steps (será reorganizado para ~10 steps)
+- Edge function `generate-social-image` com pipeline CoT → geração → logo composition
+- Upload de referências, logo e fotos via storage
+- Sistema de créditos e débito
+- Constants com formatos, layouts e objetivos
+- LayoutPicker com mockups SVG
 
-3. **Usuários removidos permanecem**: O `manage-member` remove de `organization_memberships` e `user_roles`, mas **não limpa** a entrada de `pending_invitations`. O convidado removido continua aparecendo como "Pendente".
+### O que muda fundamentalmente
 
-4. **HIBP rejeita senhas válidas**: A proteção Have I Been Pwned está ativa no servidor. Senhas como "Juliana12345@" são rejeitadas por estarem em bases de vazamentos, mesmo cumprindo todas as regras visuais. O usuário quer que qualquer senha que siga as regras definidas seja aceita.
+1. **Novo fluxo de steps** — reordenado conforme a especificação (tipo material → formato → tipo/quantidade → objetivo → tema/assunto → texto AI vs manual → público → layout visual → referências → logo → imagens → restrições → revisão)
+2. **Layout picker com 6 opções simplificadas** — hero_center, split, overlay, card, minimal, grid (em vez das 9 atuais)
+3. **Modo de texto AI vs Manual** — novo bloco onde o usuário escolhe se quer que a IA crie os textos ou se vai escrever manualmente
+4. **Público-alvo como campo dedicado** — novo input
+5. **Restrições negativas** — novo campo "O que não quer na arte"
+6. **Engine de prompt completamente nova** — template estruturado com grid maps, regras de logo, identidade visual, formato, e restrições negativas
+7. **Verificação automática pós-geração** — IA avalia se layout, logo, hierarquia e branding foram respeitados, com fallback em até 3 níveis
+8. **Análise de referências por IA** — extração automática de paleta, tipografia, estilo de composição das referências enviadas
 
-5. **Sem invalidação cruzada de cache**: Ao remover membro, apenas `["org-members"]` é invalidado. O cache de `["pending-invitations"]` continua stale.
+### Estrutura dos novos steps (14 etapas no wizard)
 
-### Correções
+| Step | Pergunta para o usuário | Campo interno |
+|------|------------------------|---------------|
+| 1 | Onde será usada? (Digital/Impressa) | `material_type` |
+| 2 | Qual formato? (1:1, 4:5, 9:16, carrossel / A4, A5, flyer...) | `digital_format` ou `print_format` |
+| 3 | Tipo e quantidade (post único, carrossel, story + slides) | `slides_count`, `quantity` |
+| 4 | O que quer gerar? (Vendas, Leads, Engajamento...) | `objective` |
+| 5 | Sobre o que é? (tema livre) | `topic` |
+| 6 | Texto: IA cria ou manual? | `text_mode` + campos de texto |
+| 7 | Para quem é? (público-alvo) | `audience` |
+| 8 | Escolha a diagramação (6 layouts visuais) | `layout_type` |
+| 9 | Referências visuais (mín 3) | `references[]` |
+| 10 | Logo da marca | `logo_upload` |
+| 11 | Imagens (base, pessoa, fundo — opcional) | `base_image`, `character_image`, `background_image` |
+| 12 | Elementos visuais | `elements[]` |
+| 13 | Restrições (o que não quer) | `restrictions` |
+| 14 | Revisão final + geração | — |
 
-#### 1. Desduplicar membros ativos vs pendentes no UI
+### Mudanças nos arquivos
 
-**Arquivos**: `src/pages/cliente/ClienteConfiguracoes.tsx`, `src/pages/Matriz.tsx`
-
-Na `UsersAndTeamsTab`, cruzar a lista de `members` com `pendingInvitations`:
-- Se o email do membro aparece em `pendingInvitations` com `accepted_at = null` → **excluir** da lista ativa (admins/users)
-- Esse membro já aparece na seção "Convites Pendentes"
-- Resultado: sem duplicação
-
-#### 2. Marcar accepted_at via edge function (não via client SDK)
-
-**Arquivo**: `supabase/functions/invite-user/index.ts` (adicionar ação "accept"), ou criar endpoint dedicado
-
-Em vez de o Welcome.tsx tentar `update` direto (que falha por RLS), criar uma ação `accept-invitation` na edge function `manage-member` (que já usa service role):
-- Welcome.tsx chama `supabase.functions.invoke("manage-member", { body: { action: "accept_invitation" } })`
-- A edge function usa adminClient para atualizar `accepted_at` e garantir que funcione
-
-**Arquivo**: `src/pages/Welcome.tsx` — trocar o update direto pelo invoke da edge function
-
-#### 3. Limpar pending_invitations na remoção de membro
-
-**Arquivo**: `supabase/functions/manage-member/index.ts`
-
-No bloco `action === "remove"`, adicionar:
-- Buscar o email do user via `auth.admin.getUserById(user_id)`
-- Deletar de `pending_invitations` onde `email = userEmail AND organization_id = organization_id`
-- Invalidar cache de pending no frontend
-
-#### 4. Desabilitar HIBP
-
-Usar `cloud--configure_auth` para desabilitar a verificação de senhas vazadas, permitindo que qualquer senha que cumpra as regras de complexidade seja aceita.
-
-#### 5. Invalidação completa de cache
-
-**Arquivos**: `src/components/EditMemberDialog.tsx`, `src/pages/Matriz.tsx`
-
-Em todos os pontos onde membros são modificados (save, remove, invite), invalidar AMBOS:
-- `["org-members"]`
-- `["pending-invitations"]`
-
-#### 6. Mesma lógica na Matriz (franqueadora)
-
-**Arquivo**: `src/pages/Matriz.tsx`
-
-Aplicar a mesma deduplicação: importar `usePendingInvitations`, filtrar membros ativos excluindo emails pendentes, e mostrar seção "Convites Pendentes" com reenvio/cancelamento (como já existe em ClienteConfiguracoes).
-
-### Arquivos
+#### Frontend
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/cliente/ClienteConfiguracoes.tsx` | Filtrar membros ativos excluindo pendentes |
-| `src/pages/Matriz.tsx` | Adicionar seção pendentes + mesma deduplicação |
-| `src/pages/Welcome.tsx` | Trocar update direto por invoke de edge function |
-| `supabase/functions/manage-member/index.ts` | Adicionar ação `accept_invitation` + limpar pending na remoção |
-| `src/components/EditMemberDialog.tsx` | Invalidar `pending-invitations` no remove |
-| Auth config | Desabilitar HIBP |
+| `src/components/cliente/social/constants.ts` | Simplificar LAYOUT_TYPES para 6 (hero_center, split, overlay, card, minimal, grid). Adicionar grid maps por layout. Adicionar arrays de objetivos, elementos visuais e campos de público. |
+| `src/components/cliente/social/ArtWizard.tsx` | Refatorar para 14 steps. Novo estado: `topic`, `audience`, `textMode`, `restrictions`, `elements`, `baseImage`, `characterImage`, `backgroundImage`. Novo `canProceed()` por step. |
+| `src/components/cliente/social/ArtWizardSteps.tsx` | Reescrever steps: Step1 tipo material, Step2 formato, Step3 tipo/qtd, Step4 objetivo, Step5 tema, Step6 texto (AI/manual), Step7 público, Step8 layout picker, Step9 referências, Step10 logo, Step11 imagens (3 categorias), Step12 elementos visuais, Step13 restrições, Step14 revisão final. |
+| `src/components/cliente/social/LayoutMockupSvg.tsx` | Atualizar para os 6 novos layouts (hero_center, split, overlay, card, minimal, grid) |
+| `src/components/cliente/social/LayoutPicker.tsx` | Sem mudança estrutural, mas renderizar os 6 novos |
+| `src/pages/cliente/ClienteRedesSociais.tsx` | Atualizar `ArtGeneratePayload` para incluir novos campos (`topic`, `audience`, `textMode`, `restrictions`, `elements`, `baseImage`, `characterImage`, `backgroundImage`) |
+| `src/hooks/useClientePosts.ts` | Passar novos campos para a edge function |
 
-### Resultado
+#### Backend (Edge Function)
 
-- Convidados pendentes aparecem APENAS na seção "Pendentes", não como ativos
-- Ao aceitar convite (criar senha), status muda para ativo automaticamente
-- Ao remover membro, ele some completamente (de membros E de pendentes)
-- Senhas que seguem as regras são sempre aceitas
-- Cache sempre atualizado em todas as operações
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/generate-social-image/index.ts` | **Refatoração profunda**: (1) Novo template de prompt final com 14 seções (TYPE, FORMAT, OBJECTIVE, TOPIC, AUDIENCE, LAYOUT+GRID, TEXT, BRAND REFS, IMAGE HANDLING, LOGO PROCESSING, LOGO PLACEMENT, VISUAL STYLE, QUALITY, NEGATIVE). (2) Grid maps por layout injetados automaticamente. (3) Análise de referências extraindo paleta/tipografia/estilo. (4) Verificação pós-geração com IA + fallback em 3 níveis (normal → strict → ultra strict). (5) Regras por objetivo (vendas=alto contraste, autoridade=elegante, etc.). (6) Regras separadas para imagem base vs pessoa vs fundo. |
+| `supabase/functions/generate-social-briefing/index.ts` | Atualizar para receber os novos campos (topic, audience, textMode, restrictions) e gerar texto com base neles. |
+
+### Verificação pós-geração (fallback automático)
+
+Após gerar a arte, o sistema fará uma chamada adicional à IA para avaliar:
+- Layout respeitado?
+- Logo na posição correta?
+- Headline dominante?
+- Composição limpa?
+- Identidade visual mantida?
+
+Se qualquer item falhar, regenera com prompt mais restritivo (até 3 tentativas: normal → strict → ultra strict). Isso acontece dentro da edge function, transparente para o usuário.
+
+### Regras de carrossel
+
+Quando formato = carrossel:
+- Slide 1: hook forte
+- Slides do meio: desenvolvimento do conteúdo
+- Último slide: CTA/fechamento
+- Todos mantêm mesma identidade, paleta, tipografia, grid, posição de logo
+
+### Regras de impressão
+
+Quando tipo = impresso:
+- Alta resolução (300dpi)
+- Cores CMYK
+- Margem de segurança/sangria
+- Conteúdo importante longe das bordas
+
+### Resultado esperado
+
+- Usuário responde perguntas simples sem termos técnicos
+- Sistema monta prompt técnico e travado com grid maps, regras de logo, identidade visual
+- Artes geradas respeitam layout, logo, hierarquia e branding
+- Fallback automático corrige erros sem intervenção do usuário
+- Suporte a digital + impressão + carrossel
+
+### Estimativa de complexidade
+
+Esta é uma refatoração grande envolvendo ~7 arquivos e ~2500+ linhas de código. Recomendo implementar em fases dentro da mesma execução, começando pelos constants/steps do wizard e terminando com o fallback no backend.
 
