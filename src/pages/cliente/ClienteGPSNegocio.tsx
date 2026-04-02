@@ -166,8 +166,6 @@ export default function ClienteGPSNegocio() {
   const approveStrategy = useApproveStrategy();
   const generateStrategy = useGenerateStrategy();
   const saveSalesPlan = useSaveSalesPlan();
-  const { data: existingFunnels } = useCrmFunnels();
-  const { createFunnel } = useCrmFunnelMutations();
   const { createScript } = useClienteScriptMutations();
 
   // ── Metas state ──
