@@ -743,8 +743,12 @@ Output ONLY the extracted logo image.`,
 
     // Build enriched prompt for CoT (in English labels)
     let enrichedPrompt = prompt || "";
+    if (topic) enrichedPrompt += `\nTopic/Subject: ${topic}`;
+    if (audience) enrichedPrompt += `\nTarget Audience: ${audience}`;
+    if (objective) enrichedPrompt += `\nObjective: ${objective}`;
     if (cena) enrichedPrompt += `\nScene: ${cena}`;
     if (elementos_visuais) enrichedPrompt += `\nVisual elements: ${elementos_visuais}`;
+    if (elements && elements.length > 0) enrichedPrompt += `\nDesired elements: ${elements.join(", ")}`;
     if (headline) enrichedPrompt += `\nHeadline: ${headline}`;
     if (subheadline) enrichedPrompt += `\nSubheadline: ${subheadline}`;
     if (supporting_text) enrichedPrompt += `\nSupporting text: ${supporting_text}`;
@@ -753,8 +757,8 @@ Output ONLY the extracted logo image.`,
     if (tipo_postagem) enrichedPrompt += `\nPost type: ${tipo_postagem}`;
     if (brand_name) enrichedPrompt += `\nBrand: ${brand_name}`;
     if (layout_type) enrichedPrompt += `\nLayout type: ${layout_type}`;
-    if (objective) enrichedPrompt += `\nObjective: ${objective}`;
     if (logo_url) enrichedPrompt += `\nBrand logo: provided as separate image`;
+    if (restrictions) enrichedPrompt += `\nNEGATIVE CONSTRAINTS (AVOID): ${restrictions}`;
     if (feedbackContext) enrichedPrompt += feedbackContext;
 
     // Convert reference images to base64 EARLY so CoT can use them too
