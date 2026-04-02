@@ -166,6 +166,7 @@ function OrgTab() {
 function UsersAndTeamsTab() {
   const { user } = useAuth();
   const { data: members, isLoading } = useOrgMembers();
+  const { data: pendingInvitations, isLoading: pendingLoading } = usePendingInvitations();
   const { data: subscription } = useClienteSubscription();
   const { data: orgId } = useUserOrgId();
   const { data: teams } = useOrgTeams();
