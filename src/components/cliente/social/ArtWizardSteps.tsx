@@ -299,7 +299,7 @@ function Step5Topic({ topic, setTopic, suggestions }: StepProps) {
         className="resize-none"
       />
       <div className="flex flex-wrap gap-1.5">
-        {(props.suggestions?.topics || ["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"]).map(s => (
+        {(suggestions?.topics || ["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"]).map(s => (
           <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setTopic(s)}>
             {s}
           </Badge>
