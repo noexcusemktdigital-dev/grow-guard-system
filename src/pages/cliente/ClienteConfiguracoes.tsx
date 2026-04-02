@@ -201,6 +201,7 @@ function UsersAndTeamsTab() {
       setInviteForm({ email: "", full_name: "", role: "cliente_user" });
       setInviteTeamIds([]);
       qc.invalidateQueries({ queryKey: ["org-members"] });
+      qc.invalidateQueries({ queryKey: ["pending-invitations"] });
     },
     onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
   });
