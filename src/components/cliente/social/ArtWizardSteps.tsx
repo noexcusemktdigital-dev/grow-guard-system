@@ -531,7 +531,7 @@ function Step11Images({ baseImageUrl, setBaseImageUrl, characterImageUrl, setCha
 }
 
 /* ── Step 12: Elements ── */
-function Step12Elements({ elements, setElements }: StepProps) {
+function Step12Elements({ elements, setElements, suggestions }: StepProps) {
   const toggleElement = (el: string) => {
     if (elements.includes(el)) setElements(elements.filter(e => e !== el));
     else setElements([...elements, el]);
