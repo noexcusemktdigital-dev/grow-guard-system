@@ -14,6 +14,38 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    // Parse body early so we can handle accept_invitation before auth
+    const body = await req.json();
+    const { user_id, organization_id, action = "update", role, full_name, job_title } = body;
+
+    const admin = createClient(supabaseUrl, serviceKey);
+
+    // ── accept_invitation: NO auth required — uses service role only ──
+    if (action === "accept_invitation") {
+      const email = body.email?.toLowerCase();
+      if (!email) {
+        return new Response(JSON.stringify({ error: "email required" }), { status: 200, headers: responseHeaders });
+      }
+      console.log("[manage-member] Accepting invitation for", email);
+      const { error: upErr } = await admin
+        .from("pending_invitations")
+        .update({ accepted_at: new Date().toISOString() })
+        .eq("email", email)
+        .is("accepted_at", null);
+      if (upErr) {
+        console.warn("[manage-member] Error updating pending_invitations:", upErr.message);
+      }
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: responseHeaders });
+    }
+
+    // ── All other actions require auth ──
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Sessão expirada. Faça login novamente." }), {
+        status: 200,
+        headers: responseHeaders,
+      });
+    }
+
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -32,24 +64,7 @@ Deno.serve(async (req) => {
     }
 
     const callerId = caller.id;
-    const body = await req.json();
-    const { user_id, organization_id, action = "update", role, full_name, job_title } = body;
     console.log("[manage-member] Payload", { callerId, user_id, organization_id, action, hasRole: !!role });
-
-    const admin = createClient(supabaseUrl, serviceKey);
-
-    // ── accept_invitation: called from Welcome page after password set ──
-    if (action === "accept_invitation") {
-      const email = body.email?.toLowerCase();
-      if (!email) {
-        return new Response(JSON.stringify({ error: "email required" }), { status: 200, headers: responseHeaders });
-      }
-      console.log("[manage-member] Accepting invitation for", email);
-      const { error: upErr } = await admin
-        .from("pending_invitations")
-        .update({ accepted_at: new Date().toISOString() })
-        .eq("email", email)
-        .is("accepted_at", null);
       if (upErr) {
         console.warn("[manage-member] Error updating pending_invitations:", upErr.message);
       }
