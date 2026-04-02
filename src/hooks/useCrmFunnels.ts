@@ -1,7 +1,9 @@
 // @ts-nocheck
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import { DEFAULT_STAGES } from "@/components/crm/CrmStageSystem";
 
 export function useCrmFunnels() {
   const { data: orgId } = useUserOrgId();
