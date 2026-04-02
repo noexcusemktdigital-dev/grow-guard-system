@@ -154,6 +154,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
       playSound("success");
     },
   });
