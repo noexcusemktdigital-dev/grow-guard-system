@@ -101,6 +101,7 @@ export function ArtWizard({
   const [step, setStep] = useState(1);
   const strategyData = useStrategyData();
   const suggestions = useMemo(() => getSmartSuggestions(strategyData), [strategyData]);
+  const referenceMemory = useReferenceMemory(orgId);
 
   // Step 1: Material type
   const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
