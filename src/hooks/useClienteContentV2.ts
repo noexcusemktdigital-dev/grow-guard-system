@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClienteSubscription } from "./useClienteSubscription";
