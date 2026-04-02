@@ -32,6 +32,7 @@ const TEAM_COLORS_LOCAL = TEAM_COLORS;
 
 export default function Matriz() {
   const { data: members, isLoading: loadingMembers } = useOrgMembers();
+  const { data: pendingInvitations } = usePendingInvitations();
   const { data: orgId } = useUserOrgId();
   const { data: teams, isLoading: loadingTeams } = useOrgTeams();
   const { data: teamMemberships } = useTeamMemberships();
