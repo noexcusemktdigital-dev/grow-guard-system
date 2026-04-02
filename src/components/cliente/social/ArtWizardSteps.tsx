@@ -11,8 +11,8 @@ import { RefUploader } from "./RefUploader";
 import {
   ART_FORMATS, POST_TYPES, ART_OBJECTIVES, TEXT_MODES,
   PRINT_FORMATS, PRINT_TYPES, LAYOUT_TYPES,
-  AUDIENCE_SUGGESTIONS, ELEMENT_SUGGESTIONS,
 } from "./constants";
+import type { SmartSuggestions } from "@/utils/smartSuggestions";
 import { LayoutPicker } from "./LayoutPicker";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import {
@@ -99,6 +99,7 @@ interface StepProps {
   setCharacterImageUrl: (v: string) => void;
   backgroundImageUrl: string;
   setBackgroundImageUrl: (v: string) => void;
+  suggestions?: SmartSuggestions;
 }
 
 export function ArtWizardStep(props: StepProps) {
@@ -283,7 +284,7 @@ function Step4Objective({ objective, setObjective }: StepProps) {
 }
 
 /* ── Step 5: Topic ── */
-function Step5Topic({ topic, setTopic }: StepProps) {
+function Step5Topic({ topic, setTopic, suggestions }: StepProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -291,14 +292,14 @@ function Step5Topic({ topic, setTopic }: StepProps) {
         <p className="text-sm text-muted-foreground">Descreva o assunto principal</p>
       </div>
       <Textarea
-        placeholder="Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."
+        placeholder={suggestions?.topicPlaceholder || "Ex: consórcio de imóveis, clínica odontológica, lançamento de curso, evento corporativo..."}
         value={topic}
         onChange={(e) => setTopic(e.target.value)}
         rows={3}
         className="resize-none"
       />
       <div className="flex flex-wrap gap-1.5">
-        {["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"].map(s => (
+        {(suggestions?.topics || ["Consórcio", "Imóvel", "Clínica", "Curso", "Evento", "Seguro", "Produto novo"]).map(s => (
           <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setTopic(s)}>
             {s}
           </Badge>
@@ -352,7 +353,7 @@ function Step6TextMode({ textMode, setTextMode, briefingText, setBriefingText, m
 }
 
 /* ── Step 7: Audience ── */
-function Step7Audience({ audience, setAudience }: StepProps) {
+function Step7Audience({ audience, setAudience, suggestions }: StepProps) {
   return (
     <div className="space-y-4">
       <div>
@@ -360,12 +361,12 @@ function Step7Audience({ audience, setAudience }: StepProps) {
         <p className="text-sm text-muted-foreground">Defina o público-alvo para a IA adaptar linguagem e visual</p>
       </div>
       <Input
-        placeholder="Ex: empresários, mulheres 25-45, médicos, público geral..."
+        placeholder={suggestions?.audiencePlaceholder || "Ex: empresários, mulheres 25-45, médicos, público geral..."}
         value={audience}
         onChange={(e) => setAudience(e.target.value)}
       />
       <div className="flex flex-wrap gap-1.5">
-        {AUDIENCE_SUGGESTIONS.map(s => (
+        {(suggestions?.audiences || []).map(s => (
           <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 text-xs" onClick={() => setAudience(s)}>
             {s}
           </Badge>
@@ -530,7 +531,7 @@ function Step11Images({ baseImageUrl, setBaseImageUrl, characterImageUrl, setCha
 }
 
 /* ── Step 12: Elements ── */
-function Step12Elements({ elements, setElements }: StepProps) {
+function Step12Elements({ elements, setElements, suggestions }: StepProps) {
   const toggleElement = (el: string) => {
     if (elements.includes(el)) setElements(elements.filter(e => e !== el));
     else setElements([...elements, el]);
@@ -544,7 +545,7 @@ function Step12Elements({ elements, setElements }: StepProps) {
         <p className="text-sm text-muted-foreground mt-1">Selecione elementos visuais desejados</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {ELEMENT_SUGGESTIONS.map(el => (
+        {(suggestions?.elements || []).map(el => (
           <Badge
             key={el}
             variant={elements.includes(el) ? "default" : "outline"}
