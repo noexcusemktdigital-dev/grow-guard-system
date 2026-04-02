@@ -222,19 +222,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existingMembership) {
-        // Already a member — update pending_invitations and resend
-        await adminClient
-          .from("pending_invitations")
-          .upsert({
-            email: email.toLowerCase().trim(),
-            organization_id,
-            invited_by: callerId,
-            role: role || "cliente_user",
-            team_ids: team_ids || [],
-            full_name: full_name || null,
-            accepted_at: null,
-          }, { onConflict: "email,organization_id" });
-
         return new Response(
           JSON.stringify({ error: "Este usuário já é membro desta organização." }),
           { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
@@ -253,12 +240,13 @@ Deno.serve(async (req) => {
     const siteUrl = Deno.env.get("SITE_URL") || "https://sistema.noexcusedigital.com.br";
 
     if (isNewUser) {
-      // New user: redirect to /welcome instead of /reset-password
-      const redirectPath = "/welcome";
+      // Generate recovery link but extract token_hash to build a safe URL
+      // that won't be consumed by email scanners pre-clicking
+      const portalParam = orgType === "cliente" ? "saas" : "franchise";
       const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
         type: "recovery",
         email,
-        options: { redirectTo: `${siteUrl}${redirectPath}?portal=${orgType === "cliente" ? "saas" : "franchise"}` },
+        options: { redirectTo: `${siteUrl}/welcome?portal=${portalParam}` },
       });
 
       if (linkErr) {
@@ -266,14 +254,34 @@ Deno.serve(async (req) => {
         throw linkErr;
       }
 
-      const recoveryUrl = linkData?.properties?.action_link;
-      console.log("[invite-user] Recovery URL generated:", recoveryUrl ? "YES" : "NO");
-      if (recoveryUrl) {
+      // Build a custom URL using token_hash instead of the action_link.
+      // The action_link hits /verify which consumes the OTP on GET — email
+      // scanners can trigger this before the real user opens the link.
+      // Using token_hash, the frontend calls verifyOtp explicitly only when
+      // the user interacts with the page.
+      const tokenHash = linkData?.properties?.hashed_token;
+      const emailEncoded = encodeURIComponent(email);
+
+      if (tokenHash) {
+        const safeInviteUrl = `${siteUrl}/welcome?token_hash=${tokenHash}&type=recovery&email=${emailEncoded}&portal=${portalParam}`;
+        console.log("[invite-user] Safe invite URL generated (token_hash approach)");
         try {
-          await sendViaResend(email, buildInviteHtml(recoveryUrl));
+          await sendViaResend(email, buildInviteHtml(safeInviteUrl));
           console.log(`Invite email sent via Resend to ${email}`);
         } catch (emailErr) {
           console.error("Failed to send invite email via Resend:", emailErr);
+        }
+      } else {
+        // Fallback: use action_link if token_hash not available
+        const recoveryUrl = linkData?.properties?.action_link;
+        console.log("[invite-user] Fallback to action_link (no token_hash)");
+        if (recoveryUrl) {
+          try {
+            await sendViaResend(email, buildInviteHtml(recoveryUrl));
+            console.log(`Invite email sent via Resend to ${email} (fallback)`);
+          } catch (emailErr) {
+            console.error("Failed to send invite email via Resend:", emailErr);
+          }
         }
       }
     } else {

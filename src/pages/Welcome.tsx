@@ -24,33 +24,82 @@ const Welcome = () => {
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState(false);
-  const [recoveryConfirmed, setRecoveryConfirmed] = useState(false);
+  const [verifying, setVerifying] = useState(true);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const portal = searchParams.get("portal") || "";
+  const tokenHash = searchParams.get("token_hash") || "";
+  const tokenType = searchParams.get("type") || "";
+  const tokenEmail = searchParams.get("email") || "";
 
   const allRulesPass = useMemo(() => PASSWORD_RULES.every((r) => r.test(password)), [password]);
   const passwordsMatch = password.length > 0 && password === confirmPassword;
 
   useEffect(() => {
+    // Check if URL hash contains an error from Supabase redirect (e.g. otp_expired)
+    const hash = window.location.hash;
+    if (hash.includes("error=")) {
+      const hashParams = new URLSearchParams(hash.replace("#", ""));
+      const errorCode = hashParams.get("error_code");
+      const errorDesc = hashParams.get("error_description");
+      console.warn("[Welcome] URL hash error:", errorCode, errorDesc);
+
+      // If we have token_hash params, we can still try explicit verification
+      if (tokenHash && tokenType) {
+        console.log("[Welcome] Hash error detected but token_hash available, attempting explicit verify");
+        // Clean the hash so it doesn't interfere
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      } else {
+        // No token_hash — this is a legacy link that already expired
+        setSessionError(true);
+        setVerifying(false);
+        return;
+      }
+    }
+
+    // If we have token_hash, verify explicitly (new flow)
+    if (tokenHash && tokenType) {
+      console.log("[Welcome] Verifying token_hash explicitly...");
+      supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: tokenType as "recovery",
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error("[Welcome] verifyOtp error:", error.message);
+          setSessionError(true);
+          setVerifying(false);
+        } else if (data?.session) {
+          console.log("[Welcome] verifyOtp success, session ready");
+          setSessionReady(true);
+          setVerifying(false);
+        } else {
+          console.warn("[Welcome] verifyOtp returned no session");
+          setSessionError(true);
+          setVerifying(false);
+        }
+      });
+      return;
+    }
+
+    // Legacy flow: listen for auth state changes (for old action_link style)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[Welcome] onAuthStateChange:", event);
-      if (event === "PASSWORD_RECOVERY" && session) {
+      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
         setSessionReady(true);
-        setRecoveryConfirmed(true);
-      }
-      if (event === "SIGNED_IN" && session) {
-        setSessionReady(true);
-        setRecoveryConfirmed(true);
+        setVerifying(false);
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
+      if (session) {
+        setSessionReady(true);
+        setVerifying(false);
+      }
     });
 
     const timeout = setTimeout(() => {
+      setVerifying(false);
       setSessionReady((ready) => {
         if (!ready) setSessionError(true);
         return ready;
@@ -61,7 +110,7 @@ const Welcome = () => {
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  }, []);
+  }, [tokenHash, tokenType]);
 
   const getRedirectPath = () => {
     if (portal === "franchise") return "/acessofranquia";
@@ -80,20 +129,21 @@ const Welcome = () => {
       return;
     }
 
-    if (!recoveryConfirmed) {
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
 
     if (error) {
       console.error("[Welcome] updateUser error:", error.message, error.status, error);
-      if (error.message?.includes("same_password")) {
+
+      // Map specific errors to user-friendly messages
+      const msg = error.message?.toLowerCase() || "";
+      if (msg.includes("same_password") || msg.includes("different_password")) {
         toast.error("A nova senha deve ser diferente da senha atual.");
-      } else if (error.status === 422) {
-        toast.error("Link de convite expirado. Peça ao administrador para reenviar o convite.");
+      } else if (msg.includes("weak_password") || msg.includes("password")) {
+        toast.error("Senha muito fraca. Tente uma senha mais forte.");
+      } else if (error.status === 401 || msg.includes("not authenticated") || msg.includes("session")) {
+        toast.error("Sessão expirada. Peça ao administrador para reenviar o convite.");
       } else if (error.status === 403) {
         toast.error("Link expirado. Peça ao administrador para reenviar o convite.");
       } else {
@@ -148,7 +198,7 @@ const Welcome = () => {
               Ir para o login
             </Button>
           </div>
-        ) : !sessionReady ? (
+        ) : verifying || !sessionReady ? (
           <div className="text-center space-y-4">
             <Loader2 className="h-8 w-8 text-white/50 mx-auto animate-spin" />
             <p className="text-white/50 text-sm">Verificando seu convite...</p>
