@@ -98,6 +98,8 @@ export function ArtWizard({
   onGenerate, onFillWithAI, isFillingAI, canAfford, creditCost, onBack,
 }: ArtWizardProps) {
   const [step, setStep] = useState(1);
+  const strategyData = useStrategyData();
+  const suggestions = useMemo(() => getSmartSuggestions(strategyData), [strategyData]);
 
   // Step 1: Material type
   const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
