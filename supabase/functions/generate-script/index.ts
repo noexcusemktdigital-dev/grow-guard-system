@@ -65,7 +65,9 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      console.error("[generate-script] Missing auth header");
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -76,14 +78,15 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("[generate-script] Auth failed:", userError?.message);
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext, from_gps } = await req.json();
 
