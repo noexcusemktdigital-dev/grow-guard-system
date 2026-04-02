@@ -250,12 +250,6 @@ const Welcome = () => {
                 </div>
                )}
 
-              {password.length > 0 && allRulesPass && (
-                <p className="text-xs text-white/40 flex items-center gap-1.5 px-1">
-                  <Lock className="h-3 w-3 shrink-0" />
-                  A senha também não pode ter sido exposta em vazamentos conhecidos
-                </p>
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="confirm" className="text-white/70">Confirmar senha</Label>

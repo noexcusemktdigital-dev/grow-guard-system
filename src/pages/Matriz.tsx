@@ -173,64 +173,144 @@ export default function Matriz() {
             </Button>
           </div>
 
-          {(members ?? []).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-1">Nenhum membro</h3>
-              <p className="text-sm text-muted-foreground mb-4">Convide membros para a equipe da franqueadora.</p>
-              <Button onClick={() => setShowInvite(true)}>
-                <UserPlus className="w-4 h-4 mr-1" /> Convidar Primeiro Membro
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {members?.map((m) => {
-                const userTeams = getUserTeams(m.user_id);
-                return (
-                  <Card key={m.user_id} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                          {(m.full_name || "?").slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{m.full_name || "Sem nome"}</p>
-                        {m.job_title && <p className="text-xs text-muted-foreground truncate">{m.job_title}</p>}
-                      </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
-                        {ROLE_LABELS[m.role] || m.role}
-                      </Badge>
-                    </div>
+          {(() => {
+            // Filter out members who still have a pending invitation
+            const pendingEmails = new Set(
+              (pendingInvitations ?? []).filter(inv => !inv.accepted_at).map(inv => inv.email.toLowerCase())
+            );
+            const activeMembers = (members ?? []).filter(m => !pendingEmails.has(m.email?.toLowerCase()));
 
-                    {/* Team badges */}
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {userTeams.length > 0 ? (
-                        userTeams.map((t) => (
-                          <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS_LOCAL[t.slug] || TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
-                            {t.name}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground italic">Sem time atribuído</span>
-                      )}
-                    </div>
+            return activeMembers.length === 0 && (pendingInvitations ?? []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-1">Nenhum membro</h3>
+                <p className="text-sm text-muted-foreground mb-4">Convide membros para a equipe da franqueadora.</p>
+                <Button onClick={() => setShowInvite(true)}>
+                  <UserPlus className="w-4 h-4 mr-1" /> Convidar Primeiro Membro
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {activeMembers.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {activeMembers.map((m) => {
+                      const userTeams = getUserTeams(m.user_id);
+                      return (
+                        <Card key={m.user_id} className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                                {(m.full_name || "?").slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{m.full_name || "Sem nome"}</p>
+                              {m.job_title && <p className="text-xs text-muted-foreground truncate">{m.job_title}</p>}
+                            </div>
+                            <Badge variant="outline" className="text-[10px] shrink-0">
+                              {ROLE_LABELS[m.role] || m.role}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {userTeams.length > 0 ? (
+                              userTeams.map((t) => (
+                                <span key={t.id} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${TEAM_COLORS_LOCAL[t.slug] || TEAM_COLORS[t.slug] || "bg-muted text-muted-foreground"}`}>
+                                  {t.name}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground italic">Sem time atribuído</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-muted-foreground">
+                              Desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
+                            </p>
+                            {m.user_id !== user?.id && (
+                              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditMember(m)}>
+                                Editar
+                              </Button>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
 
-                    <div className="flex items-center justify-between mt-3">
-                      <p className="text-xs text-muted-foreground">
-                        Desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
-                      </p>
-                      {m.user_id !== user?.id && (
-                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => openEditMember(m)}>
-                          Editar
-                        </Button>
-                      )}
+                {/* Pending Invitations */}
+                {pendingInvitations && pendingInvitations.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-amber-500" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Convites Pendentes ({pendingInvitations.length})</span>
                     </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {pendingInvitations.map((inv) => (
+                        <Card key={inv.id} className="p-4 border-amber-200/50 bg-amber-50/30 dark:border-amber-500/20 dark:bg-amber-500/5">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarFallback className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-sm font-semibold">
+                                {(inv.full_name || inv.email[0] || "?").slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{inv.full_name || inv.email}</p>
+                              {inv.full_name && <p className="text-xs text-muted-foreground truncate">{inv.email}</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-3">
+                            <Badge variant="outline" className="gap-1 bg-amber-100/50 text-amber-700 border-amber-300/50 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30">
+                              <Clock className="w-3 h-3" />Pendente
+                            </Badge>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-7 gap-1"
+                                onClick={async () => {
+                                  try {
+                                    const { data, error } = await supabase.functions.invoke("invite-user", {
+                                      body: { email: inv.email, full_name: inv.full_name, role: inv.role, organization_id: orgId, team_ids: inv.team_ids },
+                                    });
+                                    if (error) throw error;
+                                    if (data?.error) throw new Error(data.error);
+                                    toast({ title: "Convite reenviado!" });
+                                    qc.invalidateQueries({ queryKey: ["pending-invitations"] });
+                                  } catch (err: unknown) {
+                                    toast({ title: "Erro ao reenviar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                <RefreshCw className="w-3 h-3" />Reenviar
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-7 text-destructive hover:text-destructive"
+                                onClick={async () => {
+                                  try {
+                                    await supabase.from("pending_invitations").delete().eq("id", inv.id);
+                                    toast({ title: "Convite cancelado" });
+                                    qc.invalidateQueries({ queryKey: ["pending-invitations"] });
+                                    qc.invalidateQueries({ queryKey: ["org-members"] });
+                                  } catch {
+                                    toast({ title: "Erro ao cancelar", variant: "destructive" });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 
