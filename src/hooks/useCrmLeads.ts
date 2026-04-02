@@ -154,6 +154,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
       playSound("success");
     },
   });
@@ -172,6 +173,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -189,6 +191,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -206,6 +209,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -217,6 +221,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -228,6 +233,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -239,6 +245,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
@@ -247,7 +254,10 @@ export function useCrmLeadMutations() {
       const { error } = await supabase.rpc("bulk_add_tag" as unknown as "get_parent_org_id", { _ids: ids, _tag: tag } as Record<string, unknown>);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-leads"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
+    },
   });
 
   const archiveOldLeads = useMutation({
@@ -265,6 +275,7 @@ export function useCrmLeadMutations() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
+      qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
 
