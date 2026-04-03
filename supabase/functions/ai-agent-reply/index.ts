@@ -430,9 +430,9 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }));
 
     // Build system prompt with role-specific instructions
-    const persona = agent.persona || {};
-    const knowledgeBase = agent.knowledge_base || [];
-    const objectives = agent.objectives || [];
+    const persona: Record<string, any> = agent.persona || {};
+    const knowledgeBase: any[] = agent.knowledge_base || [];
+    const objectives: any[] = agent.objectives || [];
 
     let systemPrompt = promptConfig.system_prompt || `Você é ${agent.name}, um assistente virtual.`;
 
