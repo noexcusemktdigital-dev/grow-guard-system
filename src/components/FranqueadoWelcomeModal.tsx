@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Rocket, Wrench, MessageSquareHeart, Bug,
@@ -39,6 +39,7 @@ export function FranqueadoWelcomeModal() {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent className="max-w-lg p-0 overflow-hidden gap-0">
+        <DialogTitle className="sr-only">Bem-vindo à rede NOEXCUSE</DialogTitle>
         {/* Header */}
         <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-6 pb-5 text-center">
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />

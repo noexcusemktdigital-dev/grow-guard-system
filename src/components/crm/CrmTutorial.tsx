@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -120,6 +120,7 @@ export function CrmTutorial({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0 overflow-hidden gap-0">
+        <DialogTitle className="sr-only">Tutorial CRM</DialogTitle>
         {/* Header gradient */}
         <div className="bg-gradient-to-br from-primary/90 to-primary px-6 pt-6 pb-8 text-primary-foreground relative">
           <button onClick={handleClose} className="absolute top-3 right-3 p-1 rounded-full hover:bg-primary-foreground/10 transition">

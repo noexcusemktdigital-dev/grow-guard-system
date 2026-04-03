@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,6 +52,7 @@ export function TrialWelcomeModal({ onComplete }: { onComplete?: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent className="max-w-lg p-0 overflow-hidden gap-0">
+        <DialogTitle className="sr-only">Bem-vindo ao período de trial</DialogTitle>
         {/* Header */}
         <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-6 pb-5 text-center">
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
