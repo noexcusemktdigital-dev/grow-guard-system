@@ -456,16 +456,12 @@ export default function ClienteChecklist() {
       {/* Empty state */}
       {overdue.length === 0 && pending.length === 0 && done.length === 0 && (
         <div className="text-center py-12 space-y-3">
-          <Sparkles className="h-10 w-10 mx-auto mb-3 text-primary/40" />
-          <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada</p>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleGenerate()} disabled={generating}>
-              <Wand2 className="w-4 h-4 mr-1" /> Gerar Tarefas com IA (5 créditos)
-            </Button>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
-            </Button>
-          </div>
+          <CheckSquare className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Nenhuma tarefa pendente no momento.</p>
+          <p className="text-xs text-muted-foreground">Novas demandas do CRM aparecerão aqui automaticamente.</p>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
+          </Button>
         </div>
       )}
 
