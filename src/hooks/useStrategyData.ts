@@ -29,7 +29,7 @@ export function useStrategyData() {
     gatilhosCompra: result?.icp?.gatilhos_compra || [],
 
     // Proposta de valor
-    propostaValor: result?.proposta_valor || null,
+    propostaValor: (result?.proposta_valor as Record<string, unknown>) || null,
 
     // Tom de comunicação
     tomComunicacao: result?.tom_comunicacao || null,

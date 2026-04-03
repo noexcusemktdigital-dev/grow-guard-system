@@ -74,7 +74,7 @@ export function PostResult({
                   <img src={result.result_url} alt={`Resultado ${idx + 1}`} className="w-full max-h-[500px] object-contain bg-muted" />
                 ) : result.result_data?.frameUrls ? (
                   <div className="grid grid-cols-3 gap-1 p-2 bg-muted">
-                    {result.result_data.frameUrls.map((url: string, i: number) => (
+                    {(result.result_data.frameUrls as string[]).map((url: string, i: number) => (
                       <img key={i} src={url} alt={`Frame ${i + 1}`} className="w-full aspect-[9/16] object-cover rounded" />
                     ))}
                   </div>

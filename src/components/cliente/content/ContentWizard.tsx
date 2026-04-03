@@ -255,10 +255,10 @@ export function ContentWizard({
         {hasStrategy && (
           <div className="pt-2 border-t mt-2 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
             <span className="text-primary font-medium col-span-2">✓ Dados importados da estratégia:</span>
-            {strategy.personaName && <span>👤 {strategy.personaName}</span>}
-            {strategy.tomPrincipal && <span>🎯 Tom: {strategy.tomPrincipal}</span>}
-            {strategy.pilares?.length > 0 && <span>📐 {strategy.pilares.length} pilares</span>}
-            {strategy.dores?.length > 0 && <span>💢 {strategy.dores.length} dores</span>}
+            {strategy.personaName && <span>👤 {String(strategy.personaName)}</span>}
+            {strategy.tomPrincipal && <span>🎯 Tom: {String(strategy.tomPrincipal)}</span>}
+            {Array.isArray(strategy.pilares) && (strategy.pilares as unknown[]).length > 0 && <span>📐 {(strategy.pilares as unknown[]).length} pilares</span>}
+            {Array.isArray(strategy.dores) && (strategy.dores as unknown[]).length > 0 && <span>💢 {(strategy.dores as unknown[]).length} dores</span>}
           </div>
         )}
       </div>

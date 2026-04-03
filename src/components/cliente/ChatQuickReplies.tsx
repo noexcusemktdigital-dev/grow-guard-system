@@ -46,9 +46,9 @@ export function ChatQuickReplies({ onSelect }: Props) {
   const addMutation = useMutation({
     mutationFn: async ({ label, text }: { label: string; text: string }) => {
       if (!orgId) return;
-      const { error } = await supabase
-        .from("quick_reply_templates" as unknown as "quick_reply_templates")
-        .insert({ organization_id: orgId, label, text, position: templates.length } as unknown as Record<string, unknown>);
+      const { error } = await (supabase as any)
+        .from("quick_reply_templates")
+        .insert({ organization_id: orgId, label, text, position: templates.length });
       if (error) throw error;
     },
     onSuccess: () => {
