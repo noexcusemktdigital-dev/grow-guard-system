@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* eslint-disable */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";

@@ -21,6 +21,16 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // CODE-005: Bloquear novos @ts-nocheck — redução progressiva de 507 → 0
+      // @ts-ignore e @ts-expect-error permitidos com descrição obrigatória
+      "@typescript-eslint/ban-ts-comment": ["warn", {
+        "ts-nocheck": true,
+        "ts-ignore": "allow-with-description",
+        "ts-expect-error": "allow-with-description",
+        minimumDescriptionLength: 10,
+      }],
+      // Bloquear `any` explícito novo — existentes já estão nos arquivos com @ts-nocheck
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 );
