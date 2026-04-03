@@ -46,7 +46,7 @@ interface AdAction {
   value: string;
 }
 
-async function syncGoogleAds(connection: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+async function syncGoogleAds(connection: Record<string, any>, supabase: any) {
   let accessToken = connection.access_token;
   const devToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN");
   if (!devToken) throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured");
