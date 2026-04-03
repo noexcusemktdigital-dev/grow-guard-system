@@ -39,11 +39,11 @@ export function ScriptGeneratorBriefingStep({
   // Suppress unused variable warning for funnels
   void funnels;
 
-  const salesPlanAnswers = salesPlan?.answers || {};
+  const salesPlanAnswers = (salesPlan?.answers || {}) as Record<string, string>;
   const autoContext = {
     products: products?.map(p => ({ name: p.name, price: p.price })) || [],
     segment: salesPlanAnswers.segmento || "",
-    channels: Array.isArray(salesPlanAnswers.canais_aquisicao) ? salesPlanAnswers.canais_aquisicao : [],
+    channels: Array.isArray((salesPlan?.answers as Record<string, unknown>)?.canais_aquisicao) ? (salesPlan?.answers as Record<string, unknown>)?.canais_aquisicao as string[] : [],
     teamSize: salesPlanAnswers.tamanho_equipe || "",
     ticketMedio: salesPlanAnswers.ticket_medio || "",
     modeloNegocio: salesPlanAnswers.modelo_negocio || "",
