@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
         .select("id")
         .eq("organization_id", organization_id)
         .single();
-      if (instance && !instanceIds.includes(instance.id)) {
+      if (instance && !(instanceIds as any[]).includes(instance.id)) {
         return new Response(JSON.stringify({ skipped: true, reason: "agent not assigned to this instance" }), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
