@@ -177,7 +177,7 @@ export default function ClienteTrafegoPago() {
   };
 
   const sourceData = (activeStrategy?.source_data || {}) as Record<string, unknown>;
-  const platforms = (activeStrategy?.platforms || []) as Record<string, unknown>[];
+  const platforms = (activeStrategy?.platforms || []) as any[];
 
   // Filter campaigns by platform type (with normalization)
   const filteredCampaigns = (campaigns || []).filter((c) => {
