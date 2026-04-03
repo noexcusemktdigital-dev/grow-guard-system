@@ -388,15 +388,6 @@ export default function ClienteChecklist() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border">
-          <CardContent className="py-3 px-4 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <div>
-              <p className="text-lg font-bold">{progressPct}%</p>
-              <p className="text-[10px] text-muted-foreground">Progresso</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Actions Row */}
