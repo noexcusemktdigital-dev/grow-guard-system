@@ -543,7 +543,7 @@ export default function ClienteConfiguracoes() {
         {isAdmin && <TabsContent value="organizacao"><OrgTab /></TabsContent>}
         {isAdmin && <TabsContent value="usuarios"><UsersAndTeamsTab /></TabsContent>}
         {isAdmin && <TabsContent value="notificacoes"><NotificationsTab /></TabsContent>}
-        {isAdmin && <TabsContent value="suporte"><SupportAccessManager /></TabsContent>}
+        
       </Tabs>
     </div>
   );
