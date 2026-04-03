@@ -537,7 +537,7 @@ export default function ClienteConfiguracoes() {
           {isAdmin && <TabsTrigger value="organizacao" className="gap-1.5 text-xs sm:text-sm"><Building2 className="w-4 h-4" /> Organização</TabsTrigger>}
           {isAdmin && <TabsTrigger value="usuarios" className="gap-1.5 text-xs sm:text-sm"><Users className="w-4 h-4" /> Usuários</TabsTrigger>}
           {isAdmin && <TabsTrigger value="notificacoes" className="gap-1.5 text-xs sm:text-sm"><Bell className="w-4 h-4" /> Alertas</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="suporte" className="gap-1.5 text-xs sm:text-sm"><ShieldCheck className="w-4 h-4" /> Suporte</TabsTrigger>}
+          
         </TabsList>
         <TabsContent value="perfil"><ProfileTab /></TabsContent>
         {isAdmin && <TabsContent value="organizacao"><OrgTab /></TabsContent>}
