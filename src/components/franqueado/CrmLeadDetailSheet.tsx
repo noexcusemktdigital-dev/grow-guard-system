@@ -27,8 +27,21 @@ const FRANQUEADO_STAGES = [
   "Apresentação de Estratégia", "Proposta", "Venda", "Oportunidade Perdida",
 ];
 
+interface LeadData {
+  id: string;
+  name: string;
+  stage: string;
+  company?: string;
+  email?: string;
+  phone?: string;
+  value?: number;
+  created_at: string;
+  tags?: string[];
+  [key: string]: unknown;
+}
+
 interface CrmLeadDetailSheetProps {
-  lead: Record<string, unknown> | null;
+  lead: LeadData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activities?: Array<{ id: string; title: string; description?: string; created_at: string }>;
