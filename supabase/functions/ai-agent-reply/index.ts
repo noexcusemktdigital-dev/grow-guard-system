@@ -374,10 +374,10 @@ Deno.serve(async (req) => {
 
     // Fetch CRM lead context
     let leadContext = "";
-    let leadData: Record<string, unknown> | null = null;
+    let leadData: Record<string, any> | null = null;
     let funnelStages: { key: string; label?: string }[] = [];
-    const crmActions = agent.crm_actions || {};
-    const role = agent.role || "sdr";
+    const crmActions: Record<string, any> = agent.crm_actions || {};
+    const role = (agent.role as string) || "sdr";
 
     if (contact.crm_lead_id) {
       const { data: lead } = await adminClient
