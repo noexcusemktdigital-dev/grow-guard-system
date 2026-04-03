@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useAuth } from "@/contexts/AuthContext";
 
 /** Routes completely blocked for cliente_user */
