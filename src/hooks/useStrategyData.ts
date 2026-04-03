@@ -20,7 +20,7 @@ export function useStrategyData() {
     status: strategy?.status,
 
     // ICP
-    icp: result?.icp || null,
+    icp: (result?.icp as Record<string, unknown>) || null,
     personaName: result?.icp?.nome_persona || null,
     publicoAlvo: result?.icp?.descricao || null,
     dores: result?.icp?.dores || [],
