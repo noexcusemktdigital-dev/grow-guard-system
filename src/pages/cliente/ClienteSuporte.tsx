@@ -20,6 +20,8 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { SupportAccessManager } from "@/components/cliente/SupportAccessManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Aberto", in_progress: "Em análise", waiting: "Aguardando", resolved: "Resolvido", closed: "Encerrado",
@@ -117,12 +119,22 @@ export default function ClienteSuporte() {
             <MessageSquare className="w-5 h-5 text-primary" />
             <h1 className="text-xl font-bold">Suporte</h1>
           </div>
-          <p className="text-sm text-muted-foreground">Abra e acompanhe chamados de suporte</p>
+          <p className="text-sm text-muted-foreground">Chamados e acesso temporário de suporte</p>
         </div>
-        <Button size="sm" onClick={() => setCreateDialog(true)}>
-          <Plus className="w-4 h-4 mr-1" /> Novo Chamado
-        </Button>
       </div>
+
+      <Tabs defaultValue="chamados">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="chamados" className="gap-1.5 text-xs sm:text-sm"><MessageSquare className="w-4 h-4" /> Chamados</TabsTrigger>
+          <TabsTrigger value="acesso" className="gap-1.5 text-xs sm:text-sm"><Clock className="w-4 h-4" /> Acesso Temporário</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="chamados">
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setCreateDialog(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Novo Chamado
+          </Button>
+        </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-3">
@@ -270,6 +282,12 @@ export default function ClienteSuporte() {
           </div>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="acesso">
+          <SupportAccessManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
