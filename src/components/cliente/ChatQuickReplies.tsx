@@ -48,7 +48,7 @@ export function ChatQuickReplies({ onSelect }: Props) {
       if (!orgId) return;
       const { error } = await supabase
         .from("quick_reply_templates" as unknown as "quick_reply_templates")
-        .insert({ organization_id: orgId, label, text, position: templates.length } as Record<string, unknown>);
+        .insert({ organization_id: orgId, label, text, position: templates.length } as unknown as Record<string, unknown>);
       if (error) throw error;
     },
     onSuccess: () => {

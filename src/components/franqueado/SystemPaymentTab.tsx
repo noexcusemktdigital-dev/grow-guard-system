@@ -21,7 +21,7 @@ export function SystemPaymentTab() {
   const chargeMutation = useChargeSystemFee();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [paymentResult, setPaymentResult] = useState<Record<string, unknown> | null>(null);
+  const [paymentResult, setPaymentResult] = useState<{ pix_qr_code?: string; pix_copy_paste?: string; invoice_url?: string; payment_id?: string } | null>(null);
 
   const handlePay = async (method: string) => {
     setSelectedMethod(method);

@@ -272,7 +272,7 @@ export function CrmAutomations() {
       updateAutomation.mutate({ id: editingId, ...payload });
       toast({ title: "Automação atualizada" });
     } else {
-      createAutomation.mutate(payload);
+      createAutomation.mutate(payload as { name: string; trigger_type: string; action_type: string; trigger_config?: Record<string, unknown>; action_config?: Record<string, unknown>; is_active?: boolean });
       toast({ title: "Automação criada" });
     }
     reset();

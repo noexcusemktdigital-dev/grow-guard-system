@@ -245,18 +245,18 @@ function BatchFolder({ batch, navigate, onCopy, onExpand, onDelete }: {
                     </div>
                   )}
 
-                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && parsedContent?.headline && (
-                    <p className="text-sm font-extrabold">{parsedContent.headline}</p>
+                  {(formato.includes("post") || formato.includes("educativo") || formato.includes("autoridade")) && (parsedContent as Record<string, unknown>)?.headline && (
+                    <p className="text-sm font-extrabold">{String((parsedContent as Record<string, unknown>).headline)}</p>
                   )}
 
-                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && parsedContent?.hook && (
+                  {(formato.includes("video") || formato.includes("vídeo") || formato.includes("roteiro")) && (parsedContent as Record<string, unknown>)?.hook && (
                     <div className="rounded-lg bg-primary/10 p-2 text-center">
-                      <p className="text-xs font-bold">🎬 "{parsedContent.hook}"</p>
+                      <p className="text-xs font-bold">🎬 "{String((parsedContent as Record<string, unknown>).hook)}"</p>
                     </div>
                   )}
 
                   {r.legenda && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">{r.legenda}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{String(r.legenda)}</p>
                   )}
 
                   <div className="flex gap-2 pt-1 border-t">
