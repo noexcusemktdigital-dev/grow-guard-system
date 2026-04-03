@@ -52,8 +52,8 @@ export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: Cli
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={[...planHistory].reverse().map(h => ({
-                  data: new Date(h.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
-                  score: h.score,
+                  data: new Date(h.created_at as string).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+                  score: h.score as number,
                 }))} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradHistoryEvo" x1="0" y1="0" x2="0" y2="1">
