@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchingRef = useRef(false);
   const lastFetchedUserRef = useRef<string | null>(null);
   const roleRef = useRef<AppRole | null>(null);
+  const initializedRef = useRef(false);
 
   // Keep roleRef in sync
   useEffect(() => { roleRef.current = role; }, [role]);
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const path = window.location.pathname;
       const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
 
-      // Fast timeouts (6s) with max 2 retries — no exponential backoff, just quick retry
+      // Fast timeouts (6s) with max 2 retries
       const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
@@ -82,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (attempt < 1) await new Promise(r => setTimeout(r, 300));
         }
-        // failed after retries
         return null;
       };
 
@@ -122,19 +122,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           || roles[0];
         setRole(topRole);
         lastFetchedUserRef.current = currentUser.id;
-        // Cache role for timeout fallback
         try { localStorage.setItem("noe-cached-role", topRole); } catch {}
       } else {
         // Check if this was a timeout (null result) vs genuine "no roles"
         if (roleResult === null) {
-          // On timeout, use cached role if available — don't guess
-          // Role fetch timed out, checking cached role
           const cached = localStorage.getItem("noe-cached-role") as AppRole | null;
           if (cached) {
-            // Using cached role as fallback
             setRole(cached);
           } else {
-            // Last resort fallback
             const fallback: AppRole = isSaasPortal ? "cliente_user" : "franqueado";
             setRole(fallback);
           }
@@ -147,7 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const isGoogleOAuth = currentUser.app_metadata?.provider === "google";
 
         if (signupSource === "saas" || isGoogleOAuth) {
-          // For Google OAuth users, auto-provision via signup-saas if no org exists
           if (isGoogleOAuth) {
             const { data: existingOrg } = await supabase.rpc("get_user_org_id", { _user_id: currentUser.id, _portal: "saas" });
             if (!existingOrg) {
@@ -156,10 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   ? `${currentUser.user_metadata.full_name}'s Company`
                   : "Minha Empresa";
                 await supabase.functions.invoke("signup-saas", {
-                  body: {
-                    user_id: currentUser.id,
-                    company_name: companyName,
-                  },
+                  body: { user_id: currentUser.id, company_name: companyName },
                 });
                 logger.info("[Auth] Auto-provisioned Google OAuth user via signup-saas");
               } catch (provisionErr) {
@@ -186,17 +177,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
           if (!found) {
-            // Fail safely — do not grant any role automatically
-            // User will see login/error screen; support can investigate
             logger.error("[Auth] Role not found after 10s polling — provisioning may have failed. Role set to null.");
             lastFetchedUserRef.current = currentUser.id;
           }
-        } else {
-          // No roles found and not a SaaS signup, role remains null
         }
       }
     } catch (err) {
-      // Fail safely — do not grant any role on error (privilege escalation prevention)
       logger.error("[Auth] fetchProfileAndRole failed:", err);
     } finally {
       fetchingRef.current = false;
@@ -206,47 +192,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        if (!mounted) return;
+    // STEP 1: Restore session from storage FIRST, before any listener
+    const initialize = async () => {
+      let restoredSession: Session | null = null;
 
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          // For TOKEN_REFRESHED events, skip re-fetching if already have data
-          if (_event === "TOKEN_REFRESHED" && roleRef.current !== null && lastFetchedUserRef.current === newSession.user.id) {
-            setLoading(false);
-            return;
-          }
-          await fetchProfileAndRole(newSession.user, _event === "SIGNED_IN");
-
-          // Fallback: mark any pending invitations as accepted on login
-          if (_event === "SIGNED_IN" && newSession.user.email) {
-            try {
-              supabase.functions.invoke("manage-member", {
-                body: { action: "accept_invitation", email: newSession.user.email },
-              }).catch((e: unknown) => logger.warn("[Auth] accept_invitation fallback error:", e));
-            } catch {}
-          }
-        } else {
-          setProfile(null);
-          setRole(null);
-        }
-
-        setLoading(false);
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        restoredSession = existingSession;
+      } catch (err) {
+        logger.error("[Auth] getSession failed:", err);
       }
-    );
 
-    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
-      if (!mounted) return;
-
-      if (existingSession) {
-        setSession(existingSession);
-        setUser(existingSession.user);
-        await fetchProfileAndRole(existingSession.user, true);
-      } else {
-        // Check default client for OAuth redirect sessions
+      // If no session on custom client, check default client for OAuth redirects
+      if (!restoredSession) {
         try {
           const { data: { session: defaultSession } } = await defaultClient.auth.getSession();
           if (defaultSession) {
@@ -255,22 +213,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               refresh_token: defaultSession.refresh_token,
             });
             await defaultClient.auth.signOut({ scope: 'local' });
-            if (transferred) {
-              setSession(transferred);
-              setUser(transferred.user);
-              await fetchProfileAndRole(transferred.user, true);
-            }
+            restoredSession = transferred;
           }
         } catch (err) {
           logger.error("[Auth] OAuth session transfer failed:", err);
         }
       }
-      if (mounted) setLoading(false);
-    });
+
+      if (!mounted) return;
+
+      // Apply restored session
+      if (restoredSession?.user) {
+        setSession(restoredSession);
+        setUser(restoredSession.user);
+        await fetchProfileAndRole(restoredSession.user, true);
+      }
+
+      // Mark loading complete AFTER session is verified
+      if (mounted) {
+        setLoading(false);
+        initializedRef.current = true;
+      }
+
+      // STEP 2: Register listener AFTER session is restored
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (_event, newSession) => {
+          if (!mounted) return;
+
+          // Skip INITIAL_SESSION — we already handled it via getSession()
+          if (_event === "INITIAL_SESSION") return;
+
+          // For TOKEN_REFRESHED, just update session/user refs — skip re-fetching
+          if (_event === "TOKEN_REFRESHED") {
+            if (newSession) {
+              setSession(newSession);
+              setUser(newSession.user);
+            }
+            return;
+          }
+
+          // SIGNED_OUT
+          if (!newSession) {
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            setRole(null);
+            return;
+          }
+
+          // SIGNED_IN (new login, not initial)
+          setSession(newSession);
+          setUser(newSession.user);
+
+          // Fire-and-forget — no await to prevent blocking the listener queue
+          fetchProfileAndRole(newSession.user, true).catch((e) =>
+            logger.error("[Auth] fetchProfileAndRole in listener failed:", e)
+          );
+
+          // Accept pending invitations on new sign-in
+          if (_event === "SIGNED_IN" && newSession.user.email) {
+            supabase.functions.invoke("manage-member", {
+              body: { action: "accept_invitation", email: newSession.user.email },
+            }).catch((e: unknown) => logger.warn("[Auth] accept_invitation fallback error:", e));
+          }
+        }
+      );
+
+      // Cleanup
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+
+    const cleanupPromise = initialize();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      cleanupPromise.then((unsub) => unsub?.());
     };
   }, []);
 
