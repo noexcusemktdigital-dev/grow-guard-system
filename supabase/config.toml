@@ -84,6 +84,8 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = false
   [functions.generate-daily-checklist]
     verify_jwt = false
+  [functions.generate-daily-tasks]
+    verify_jwt = false
 
   # --- Utility functions (require auth) ---
   [functions.get-outbound-ip]
