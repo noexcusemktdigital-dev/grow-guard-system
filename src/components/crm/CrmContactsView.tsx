@@ -178,7 +178,7 @@ export function CrmContactsView({ onCreateLeadFromContact, onBackToPipeline }: P
       notes: form.notes || null, tags, source: form.source || null,
       document: form.document || null, address: form.address || null,
       birth_date: form.birth_date || null,
-    } as Record<string, unknown>);
+    } as any);
     resetForm(); setNewOpen(false);
     toast({ title: "Contato criado" });
   };
