@@ -24,6 +24,8 @@ function getPortalStorageKey(): string {
   return isSaas ? "noe-saas-auth" : "noe-franchise-auth";
 }
 
+export const PORTAL_STORAGE_KEY = getPortalStorageKey();
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     storageKey: getPortalStorageKey(),

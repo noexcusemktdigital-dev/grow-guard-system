@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { logger } from "@/lib/logger";
-import { supabase } from "@/lib/supabase";
+import { supabase, PORTAL_STORAGE_KEY } from "@/lib/supabase";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,15 @@ const SaasAuth = () => {
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get("ref") || "";
   const [referralInfo, setReferralInfo] = useState<{ org_name: string; discount: number } | null>(null);
+
+  // Guard: if JS module was loaded from a franchise path (/acessofranquia, /franqueado, /franqueadora),
+  // the storageKey is "noe-franchise-auth" but this page needs "noe-saas-auth".
+  // Force a hard reload so the module re-initializes with the correct key.
+  useEffect(() => {
+    if (PORTAL_STORAGE_KEY !== "noe-saas-auth") {
+      window.location.replace(window.location.href);
+    }
+  }, []);
 
   // Resolve referral code on mount
   useEffect(() => {

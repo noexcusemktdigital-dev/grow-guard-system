@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, PORTAL_STORAGE_KEY } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,15 @@ const Auth = () => {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
   const navigate = useNavigate();
+
+  // Guard: if JS module was loaded from a SaaS path (/app, /cliente, /),
+  // the storageKey is "noe-saas-auth" but this page needs "noe-franchise-auth".
+  // Force a hard reload so the module re-initializes with the correct key.
+  useEffect(() => {
+    if (PORTAL_STORAGE_KEY !== "noe-franchise-auth") {
+      window.location.replace(window.location.href);
+    }
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
