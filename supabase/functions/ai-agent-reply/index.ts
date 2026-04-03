@@ -82,7 +82,7 @@ function hoursSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
 }
 
-async function debitCredits(adminClient: ReturnType<typeof createClient>, orgId: string, tokensUsed: number, agentName: string) {
+async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
   const FIXED_CREDIT_COST = 2;
   try {
     await adminClient.rpc("debit_credits", {
