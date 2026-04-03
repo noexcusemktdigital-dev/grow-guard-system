@@ -140,7 +140,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                 </div>
                 <div className="flex gap-1">
                   {!funnel.is_default && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAsDefault(funnel.id)}>Tornar padrão</Button>}
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEditFunnel(funnel)}>Editar</Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEditFunnel(funnel as any)}>Editar</Button>
                   {!funnel.is_default && deleteFunnel && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setDeletingFunnel(funnel)}>
                       <Trash2 className="w-3.5 h-3.5" />
