@@ -1,48 +1,50 @@
 
 
-## Plano — Resolver instabilidade de sessão e logouts inesperados
+## Plano — Resolver instabilidade de sessão, logouts e redirecionamentos
 
-### Problema
+### Diagnóstico
 
-O `AuthContext` registra `onAuthStateChange` antes de `getSession()`, causando race condition onde `INITIAL_SESSION` com `null` dispara logout antes da sessão real ser restaurada. Além disso, `await` no callback bloqueia token refresh.
+Após revisão completa, o **AuthContext** e o **ProtectedRoute** já possuem as correções de race condition (getSession primeiro, listener depois, sem await no callback). Porém, há um problema crítico restante:
+
+### Problema Principal: Script anti-DevTools em `index.html`
+
+O `index.html` (linhas 23-35) contém um script de proteção anti-DevTools que:
+
+1. **Destrói o DOM inteiro** (`document.body.innerHTML = ...`) quando detecta DevTools ou diferença de tamanho de janela > 170px
+2. **Redireciona para `/`** após 2 segundos (`window.location.href = "/"`)
+3. **Roda a cada 1 segundo** via `setInterval`, verificando `outerWidth - innerWidth > 170`
+4. **Sobrescreve `window.console`** (linha 33) — mata todos os logs, incluindo o logger de autenticação
+
+**Este script é a causa raiz da instabilidade.** Falsos positivos acontecem quando:
+- O navegador está com sidebar, bookmarks bar, ou extensões que alteram o tamanho da janela
+- O usuário redimensiona a janela
+- Dispositivos com DPI alto ou telas menores produzem diferenças de tamanho que excedem 170px
+- O preview do Lovable roda dentro de um iframe que afeta as medições
+
+Quando dispara, ele **apaga toda a aplicação React**, destrói o estado em memória e redireciona — causando exatamente os sintomas relatados (logout, perda de estado, redirecionamento indevido).
 
 ### Correção
 
-#### Arquivo: `src/contexts/AuthContext.tsx`
+#### Arquivo: `index.html`
 
-Reescrever o `useEffect` de inicialização:
+**Remover completamente o script anti-DevTools** (linhas 23-35). Este script:
+- Causa falsos positivos que destroem a sessão do usuário
+- Sobrescreve `window.console`, impedindo debug e logging
+- Não oferece proteção real (qualquer pessoa pode desabilitá-lo)
+- É incompatível com o ambiente de preview do Lovable
 
-1. **`getSession()` primeiro** — restaurar sessão do storage antes de qualquer decisão
-2. **Registrar listener depois** — só após `getSession()` completar
-3. **Flag `initializedRef`** — ignorar o evento `INITIAL_SESSION` automático (que vem com `null`)
-4. **Sem `await` no callback** — usar fire-and-forget para `fetchProfileAndRole`
-5. **`loading = false` apenas após `getSession()`** — nunca antes
-
-Fluxo novo:
-```text
-1. getSession() → restaura token do localStorage
-2. Se session → setUser, setSession, await fetchProfileAndRole
-3. setLoading(false)
-4. Registra onAuthStateChange (para SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED futuros)
-   - No callback: fire-and-forget, sem await
-   - Ignora INITIAL_SESSION (já tratado pelo getSession)
-```
-
-#### Arquivo: `src/components/ProtectedRoute.tsx`
-
-Adicionar detecção de mismatch de portal: se o usuário está em rota `/cliente/*` mas a storageKey é `noe-franchise-auth` (ou vice-versa), forçar reload para recalcular a storageKey correta.
+Manter apenas a proteção de context menu se desejado, mas sem destruição do DOM.
 
 ### Arquivos
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `src/contexts/AuthContext.tsx` | Reescrever useEffect: getSession primeiro, listener depois, sem await |
-| `src/components/ProtectedRoute.tsx` | Guard contra portal mismatch na storageKey |
+| `index.html` | Remover script anti-DevTools (linhas 23-35) |
 
 ### Resultado
 
-- Sessão restaurada do storage antes de qualquer routing
-- Sem logouts fantasma por race condition
-- Token refresh não bloqueia
-- Navegação entre portais recalcula storageKey corretamente
+- Fim dos logouts fantasma causados por destruicao do DOM
+- Console funcional para logging e debug
+- Sessao preservada durante toda a navegacao
+- Sem redirecionamentos indevidos por falsos positivos do detector de janela
 
