@@ -38,7 +38,7 @@ const priorityConfig: Record<string, { label: string; color: string; order: numb
 const sourceConfig: Record<string, { label: string; color: string }> = {
   manual: { label: "Manual", color: "text-foreground" },
   admin: { label: "Admin", color: "text-primary" },
-  system: { label: "IA", color: "text-amber-500" },
+  system: { label: "CRM", color: "text-amber-500" },
 };
 
 /* ─── TASK FORM DIALOG ─── */
