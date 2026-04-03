@@ -21,7 +21,7 @@ interface CustomerInput {
  *  4. Save asaas_customer_id back to organizations
  */
 export async function getOrCreateAsaasCustomer(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   asaasApiKey: string,
   input: CustomerInput
 ): Promise<string> {
