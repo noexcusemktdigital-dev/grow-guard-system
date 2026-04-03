@@ -702,7 +702,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     // Send via Z-API — prefer the contact's instance, fallback to any connected instance
-    let instance: Record<string, unknown> | null = null;
+    let instance: Record<string, any> | null = null;
     if (contact.instance_id) {
       const { data: contactInstance } = await adminClient.from("whatsapp_instances").select("*").eq("id", contact.instance_id).eq("status", "connected").maybeSingle();
       if (contactInstance) instance = contactInstance;
