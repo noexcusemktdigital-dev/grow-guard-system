@@ -283,7 +283,7 @@ serve(async (req) => {
         return new Response(null, { status: 302, headers: { Location: errUrl } });
       }
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("ads-oauth-callback GET error:", err);
       return new Response(null, {
         status: 302,

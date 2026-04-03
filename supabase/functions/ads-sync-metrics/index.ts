@@ -46,7 +46,7 @@ interface AdAction {
   value: string;
 }
 
-async function syncGoogleAds(connection: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+async function syncGoogleAds(connection: Record<string, any>, supabase: any) {
   let accessToken = connection.access_token;
   const devToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN");
   if (!devToken) throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured");
@@ -133,7 +133,7 @@ async function syncGoogleAds(connection: Record<string, unknown>, supabase: Retu
   return metrics;
 }
 
-async function syncMetaAds(connection: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   const accessToken = connection.access_token;
   let accountId = connection.account_id;
   if (!accountId) throw new Error("No Meta ad account ID");
@@ -290,9 +290,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, synced: metrics.length }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("ads-sync-metrics error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
