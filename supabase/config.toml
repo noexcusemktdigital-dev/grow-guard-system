@@ -159,9 +159,9 @@ project_id = "gxrhdpbbxfipeopdyygn"
 
   # --- Google Calendar (require authenticated user session) ---
   [functions.google-calendar-oauth]
-    verify_jwt = true
+    verify_jwt = false
   [functions.google-calendar-sync]
-    verify_jwt = true
+    verify_jwt = false
 
   # --- Ads platform functions (require authenticated user session) ---
   [functions.ads-oauth-callback]
