@@ -23,12 +23,12 @@ export function useFranqueadoSystemPayments() {
   const payments = useQuery({
     queryKey: ["franchisee-system-payments", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("franchisee_system_payments" as unknown as "organizations")
+      const { data, error } = await (supabase
+        .from("franchisee_system_payments" as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- table not in generated types
         .select("*")
         .eq("organization_id", orgId!)
         .order("month", { ascending: false })
-        .limit(12);
+        .limit(12) as any);
       if (error) throw error;
       return (data || []) as unknown as SystemPayment[];
     },
