@@ -88,11 +88,13 @@ export function useWhatsAppContacts(_filterInstanceId?: string | null) {
     queryKey: ["whatsapp-contacts", orgId],
     queryFn: async () => {
       if (!orgId) return [];
+      // DATA-003: limite de 300 contatos mais recentes — evita timeout com inboxes volumosas
       const query = supabase
         .from("whatsapp_contacts" as unknown as "profiles")
         .select("*")
         .eq("organization_id", orgId)
-        .order("last_message_at", { ascending: false, nullsFirst: false });
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(300);
 
       const { data, error } = await query;
       if (error) throw error;

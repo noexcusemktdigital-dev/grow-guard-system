@@ -21,7 +21,8 @@ export function useFinanceRevenues(monthId?: string) {
   return useQuery({
     queryKey: ["finance-revenues", orgId, monthId],
     queryFn: async () => {
-      let q = supabase.from("finance_revenues").select("*").eq("organization_id", orgId!).order("date", { ascending: false });
+      // DATA-003: limite de 500 lançamentos — filtro por mês já reduz volume na maioria dos casos
+      let q = supabase.from("finance_revenues").select("*").eq("organization_id", orgId!).order("date", { ascending: false }).limit(500);
       if (monthId) q = q.eq("finance_month_id", monthId);
       const { data, error } = await q;
       if (error) throw error;
@@ -36,7 +37,7 @@ export function useFinanceExpenses(monthId?: string) {
   return useQuery({
     queryKey: ["finance-expenses", orgId, monthId],
     queryFn: async () => {
-      let q = supabase.from("finance_expenses").select("*").eq("organization_id", orgId!).order("date", { ascending: false });
+      let q = supabase.from("finance_expenses").select("*").eq("organization_id", orgId!).order("date", { ascending: false }).limit(500);
       if (monthId) q = q.eq("finance_month_id", monthId);
       const { data, error } = await q;
       if (error) throw error;
@@ -90,7 +91,7 @@ export function useFinanceInstallments() {
   return useQuery({
     queryKey: ["finance-installments", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("finance_installments").select("*").eq("organization_id", orgId!).order("start_date");
+      const { data, error } = await supabase.from("finance_installments").select("*").eq("organization_id", orgId!).order("start_date").limit(500);
       if (error) throw error;
       return data;
     },

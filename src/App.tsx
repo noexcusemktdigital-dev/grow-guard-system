@@ -118,6 +118,19 @@ function PageLoader() {
   );
 }
 
+// UX-002/003: Boundary granular por página — erro em uma rota não desmonta o portal inteiro.
+// Envolve cada <Route element> com Suspense + ErrorBoundary próprios.
+// O Suspense global no App ainda existe como fallback para o primeiro carregamento.
+function PageBoundary({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -206,21 +219,21 @@ function App() {
                   <Route path="notificacoes" element={<ClienteNotificacoes />} />
                   <Route path="gamificacao" element={<ClienteGamificacao />} />
                   <Route path="plano-vendas" element={<Navigate to="/cliente/gps-negocio" replace />} />
-                  <Route path="chat" element={<ClienteChat />} />
-                  <Route path="gps-negocio" element={<ClienteGPSNegocio />} />
-                  <Route path="crm" element={<ClienteCRM />} />
-                  <Route path="crm/config" element={<CrmConfigPage />} />
-                  <Route path="agentes-ia" element={<ClienteAgentesIA />} />
-                  <Route path="scripts" element={<ClienteScripts />} />
-                  <Route path="disparos" element={<ClienteDisparos />} />
-                  <Route path="dashboard" element={<ClienteDashboard />} />
+                  <Route path="chat" element={<PageBoundary><ClienteChat /></PageBoundary>} />
+                  <Route path="gps-negocio" element={<PageBoundary><ClienteGPSNegocio /></PageBoundary>} />
+                  <Route path="crm" element={<PageBoundary><ClienteCRM /></PageBoundary>} />
+                  <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
+                  <Route path="agentes-ia" element={<PageBoundary><ClienteAgentesIA /></PageBoundary>} />
+                  <Route path="scripts" element={<PageBoundary><ClienteScripts /></PageBoundary>} />
+                  <Route path="disparos" element={<PageBoundary><ClienteDisparos /></PageBoundary>} />
+                  <Route path="dashboard" element={<PageBoundary><ClienteDashboard /></PageBoundary>} />
                   <Route path="plano-marketing" element={<Navigate to="/cliente/gps-negocio" replace />} />
-                  <Route path="conteudos" element={<ClienteConteudos />} />
-                  <Route path="redes-sociais" element={<ClienteRedesSociais />} />
-                  <Route path="sites" element={<ClienteSites />} />
-                  <Route path="trafego-pago" element={<ClienteTrafegoPago />} />
-                  <Route path="integracoes" element={<ClienteIntegracoes />} />
-                  <Route path="plano-creditos" element={<ClientePlanoCreditos />} />
+                  <Route path="conteudos" element={<PageBoundary><ClienteConteudos /></PageBoundary>} />
+                  <Route path="redes-sociais" element={<PageBoundary><ClienteRedesSociais /></PageBoundary>} />
+                  <Route path="sites" element={<PageBoundary><ClienteSites /></PageBoundary>} />
+                  <Route path="trafego-pago" element={<PageBoundary><ClienteTrafegoPago /></PageBoundary>} />
+                  <Route path="integracoes" element={<PageBoundary><ClienteIntegracoes /></PageBoundary>} />
+                  <Route path="plano-creditos" element={<PageBoundary><ClientePlanoCreditos /></PageBoundary>} />
                   <Route path="configuracoes" element={<ClienteConfiguracoes />} />
                   <Route path="avaliacoes" element={<ClienteAvaliacoes />} />
                   <Route path="suporte" element={<ClienteSuporte />} />
