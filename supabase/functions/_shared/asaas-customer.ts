@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "./asaas-fetch.ts";
 
@@ -20,7 +21,7 @@ interface CustomerInput {
  *  4. Save asaas_customer_id back to organizations
  */
 export async function getOrCreateAsaasCustomer(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   asaasApiKey: string,
   input: CustomerInput
 ): Promise<string> {
@@ -130,7 +131,7 @@ export async function fetchPixQrCode(
  * the remainder stays with the franchisee (charge emitter).
  */
 export async function buildSplitConfig(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   orgId: string,
   baseValue: number,
   surplusValue: number = 0

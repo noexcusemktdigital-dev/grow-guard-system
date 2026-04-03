@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 
@@ -62,17 +63,17 @@ COMPORTAMENTO OBRIGATÓRIO:
 
 // ─── Engagement rule helpers ───
 
-function isWithinWorkingHours(workingHours: Record<string, unknown> | null): boolean {
+function isWithinWorkingHours(workingHours: Record<string, any> | null): boolean {
   if (!workingHours?.enabled) return true;
-  const tz = workingHours.timezone || "America/Sao_Paulo";
+  const tz = (workingHours.timezone || "America/Sao_Paulo") as string;
   const now = new Date();
-  const formatter = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+  const formatter = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz as string });
   const parts = formatter.formatToParts(now);
   const hour = parseInt(parts.find((p: { type: string; value: string }) => p.type === "hour")?.value || "0");
   const minute = parseInt(parts.find((p: { type: string; value: string }) => p.type === "minute")?.value || "0");
   const currentMinutes = hour * 60 + minute;
-  const [startH, startM] = (workingHours.start || "08:00").split(":").map(Number);
-  const [endH, endM] = (workingHours.end || "18:00").split(":").map(Number);
+  const [startH, startM] = ((workingHours.start as string) || "08:00").split(":").map(Number);
+  const [endH, endM] = ((workingHours.end as string) || "18:00").split(":").map(Number);
   const startMinutes = startH * 60 + startM;
   const endMinutes = endH * 60 + endM;
   return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
@@ -82,7 +83,7 @@ function hoursSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
 }
 
-async function debitCredits(adminClient: ReturnType<typeof createClient>, orgId: string, tokensUsed: number, agentName: string) {
+async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
   const FIXED_CREDIT_COST = 2;
   try {
     await adminClient.rpc("debit_credits", {
@@ -96,7 +97,7 @@ async function debitCredits(adminClient: ReturnType<typeof createClient>, orgId:
   }
 }
 
-async function executeHandoff(adminClient: ReturnType<typeof createClient>, orgId: string, contactId: string, agentName: string, reason: string) {
+async function executeHandoff(adminClient: any, orgId: string, contactId: string, agentName: string, reason: string) {
   await adminClient.from("whatsapp_contacts").update({ attending_mode: "human" }).eq("id", contactId);
   const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", orgId);
   if (members) {
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
     }
 
     // Find active AI agent — with fallback if assigned agent is inactive
-    let agent: Record<string, unknown> | null = null;
+    let agent: Record<string, any> | null = null;
     if (contact.agent_id) {
       const { data: assignedAgents } = await adminClient
         .from("client_ai_agents")
@@ -240,14 +241,14 @@ Deno.serve(async (req) => {
     }
 
     // Check whatsapp_instance_ids restriction
-    const instanceIds = agent.whatsapp_instance_ids || [];
-    if (instanceIds.length > 0) {
+    const instanceIds: any[] = agent.whatsapp_instance_ids || [];
+    if ((instanceIds as any[]).length > 0) {
       const { data: instance } = await adminClient
         .from("whatsapp_instances")
         .select("id")
         .eq("organization_id", organization_id)
         .single();
-      if (instance && !instanceIds.includes(instance.id)) {
+      if (instance && !(instanceIds as any[]).includes(instance.id)) {
         return new Response(JSON.stringify({ skipped: true, reason: "agent not assigned to this instance" }), {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
@@ -259,8 +260,8 @@ Deno.serve(async (req) => {
       await adminClient.from("whatsapp_contacts").update({ agent_id: agent.id }).eq("id", contact_id);
     }
 
-    const promptConfig = agent.prompt_config || {};
-    const engagementRules = promptConfig.engagement_rules || {};
+    const promptConfig: Record<string, any> = agent.prompt_config || {};
+    const engagementRules: Record<string, any> = promptConfig.engagement_rules || {};
 
     // ─── CHECK 2: Working hours ───
     if (!isWithinWorkingHours(engagementRules.working_hours)) {
@@ -374,10 +375,10 @@ Deno.serve(async (req) => {
 
     // Fetch CRM lead context
     let leadContext = "";
-    let leadData: Record<string, unknown> | null = null;
+    let leadData: Record<string, any> | null = null;
     let funnelStages: { key: string; label?: string }[] = [];
-    const crmActions = agent.crm_actions || {};
-    const role = agent.role || "sdr";
+    const crmActions: Record<string, any> = agent.crm_actions || {};
+    const role = (agent.role as string) || "sdr";
 
     if (contact.crm_lead_id) {
       const { data: lead } = await adminClient
@@ -430,9 +431,9 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }));
 
     // Build system prompt with role-specific instructions
-    const persona = agent.persona || {};
-    const knowledgeBase = agent.knowledge_base || [];
-    const objectives = agent.objectives || [];
+    const persona: Record<string, any> = agent.persona || {};
+    const knowledgeBase: any[] = agent.knowledge_base || [];
+    const objectives: any[] = agent.objectives || [];
 
     let systemPrompt = promptConfig.system_prompt || `Você é ${agent.name}, um assistente virtual.`;
 
@@ -456,7 +457,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     // Add objections from prompt_config
-    const objections = promptConfig.objections || [];
+    const objections: any[] = promptConfig.objections || [];
     if (objections.length > 0) {
       systemPrompt += `\n\nObjeções comuns e como responder:\n${objections.map((o: { objection: string; response: string }) => `- Objeção: "${o.objection}" → Resposta sugerida: "${o.response}"`).join("\n")}`;
     }
@@ -702,7 +703,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     // Send via Z-API — prefer the contact's instance, fallback to any connected instance
-    let instance: Record<string, unknown> | null = null;
+    let instance: Record<string, any> | null = null;
     if (contact.instance_id) {
       const { data: contactInstance } = await adminClient.from("whatsapp_instances").select("*").eq("id", contact.instance_id).eq("status", "connected").maybeSingle();
       if (contactInstance) instance = contactInstance;
@@ -785,9 +786,9 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("ai-agent-reply error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
