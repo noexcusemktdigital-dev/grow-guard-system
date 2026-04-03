@@ -14,6 +14,28 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // SEC-NOE-003: autenticação obrigatória via Authorization: Bearer {secret}
+    const webhookSecret = Deno.env.get("CRM_LEAD_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("CRM_LEAD_WEBHOOK_SECRET not configured — rejecting all requests");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    const providedSecret = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : req.headers.get("X-Webhook-Secret");
+
+    if (!providedSecret || providedSecret !== webhookSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/");
     const orgId = pathParts[pathParts.length - 1];

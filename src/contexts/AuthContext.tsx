@@ -186,8 +186,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
           if (!found) {
-            logger.error("[Auth] Role not found after 10s polling, using fallback");
-            setRole("cliente_admin");
+            // Fail safely — do not grant any role automatically
+            // User will see login/error screen; support can investigate
+            logger.error("[Auth] Role not found after 10s polling — provisioning may have failed. Role set to null.");
             lastFetchedUserRef.current = currentUser.id;
           }
         } else {
@@ -195,11 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
+      // Fail safely — do not grant any role on error (privilege escalation prevention)
       logger.error("[Auth] fetchProfileAndRole failed:", err);
-      const path = window.location.pathname;
-      if (path.startsWith("/cliente") || path.startsWith("/app")) {
-        setRole("cliente_admin");
-      }
     } finally {
       fetchingRef.current = false;
     }

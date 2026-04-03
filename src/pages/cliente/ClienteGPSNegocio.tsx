@@ -288,7 +288,7 @@ export default function ClienteGPSNegocio() {
         segment: rafaelAnswers.segmento,
         modeloNegocio: rafaelAnswers.modelo_negocio,
         produtosServicos: rafaelAnswers.produto,
-        diferenciais: sofiaAnswers.diferencial,
+        diferenciais: allAnswers.diferencial,
         dorPrincipal: rafaelAnswers.dor_principal,
         ticketMedio: rafaelAnswers.ticket_medio,
         etapasFunil: typeof etapasText === "string" ? etapasText.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean) : [],

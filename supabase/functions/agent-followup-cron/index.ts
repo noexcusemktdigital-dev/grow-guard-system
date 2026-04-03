@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
         .eq("organization_id", agent.organization_id)
         .maybeSingle();
 
-      if (wallet && wallet.balance <= 0) continue;
+      // FIN-001: wallet IS NULL (não apenas zero) também deve pular — sem wallet = sem créditos
+      if (!wallet || wallet.balance <= 0) continue;
 
       // Find contacts assigned to this agent in AI mode
       const { data: contacts } = await adminClient

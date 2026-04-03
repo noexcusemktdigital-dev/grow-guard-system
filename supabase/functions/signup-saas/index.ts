@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
 
     // ---- LEGACY MODE (called with user_id from old frontend or Google OAuth) ----
     if (body.user_id) {
-      return await handleLegacyProvisioning(supabaseAdmin, body, headers, supabaseUrl);
+      return await handleLegacyProvisioning(supabaseAdmin, body, headers, supabaseUrl, req);
     }
 
     // ---- NEW SIGNUP MODE (email + password + full_name) ----
@@ -171,12 +171,29 @@ Deno.serve(async (req) => {
 
 // Legacy provisioning (called with user_id from Google OAuth flow)
 async function handleLegacyProvisioning(
-  supabaseAdmin: any, body: any, headers: Record<string, string>, supabaseUrl: string
+  supabaseAdmin: any, body: any, headers: Record<string, string>, supabaseUrl: string,
+  req: Request
 ): Promise<Response> {
   const { user_id, company_name, referral_code } = body;
 
-  // Validate caller matches user_id
-  // (skipping auth header check since verify_jwt = false and this is called post-signup)
+  // API-003: Validate that the caller's JWT matches body.user_id (prevent IDOR)
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Authorization required" }), { status: 401, headers });
+  }
+  const callerClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+  const { data: { user: callerUser }, error: callerErr } = await callerClient.auth.getUser();
+  if (callerErr || !callerUser) {
+    return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers });
+  }
+  if (callerUser.id !== user_id) {
+    console.error(`[signup-saas] IDOR attempt: caller=${callerUser.id} tried to provision user_id=${user_id}`);
+    return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers });
+  }
 
   // Ensure profile exists
   let userExists = false;

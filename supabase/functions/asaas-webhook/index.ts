@@ -2,6 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  // jsonOk must be inside handler so req is in scope
+  const jsonOk = (data: Record<string, unknown>) =>
+    new Response(JSON.stringify(data), {
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
@@ -11,16 +17,24 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const asaasToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
 
-    // 1. Validate token BEFORE parsing body (security fix)
-    if (asaasToken) {
-      const headerToken = req.headers.get("asaas-access-token");
-      if (headerToken !== asaasToken) {
-        await req.text();
-        return new Response(JSON.stringify({ error: "Invalid token" }), {
-          status: 401,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
+    // 1. Token obrigatório — rejeita se não configurado (SEC-NOE-004)
+    if (!asaasToken) {
+      console.error("ASAAS_WEBHOOK_TOKEN not configured — rejecting all requests");
+      await req.text();
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Validate token BEFORE parsing body
+    const headerToken = req.headers.get("asaas-access-token");
+    if (headerToken !== asaasToken) {
+      await req.text();
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json();
@@ -594,12 +608,6 @@ Deno.serve(async (req) => {
 });
 
 // ── Helper functions ──
-
-function jsonOk(data: Record<string, unknown>) {
-  return new Response(JSON.stringify(data), {
-    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-  });
-}
 
 // Legacy fallback: map value to credits when externalReference is missing
 function valueToCreditAmount(value: number): number {
