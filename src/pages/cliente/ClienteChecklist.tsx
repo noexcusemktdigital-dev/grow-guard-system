@@ -360,7 +360,7 @@ export default function ClienteChecklist() {
       />
 
       {/* KPI Header */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border">
           <CardContent className="py-3 px-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-500" />
