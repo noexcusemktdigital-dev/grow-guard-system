@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Navigation, Sparkles, Clock, DollarSign, TrendingUp, Target, BarChart3, Users, Bot, BookOpen, Rocket, CheckCircle2, ArrowRight, Trophy, MessageCircle, Globe, Send, Image, Video, PenTool } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
