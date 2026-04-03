@@ -59,7 +59,7 @@ const franqueadoActions = [
 
 const clientePages = [
   { label: "Início", path: "/cliente/inicio" },
-  { label: "WhatsApp", path: "/cliente/checklist" },
+  { label: "Tarefas", path: "/cliente/checklist" },
   { label: "Agenda", path: "/cliente/agenda" },
   { label: "Gamificação", path: "/cliente/gamificacao" },
   { label: "Plano de Vendas", path: "/cliente/plano-vendas" },
