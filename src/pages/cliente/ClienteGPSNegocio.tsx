@@ -151,7 +151,7 @@ function TransitionScreen() {
 
 export default function ClienteGPSNegocio() {
   const [phase, setPhase] = useState<Phase>("welcome");
-  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("marketing");
+  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("marketing-core");
   const [rafaelAnswers, setRafaelAnswers] = useState<Record<string, any>>({});
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
