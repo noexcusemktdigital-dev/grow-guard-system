@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import { Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

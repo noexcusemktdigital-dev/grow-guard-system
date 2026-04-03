@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Comunicados types and constants
 
 export type ComunicadoStatus = "Ativo" | "Programado" | "Expirado" | "Rascunho" | "Arquivado";

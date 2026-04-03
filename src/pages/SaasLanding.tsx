@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UNIFIED_PLANS } from "@/constants/plans";

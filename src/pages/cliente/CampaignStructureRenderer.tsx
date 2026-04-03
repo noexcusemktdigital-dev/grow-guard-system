@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Badge } from "@/components/ui/badge";
 import { Layers, ChevronRight } from "lucide-react";
 

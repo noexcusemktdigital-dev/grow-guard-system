@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import { differenceInDays } from "date-fns";
 import { Clock, ArrowRight } from "lucide-react";

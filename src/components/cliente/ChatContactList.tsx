@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useMemo, useRef } from "react";
 import { Search, Clock, MessageCircle, Wifi, Bot, User, Users, Archive } from "lucide-react";
 import { Input } from "@/components/ui/input";

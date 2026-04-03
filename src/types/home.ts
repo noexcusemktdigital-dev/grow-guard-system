@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Home types
 
 export type MensagemCategoria = "Mentalidade" | "Vendas" | "Gestão" | "Marketing" | "Liderança";

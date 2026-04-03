@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Metas/Ranking types and constants
 import {
   Shield, TrendingUp, Star, Crown, Gem, DollarSign,

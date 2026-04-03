@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Default contract templates with placeholders for editable fields
 
 export interface DefaultTemplate {

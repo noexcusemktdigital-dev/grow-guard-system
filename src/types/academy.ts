@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Academy types and constants (extracted from academyData.ts)
 
 export type AcademyModuleCategory = "Comercial" | "Estrategia" | "Institucional" | "Produtos";

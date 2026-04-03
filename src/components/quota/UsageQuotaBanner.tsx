@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { memo } from "react";
 import { AlertTriangle, ArrowUpRight, Infinity } from "lucide-react";
 import { Button } from "@/components/ui/button";

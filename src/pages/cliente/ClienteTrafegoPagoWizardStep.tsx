@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

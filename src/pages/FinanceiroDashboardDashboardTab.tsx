@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo } from "react";
 import { formatBRL } from "@/lib/formatting";
 import { KpiCard } from "@/components/KpiCard";

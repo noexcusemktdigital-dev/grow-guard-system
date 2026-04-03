@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState, useRef } from "react";
 import { formatBRL } from "@/lib/formatting";
 import { Inbox, FileDown, Building2, Plus, Upload } from "lucide-react";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface PlaybookStep {
   titulo: string;
   descricao: string;

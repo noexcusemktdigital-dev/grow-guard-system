@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useRef } from "react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { PageHeader } from "@/components/PageHeader";

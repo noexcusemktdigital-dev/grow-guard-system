@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Inbox, Send, Loader2, CheckCircle, Clock, AlertTriangle, QrCode, Copy, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Building2, Wallet, Users, Target, Megaphone, Layers, Zap, BarChart3,
 } from "lucide-react";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useEffect, useState, useCallback } from "react";
 import { format, startOfMonth, subMonths, isAfter, subHours } from "date-fns";
 import { ptBR } from "date-fns/locale";

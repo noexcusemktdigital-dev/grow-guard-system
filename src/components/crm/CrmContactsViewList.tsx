@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Users, Plus, MoreHorizontal, Copy, Trash2, UserPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

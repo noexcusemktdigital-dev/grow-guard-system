@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Package, RefreshCcw, Check } from 'lucide-react';
 import type { Duration, PaymentOption, SelectedService } from '@/hooks/useCalculator';
 import type { Module, Service } from '@/data/services';

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Playbooks & Scripts — Banco de Conhecimento da Matriz
 // Dados estruturados dos PDFs de Performance e Criação
 

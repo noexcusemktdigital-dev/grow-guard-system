@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { ArrowLeft, GripVertical, Link2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

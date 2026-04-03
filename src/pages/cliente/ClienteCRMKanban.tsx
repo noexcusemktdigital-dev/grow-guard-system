@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import {
   Phone, Clock, GripVertical, MoreHorizontal,

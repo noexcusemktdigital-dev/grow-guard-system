@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 

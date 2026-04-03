@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Marketing types (extracted from marketingData.ts)
 import {
   Image, Target, Presentation, Palette, Briefcase,

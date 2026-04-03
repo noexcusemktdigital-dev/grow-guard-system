@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Filter, Search, Tag, ArrowRightLeft, UserCircle, X, XCircle, Trash2 } from "lucide-react";
 import { Shuffle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

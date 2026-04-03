@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Loader2, Sparkles, Shield, Clock, RotateCcw, Plus, X, ChevronRight } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";

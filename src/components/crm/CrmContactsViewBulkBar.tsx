@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Tag, MapPin, Building2, UserPlus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
 import { logger } from "@/lib/logger";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";

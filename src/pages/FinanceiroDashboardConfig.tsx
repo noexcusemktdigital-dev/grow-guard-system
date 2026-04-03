@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";

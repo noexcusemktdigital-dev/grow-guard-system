@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Shield, Copy, Clock, X, Eye, EyeOff, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";

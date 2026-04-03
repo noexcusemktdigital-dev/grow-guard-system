@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { DollarSign, Percent, Monitor, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";

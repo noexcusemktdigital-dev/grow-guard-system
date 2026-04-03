@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import {
   DollarSign, Sparkles, Target, Users, Globe, BarChart3, Zap,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { BookOpen, Search, ChevronDown, Copy, Check, Target, AlertTriangle, MessageSquare, Lightbulb } from "lucide-react";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // CRM types and constants (extracted from crmData.ts)
 
 export type FunnelType = "franchise" | "clients";

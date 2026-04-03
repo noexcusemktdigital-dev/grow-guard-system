@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, Sparkles, Trophy, ListChecks, Users, Target } from "lucide-react";

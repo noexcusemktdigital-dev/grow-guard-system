@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Bot, Send, Loader2, History, ScrollText } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";

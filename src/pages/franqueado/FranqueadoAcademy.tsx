@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
 
 export default function FranqueadoAcademy() {

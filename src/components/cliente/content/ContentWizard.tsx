@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, ArrowRight, Sparkles, Video, Smartphone, Monitor, Film,

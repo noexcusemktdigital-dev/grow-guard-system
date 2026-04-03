@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import {
   Sparkles, Pencil, ArrowRight, ArrowLeft, RefreshCw, Save,

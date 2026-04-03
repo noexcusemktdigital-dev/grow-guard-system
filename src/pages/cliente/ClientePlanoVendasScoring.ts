@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { AlertCircle, CheckCircle2, Lightbulb } from "lucide-react";
 import type { Answers } from "./ClientePlanoVendasData";
 

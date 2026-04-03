@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { ArrowLeft, Phone, MessageSquare, Video, Mail, Plus, Check, AlertTriangle, FileText, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

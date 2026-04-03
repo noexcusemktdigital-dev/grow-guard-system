@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from "react";
 import { Activity, ChevronRight, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";

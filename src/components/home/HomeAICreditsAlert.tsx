@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import { Cpu, AlertTriangle, Zap, CreditCard, ArrowUpRight, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

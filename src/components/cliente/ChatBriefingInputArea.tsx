@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ArrowRight, Send, CheckCircle2, HelpCircle, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

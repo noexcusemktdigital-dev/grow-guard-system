@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import { Bot, User, Users, Globe, Archive } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Unidades types
 
 export type UnidadeStatus = "Ativa" | "Suspensa" | "Encerrada";

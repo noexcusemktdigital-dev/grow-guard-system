@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import { useUserOrgId, setStoredOrgId } from "@/hooks/useUserOrgId";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Target, MessageSquare, Wallet, X, ArrowRight } from "lucide-react";

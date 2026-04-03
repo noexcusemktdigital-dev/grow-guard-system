@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Loader2, Sparkles, ChevronRight } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";

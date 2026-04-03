@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { X } from "lucide-react";
 import { useOrgTeams } from "@/hooks/useOrgTeams";
 import { Label } from "@/components/ui/label";

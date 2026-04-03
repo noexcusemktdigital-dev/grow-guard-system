@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from "react";
 import {
   Bot, User, UserPlus, Search, RefreshCw, ChevronDown, ChevronUp, ArrowLeft,

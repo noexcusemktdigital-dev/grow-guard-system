@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo } from "react";
 import {
   Target, Plus, CheckCircle2, AlertCircle, TrendingUp, Building2, User,

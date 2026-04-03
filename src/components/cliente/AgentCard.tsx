@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Bot, Copy, Edit, MoreVertical, Trash2, Smartphone, Play, Pause, MessageCircle, Users, RotateCcw, Power, PowerOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";

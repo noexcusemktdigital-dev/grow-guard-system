@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ServiceCard } from './ServiceCard';
 import { Palette, Share2, TrendingUp, Globe, Database } from 'lucide-react';

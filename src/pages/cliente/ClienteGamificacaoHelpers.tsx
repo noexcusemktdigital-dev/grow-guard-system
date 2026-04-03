@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useMemo } from "react";
 import {
   Trophy, Medal, Star, Target, Coins, Timer, BarChart3, Award,

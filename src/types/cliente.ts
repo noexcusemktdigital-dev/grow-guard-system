@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Cliente types
 export type ApprovalStatus = "pending" | "approved" | "changes_requested" | "rejected";
 

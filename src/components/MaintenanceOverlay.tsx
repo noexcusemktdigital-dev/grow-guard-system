@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Construction, ArrowLeft } from "lucide-react";

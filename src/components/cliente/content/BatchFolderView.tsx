@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { FolderOpen, ChevronDown, ChevronRight, Copy, ExternalLink, Search, Filter, Eye, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
