@@ -11,11 +11,15 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch unprocessed queue events (limit 50 per run)
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 5 * 60 * 1000; // 5min between retries
+
+    // Fetch unprocessed queue events — include retryable failed events (API-005)
     const { data: events, error: evErr } = await admin
       .from("crm_automation_queue")
       .select("*")
       .eq("processed", false)
+      .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
       .order("created_at")
       .limit(50);
 
@@ -83,7 +87,23 @@ Deno.serve(async (req) => {
         processedCount++;
       } catch (eventErr) {
         console.error(`Event processing error for ${event.id}:`, eventErr);
-        await markProcessed(admin, event.id);
+        // API-005: DLQ — retry up to MAX_RETRIES before marking as permanently failed
+        const currentErrors = (event.error_count || 0) + 1;
+        if (currentErrors >= MAX_RETRIES) {
+          await admin.from("crm_automation_queue").update({
+            processed: true,
+            error_count: currentErrors,
+            last_error: eventErr instanceof Error ? eventErr.message : String(eventErr),
+          }).eq("id", event.id);
+        } else {
+          const nextRetry = new Date(Date.now() + RETRY_DELAY_MS * currentErrors).toISOString();
+          await admin.from("crm_automation_queue").update({
+            error_count: currentErrors,
+            last_error: eventErr instanceof Error ? eventErr.message : String(eventErr),
+            next_retry_at: nextRetry,
+          }).eq("id", event.id);
+          console.log(`Event ${event.id} queued for retry #${currentErrors} at ${nextRetry}`);
+        }
         processedCount++;
       }
     }
@@ -104,7 +124,7 @@ Deno.serve(async (req) => {
 async function markProcessed(admin: ReturnType<typeof createClient>, eventId: string) {
   await admin
     .from("crm_automation_queue")
-    .update({ processed: true })
+    .update({ processed: true, error_count: 0 })
     .eq("id", eventId);
 }
 

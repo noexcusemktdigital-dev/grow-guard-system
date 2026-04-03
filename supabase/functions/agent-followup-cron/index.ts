@@ -35,6 +35,21 @@ Deno.serve(async (req) => {
 
     let followupsSent = 0;
 
+    // DATA-002: Batch pre-fetch wallets and instances for all unique orgs (eliminates N+1)
+    const uniqueOrgIds = [...new Set(agents.map((a: { organization_id: string }) => a.organization_id))];
+
+    const [{ data: wallets }, { data: instances }] = await Promise.all([
+      adminClient.from("credit_wallets").select("organization_id, balance").in("organization_id", uniqueOrgIds),
+      adminClient.from("whatsapp_instances").select("*").in("organization_id", uniqueOrgIds).eq("status", "connected"),
+    ]);
+
+    const walletMap = new Map((wallets || []).map((w: { organization_id: string; balance: number }) => [w.organization_id, w]));
+    // Keep only first connected instance per org (same semantics as .single() was)
+    const instanceMap = new Map<string, Record<string, unknown>>();
+    for (const inst of (instances || [])) {
+      if (!instanceMap.has(inst.organization_id)) instanceMap.set(inst.organization_id, inst);
+    }
+
     for (const agent of agents) {
       const promptConfig = agent.prompt_config || {};
       const followup = promptConfig.followup || {};
@@ -45,14 +60,9 @@ Deno.serve(async (req) => {
       const maxAttempts = followup.max_attempts || 3;
       const cutoffTime = new Date(Date.now() - delayHours * 60 * 60 * 1000).toISOString();
 
-      // Check credit balance
-      const { data: wallet } = await adminClient
-        .from("credit_wallets")
-        .select("balance")
-        .eq("organization_id", agent.organization_id)
-        .maybeSingle();
-
       // FIN-001: wallet IS NULL (não apenas zero) também deve pular — sem wallet = sem créditos
+      // DATA-002: wallet looked up from pre-fetched map, not a per-agent query
+      const wallet = walletMap.get(agent.organization_id);
       if (!wallet || wallet.balance <= 0) continue;
 
       // Find contacts assigned to this agent in AI mode
@@ -66,24 +76,25 @@ Deno.serve(async (req) => {
       if (!contacts || contacts.length === 0) continue;
 
       for (const contact of contacts) {
-        // Get last message
-        const { data: lastMessages } = await adminClient
+        // DATA-002: Single query replaces two separate lastMessages + history queries
+        const { data: messages } = await adminClient
           .from("whatsapp_messages")
-          .select("direction, created_at, metadata")
+          .select("direction, created_at, content, metadata")
           .eq("contact_id", contact.id)
           .eq("organization_id", agent.organization_id)
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(10);
 
-        if (!lastMessages || lastMessages.length === 0) continue;
+        if (!messages || messages.length === 0) continue;
 
-        const lastMsg = lastMessages[0];
+        const lastMsg = messages[0];
 
         // Only follow up if last message was from the agent (outbound) and enough time passed
         if (lastMsg.direction !== "outbound") continue;
         if (new Date(lastMsg.created_at) > new Date(cutoffTime)) continue;
 
-        // Count existing follow-ups
+        // Count existing follow-ups (from same fetched messages)
+        const lastMessages = messages.slice(0, 5);
         const followupCount = lastMessages.filter(
           (m: { direction: string; metadata?: { followup?: boolean } }) => m.direction === "outbound" && m.metadata?.followup === true
         ).length;
@@ -107,14 +118,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Generate follow-up message
-        const { data: history } = await adminClient
-          .from("whatsapp_messages")
-          .select("direction, content")
-          .eq("contact_id", contact.id)
-          .eq("organization_id", agent.organization_id)
-          .order("created_at", { ascending: false })
-          .limit(10);
+        // Build chat history from the already-fetched messages (no extra query needed)
+        const history = messages;
 
         const chatHistory = (history || []).reverse().map((m: { direction: string; content: string }) => ({
           role: m.direction === "inbound" ? "user" : "assistant",
@@ -144,14 +149,9 @@ Deno.serve(async (req) => {
 
           if (!followupText) continue;
 
-          // Send via Z-API
-          const { data: instance } = await adminClient
-            .from("whatsapp_instances")
-            .select("*")
-            .eq("organization_id", agent.organization_id)
-            .single();
-
-          if (!instance || instance.status !== "connected") continue;
+          // DATA-002: Instance looked up from pre-fetched map, not a per-contact query
+          const instance = instanceMap.get(agent.organization_id);
+          if (!instance) continue;
 
           const cleanPhone = contact.phone.replace(/[\s\-\+\(\)]/g, "");
           const zapiUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-text`;

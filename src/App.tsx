@@ -97,10 +97,13 @@ const ClienteMarketingHub = lazy(() => import("./pages/cliente/ClienteMarketingH
 const ClienteComunicados = lazy(() => import("./pages/cliente/ClienteComunicados"));
 const ClienteFaq = lazy(() => import("./pages/cliente/ClienteFaq"));
 
+// PERF-004: staleTime global 2min é agressivo para dados transacionais.
+// Queries financeiras e de créditos usam staleTime: 0 via queryKey prefix.
+// Componentes sensíveis podem sobrescrever com staleTime local.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2,
+      staleTime: 1000 * 30,       // 30s default (era 2min — muito alto para CRM/leads)
       gcTime: 1000 * 60 * 10,
       retry: 1,
     },
