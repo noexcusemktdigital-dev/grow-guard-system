@@ -1,54 +1,48 @@
 
 
-## Plano — Salvar hierarquia na memória + Corrigir erros de build
+## Plano — Resolver instabilidade de sessão e logouts inesperados
 
-### 1. Memória: Hierarquia completa do sistema
+### Problema
 
-A seguinte estrutura será registrada como memória permanente do projeto:
+O `AuthContext` registra `onAuthStateChange` antes de `getSession()`, causando race condition onde `INITIAL_SESSION` com `null` dispara logout antes da sessão real ser restaurada. Além disso, `await` no callback bloqueia token refresh.
 
+### Correção
+
+#### Arquivo: `src/contexts/AuthContext.tsx`
+
+Reescrever o `useEffect` de inicialização:
+
+1. **`getSession()` primeiro** — restaurar sessão do storage antes de qualquer decisão
+2. **Registrar listener depois** — só após `getSession()` completar
+3. **Flag `initializedRef`** — ignorar o evento `INITIAL_SESSION` automático (que vem com `null`)
+4. **Sem `await` no callback** — usar fire-and-forget para `fetchProfileAndRole`
+5. **`loading = false` apenas após `getSession()`** — nunca antes
+
+Fluxo novo:
 ```text
-NOE SYSTEM — HIERARQUIA DE PAPÉIS E ORGANIZAÇÕES
-
-PORTAL FRANQUIA (/acessofranquia)
-├── MATRIZ (org_type: "franqueadora")
-│   ├── super_admin — Controle total do sistema, billing, matriz, academy
-│   ├── admin — Gestão operacional da rede, unidades, comunicados
-│   └── Usuários vinculados via org_memberships + teams
-│
-└── FRANQUEADO (org_type: "franqueado", parent_org_id → matriz)
-    ├── franqueado (papel único, permissão via org_memberships)
-    ├── Admin da Unidade — gestão local, prospects, estratégia
-    └── Operador — execução operacional, acesso restrito
-
-PORTAL SAAS (/app)
-└── CLIENTE (org_type: "cliente")
-    ├── Workspace = 1 organização com subscription + credit_wallet
-    ├── cliente_admin — CRM, GPS, Ads, Billing, Equipe, Integrações
-    └── cliente_user — Leads, WhatsApp, tarefas; sem billing/equipe/config
+1. getSession() → restaura token do localStorage
+2. Se session → setUser, setSession, await fetchProfileAndRole
+3. setLoading(false)
+4. Registra onAuthStateChange (para SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED futuros)
+   - No callback: fire-and-forget, sem await
+   - Ignora INITIAL_SESSION (já tratado pelo getSession)
 ```
 
-**Relações**: `organizations.parent_org_id` liga franqueado→matriz. `org_memberships` vincula usuários a orgs. `user_roles` define papel global (portal-aware via `get_user_role`).
+#### Arquivo: `src/components/ProtectedRoute.tsx`
 
-### 2. Corrigir erros de build nas Edge Functions
+Adicionar detecção de mismatch de portal: se o usuário está em rota `/cliente/*` mas a storageKey é `noe-franchise-auth` (ou vice-versa), forçar reload para recalcular a storageKey correta.
 
-Há erros de TypeScript em 7+ edge functions. O padrão é o mesmo em todas:
+### Arquivos
 
-| Erro | Correção |
-|------|----------|
-| `'err' is of type 'unknown'` | `catch (err: unknown)` + `err instanceof Error ? err.message : String(err)` |
-| `Property X does not exist on type 'never'` (asaas-customer) | Adicionar type assertion `as any` nos retornos de `.select().single()` |
-| `Property X does not exist on type '{}'` (ai-agent-reply) | Tipar corretamente os objetos de configuração |
-| `Argument not assignable to 'never'` | Type assertions nos `.update()`, `.insert()`, `.rpc()` |
+| Arquivo | Ação |
+|---------|------|
+| `src/contexts/AuthContext.tsx` | Reescrever useEffect: getSession primeiro, listener depois, sem await |
+| `src/components/ProtectedRoute.tsx` | Guard contra portal mismatch na storageKey |
 
-#### Arquivos a corrigir
+### Resultado
 
-| Arquivo | Tipo de erro |
-|---------|-------------|
-| `supabase/functions/ai-agent-simulate/index.ts` | `err` unknown |
-| `supabase/functions/ai-generate-agent-config/index.ts` | `err` unknown |
-| `supabase/functions/_shared/asaas-customer.ts` | Properties on `never` |
-| `supabase/functions/asaas-buy-credits/index.ts` | SupabaseClient type mismatch |
-| `supabase/functions/ai-agent-reply/index.ts` | Múltiplos: `{}` types, `never`, Intl overload |
-
-A correção segue o mesmo padrão já aplicado em `ads-disconnect`, `ads-analyze` etc: type assertions e tipagem explícita de catch blocks.
+- Sessão restaurada do storage antes de qualquer routing
+- Sem logouts fantasma por race condition
+- Token refresh não bloqueia
+- Navegação entre portais recalcula storageKey corretamente
 
