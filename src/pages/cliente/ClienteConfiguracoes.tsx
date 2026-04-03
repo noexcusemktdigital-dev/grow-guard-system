@@ -1,8 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight, Clock, RefreshCw, Trash2, ShieldCheck } from "lucide-react";
-import { SupportAccessManager } from "@/components/cliente/SupportAccessManager";
+import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
