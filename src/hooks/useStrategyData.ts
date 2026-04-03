@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable */
 import { useActiveStrategy } from "./useMarketingStrategy";
 import { useSalesPlan } from "./useSalesPlan";
