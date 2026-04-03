@@ -334,7 +334,7 @@ export default function ClientePlanoVendas() {
 
         <TabsContent value="historico" className="space-y-6 mt-4">
           <ClientePlanoVendasHistorico
-            planHistory={planHistory}
+            planHistory={planHistory as any}
             historyLoading={historyLoading}
           />
         </TabsContent>
