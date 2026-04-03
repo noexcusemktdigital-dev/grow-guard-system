@@ -132,7 +132,7 @@ export function ClientePlanoVendasMetaDialog({
                 <Select value={novaMeta.team_id} onValueChange={v => setNovaMeta(p => ({ ...p, team_id: v }))}>
                   <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione o time" /></SelectTrigger>
                   <SelectContent>
-                    {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    {teams.map(t => <SelectItem key={t.id as React.Key} value={t.id as string}>{t.name as React.ReactNode}</SelectItem>)}
                   </SelectContent>
                 </Select>
               ) : (
