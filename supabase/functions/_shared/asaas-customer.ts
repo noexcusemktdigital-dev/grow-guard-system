@@ -131,7 +131,7 @@ export async function fetchPixQrCode(
  * the remainder stays with the franchisee (charge emitter).
  */
 export async function buildSplitConfig(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   orgId: string,
   baseValue: number,
   surplusValue: number = 0

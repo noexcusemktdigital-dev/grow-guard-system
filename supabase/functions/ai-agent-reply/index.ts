@@ -96,7 +96,7 @@ async function debitCredits(adminClient: any, orgId: string, tokensUsed: number,
   }
 }
 
-async function executeHandoff(adminClient: ReturnType<typeof createClient>, orgId: string, contactId: string, agentName: string, reason: string) {
+async function executeHandoff(adminClient: any, orgId: string, contactId: string, agentName: string, reason: string) {
   await adminClient.from("whatsapp_contacts").update({ attending_mode: "human" }).eq("id", contactId);
   const { data: members } = await adminClient.from("organization_memberships").select("user_id").eq("organization_id", orgId);
   if (members) {
