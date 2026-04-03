@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -77,17 +76,18 @@ export default function ClienteOnboardingCompany() {
   // Pre-fill when org loads
   const [prefilled, setPrefilled] = useState(false);
   if (org && !prefilled) {
+    const o = org as Record<string, any>;
     setForm(prev => ({
       ...prev,
-      name: (org.name && !org.name.includes("'s Company") && !org.name.includes("'s Company")) ? org.name : "",
-      cnpj: (org as unknown as Record<string, unknown>).cnpj || prev.cnpj,
-      phone: (org as unknown as Record<string, unknown>).phone || prev.phone,
-      city: (org as unknown as Record<string, unknown>).city || prev.city,
-      state: (org as unknown as Record<string, unknown>).state || prev.state,
-      segment: (org as unknown as Record<string, unknown>).segment || prev.segment,
-      product_types: Array.isArray((org as unknown as Record<string, unknown>).product_types) ? (org as unknown as Record<string, unknown>).product_types.join(", ") : prev.product_types,
-      employee_count: (org as unknown as Record<string, unknown>).employee_count || prev.employee_count,
-      website: (org as unknown as Record<string, unknown>).website || prev.website,
+      name: (o.name && !String(o.name).includes("'s Company")) ? String(o.name) : "",
+      cnpj: String(o.cnpj || prev.cnpj || ""),
+      phone: String(o.phone || prev.phone || ""),
+      city: String(o.city || prev.city || ""),
+      state: String(o.state || prev.state || ""),
+      segment: String(o.segment || prev.segment || ""),
+      product_types: Array.isArray(o.product_types) ? (o.product_types as string[]).join(", ") : String(prev.product_types || ""),
+      employee_count: String(o.employee_count || prev.employee_count || ""),
+      website: String(o.website || prev.website || ""),
     }));
     setPrefilled(true);
   }
@@ -136,7 +136,7 @@ export default function ClienteOnboardingCompany() {
 
   // Redirect if onboarding already completed
   useEffect(() => {
-    if (!isLoading && org && (org as unknown as { onboarding_completed?: boolean }).onboarding_completed === true) {
+    if (!isLoading && org && (org as any).onboarding_completed === true) {
       navigate("/cliente/inicio", { replace: true });
     }
   }, [org, isLoading, navigate]);

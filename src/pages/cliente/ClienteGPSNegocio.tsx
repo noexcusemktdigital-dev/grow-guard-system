@@ -151,7 +151,7 @@ function TransitionScreen() {
 
 export default function ClienteGPSNegocio() {
   const [phase, setPhase] = useState<Phase>("welcome");
-  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("marketing");
+  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("marketing-core");
   const [rafaelAnswers, setRafaelAnswers] = useState<Record<string, any>>({});
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -270,9 +270,9 @@ export default function ClienteGPSNegocio() {
 
       // Merge results
       const unifiedResult = {
-        ...(coreResult.result || {}),
-        ...(growthResult.result || {}),
-        ...(comercialResult.result || {}),
+        ...((coreResult as any).result || {}),
+        ...((growthResult as any).result || {}),
+        ...((comercialResult as any).result || {}),
       };
       
       await saveStrategy.mutateAsync({
@@ -291,7 +291,7 @@ export default function ClienteGPSNegocio() {
         diferenciais: allAnswers.diferencial,
         dorPrincipal: rafaelAnswers.dor_principal,
         ticketMedio: rafaelAnswers.ticket_medio,
-        etapasFunil: typeof etapasText === "string" ? etapasText.split(/→|->|,|\n/).map(s => s.trim()).filter(Boolean) : [],
+        etapasFunil: typeof rafaelAnswers.etapas_funil === "string" ? rafaelAnswers.etapas_funil.split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
         tempoFechamento: rafaelAnswers.tempo_fechamento,
       };
       (async () => {
@@ -511,7 +511,7 @@ export default function ClienteGPSNegocio() {
             {showHistory && history && history.length > 0 && (
               <div className="space-y-2 mb-4">
                 <p className="text-sm font-semibold text-muted-foreground">Estratégias anteriores</p>
-                {history.map((s) => <StrategyHistoryItem key={s.id} strategy={s} />)}
+                {history.map((s) => <StrategyHistoryItem key={s.id} strategy={s as any} />)}
               </div>
             )}
 
@@ -548,8 +548,8 @@ export default function ClienteGPSNegocio() {
                   isCreating={createGoal.isPending}
                   isUpdating={updateGoal.isPending}
                   isMonetaryMetric={isMonetaryMetric}
-                  teams={teams}
-                  members={members}
+                  teams={teams as any}
+                  members={members as any}
                 />
               }
             />
