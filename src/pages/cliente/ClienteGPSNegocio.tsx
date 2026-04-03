@@ -549,8 +549,8 @@ export default function ClienteGPSNegocio() {
                   isCreating={createGoal.isPending}
                   isUpdating={updateGoal.isPending}
                   isMonetaryMetric={isMonetaryMetric}
-                  teams={teams}
-                  members={members}
+                  teams={teams as any}
+                  members={members as any}
                 />
               }
             />
