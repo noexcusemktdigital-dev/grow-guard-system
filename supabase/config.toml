@@ -135,15 +135,15 @@ project_id = "gxrhdpbbxfipeopdyygn"
 
   # --- WhatsApp functions (require authenticated user session) ---
   [functions.whatsapp-bulk-send]
-    verify_jwt = true
+    verify_jwt = false
   [functions.whatsapp-send]
-    verify_jwt = true
+    verify_jwt = false
   [functions.whatsapp-setup]
     verify_jwt = false
   [functions.whatsapp-typing]
-    verify_jwt = true
+    verify_jwt = false
   [functions.whatsapp-load-history]
-    verify_jwt = true
+    verify_jwt = false
   [functions.whatsapp-sync-chats]
     verify_jwt = false
   [functions.whatsapp-sync-photos]
