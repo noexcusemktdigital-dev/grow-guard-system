@@ -73,7 +73,7 @@ export function BatchFolderView({ history, navigate, onDelete }: BatchFolderView
         text += parsed.map((s: Record<string, string>, i: number) => `[Slide ${i + 1}] ${s.titulo || ""}\n${s.texto || s.content || ""}`).join("\n\n") + "\n\n";
       }
     }
-    if (r?.hashtags?.length) text += r.hashtags.map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
+    if ((r?.hashtags as string[])?.length) text += (r.hashtags as string[]).map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
     navigator.clipboard.writeText(text);
     toast({ title: "Conteúdo copiado!" });
   };
