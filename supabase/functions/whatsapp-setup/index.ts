@@ -572,6 +572,7 @@ Deno.serve(async (req) => {
             webhook_by_events: true,
             webhook_base64: true,
             events,
+            headers: { "x-evolution-secret": effectiveApiKey },
           },
         ];
 
