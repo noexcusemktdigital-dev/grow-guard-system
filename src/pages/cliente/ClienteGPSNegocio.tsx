@@ -512,7 +512,7 @@ export default function ClienteGPSNegocio() {
             {showHistory && history && history.length > 0 && (
               <div className="space-y-2 mb-4">
                 <p className="text-sm font-semibold text-muted-foreground">Estratégias anteriores</p>
-                {history.map((s) => <StrategyHistoryItem key={s.id} strategy={s} />)}
+                {history.map((s) => <StrategyHistoryItem key={s.id} strategy={s as any} />)}
               </div>
             )}
 
