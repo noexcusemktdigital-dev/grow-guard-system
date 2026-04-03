@@ -213,7 +213,6 @@ function TaskCard({
 export default function ClienteChecklist() {
   const { user } = useAuth();
   const { isAdmin } = useRoleAccess();
-  const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
   const { data: allTasks, isLoading } = useClienteTasks();
   const { data: members } = useOrgMembers();
@@ -224,19 +223,15 @@ export default function ClienteChecklist() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [memberFilter, setMemberFilter] = useState<string>("all");
-  const [generating, setGenerating] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
   const today = startOfDay(new Date());
 
-  // Filter tasks by role, member, priority
   const tasks = useMemo(() => {
     let list = allTasks ?? [];
-    // Non-admin: only own tasks
     if (!isAdmin) {
       list = list.filter(t => t.assigned_to === user?.id || (!t.assigned_to && t.created_by === user?.id));
     }
-    // Admin member filter
     if (isAdmin && memberFilter !== "all") {
       list = list.filter(t => t.assigned_to === memberFilter || t.created_by === memberFilter);
     }
@@ -246,7 +241,6 @@ export default function ClienteChecklist() {
     return list;
   }, [allTasks, isAdmin, user?.id, memberFilter, priorityFilter]);
 
-  // Categorize
   const overdue = useMemo(() =>
     tasks.filter(t => t.status === "pending" && t.due_date && isBefore(parseISO(t.due_date), today))
       .sort((a, b) => (priorityConfig[a.priority]?.order ?? 1) - (priorityConfig[b.priority]?.order ?? 1)),
@@ -266,33 +260,8 @@ export default function ClienteChecklist() {
   );
 
   const completedToday = done.filter(t => t.completed_at && isToday(parseISO(t.completed_at)));
-  const totalActive = overdue.length + pending.length + completedToday.length;
-  const progressPct = totalActive > 0 ? Math.round((completedToday.length / totalActive) * 100) : 0;
 
   const getMemberName = (id: string | null) => members?.find(m => m.user_id === id)?.full_name || "";
-
-  // Generate daily tasks via edge function
-  const handleGenerate = async (targetUserId?: string) => {
-    if (!orgId) return;
-    setGenerating(true);
-    try {
-      const { error } = await supabase.functions.invoke("generate-daily-tasks", {
-        body: { target_user_id: targetUserId || user?.id },
-      });
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["client-tasks"] });
-      toast.success("Tarefas do dia geradas com sucesso!");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("Already generated")) {
-        toast.info("Tarefas já foram geradas para hoje");
-      } else {
-        toast.error(msg || "Erro ao gerar tarefas");
-      }
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const handleCreate = (data: Record<string, unknown>) => {
     createTask.mutate({
