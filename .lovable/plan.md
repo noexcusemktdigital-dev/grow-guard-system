@@ -1,35 +1,31 @@
 
 
-## Plano — Simplificar ferramenta de Tarefas (sem IA, sem progresso)
+## Plano — Corrigir erro CORS na Edge Function `izitech-provision`
 
-### Mudanças
+### Problema
 
-O objetivo é remover a geração por IA e o KPI de progresso. Tarefas são adicionadas automaticamente pelo CRM (já existem triggers que fazem isso) ou manualmente. Se não houver tarefas pendentes, exibe mensagem "Nenhuma tarefa pendente no momento".
+O arquivo `supabase/functions/_shared/cors.ts` possui uma allowlist restrita de origens CORS que **nao inclui** os dominios do Lovable (`*.lovableproject.com`, `*.lovable.app`). Quando usuarios acessam via preview, o browser bloqueia a resposta por CORS mismatch, resultando no erro generico "Edge Function returned a non-2xx status code".
 
-### Alterações em `ClienteChecklist.tsx`
+Alem disso, o componente `WhatsAppSetupWizard.tsx` nao usa `extractEdgeFunctionError` para extrair a mensagem real do backend, mostrando apenas o erro generico do SDK.
 
-1. **Remover KPI de Progresso**: Eliminar o 4º card ("Progresso %") e a variável `progressPct`. Manter apenas 3 KPIs: Pendentes, Atrasadas, Concluídas hoje.
+### Alteracoes
 
-2. **Remover botão "Gerar Tarefas IA"**: Eliminar o botão com `Wand2`, a função `handleGenerate`, o state `generating`, e a importação do `supabase` para invoke. Manter apenas "Nova Tarefa".
+#### 1. `supabase/functions/_shared/cors.ts`
 
-3. **Remover referência a IA no empty state**: Trocar os dois botões por apenas "Nova Tarefa" e mensagem "Nenhuma tarefa pendente no momento. Novas demandas do CRM aparecerão aqui automaticamente."
+Adicionar os dominios do Lovable a allowlist:
+- `https://id-preview--1d5802a2-4462-4bb6-a30e-a9b2d444f68e.lovable.app`
+- `https://grow-guard-system.lovable.app`
 
-4. **Remover sourceConfig "IA"**: Alterar `system` de "IA" para "CRM" (tarefas vindas do CRM).
+Ou, melhor ainda, aceitar qualquer origem `*.lovable.app` e `*.lovableproject.com` via checagem dinamica para nao quebrar em futuros deploys.
 
-5. **Remover imports não utilizados**: `Wand2`, `Sparkles` (se não usado), `Flame`.
+#### 2. `src/components/cliente/WhatsAppSetupWizard.tsx`
+
+No catch do `handleIzitechConnect`, usar `extractEdgeFunctionError` para extrair a mensagem real do backend em vez do erro generico do SDK.
 
 ### Arquivos
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `src/pages/cliente/ClienteChecklist.tsx` | Simplificar conforme acima |
-
-### O que NÃO muda
-
-- `TaskFormDialog` continua igual (admin pode atribuir a outros)
-- `TaskCard` continua igual
-- Filtros de prioridade e membro (admin) continuam
-- Seções Atrasadas/Pendentes/Concluídas continuam
-- Gamificação (+10 XP) continua
-- Edge function `generate-daily-tasks` permanece disponível mas não é chamada pela UI
+| `supabase/functions/_shared/cors.ts` | Adicionar dominios Lovable |
+| `src/components/cliente/WhatsAppSetupWizard.tsx` | Usar `extractEdgeFunctionError` no catch |
 
