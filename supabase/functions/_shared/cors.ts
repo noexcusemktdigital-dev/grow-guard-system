@@ -1,6 +1,4 @@
-// API-004: CORS allowlist — restringe origens ao domínio NOE + localhost dev.
-// Wildcard (*) foi removido pois aumenta superfície de ataque CSRF.
-// Webhooks externos (Asaas, Z-API) não enviam Origin header — não são afetados.
+// API-004: CORS — origens permitidas (estáticas + dinâmicas para Lovable preview)
 const ALLOWED_ORIGINS = [
   'https://sistema.noexcusedigital.com.br',
   'https://noexcusedigital.com.br',
@@ -14,11 +12,18 @@ const CORS_HEADERS_BASE = {
   'Vary': 'Origin',
 };
 
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Aceitar qualquer subdomínio do Lovable (preview e produção)
+  if (origin.endsWith('.lovable.app') || origin.endsWith('.lovableproject.com')) return true;
+  return false;
+}
+
 export function getCorsHeaders(req?: Request): Record<string, string> {
   const origin = req?.headers.get('Origin') ?? '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin)
+  const allowedOrigin = isAllowedOrigin(origin)
     ? origin
-    : ALLOWED_ORIGINS[0]; // fallback ao domínio primário (para server-to-server sem Origin)
+    : ALLOWED_ORIGINS[0]; // fallback ao domínio primário (server-to-server sem Origin)
   return {
     ...CORS_HEADERS_BASE,
     'Access-Control-Allow-Origin': allowedOrigin,

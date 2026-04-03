@@ -134,7 +134,8 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
       }, 4000);
     } catch (err: unknown) {
       setIzitechLoading(false);
-      toast({ title: "Erro", description: (err instanceof Error ? err.message : String(err)) || "Falha ao criar instância", variant: "destructive" });
+      const realErr = await (await import("@/lib/edgeFunctionError")).extractEdgeFunctionError(err);
+      toast({ title: "Erro", description: realErr.message || "Falha ao criar instância", variant: "destructive" });
       setStep(2);
     }
   };
