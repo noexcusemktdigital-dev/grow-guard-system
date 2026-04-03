@@ -2,9 +2,27 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  FileText, Palette, Monitor, Zap, Users, PenTool, CheckSquare, ExternalLink,
+  FileText, Palette, Monitor, Zap, Users, PenTool, CheckSquare, ExternalLink, HelpCircle,
 } from "lucide-react";
+
+/* ═══════════════ INFO TOOLTIP ═══════════════ */
+
+export function InfoTip({ text }: { text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <UITooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help inline-block ml-1.5" />
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+          {text}
+        </TooltipContent>
+      </UITooltip>
+    </TooltipProvider>
+  );
+}
 
 /* ═══════════════ ANIMATED COUNTER ═══════════════ */
 
