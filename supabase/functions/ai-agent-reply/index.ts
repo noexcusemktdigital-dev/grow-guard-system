@@ -259,8 +259,8 @@ Deno.serve(async (req) => {
       await adminClient.from("whatsapp_contacts").update({ agent_id: agent.id }).eq("id", contact_id);
     }
 
-    const promptConfig = agent.prompt_config || {};
-    const engagementRules = promptConfig.engagement_rules || {};
+    const promptConfig: Record<string, any> = agent.prompt_config || {};
+    const engagementRules: Record<string, any> = promptConfig.engagement_rules || {};
 
     // ─── CHECK 2: Working hours ───
     if (!isWithinWorkingHours(engagementRules.working_hours)) {
