@@ -456,7 +456,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     // Add objections from prompt_config
-    const objections = promptConfig.objections || [];
+    const objections: any[] = promptConfig.objections || [];
     if (objections.length > 0) {
       systemPrompt += `\n\nObjeções comuns e como responder:\n${objections.map((o: { objection: string; response: string }) => `- Objeção: "${o.objection}" → Resposta sugerida: "${o.response}"`).join("\n")}`;
     }
