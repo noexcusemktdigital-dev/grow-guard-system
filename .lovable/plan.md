@@ -1,40 +1,35 @@
 
 
-## Plano — Corrigir erro na Edge Function `google-calendar-oauth`
+## Plano — Simplificar ferramenta de Tarefas (sem IA, sem progresso)
 
-### Problema
+### Mudanças
 
-A função helper `jsonRes` (linha 5-10) referencia a variável `req` para obter os headers CORS, mas `req` existe apenas dentro do callback do `serve()`. Isso causa um `ReferenceError: req is not defined` em qualquer chamada da função, resultando no erro "non-2xx status code" para todos os usuários.
+O objetivo é remover a geração por IA e o KPI de progresso. Tarefas são adicionadas automaticamente pelo CRM (já existem triggers que fazem isso) ou manualmente. Se não houver tarefas pendentes, exibe mensagem "Nenhuma tarefa pendente no momento".
 
-### Correção
+### Alterações em `ClienteChecklist.tsx`
 
-Alterar `jsonRes` para receber `req` como parâmetro, e atualizar todas as chamadas (aproximadamente 15 ocorrências) para passar `req`.
+1. **Remover KPI de Progresso**: Eliminar o 4º card ("Progresso %") e a variável `progressPct`. Manter apenas 3 KPIs: Pendentes, Atrasadas, Concluídas hoje.
 
-### Arquivo
+2. **Remover botão "Gerar Tarefas IA"**: Eliminar o botão com `Wand2`, a função `handleGenerate`, o state `generating`, e a importação do `supabase` para invoke. Manter apenas "Nova Tarefa".
 
-| Arquivo | Acao |
+3. **Remover referência a IA no empty state**: Trocar os dois botões por apenas "Nova Tarefa" e mensagem "Nenhuma tarefa pendente no momento. Novas demandas do CRM aparecerão aqui automaticamente."
+
+4. **Remover sourceConfig "IA"**: Alterar `system` de "IA" para "CRM" (tarefas vindas do CRM).
+
+5. **Remover imports não utilizados**: `Wand2`, `Sparkles` (se não usado), `Flame`.
+
+### Arquivos
+
+| Arquivo | Ação |
 |---------|------|
-| `supabase/functions/google-calendar-oauth/index.ts` | Adicionar `req` como parâmetro em `jsonRes` e passar em todas as chamadas |
+| `src/pages/cliente/ClienteChecklist.tsx` | Simplificar conforme acima |
 
-### Detalhes Tecnicos
+### O que NÃO muda
 
-```typescript
-// ANTES (broken)
-function jsonRes(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-  });
-}
-
-// DEPOIS (fixed)
-function jsonRes(req: Request, body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-  });
-}
-```
-
-Todas as chamadas mudam de `jsonRes({...})` para `jsonRes(req, {...})`.
+- `TaskFormDialog` continua igual (admin pode atribuir a outros)
+- `TaskCard` continua igual
+- Filtros de prioridade e membro (admin) continuam
+- Seções Atrasadas/Pendentes/Concluídas continuam
+- Gamificação (+10 XP) continua
+- Edge function `generate-daily-tasks` permanece disponível mas não é chamada pela UI
 
