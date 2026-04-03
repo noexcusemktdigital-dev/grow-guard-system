@@ -34,7 +34,7 @@ interface SidebarItem {
 
 const globalSection: SidebarItem[] = [
   { label: "Início", icon: LayoutDashboard, path: "/cliente/inicio" },
-  { label: "Tarefas", icon: CheckSquare, path: "/cliente/checklist" },
+  { label: "WhatsApp", icon: MessageCircle, path: "/cliente/checklist" },
   { label: "Agenda", icon: Calendar, path: "/cliente/agenda" },
   { label: "Gamificação", icon: Trophy, path: "/cliente/gamificacao" },
 ];
