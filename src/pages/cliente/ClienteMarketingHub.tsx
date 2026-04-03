@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -172,7 +171,7 @@ export default function ClienteMarketingHub() {
             <h3 className="text-xs font-bold mb-2 text-muted-foreground uppercase tracking-wider">Resumo da Estratégia Ativa</h3>
             {(() => {
               const s = monthStrategies[0];
-              const a = s.answers || {};
+              const a = (s.answers || {}) as Record<string, any>;
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   {a.publico && <div><span className="text-muted-foreground">Público:</span> <span className="font-medium">{a.publico}</span></div>}
