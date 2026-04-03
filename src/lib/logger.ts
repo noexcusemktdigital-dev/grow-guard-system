@@ -1,4 +1,3 @@
-// @ts-nocheck
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 interface LogEntry {

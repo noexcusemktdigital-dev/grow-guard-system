@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { supabase } from "@/lib/supabase";
 
 type AppRole = "super_admin" | "admin" | "franqueado" | "cliente_admin" | "cliente_user";
