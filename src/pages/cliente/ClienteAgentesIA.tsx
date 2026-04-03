@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 import { useState } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import { Bot, Plus, Sparkles } from "lucide-react";

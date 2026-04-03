@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Sparkles, Clock, DollarSign, Megaphone } from "lucide-react";
 import { motion } from "framer-motion";

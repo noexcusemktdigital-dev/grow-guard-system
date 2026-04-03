@@ -1,4 +1,5 @@
 // @ts-nocheck
+
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { logger } from "@/lib/logger";
 import { MessageCircle, Settings2, PanelRightOpen, PanelRightClose, WifiOff } from "lucide-react";
