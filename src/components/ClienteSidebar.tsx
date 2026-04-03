@@ -48,7 +48,7 @@ const gpsItem: SidebarItem = {
 
 const vendasSection: SidebarItem[] = [
   { label: "CRM", icon: Users, path: "/cliente/crm" },
-  { label: "Conversas", icon: MessageCircle, path: "/cliente/chat" },
+  { label: "WhatsApp", icon: MessageCircle, path: "/cliente/chat" },
   { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
   { label: "Scripts", icon: BookOpen, path: "/cliente/scripts" },
   { label: "Disparos", icon: Send, path: "/cliente/disparos", adminOnly: true },
