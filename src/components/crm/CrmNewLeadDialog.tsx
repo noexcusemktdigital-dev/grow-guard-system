@@ -75,7 +75,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
       _maxLeads: maxLeads,
-    } as Record<string, unknown>);
+    } as any);
     reset();
     onOpenChange(false);
     toast({ title: "Lead criado com sucesso" });

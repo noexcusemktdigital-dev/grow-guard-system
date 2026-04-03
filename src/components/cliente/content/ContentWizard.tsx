@@ -206,16 +206,16 @@ export function ContentWizard({
 
       <div>
         <p className="text-sm font-medium mb-1">Tema ou assunto específico (opcional)</p>
-        {hasStrategy && strategy.pilares?.length > 0 && (
+        {hasStrategy && Array.isArray(strategy.pilares) && (strategy.pilares as unknown[]).length > 0 && (
           <div className="mb-2">
             <p className="text-xs text-muted-foreground mb-1.5">Seus pilares estratégicos:</p>
             <div className="flex flex-wrap gap-2">
               {(strategy.pilares as Array<Record<string, unknown>>).map((p, i: number) => {
-                const name = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
+                const name = typeof p === "string" ? p : String(p.nome || p.pilar || p.name || JSON.stringify(p));
                 return (
-                  <button key={i} onClick={() => onTemaChange(name)}
+                  <button key={i} onClick={() => onTemaChange(String(name))}
                     className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-                    {name}
+                    {String(name)}
                   </button>
                 );
               })}
@@ -255,10 +255,10 @@ export function ContentWizard({
         {hasStrategy && (
           <div className="pt-2 border-t mt-2 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
             <span className="text-primary font-medium col-span-2">✓ Dados importados da estratégia:</span>
-            {strategy.personaName && <span>👤 {strategy.personaName}</span>}
-            {strategy.tomPrincipal && <span>🎯 Tom: {strategy.tomPrincipal}</span>}
-            {strategy.pilares?.length > 0 && <span>📐 {strategy.pilares.length} pilares</span>}
-            {strategy.dores?.length > 0 && <span>💢 {strategy.dores.length} dores</span>}
+            {strategy.personaName && <span>👤 {String(strategy.personaName)}</span>}
+            {strategy.tomPrincipal && <span>🎯 Tom: {String(strategy.tomPrincipal)}</span>}
+            {Array.isArray(strategy.pilares) && (strategy.pilares as unknown[]).length > 0 && <span>📐 {(strategy.pilares as unknown[]).length} pilares</span>}
+            {Array.isArray(strategy.dores) && (strategy.dores as unknown[]).length > 0 && <span>💢 {(strategy.dores as unknown[]).length} dores</span>}
           </div>
         )}
       </div>

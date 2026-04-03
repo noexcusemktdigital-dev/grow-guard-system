@@ -62,7 +62,7 @@ export function CrmTeamManager() {
       updateTeam.mutate({ id: editingTeam.id, ...payload });
       toast({ title: "Time atualizado" });
     } else {
-      createTeam.mutate(payload as Record<string, unknown>);
+      createTeam.mutate(payload);
       toast({ title: "Time criado" });
     }
     setDialogOpen(false);

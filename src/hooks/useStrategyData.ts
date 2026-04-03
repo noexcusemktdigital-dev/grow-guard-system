@@ -20,7 +20,7 @@ export function useStrategyData() {
     status: strategy?.status,
 
     // ICP
-    icp: result?.icp || null,
+    icp: (result?.icp as Record<string, unknown>) || null,
     personaName: result?.icp?.nome_persona || null,
     publicoAlvo: result?.icp?.descricao || null,
     dores: result?.icp?.dores || [],
@@ -29,7 +29,7 @@ export function useStrategyData() {
     gatilhosCompra: result?.icp?.gatilhos_compra || [],
 
     // Proposta de valor
-    propostaValor: result?.proposta_valor || null,
+    propostaValor: (result?.proposta_valor as Record<string, unknown>) || null,
 
     // Tom de comunicação
     tomComunicacao: result?.tom_comunicacao || null,
@@ -73,13 +73,13 @@ export function useStrategyData() {
     // Sales Plan (backward compat — unified knowledge base)
     hasSalesPlan: Object.keys(spAnswers).length > 5,
     salesPlanAnswers: spAnswers,
-    salesPlanProducts: spAnswers.produtos_servicos || null,
-    salesPlanDiferenciais: spAnswers.diferenciais || null,
-    salesPlanDorPrincipal: spAnswers.dor_principal || null,
-    salesPlanSegmento: spAnswers.segmento || null,
-    salesPlanModeloNegocio: spAnswers.modelo_negocio || null,
-    salesPlanTicketMedio: spAnswers.ticket_medio || null,
-    salesPlanEtapasFunil: spAnswers.etapas_funil || null,
+    salesPlanProducts: (spAnswers.produtos_servicos as string) || null,
+    salesPlanDiferenciais: (spAnswers.diferenciais as string) || null,
+    salesPlanDorPrincipal: (spAnswers.dor_principal as string) || null,
+    salesPlanSegmento: (spAnswers.segmento as string) || null,
+    salesPlanModeloNegocio: (spAnswers.modelo_negocio as string) || null,
+    salesPlanTicketMedio: (spAnswers.ticket_medio as string) || null,
+    salesPlanEtapasFunil: (spAnswers.etapas_funil as string) || null,
 
     // Full result for advanced usage
     fullResult: result,

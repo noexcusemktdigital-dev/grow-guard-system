@@ -244,16 +244,16 @@ export function CrmAutomations() {
   };
 
   const openEdit = (auto: Record<string, unknown>) => {
-    setEditingId(auto.id);
-    setName(auto.name);
-    setDescription(auto.description || "");
-    setTriggerType(auto.trigger_type);
-    setActionType(auto.action_type);
-    setActionConfig(auto.action_config || {});
-    setTriggerConfig(auto.trigger_config || {});
+    setEditingId(auto.id as string);
+    setName(auto.name as string);
+    setDescription((auto.description as string) || "");
+    setTriggerType(auto.trigger_type as string);
+    setActionType(auto.action_type as string);
+    setActionConfig((auto.action_config as Record<string, unknown>) || {});
+    setTriggerConfig((auto.trigger_config as Record<string, unknown>) || {});
     setSelectedFunnels(Array.isArray(auto.funnel_ids) ? auto.funnel_ids : []);
     setSelectedTeams(Array.isArray(auto.team_ids) ? auto.team_ids : []);
-    setSelectedAgentId(auto.agent_id || "");
+    setSelectedAgentId((auto.agent_id as string) || "");
     setDialogOpen(true);
   };
 
@@ -272,7 +272,7 @@ export function CrmAutomations() {
       updateAutomation.mutate({ id: editingId, ...payload });
       toast({ title: "Automação atualizada" });
     } else {
-      createAutomation.mutate(payload);
+      createAutomation.mutate(payload as { name: string; trigger_type: string; action_type: string; trigger_config?: Record<string, unknown>; action_config?: Record<string, unknown>; is_active?: boolean });
       toast({ title: "Automação criada" });
     }
     reset();
