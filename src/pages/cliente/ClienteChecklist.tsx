@@ -414,15 +414,9 @@ export default function ClienteChecklist() {
             </Select>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleGenerate()} disabled={generating}>
-            <Wand2 className="w-4 h-4 mr-1" />
-            {generating ? "Gerando..." : "Gerar Tarefas IA (5 créditos)"}
-          </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
+        </Button>
       </div>
 
       {/* Overdue Section */}
