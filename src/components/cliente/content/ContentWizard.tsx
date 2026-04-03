@@ -206,16 +206,16 @@ export function ContentWizard({
 
       <div>
         <p className="text-sm font-medium mb-1">Tema ou assunto específico (opcional)</p>
-        {hasStrategy && strategy.pilares?.length > 0 && (
+        {hasStrategy && Array.isArray(strategy.pilares) && (strategy.pilares as unknown[]).length > 0 && (
           <div className="mb-2">
             <p className="text-xs text-muted-foreground mb-1.5">Seus pilares estratégicos:</p>
             <div className="flex flex-wrap gap-2">
               {(strategy.pilares as Array<Record<string, unknown>>).map((p, i: number) => {
-                const name = typeof p === "string" ? p : p.nome || p.pilar || p.name || JSON.stringify(p);
+                const name = typeof p === "string" ? p : String(p.nome || p.pilar || p.name || JSON.stringify(p));
                 return (
-                  <button key={i} onClick={() => onTemaChange(name)}
+                  <button key={i} onClick={() => onTemaChange(String(name))}
                     className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-                    {name}
+                    {String(name)}
                   </button>
                 );
               })}
