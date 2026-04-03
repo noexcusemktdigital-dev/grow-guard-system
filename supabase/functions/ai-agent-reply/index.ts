@@ -71,8 +71,8 @@ function isWithinWorkingHours(workingHours: Record<string, any> | null): boolean
   const hour = parseInt(parts.find((p: { type: string; value: string }) => p.type === "hour")?.value || "0");
   const minute = parseInt(parts.find((p: { type: string; value: string }) => p.type === "minute")?.value || "0");
   const currentMinutes = hour * 60 + minute;
-  const [startH, startM] = (workingHours.start || "08:00").split(":").map(Number);
-  const [endH, endM] = (workingHours.end || "18:00").split(":").map(Number);
+  const [startH, startM] = ((workingHours.start as string) || "08:00").split(":").map(Number);
+  const [endH, endM] = ((workingHours.end as string) || "18:00").split(":").map(Number);
   const startMinutes = startH * 60 + startM;
   const endMinutes = endH * 60 + endM;
   return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
