@@ -1,31 +1,32 @@
 
 
-## Plano — Corrigir erro CORS na Edge Function `izitech-provision`
+## Plano — Corrigir erro ao salvar credenciais do Google Calendar
 
 ### Problema
 
-O arquivo `supabase/functions/_shared/cors.ts` possui uma allowlist restrita de origens CORS que **nao inclui** os dominios do Lovable (`*.lovableproject.com`, `*.lovable.app`). Quando usuarios acessam via preview, o browser bloqueia a resposta por CORS mismatch, resultando no erro generico "Edge Function returned a non-2xx status code".
+A Edge Function `google-calendar-oauth` faz um `upsert` com `{ onConflict: "user_id" }`, mas a tabela `google_calendar_tokens` **não possui unique constraint na coluna `user_id`** — só tem a primary key no `id`. Isso faz o Postgres rejeitar o upsert, gerando erro 500.
 
-Alem disso, o componente `WhatsAppSetupWizard.tsx` nao usa `extractEdgeFunctionError` para extrair a mensagem real do backend, mostrando apenas o erro generico do SDK.
+O fallback (delete + insert) pode funcionar na primeira vez, mas a falta de constraint é a causa raiz. Além disso, o componente `GoogleSetupWizard.tsx` não extrai o erro real do backend, mostrando apenas "Edge Function returned a non-2xx status code".
 
-### Alteracoes
+### Alterações
 
-#### 1. `supabase/functions/_shared/cors.ts`
+#### 1. Migração SQL — Adicionar unique constraint em `user_id`
 
-Adicionar os dominios do Lovable a allowlist:
-- `https://id-preview--1d5802a2-4462-4bb6-a30e-a9b2d444f68e.lovable.app`
-- `https://grow-guard-system.lovable.app`
+```sql
+ALTER TABLE public.google_calendar_tokens
+ADD CONSTRAINT google_calendar_tokens_user_id_key UNIQUE (user_id);
+```
 
-Ou, melhor ainda, aceitar qualquer origem `*.lovable.app` e `*.lovableproject.com` via checagem dinamica para nao quebrar em futuros deploys.
+Isso permite que o `upsert({ onConflict: "user_id" })` funcione corretamente.
 
-#### 2. `src/components/cliente/WhatsAppSetupWizard.tsx`
+#### 2. `src/components/agenda/GoogleSetupWizard.tsx`
 
-No catch do `handleIzitechConnect`, usar `extractEdgeFunctionError` para extrair a mensagem real do backend em vez do erro generico do SDK.
+Melhorar o tratamento de erro no `handleSaveAndConnect` para usar `extractEdgeFunctionError` e exibir a mensagem real do backend no toast.
 
 ### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| `supabase/functions/_shared/cors.ts` | Adicionar dominios Lovable |
-| `src/components/cliente/WhatsAppSetupWizard.tsx` | Usar `extractEdgeFunctionError` no catch |
+| Migração SQL | Adicionar UNIQUE constraint em `user_id` |
+| `src/components/agenda/GoogleSetupWizard.tsx` | Melhorar tratamento de erro |
 
