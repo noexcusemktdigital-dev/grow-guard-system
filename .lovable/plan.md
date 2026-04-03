@@ -1,41 +1,40 @@
 
 
-## Plano — Implementação: Reformular Tarefas com geração automática CRM
+## Plano — Corrigir erro na Edge Function `google-calendar-oauth`
 
-Este plano já foi aprovado. Resumo da implementação:
+### Problema
 
-### 1. Nova Edge Function: `generate-daily-tasks`
+A função helper `jsonRes` (linha 5-10) referencia a variável `req` para obter os headers CORS, mas `req` existe apenas dentro do callback do `serve()`. Isso causa um `ReferenceError: req is not defined` em qualquer chamada da função, resultando no erro "non-2xx status code" para todos os usuários.
 
-Criar `supabase/functions/generate-daily-tasks/index.ts`:
-- Adapta a lógica de `generate-daily-checklist` para inserir na tabela `client_tasks` (não `client_checklist_items`)
-- Aceita `target_user_id` no body (admin pode gerar para outros)
-- Verifica duplicatas: se já existem tarefas `source=system` para o target user no dia, retorna sem gerar
-- Coleta contexto CRM (leads parados, tarefas vencidas, propostas, mensagens)
-- Chama IA para gerar 5-8 tarefas, insere com `due_date=hoje`, `priority` em inglês (high/medium/low), `source=system`
-- Debita 5 créditos
-- Registrar em `supabase/config.toml`
+### Correção
 
-### 2. Reescrever `ClienteChecklist.tsx`
+Alterar `jsonRes` para receber `req` como parâmetro, e atualizar todas as chamadas (aproximadamente 15 ocorrências) para passar `req`.
 
-Eliminar as 3 abas (Hoje / Minhas Tarefas / Time) e o componente `DailyChecklistTab`.
+### Arquivo
 
-Layout unificado:
-- **Header KPIs**: Pendentes | Atrasadas | Concluídas hoje | Progresso %
-- **Botões**: "Gerar Tarefas do Dia" (5 créditos, chama `generate-daily-tasks`) + "Nova Tarefa"
-- **Admin**: filtro por membro do time, pode atribuir tarefas a qualquer membro
-- **Usuário**: vê apenas suas tarefas
-- **Seções**: Atrasadas (vermelho) → Pendentes → Concluídas (colapsável)
-- Manter `TaskFormDialog`, toggle, delete, edit, XP award
-
-### 3. Atualizar `useClienteTasks.ts`
-
-Sem mudanças estruturais necessárias — os filtros existentes já suportam o novo layout.
-
-### Arquivos
-
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `supabase/functions/generate-daily-tasks/index.ts` | Criar |
-| `src/pages/cliente/ClienteChecklist.tsx` | Reescrever |
-| `supabase/config.toml` | Adicionar função |
+| `supabase/functions/google-calendar-oauth/index.ts` | Adicionar `req` como parâmetro em `jsonRes` e passar em todas as chamadas |
+
+### Detalhes Tecnicos
+
+```typescript
+// ANTES (broken)
+function jsonRes(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+  });
+}
+
+// DEPOIS (fixed)
+function jsonRes(req: Request, body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+  });
+}
+```
+
+Todas as chamadas mudam de `jsonRes({...})` para `jsonRes(req, {...})`.
 
