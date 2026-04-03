@@ -64,11 +64,32 @@ Deno.serve(async (req) => {
         for (const automation of automations) {
           // Check trigger_config filters
           if (!matchesTriggerConfig(automation.trigger_config, event.trigger_data)) {
+            // INT-006: log skipped execution
+            await admin.from("automation_execution_logs").insert({
+              organization_id: event.organization_id,
+              automation_id: automation.id,
+              event_id: event.id,
+              lead_id: event.lead_id,
+              action_type: automation.action_type,
+              status: "skipped",
+              metadata: { reason: "trigger_config_mismatch", trigger_data: event.trigger_data },
+            });
             continue;
           }
 
           try {
             await executeAction(admin, supabaseUrl, serviceRoleKey, automation, lead, event);
+
+            // INT-006: log successful execution
+            await admin.from("automation_execution_logs").insert({
+              organization_id: event.organization_id,
+              automation_id: automation.id,
+              event_id: event.id,
+              lead_id: event.lead_id,
+              action_type: automation.action_type,
+              status: "success",
+              metadata: { automation_name: automation.name },
+            });
 
             // Update execution stats
             await admin
@@ -80,6 +101,17 @@ Deno.serve(async (req) => {
               .eq("id", automation.id);
           } catch (actionErr) {
             console.error(`Action error for automation ${automation.id}:`, actionErr);
+            // INT-006: log failed execution
+            await admin.from("automation_execution_logs").insert({
+              organization_id: event.organization_id,
+              automation_id: automation.id,
+              event_id: event.id,
+              lead_id: event.lead_id,
+              action_type: automation.action_type,
+              status: "error",
+              error_message: actionErr instanceof Error ? actionErr.message : String(actionErr),
+              metadata: { automation_name: automation.name },
+            });
           }
         }
 
