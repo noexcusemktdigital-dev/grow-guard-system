@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useClienteWallet } from "./useClienteWallet";
 import { useClienteSubscription } from "./useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
