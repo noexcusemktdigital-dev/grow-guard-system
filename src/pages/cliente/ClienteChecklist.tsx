@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
-  CheckSquare, Plus, CheckCircle2, Flame, Sparkles,
+  CheckSquare, Plus, CheckCircle2,
   Calendar, Users, Filter, Trash2, Clock, AlertTriangle, ChevronDown,
-  Wand2, Edit2,
+  Edit2,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,9 +26,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerCelebration } from "@/components/CelebrationEffect";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { playSound } from "@/lib/sounds";
 
 const priorityConfig: Record<string, { label: string; color: string; order: number }> = {
