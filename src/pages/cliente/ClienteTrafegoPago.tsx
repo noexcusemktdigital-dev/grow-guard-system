@@ -239,7 +239,7 @@ export default function ClienteTrafegoPago() {
                       wizardData={wizardData}
                       setWizardData={setWizardData}
                       toggleArrayItem={toggleArrayItem}
-                      marketingStrategyPublicoAlvo={marketingStrategy?.answers?.publico_alvo}
+                      marketingStrategyPublicoAlvo={marketingStrategy?.answers?.publico_alvo as string}
                       sitesData={sitesData}
                       detectedAssets={detectedAssets}
                     />

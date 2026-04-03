@@ -216,7 +216,7 @@ export default function ClienteRedesSociais() {
             break;
           }
           logger.error(`Slide ${i + 1} failed:`, slideErr);
-          toast({ title: `Erro no slide ${i + 1}`, description: slideErr.message, variant: "destructive" });
+          toast({ title: `Erro no slide ${i + 1}`, description: (slideErr as Error).message, variant: "destructive" });
         }
       }
 

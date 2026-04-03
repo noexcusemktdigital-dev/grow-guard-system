@@ -24,7 +24,7 @@ export interface ClientePlanoVendasMetasProps {
   scopeFilter: string;
   setScopeFilter: (v: string) => void;
   onNewMeta: () => void;
-  onEditMeta: (goal: Record<string, unknown>) => void;
+  onEditMeta: (goal: any) => void;
   onArchiveMeta: (id: string) => void;
   isMonetaryMetric: (m: string) => boolean;
 }

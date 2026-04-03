@@ -148,8 +148,8 @@ export function ClientePlanoVendasMetaDialog({
                   <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione a pessoa" /></SelectTrigger>
                   <SelectContent>
                     {members.map(m => (
-                      <SelectItem key={m.user_id} value={m.user_id}>
-                        {m.full_name} <span className="text-muted-foreground ml-1">({m.role})</span>
+                      <SelectItem key={m.user_id as React.Key} value={m.user_id as string}>
+                        {m.full_name as React.ReactNode} <span className="text-muted-foreground ml-1">({m.role as React.ReactNode})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
