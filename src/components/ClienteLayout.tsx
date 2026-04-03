@@ -7,6 +7,7 @@ import { FeatureGateProvider } from "@/contexts/FeatureGateContext";
 import { FeatureGateOverlay } from "./FeatureGateOverlay";
 import { CreditAlertBanner } from "./cliente/CreditAlertBanner";
 import { TrialCountdownBanner } from "./cliente/TrialCountdownBanner";
+import { SupportAccessBanner } from "./cliente/SupportAccessBanner";
 import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
 import { OnboardingTour } from "./cliente/OnboardingTour";
 import { TrialWelcomeModal } from "./cliente/TrialWelcomeModal";
