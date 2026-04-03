@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
-  CheckSquare, Plus, CheckCircle2, Flame, Sparkles,
+  CheckSquare, Plus, CheckCircle2,
   Calendar, Users, Filter, Trash2, Clock, AlertTriangle, ChevronDown,
-  Wand2, Edit2,
+  Edit2,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,9 +26,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerCelebration } from "@/components/CelebrationEffect";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { playSound } from "@/lib/sounds";
 
 const priorityConfig: Record<string, { label: string; color: string; order: number }> = {
@@ -40,7 +38,7 @@ const priorityConfig: Record<string, { label: string; color: string; order: numb
 const sourceConfig: Record<string, { label: string; color: string }> = {
   manual: { label: "Manual", color: "text-foreground" },
   admin: { label: "Admin", color: "text-primary" },
-  system: { label: "IA", color: "text-amber-500" },
+  system: { label: "CRM", color: "text-amber-500" },
 };
 
 /* ─── TASK FORM DIALOG ─── */
@@ -215,7 +213,6 @@ function TaskCard({
 export default function ClienteChecklist() {
   const { user } = useAuth();
   const { isAdmin } = useRoleAccess();
-  const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
   const { data: allTasks, isLoading } = useClienteTasks();
   const { data: members } = useOrgMembers();
@@ -226,19 +223,15 @@ export default function ClienteChecklist() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [memberFilter, setMemberFilter] = useState<string>("all");
-  const [generating, setGenerating] = useState(false);
   const [showDone, setShowDone] = useState(false);
 
   const today = startOfDay(new Date());
 
-  // Filter tasks by role, member, priority
   const tasks = useMemo(() => {
     let list = allTasks ?? [];
-    // Non-admin: only own tasks
     if (!isAdmin) {
       list = list.filter(t => t.assigned_to === user?.id || (!t.assigned_to && t.created_by === user?.id));
     }
-    // Admin member filter
     if (isAdmin && memberFilter !== "all") {
       list = list.filter(t => t.assigned_to === memberFilter || t.created_by === memberFilter);
     }
@@ -248,7 +241,6 @@ export default function ClienteChecklist() {
     return list;
   }, [allTasks, isAdmin, user?.id, memberFilter, priorityFilter]);
 
-  // Categorize
   const overdue = useMemo(() =>
     tasks.filter(t => t.status === "pending" && t.due_date && isBefore(parseISO(t.due_date), today))
       .sort((a, b) => (priorityConfig[a.priority]?.order ?? 1) - (priorityConfig[b.priority]?.order ?? 1)),
@@ -268,33 +260,8 @@ export default function ClienteChecklist() {
   );
 
   const completedToday = done.filter(t => t.completed_at && isToday(parseISO(t.completed_at)));
-  const totalActive = overdue.length + pending.length + completedToday.length;
-  const progressPct = totalActive > 0 ? Math.round((completedToday.length / totalActive) * 100) : 0;
 
   const getMemberName = (id: string | null) => members?.find(m => m.user_id === id)?.full_name || "";
-
-  // Generate daily tasks via edge function
-  const handleGenerate = async (targetUserId?: string) => {
-    if (!orgId) return;
-    setGenerating(true);
-    try {
-      const { error } = await supabase.functions.invoke("generate-daily-tasks", {
-        body: { target_user_id: targetUserId || user?.id },
-      });
-      if (error) throw error;
-      qc.invalidateQueries({ queryKey: ["client-tasks"] });
-      toast.success("Tarefas do dia geradas com sucesso!");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("Already generated")) {
-        toast.info("Tarefas já foram geradas para hoje");
-      } else {
-        toast.error(msg || "Erro ao gerar tarefas");
-      }
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const handleCreate = (data: Record<string, unknown>) => {
     createTask.mutate({
@@ -362,7 +329,7 @@ export default function ClienteChecklist() {
       />
 
       {/* KPI Header */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border">
           <CardContent className="py-3 px-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-500" />
@@ -387,15 +354,6 @@ export default function ClienteChecklist() {
             <div>
               <p className="text-lg font-bold">{completedToday.length}</p>
               <p className="text-[10px] text-muted-foreground">Hoje</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border">
-          <CardContent className="py-3 px-4 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <div>
-              <p className="text-lg font-bold">{progressPct}%</p>
-              <p className="text-[10px] text-muted-foreground">Progresso</p>
             </div>
           </CardContent>
         </Card>
@@ -425,15 +383,9 @@ export default function ClienteChecklist() {
             </Select>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleGenerate()} disabled={generating}>
-            <Wand2 className="w-4 h-4 mr-1" />
-            {generating ? "Gerando..." : "Gerar Tarefas IA (5 créditos)"}
-          </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
+        </Button>
       </div>
 
       {/* Overdue Section */}
@@ -473,16 +425,12 @@ export default function ClienteChecklist() {
       {/* Empty state */}
       {overdue.length === 0 && pending.length === 0 && done.length === 0 && (
         <div className="text-center py-12 space-y-3">
-          <Sparkles className="h-10 w-10 mx-auto mb-3 text-primary/40" />
-          <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada</p>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleGenerate()} disabled={generating}>
-              <Wand2 className="w-4 h-4 mr-1" /> Gerar Tarefas com IA (5 créditos)
-            </Button>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
-            </Button>
-          </div>
+          <CheckSquare className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Nenhuma tarefa pendente no momento.</p>
+          <p className="text-xs text-muted-foreground">Novas demandas do CRM aparecerão aqui automaticamente.</p>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Nova Tarefa
+          </Button>
         </div>
       )}
 
