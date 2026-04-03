@@ -133,7 +133,7 @@ async function syncGoogleAds(connection: Record<string, any>, supabase: any) {
   return metrics;
 }
 
-async function syncMetaAds(connection: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   const accessToken = connection.access_token;
   let accountId = connection.account_id;
   if (!accountId) throw new Error("No Meta ad account ID");
