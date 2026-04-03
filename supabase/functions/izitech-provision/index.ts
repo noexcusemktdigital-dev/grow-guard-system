@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
 
     // ── Get user's org ──
     const { data: member } = await supabase
-      .from("organization_members")
+      .from("organization_memberships")
       .select("organization_id")
       .eq("user_id", user.id)
       .limit(1)
