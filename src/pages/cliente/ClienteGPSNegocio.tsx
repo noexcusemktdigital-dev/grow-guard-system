@@ -291,8 +291,7 @@ export default function ClienteGPSNegocio() {
         diferenciais: allAnswers.diferencial,
         dorPrincipal: rafaelAnswers.dor_principal,
         ticketMedio: rafaelAnswers.ticket_medio,
-        const etapasRaw = rafaelAnswers.etapas_funil;
-        etapasFunil: typeof etapasRaw === "string" ? etapasRaw.split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
+        etapasFunil: typeof rafaelAnswers.etapas_funil === "string" ? rafaelAnswers.etapas_funil.split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
         tempoFechamento: rafaelAnswers.tempo_fechamento,
       };
       (async () => {
