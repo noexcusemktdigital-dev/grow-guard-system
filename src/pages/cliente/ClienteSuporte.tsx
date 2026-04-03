@@ -20,6 +20,8 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { SupportAccessManager } from "@/components/cliente/SupportAccessManager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Aberto", in_progress: "Em análise", waiting: "Aguardando", resolved: "Resolvido", closed: "Encerrado",
