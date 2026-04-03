@@ -62,11 +62,11 @@ COMPORTAMENTO OBRIGATÓRIO:
 
 // ─── Engagement rule helpers ───
 
-function isWithinWorkingHours(workingHours: Record<string, unknown> | null): boolean {
+function isWithinWorkingHours(workingHours: Record<string, any> | null): boolean {
   if (!workingHours?.enabled) return true;
-  const tz = workingHours.timezone || "America/Sao_Paulo";
+  const tz = (workingHours.timezone || "America/Sao_Paulo") as string;
   const now = new Date();
-  const formatter = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz });
+  const formatter = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz as string });
   const parts = formatter.formatToParts(now);
   const hour = parseInt(parts.find((p: { type: string; value: string }) => p.type === "hour")?.value || "0");
   const minute = parseInt(parts.find((p: { type: string; value: string }) => p.type === "minute")?.value || "0");
