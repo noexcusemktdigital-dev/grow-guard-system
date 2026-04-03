@@ -5210,6 +5210,111 @@ export type Database = {
           },
         ]
       }
+      support_access_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          organization_id: string
+          support_user_id: string | null
+          token_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          organization_id: string
+          support_user_id?: string | null
+          token_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          support_user_id?: string | null
+          token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_access_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_access_logs_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "support_access_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_access_tokens: {
+        Row: {
+          access_level: string
+          created_at: string | null
+          created_by_user_id: string
+          expires_at: string
+          id: string
+          ip_created: string | null
+          is_active: boolean | null
+          organization_id: string
+          revoked_at: string | null
+          ticket_id: string | null
+          token_hash: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string | null
+          created_by_user_id: string
+          expires_at: string
+          id?: string
+          ip_created?: string | null
+          is_active?: boolean | null
+          organization_id: string
+          revoked_at?: string | null
+          ticket_id?: string | null
+          token_hash: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string | null
+          created_by_user_id?: string
+          expires_at?: string
+          id?: string
+          ip_created?: string | null
+          is_active?: boolean | null
+          organization_id?: string
+          revoked_at?: string | null
+          ticket_id?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_access_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_access_tokens_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_messages: {
         Row: {
           attachments: string[] | null
@@ -6038,6 +6143,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_support_access_tokens: { Args: never; Returns: number }
       generate_org_api_key: { Args: { _org_id: string }; Returns: string }
       get_academy_reports: {
         Args: { _org_id: string }
@@ -6440,6 +6546,17 @@ export type Database = {
         Returns: boolean
       }
       increment_referral_uses: { Args: { _org_id: string }; Returns: undefined }
+      insert_support_access_log: {
+        Args: {
+          _action: string
+          _ip_address?: string
+          _metadata?: Json
+          _organization_id: string
+          _support_user_id: string
+          _token_id: string
+        }
+        Returns: string
+      }
       is_member_of_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean

@@ -171,5 +171,11 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = true
   [functions.ads-analyze]
     verify_jwt = true
-  [functions.create-test-users]
+
+  # --- Support access functions ---
+  [functions.generate-support-access]
+    verify_jwt = false
+  [functions.validate-support-access]
+    verify_jwt = false
+  [functions.revoke-support-access]
     verify_jwt = false
