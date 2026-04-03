@@ -214,7 +214,7 @@ function BatchFolder({ batch, navigate, onCopy, onExpand, onDelete }: {
           {batch.items.map(item => {
             const r = item.result as Record<string, unknown>;
             if (!r) return null;
-            const formato = (item.format || r.formato || "").toLowerCase();
+            const formato = ((item.format || r.formato || "") as string).toLowerCase();
             const parsedContent = parseConteudoPrincipal(r.conteudo_principal);
 
             return (
