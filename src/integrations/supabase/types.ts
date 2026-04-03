@@ -1887,8 +1887,11 @@ export type Database = {
       crm_automation_queue: {
         Row: {
           created_at: string | null
+          error_count: number
           id: string
+          last_error: string | null
           lead_id: string
+          next_retry_at: string | null
           organization_id: string
           processed: boolean | null
           trigger_data: Json | null
@@ -1896,8 +1899,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          error_count?: number
           id?: string
+          last_error?: string | null
           lead_id: string
+          next_retry_at?: string | null
           organization_id: string
           processed?: boolean | null
           trigger_data?: Json | null
@@ -1905,8 +1911,11 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          error_count?: number
           id?: string
+          last_error?: string | null
           lead_id?: string
+          next_retry_at?: string | null
           organization_id?: string
           processed?: boolean | null
           trigger_data?: Json | null
@@ -6001,6 +6010,10 @@ export type Database = {
           unit_name: string
           users_count: number
         }[]
+      }
+      get_and_increment_roulette_index: {
+        Args: { _member_count: number; _org_id: string }
+        Returns: number
       }
       get_announcements_with_parent: {
         Args: { _org_id: string }
