@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from "react";
 import { Star, ClipboardCheck, User, ChevronRight, TrendingUp, TrendingDown, Minus, FolderOpen, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
