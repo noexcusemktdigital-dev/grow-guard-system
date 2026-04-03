@@ -171,3 +171,5 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = true
   [functions.ads-analyze]
     verify_jwt = true
+  [functions.create-test-users]
+    verify_jwt = false
