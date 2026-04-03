@@ -64,7 +64,7 @@ const clientePages = [
   { label: "Gamificação", path: "/cliente/gamificacao" },
   { label: "Plano de Vendas", path: "/cliente/plano-vendas" },
   { label: "CRM", path: "/cliente/crm" },
-  { label: "Conversas", path: "/cliente/chat" },
+  { label: "WhatsApp", path: "/cliente/chat" },
   { label: "Agentes IA", path: "/cliente/agentes-ia" },
   { label: "Scripts", path: "/cliente/scripts" },
   { label: "Disparos", path: "/cliente/disparos" },
