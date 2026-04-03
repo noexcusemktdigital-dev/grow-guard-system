@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     }
 
     // Find active AI agent — with fallback if assigned agent is inactive
-    let agent: Record<string, unknown> | null = null;
+    let agent: Record<string, any> | null = null;
     if (contact.agent_id) {
       const { data: assignedAgents } = await adminClient
         .from("client_ai_agents")
