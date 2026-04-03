@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { FEATURE_TUTORIALS } from "@/constants/featureTutorials";
 
