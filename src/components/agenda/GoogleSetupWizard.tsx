@@ -36,7 +36,9 @@ export default function GoogleSetupWizard({ open, onOpenChange }: GoogleSetupWiz
       const url = await connectGoogle.mutateAsync(redirectUri);
       window.location.href = url;
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar credenciais");
+      const { extractEdgeFunctionError } = await import("@/lib/edgeFunctionError");
+      const realErr = await extractEdgeFunctionError(e);
+      toast.error(realErr.message || "Erro ao salvar credenciais");
     }
   }
 
