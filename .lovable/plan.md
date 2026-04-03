@@ -1,33 +1,54 @@
 
 
-## Plano — Integrar metas do GPS com vendas do CRM
+## Plano — Salvar hierarquia na memória + Corrigir erros de build
 
-### Diagnóstico
+### 1. Memória: Hierarquia completa do sistema
 
-O problema é que quando um lead é marcado como vendido no CRM (`markAsWon`, `markAsLost`, `updateLead`, `createLead`), nenhuma dessas mutations invalida a query `goal-progress`. Ou seja, o cálculo de progresso das metas **já funciona corretamente** (ele busca leads com `won_at` dentro do período) — mas o cache do React Query não é atualizado quando uma venda acontece no CRM.
+A seguinte estrutura será registrada como memória permanente do projeto:
 
-O `useGoalProgress` calcula o progresso corretamente com base nos leads ganhos (`won_at`) dentro do período da meta. O problema é puramente de **invalidação de cache**: as mutations do CRM não avisam ao React Query que os dados de progresso das metas mudaram.
+```text
+NOE SYSTEM — HIERARQUIA DE PAPÉIS E ORGANIZAÇÕES
 
-### Correção
+PORTAL FRANQUIA (/acessofranquia)
+├── MATRIZ (org_type: "franqueadora")
+│   ├── super_admin — Controle total do sistema, billing, matriz, academy
+│   ├── admin — Gestão operacional da rede, unidades, comunicados
+│   └── Usuários vinculados via org_memberships + teams
+│
+└── FRANQUEADO (org_type: "franqueado", parent_org_id → matriz)
+    ├── franqueado (papel único, permissão via org_memberships)
+    ├── Admin da Unidade — gestão local, prospects, estratégia
+    └── Operador — execução operacional, acesso restrito
 
-Adicionar `qc.invalidateQueries({ queryKey: ["goal-progress"] })` em todas as mutations do CRM que afetam dados usados pelo cálculo de metas:
+PORTAL SAAS (/app)
+└── CLIENTE (org_type: "cliente")
+    ├── Workspace = 1 organização com subscription + credit_wallet
+    ├── cliente_admin — CRM, GPS, Ads, Billing, Equipe, Integrações
+    └── cliente_user — Leads, WhatsApp, tarefas; sem billing/equipe/config
+```
 
-- `createLead` → afeta métrica "leads"
-- `updateLead` → afeta valor, assigned_to, stage
-- `markAsWon` → afeta métricas "revenue", "contracts", "conversions", "avg_ticket"
-- `markAsLost` → afeta taxa de conversão
-- `bulkUpdateLeads` → pode afetar qualquer campo
-- `deleteLead` / `bulkDeleteLeads` → remove leads do cálculo
+**Relações**: `organizations.parent_org_id` liga franqueado→matriz. `org_memberships` vincula usuários a orgs. `user_roles` define papel global (portal-aware via `get_user_role`).
 
-### Arquivo
+### 2. Corrigir erros de build nas Edge Functions
 
-| Arquivo | Ação |
-|---------|------|
-| `src/hooks/useCrmLeads.ts` | Adicionar invalidação de `goal-progress` em todos os `onSuccess` das mutations |
+Há erros de TypeScript em 7+ edge functions. O padrão é o mesmo em todas:
 
-### Resultado
+| Erro | Correção |
+|------|----------|
+| `'err' is of type 'unknown'` | `catch (err: unknown)` + `err instanceof Error ? err.message : String(err)` |
+| `Property X does not exist on type 'never'` (asaas-customer) | Adicionar type assertion `as any` nos retornos de `.select().single()` |
+| `Property X does not exist on type '{}'` (ai-agent-reply) | Tipar corretamente os objetos de configuração |
+| `Argument not assignable to 'never'` | Type assertions nos `.update()`, `.insert()`, `.rpc()` |
 
-- Quando um lead é marcado como vendido no CRM, a meta atualiza automaticamente o progresso
-- Dashboard, GPS do Negócio e página de Metas refletem vendas em tempo real
-- Sem mudanças no banco de dados — apenas sincronização de cache no frontend
+#### Arquivos a corrigir
+
+| Arquivo | Tipo de erro |
+|---------|-------------|
+| `supabase/functions/ai-agent-simulate/index.ts` | `err` unknown |
+| `supabase/functions/ai-generate-agent-config/index.ts` | `err` unknown |
+| `supabase/functions/_shared/asaas-customer.ts` | Properties on `never` |
+| `supabase/functions/asaas-buy-credits/index.ts` | SupabaseClient type mismatch |
+| `supabase/functions/ai-agent-reply/index.ts` | Múltiplos: `{}` types, `never`, Intl overload |
+
+A correção segue o mesmo padrão já aplicado em `ads-disconnect`, `ads-analyze` etc: type assertions e tipagem explícita de catch blocks.
 
