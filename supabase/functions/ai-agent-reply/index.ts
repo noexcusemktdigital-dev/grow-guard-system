@@ -240,8 +240,8 @@ Deno.serve(async (req) => {
     }
 
     // Check whatsapp_instance_ids restriction
-    const instanceIds = agent.whatsapp_instance_ids || [];
-    if (instanceIds.length > 0) {
+    const instanceIds: any[] = agent.whatsapp_instance_ids || [];
+    if ((instanceIds as any[]).length > 0) {
       const { data: instance } = await adminClient
         .from("whatsapp_instances")
         .select("id")
