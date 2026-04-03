@@ -66,7 +66,7 @@ serve(async (req) => {
       total_impressions: metrics.reduce((s, m) => s + Number(m.impressions), 0),
       total_clicks: metrics.reduce((s, m) => s + Number(m.clicks), 0),
       total_conversions: metrics.reduce((s, m) => s + Number(m.conversions), 0),
-      campaigns: {} as Record<string, unknown>,
+      campaigns: {} as Record<string, { platform: string; name: string; spend: number; impressions: number; clicks: number; conversions: number }>,
     };
 
     for (const m of metrics) {
