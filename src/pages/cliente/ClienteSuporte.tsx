@@ -282,6 +282,12 @@ export default function ClienteSuporte() {
           </div>
         </DialogContent>
       </Dialog>
+        </TabsContent>
+
+        <TabsContent value="acesso">
+          <SupportAccessManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
