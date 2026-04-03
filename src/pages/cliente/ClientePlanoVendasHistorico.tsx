@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { useMemo, useState } from "react";
 import { Activity, ChevronRight, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,8 +52,8 @@ export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: Cli
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={[...planHistory].reverse().map(h => ({
-                  data: new Date(h.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
-                  score: h.score,
+                  data: new Date(h.created_at as string).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+                  score: h.score as number,
                 }))} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradHistoryEvo" x1="0" y1="0" x2="0" y2="1">
@@ -89,17 +89,17 @@ export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: Cli
       ) : (
         <div className="space-y-3">
           {planHistory.map((h) => {
-            const nv = getNivel(h.score);
+            const nv = getNivel(h.score as number);
             return (
-              <Card key={h.id} className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => { setSelectedHistoryItem(h); setHistoryDialogOpen(true); }}>
+              <Card key={h.id as React.Key} className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => { setSelectedHistoryItem(h); setHistoryDialogOpen(true); }}>
                 <CardContent className="py-3 px-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground" style={{ backgroundColor: nv.cor }}>
-                      {h.score}%
+                      {h.score as React.ReactNode}%
                     </div>
                     <div>
                       <p className="text-xs font-semibold">{nv.label}</p>
-                      <p className="text-[10px] text-muted-foreground">{new Date(h.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                      <p className="text-[10px] text-muted-foreground">{new Date(h.created_at as string).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

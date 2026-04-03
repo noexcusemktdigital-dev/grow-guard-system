@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { useMemo } from "react";
 import {
   Target, Plus, CheckCircle2, AlertCircle, TrendingUp, Building2, User,
@@ -17,14 +17,14 @@ import {
 import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 
 export interface ClientePlanoVendasMetasProps {
-  activeGoals: Record<string, unknown>[];
-  historicGoals: Record<string, unknown>[] | undefined;
+  activeGoals: any[];
+  historicGoals: any[] | undefined;
   goalProgress: Record<string, any> | undefined;
   goalsLoading: boolean;
   scopeFilter: string;
   setScopeFilter: (v: string) => void;
   onNewMeta: () => void;
-  onEditMeta: (goal: Record<string, unknown>) => void;
+  onEditMeta: (goal: any) => void;
   onArchiveMeta: (id: string) => void;
   isMonetaryMetric: (m: string) => boolean;
 }

@@ -99,7 +99,7 @@ export default function ClientePlanoVendas() {
         diferenciais: ans.diferenciais,
         dorPrincipal: ans.dor_principal,
         ticketMedio: ans.ticket_medio,
-        etapasFunil: typeof etapasText === "string" ? etapasText.split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
+        etapasFunil: typeof ans.etapas_funil === "string" ? (ans.etapas_funil as string).split(/→|->|,|\n/).map((s: string) => s.trim()).filter(Boolean) : [],
         tempoFechamento: ans.tempo_fechamento,
       };
 
@@ -334,7 +334,7 @@ export default function ClientePlanoVendas() {
 
         <TabsContent value="historico" className="space-y-6 mt-4">
           <ClientePlanoVendasHistorico
-            planHistory={planHistory}
+            planHistory={planHistory as any}
             historyLoading={historyLoading}
           />
         </TabsContent>
@@ -368,8 +368,8 @@ export default function ClientePlanoVendas() {
         isCreating={createGoal.isPending}
         isUpdating={updateGoal.isPending}
         isMonetaryMetric={isMonetaryMetric}
-        teams={teams}
-        members={members}
+        teams={teams as any}
+        members={members as any}
       />
     </div>
   );

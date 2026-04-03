@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -132,7 +132,7 @@ export function ClientePlanoVendasMetaDialog({
                 <Select value={novaMeta.team_id} onValueChange={v => setNovaMeta(p => ({ ...p, team_id: v }))}>
                   <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione o time" /></SelectTrigger>
                   <SelectContent>
-                    {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    {teams.map(t => <SelectItem key={t.id as React.Key} value={t.id as string}>{t.name as React.ReactNode}</SelectItem>)}
                   </SelectContent>
                 </Select>
               ) : (
@@ -148,8 +148,8 @@ export function ClientePlanoVendasMetaDialog({
                   <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Selecione a pessoa" /></SelectTrigger>
                   <SelectContent>
                     {members.map(m => (
-                      <SelectItem key={m.user_id} value={m.user_id}>
-                        {m.full_name} <span className="text-muted-foreground ml-1">({m.role})</span>
+                      <SelectItem key={m.user_id as React.Key} value={m.user_id as string}>
+                        {m.full_name as React.ReactNode} <span className="text-muted-foreground ml-1">({m.role as React.ReactNode})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
