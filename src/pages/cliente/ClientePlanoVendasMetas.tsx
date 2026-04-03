@@ -17,8 +17,8 @@ import {
 import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 
 export interface ClientePlanoVendasMetasProps {
-  activeGoals: Record<string, unknown>[];
-  historicGoals: Record<string, unknown>[] | undefined;
+  activeGoals: any[];
+  historicGoals: any[] | undefined;
   goalProgress: Record<string, any> | undefined;
   goalsLoading: boolean;
   scopeFilter: string;
