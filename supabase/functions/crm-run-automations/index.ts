@@ -355,7 +355,7 @@ async function executeAction(
     }
 
     case "assign_to_team": {
-      // Round-robin from team members
+      // API-006: Round-robin atômico via RPC — elimina race condition de SELECT+UPDATE
       if (actionConfig.team_id) {
         const { data: teamMembers } = await admin
           .from("crm_team_members")
@@ -364,24 +364,17 @@ async function executeAction(
           .eq("is_active", true);
 
         if (teamMembers && teamMembers.length > 0) {
-          const { data: settings } = await admin
-            .from("crm_settings")
-            .select("roulette_last_index")
-            .eq("organization_id", orgId)
-            .single();
+          // Incremento atômico: lê e atualiza em uma única operação DB
+          const { data: nextIndex } = await admin.rpc("get_and_increment_roulette_index", {
+            _org_id: orgId,
+            _member_count: teamMembers.length,
+          });
 
-          const lastIndex = settings?.roulette_last_index || 0;
-          const nextIndex = (lastIndex + 1) % teamMembers.length;
-
+          const assignedUser = teamMembers[nextIndex ?? 0].user_id;
           await admin
             .from("crm_leads")
-            .update({ assigned_to: teamMembers[nextIndex].user_id })
+            .update({ assigned_to: assignedUser })
             .eq("id", lead.id);
-
-          await admin
-            .from("crm_settings")
-            .update({ roulette_last_index: nextIndex })
-            .eq("organization_id", orgId);
         }
       }
       break;
