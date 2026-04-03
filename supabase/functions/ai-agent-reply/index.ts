@@ -785,9 +785,9 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("ai-agent-reply error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
