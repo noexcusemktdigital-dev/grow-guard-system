@@ -270,9 +270,9 @@ export default function ClienteGPSNegocio() {
 
       // Merge results
       const unifiedResult = {
-        ...(coreResult.result || {}),
-        ...(growthResult.result || {}),
-        ...(comercialResult.result || {}),
+        ...((coreResult as any).result || {}),
+        ...((growthResult as any).result || {}),
+        ...((comercialResult as any).result || {}),
       };
       
       await saveStrategy.mutateAsync({
