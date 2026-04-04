@@ -42,7 +42,7 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
   const [linkStrategyId, setLinkStrategyId] = useState(proposal?.strategy_id || "");
 
   useEffect(() => {
-    if (proposal) setLinkLeadId(proposal.lead_id || "");
+    if (proposal) setLinkStrategyId(proposal.strategy_id || "");
   }, [proposal]);
 
   if (!proposal) return null;
