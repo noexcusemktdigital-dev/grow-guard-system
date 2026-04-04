@@ -3,13 +3,23 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 
-/* ── Interfaces for the 5 sections ── */
+/* ── Sub-seção de análise (cada área tem métricas + positivos + negativos) ── */
+
+export interface AnaliseSubSection {
+  metricas?: Record<string, number>;
+  positivos?: string[];
+  negativos?: string[];
+  observacoes?: string;
+}
 
 export interface FollowupAnalise {
-  metricas?: { leads?: number; conversoes?: number; trafego?: number; engajamento?: number; faturamento?: number };
-  destaques?: string[];
-  gaps?: string[];
-  observacoes?: string;
+  conteudo?: AnaliseSubSection;
+  trafego?: AnaliseSubSection;
+  web?: AnaliseSubSection;
+  vendas?: AnaliseSubSection;
+  resumo_geral?: string;
+  avancos_mes?: string[];
+  pontos_melhorar?: string[];
 }
 
 export interface ConteudoSection {
@@ -88,7 +98,6 @@ export function useClientFolders() {
         .eq("organization_id", orgId)
         .order("client_name");
       if (error) throw error;
-      // group by client_name
       const map = new Map<string, number>();
       (data || []).forEach((row: any) => {
         const name = row.client_name || "Sem nome";
