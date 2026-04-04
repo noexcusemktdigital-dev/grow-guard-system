@@ -10,11 +10,14 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard } from "@/components/KpiCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import {
-  FileText, DollarSign, Inbox, Calculator, Copy, Trash2, Send, Eye, Pencil, Download, Link, CheckCircle, FileSignature,
+  FileText, DollarSign, Inbox, Calculator, Copy, Trash2, Send, Eye, Pencil, Download, Link, CheckCircle, FileSignature, Settings, Percent,
 } from "lucide-react";
 import { useCrmProposals, useCrmProposalMutations } from "@/hooks/useCrmProposals";
-import { useCrmLeads } from "@/hooks/useCrmLeads";
+import { useStrategies } from "@/hooks/useFranqueadoStrategies";
+import { useCalculatorSettings } from "@/hooks/useCalculatorSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from "react-router-dom";
