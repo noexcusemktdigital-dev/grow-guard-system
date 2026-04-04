@@ -471,7 +471,7 @@ function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: 
           )}
 
           {/* Projeções */}
-          {result.projecoes && <ProjecoesSectionDark projecoes={result.projecoes} />}
+          {result.projecoes && <ProjecoesSectionDark projecoes={result.projecoes} barChartRef={barChartRef} lineChartRef={lineChartRef} />}
 
           {/* Execuções do Plano */}
           {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
@@ -614,7 +614,7 @@ function EtapaDetailCardDark({ etapaKey, etapa }: { etapaKey: string; etapa: Eta
 
 // ── Projeções Section (Dark Theme) ──────────────────────────────
 
-function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyResult["projecoes"]> }) {
+function ProjecoesSectionDark({ projecoes, barChartRef, lineChartRef }: { projecoes: NonNullable<StrategyResult["projecoes"]>; barChartRef?: React.RefObject<HTMLDivElement>; lineChartRef?: React.RefObject<HTMLDivElement> }) {
   return (
     <div className="space-y-4">
       {/* Unit Economics */}
