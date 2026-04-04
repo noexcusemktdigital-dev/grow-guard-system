@@ -57,6 +57,19 @@ export default function ClienteChat() {
 
   const isConnected = instance?.status === "connected";
 
+  // Realtime: auto-refresh when whatsapp_instances billing_status changes (unblock after payment)
+  const pendingOrgId = pendingInstance?.organization_id;
+  useEffect(() => {
+    if (!pendingOrgId) return;
+    const channel = supabase
+      .channel(`chat-billing-${pendingOrgId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_instances", filter: `organization_id=eq.${pendingOrgId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [pendingOrgId, queryClient]);
+
   // Cache contacts to IndexedDB
   useEffect(() => {
     if (contacts.length > 0) setCachedContacts(contacts);
