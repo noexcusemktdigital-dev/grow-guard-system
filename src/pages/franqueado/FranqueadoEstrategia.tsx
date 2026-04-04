@@ -91,7 +91,7 @@ const diagnosticSections: DiagSection[] = [
       { key: "meta_faturamento", label: "Meta de faturamento mensal (R$)", type: "currency", placeholder: "150.000", optional: true, tooltip: "Quanto a empresa deseja faturar por mês." },
       { key: "meta_clientes_mes", label: "Meta de novos clientes por mês", type: "text", placeholder: "Ex: 10", tooltip: "Quantos novos clientes a empresa deseja conquistar mensalmente." },
       { key: "metas_alternativas", label: "Metas alternativas ou objetivos a serem alcançados", type: "textarea", placeholder: "Descreva outras metas ou objetivos importantes do negócio...", optional: true, tooltip: "Outros objetivos além de faturamento e novos clientes, como posicionamento de marca, expansão territorial, etc." },
-      { key: "pitch_negocio", label: "Fale sobre o seu negócio e tente me vender seus serviços", type: "audio-text", placeholder: "Escreva aqui um pitch completo sobre o negócio: o que faz, para quem, como se diferencia, por que o cliente deveria escolher essa empresa...", tooltip: "Quanto mais detalhes aqui, melhor será o diagnóstico. Imagine que está apresentando o negócio a um potencial investidor. Pode também gravar um áudio." },
+      { key: "pitch_negocio", label: "Fale sobre o seu negócio e tente me vender seus serviços", type: "audio-text", placeholder: "Escreva aqui um pitch completo sobre o negócio: o que faz, para quem, como se diferencia, por que o cliente deveria escolher essa empresa...", tooltip: "Este é o campo mais importante do diagnóstico. Quanto mais detalhes, melhor será a estratégia gerada. Imagine que está apresentando o negócio a um potencial investidor. Grave um áudio de até 2 minutos ou escreva diretamente." },
     ],
   },
   {
