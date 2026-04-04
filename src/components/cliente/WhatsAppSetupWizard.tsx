@@ -517,6 +517,148 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
               )}
             </div>
           )}
+
+          {/* ─── STEP 4: Payment (IZITECH only) ─── */}
+          {step === 4 && provider === "izitech" && (
+            <div className="space-y-5">
+              {paymentDone ? (
+                <div className="flex flex-col items-center py-10 text-center space-y-5">
+                  <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <ShieldCheck className="w-10 h-10 text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="text-base font-bold">Tudo pronto!</p>
+                    {izitechPhone && <p className="text-sm text-muted-foreground mt-1">Número: {izitechPhone}</p>}
+                  </div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-4 w-full text-left space-y-2">
+                    <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Resumo</h4>
+                    <ul className="space-y-1.5 text-xs text-foreground">
+                      <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp conectado</li>
+                      <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Cobrança gerada — R$ 45,00/mês</li>
+                      <li className="flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5 text-primary" /> Sua integração será ativada após confirmação do pagamento</li>
+                    </ul>
+                  </div>
+                  <Button className="w-full" onClick={() => { reset(); onOpenChange(false); }}>Concluir</Button>
+                </div>
+              ) : paymentData ? (
+                <div className="space-y-5">
+                  <StepHeader number={4} title="Pagamento gerado" description="Efetue o pagamento para ativar sua integração WhatsApp." />
+                  
+                  {paymentData.pix_qr_code_base64 && (
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="rounded-2xl border-2 border-primary/20 p-4 bg-white">
+                        <img src={`data:image/png;base64,${paymentData.pix_qr_code_base64}`} alt="QR Code PIX" className="w-48 h-48 mx-auto" />
+                      </div>
+                      {paymentData.pix_copy_paste && (
+                        <div className="w-full">
+                          <Label className="text-xs font-semibold">PIX Copia e Cola</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Input value={paymentData.pix_copy_paste} readOnly className="text-[10px] font-mono bg-muted" />
+                            <Button variant="outline" size="sm" onClick={() => {
+                              navigator.clipboard.writeText(paymentData.pix_copy_paste!);
+                              toast({ title: "Copiado!" });
+                            }}>
+                              <Copy className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {paymentData.bank_slip_url && (
+                    <Button variant="outline" className="w-full" onClick={() => window.open(paymentData.bank_slip_url!, "_blank")}>
+                      <Receipt className="w-4 h-4 mr-2" /> Abrir Boleto
+                    </Button>
+                  )}
+
+                  {paymentData.invoice_url && (
+                    <Button variant="outline" className="w-full" onClick={() => window.open(paymentData.invoice_url!, "_blank")}>
+                      <ExternalLink className="w-4 h-4 mr-2" /> Abrir Fatura
+                    </Button>
+                  )}
+
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                    <p className="text-[10px] text-muted-foreground">
+                      Sua integração WhatsApp ficará ativa após confirmação do pagamento de <strong>R$ 45,00/mês</strong>.
+                    </p>
+                  </div>
+
+                  <Button className="w-full" onClick={() => setPaymentDone(true)}>Concluir</Button>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <StepHeader number={4} title="Pagamento — R$ 45,00/mês" description="Escolha como pagar a integração WhatsApp Izitech." />
+
+                  <div className="flex flex-col items-center space-y-2">
+                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 gap-1 px-3 py-1">
+                      <Wifi className="w-3 h-3" /> WhatsApp conectado
+                    </Badge>
+                    {izitechPhone && <p className="text-xs text-muted-foreground">Número: {izitechPhone}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["PIX", "BOLETO", "CREDIT_CARD"] as const).map((bt) => (
+                      <button
+                        key={bt}
+                        onClick={() => setBillingType(bt)}
+                        className={`rounded-xl border-2 p-3 text-center transition-all ${
+                          billingType === bt ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-1.5">
+                          {bt === "PIX" && <QrCode className="w-5 h-5 text-primary" />}
+                          {bt === "BOLETO" && <Receipt className="w-5 h-5 text-primary" />}
+                          {bt === "CREDIT_CARD" && <CreditCard className="w-5 h-5 text-primary" />}
+                          <span className="text-xs font-semibold">
+                            {bt === "PIX" ? "PIX" : bt === "BOLETO" ? "Boleto" : "Cartão"}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
+                    <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">R$ 45,00<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Desconto exclusivo NoExcuse (50% off)</p>
+                  </div>
+
+                  <Button
+                    className="w-full"
+                    disabled={paymentLoading || !orgId}
+                    onClick={async () => {
+                      setPaymentLoading(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
+                          body: { organization_id: orgId, plan: "whatsapp", billing_type: billingType },
+                        });
+                        if (error) throw error;
+                        if (data?.error) throw new Error(data.error);
+                        setPaymentData({
+                          pix_qr_code_base64: data.pix_qr_code_base64,
+                          pix_copy_paste: data.pix_copy_paste,
+                          invoice_url: data.invoice_url,
+                          bank_slip_url: data.bank_slip_url,
+                        });
+                        if (billingType === "CREDIT_CARD" && data.invoice_url) {
+                          window.open(data.invoice_url, "_blank");
+                          setPaymentDone(true);
+                        }
+                      } catch (err: unknown) {
+                        const realErr = await (await import("@/lib/edgeFunctionError")).extractEdgeFunctionError(err);
+                        toast({ title: "Erro ao gerar cobrança", description: realErr.message || "Tente novamente", variant: "destructive" });
+                      } finally {
+                        setPaymentLoading(false);
+                      }
+                    }}
+                  >
+                    {paymentLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CreditCard className="w-4 h-4 mr-2" />}
+                    Gerar Cobrança
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
