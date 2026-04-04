@@ -346,7 +346,7 @@ function drawCoverPage(b: PdfBuilder, result: StrategyResult, title: string) {
 // ═══════════════════════════════════════════════════════════════
 // DIAGNOSTIC SECTION (light bg)
 // ═══════════════════════════════════════════════════════════════
-function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
+async function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
   const gps = result.diagnostico_gps;
 
   // ── Resumo Executivo ──
