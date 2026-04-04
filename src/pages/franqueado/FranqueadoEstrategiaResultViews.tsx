@@ -218,14 +218,14 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
         </div>
       )}
 
-      {/* GPS Score + Termômetro */}
+      {/* GPS Score + Scores Separados */}
       <Card className="glass-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Target className="w-4 h-4 text-primary" /> GPS do Negócio — Diagnóstico
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className={`rounded-lg p-4 ${scoreBg} flex items-center gap-4`}>
             <div className="text-center">
               <p className={`text-4xl font-black ${scoreColor}`}>{score}%</p>
@@ -233,7 +233,17 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
             </div>
             <p className="text-sm flex-1">{gps.descricao}</p>
           </div>
-          <div className="mt-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className={`rounded-lg p-3 ${getScoreBg(scoreMarketing)} text-center`}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Score Marketing</p>
+              <p className={`text-2xl font-black ${getScoreColor(scoreMarketing)}`}>{scoreMarketing}%</p>
+            </div>
+            <div className={`rounded-lg p-3 ${getScoreBg(scoreComercial)} text-center`}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Score Comercial</p>
+              <p className={`text-2xl font-black ${getScoreColor(scoreComercial)}`}>{scoreComercial}%</p>
+            </div>
+          </div>
+          <div>
             <Progress value={score} className="h-2" />
             <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
               <span>Crítico</span><span>Básico</span><span>Intermediário</span><span>Avançado</span>
