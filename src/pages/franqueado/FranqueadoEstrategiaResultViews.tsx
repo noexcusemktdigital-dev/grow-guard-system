@@ -670,7 +670,7 @@ function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyRe
             <TrendingUp className="w-5 h-5 text-red-500" />
             <h3 className="text-lg font-bold text-white">Projeção de 6 Meses</h3>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" ref={barChartRef}>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={projecoes.projecao_mensal.map(p => ({ ...p, nome: `Mês ${p.mes}` }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
