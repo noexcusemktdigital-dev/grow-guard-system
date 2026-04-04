@@ -35,11 +35,11 @@ import { SummaryDrawer } from "@/components/calculator/SummaryDrawer";
 
 // ── Proposal Viewer Sheet ───────────────────────────────────────
 function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<string, unknown>; open: boolean; onClose: () => void }) {
-  const { data: leads } = useCrmLeads();
+  const { data: strategies } = useStrategies();
   const { updateProposal } = useCrmProposalMutations();
   const navigate = useNavigate();
   const previewRef = useRef<HTMLDivElement>(null);
-  const [linkLeadId, setLinkLeadId] = useState(proposal?.lead_id || "");
+  const [linkStrategyId, setLinkStrategyId] = useState(proposal?.strategy_id || "");
 
   useEffect(() => {
     if (proposal) setLinkLeadId(proposal.lead_id || "");
