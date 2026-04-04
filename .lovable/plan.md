@@ -1,41 +1,21 @@
 
 
-## Plano — Corrigir eventos não aparecendo no calendário após sincronização Google
+## Plano — Destacar termos de uso no cadastro com cor vermelha
 
-### Problema raiz
+### Mudança
 
-A edge function `google-calendar-sync` tem o mesmo bug que corrigimos no `google-calendar-oauth`: a chamada `get_user_org_id` na linha 44 não passa `_portal`, o que pode retornar `null` ou o org errado para clientes SaaS. Se `orgId` for `null`, os eventos são inseridos com `organization_id = null` ou simplesmente não são encontrados na busca.
+No arquivo `src/pages/SaasAuth.tsx`, linhas 419-432, alterar o estilo do checkbox e label dos termos para ter maior destaque visual com cor vermelha.
 
-Confirmação: o org `9a3bb183...` (p2y) tem apenas 1 evento manual e **zero eventos com google_event_id**, provando que o pull não importou nada.
+### Detalhes técnicos
 
-### Mudanças
+1. **Label**: Trocar `text-white/50` por `text-white/80` para maior legibilidade e aumentar de `text-xs` para `text-sm`
+2. **Links "Termos de Uso" e "Política de Privacidade"**: Manter `text-[hsl(355,78%,60%)]` mas adicionar `font-semibold underline` para destaque
+3. **Checkbox border**: Trocar `border-white/20` por `border-[hsl(355,78%,50%)]` para ficar vermelho mesmo desmarcado
+4. **Adicionar borda sutil** ao redor do bloco todo com `border border-[hsl(355,78%,50%)]/30 rounded-lg p-3` para chamar atenção
+
+### Arquivo afetado
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/google-calendar-sync/index.ts` | Adicionar `_portal: "saas"` ao RPC `get_user_org_id` (linha 44). Adicionar validação se `orgId` é null. Adicionar logs de debug para contagem de eventos importados. |
-| Deploy | `google-calendar-sync` |
-
-### Detalhe técnico
-
-```typescript
-// Antes (linha 44):
-const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
-
-// Depois:
-const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "saas" });
-if (!orgId) return jsonRes({ error: "Organização não encontrada" }, 400);
-```
-
-Também adicionar `console.log` no resultado do pull para facilitar debug futuro:
-```typescript
-console.log(`Google sync pull: ${imported} imported, ${googleEvents.length} total from Google, org=${orgId}`);
-```
-
-### Fluxo após a correção
-
-1. Usuário conecta Google Calendar (OAuth ok)
-2. Clica "Sincronizar" → chama `google-calendar-sync` com `action: "pull"`
-3. Function busca org com `_portal: "saas"` → retorna org correta
-4. Busca eventos do Google API → insere na tabela `calendar_events` com org correto
-5. Frontend recarrega eventos → aparecem no calendário
+| `src/pages/SaasAuth.tsx` | Linhas 419-432: aumentar destaque visual do checkbox de termos |
 
