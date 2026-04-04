@@ -33,11 +33,12 @@ const principalSection: SidebarItem[] = [
   { label: "Comunicados", icon: Megaphone, path: "/franqueadora/comunicados" },
 ];
 
-const redeSection: SidebarItem[] = [
-  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
+const franquiaSection: SidebarItem[] = [
+  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
   { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
+  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
 ];
 
 const comercialSection: SidebarItem[] = [
