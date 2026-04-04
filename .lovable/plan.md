@@ -1,79 +1,72 @@
 
 
-## Plano — Vincular Calculadora à Estratégia + Configuração de Excedente do Franqueado
+## Plano — Reorganizar sidebar da Franqueadora separando Comercial de Franquia
 
-### Visão geral
+### Situação atual
 
-Três mudanças na calculadora de propostas:
+A sidebar da Franqueadora já possui as ferramentas comerciais (CRM, Prospecção, Estratégia, Propostas, Metas) e as rotas já apontam para os mesmos componentes do Franqueado. Porém, a seção "Rede" mistura ferramentas de franquia (Unidades, Onboarding, Candidatos) com Atendimento, e a organização não está clara.
 
-1. **Trocar "Vincular ao Lead" por "Vincular à Estratégia"** — o select passa a listar estratégias salvas (do `franqueado_strategies`). Ao vincular, puxa o nome do cliente da estratégia para o campo `clientName`.
+### Mudanças
 
-2. **Painel de configuração de excedente** — um bloco colapsável acima de "Selecione os Serviços" onde o franqueado configura:
-   - Tipo: valor fixo (R$) ou percentual (%)
-   - Valor do excedente
-   - Botão salvar (persiste no banco, tabela `calculator_settings` por `organization_id`)
-   - O excedente é somado invisível aos preços — o cliente nunca vê a separação
+#### 1. Reorganizar seções da sidebar (`FranqueadoraSidebar.tsx`)
 
-3. **Salvar proposta no sistema ou exportar PDF** — já existe parcialmente, manter e garantir que ao vincular à estratégia, o `strategy_id` é salvo na proposta.
+Nova organização:
 
----
+- **Principal**: Início, Chat da Equipe, Agenda, Comunicados (sem mudança)
+- **Comercial**: CRM de Vendas, Prospecção, Criador de Estratégia, Gerador de Proposta, Metas & Ranking (sem mudança — já existe e já funciona)
+- **Franquia** (renomear "Rede"): Unidades, Onboarding, Candidatos, CRM Expansão, Atendimento
+- **Marketing & Academy**: Marketing, NOE Academy, Playbooks (sem mudança)
+- **Gestão**: Matriz, Contratos, Financeiro, Logs & Erros (sem mudança)
 
-### Mudanças técnicas
+A principal alteração visual é renomear "Rede" para "Franquia" e mover o CRM Expansão (que é o CRM de prospecção de franquia, diferente do CRM de vendas comercial) para dentro dessa seção com label "CRM Expansão". O CRM de Vendas comercial fica na seção Comercial.
 
-#### 1. Nova tabela `calculator_settings`
+#### 2. Ajustar `redeSection` → `franquiaSection`
 
-```sql
-CREATE TABLE public.calculator_settings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid REFERENCES organizations(id) ON DELETE CASCADE NOT NULL UNIQUE,
-  surplus_type text NOT NULL DEFAULT 'percentage', -- 'fixed' | 'percentage'
-  surplus_value numeric NOT NULL DEFAULT 0,
-  updated_at timestamptz DEFAULT now()
-);
-ALTER TABLE public.calculator_settings ENABLE ROW LEVEL SECURITY;
--- RLS: membros da org podem ler/atualizar
+Renomear a constante e atualizar os itens:
+```
+franquiaSection = [
+  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
+  { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
+  { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
+  { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
+  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
+]
 ```
 
-#### 2. Hook `useCalculatorSettings`
+#### 3. Adicionar rota de CRM comercial para franqueadora
 
-**Novo arquivo:** `src/hooks/useCalculatorSettings.ts`
+No `App.tsx`, adicionar uma nova rota `/franqueadora/crm-vendas` que aponta para o mesmo componente `FranqueadoCRM` (CRM de vendas do franqueado). Atualizar o path na sidebar comercial de `/franqueadora/crm` para `/franqueadora/crm-vendas`.
 
-- Busca `calculator_settings` pela org do franqueado
-- Mutation para upsert tipo e valor do excedente
-- Retorna `surplusType`, `surplusValue`
+A seção comercial fica:
+```
+comercialSection = [
+  { label: "CRM de Vendas", icon: Target, path: "/franqueadora/crm-vendas" },
+  { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
+  { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
+  { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
+]
+```
 
-#### 3. Modificar `useCalculator.ts`
+#### 4. Importar e adicionar rota no `App.tsx`
 
-- Aceitar parâmetro opcional `surplus: { type: 'fixed' | 'percentage', value: number }`
-- No `calculateServicePrice`, aplicar excedente ao preço final:
-  - Se `percentage`: `price * (1 + value/100)`
-  - Se `fixed`: `price + value` (por serviço selecionado)
-- O excedente NÃO aparece nos breakdowns — é invisível
+- Importar `FranqueadoCRM` (lazy)
+- Adicionar `<Route path="crm-vendas" element={<FranqueadoCRM />} />`
+- Adicionar `<Route path="crm-vendas/config" element={<CrmConfigPage />} />`
 
-#### 4. Modificar `FranqueadoPropostas.tsx` — CalculadoraTab
+#### 5. Atualizar atalhos na Home (`HomeAtalhos.tsx`)
 
-- **Remover** select de "Vincular ao Lead"
-- **Adicionar** select de "Vincular à Estratégia" — lista estratégias com status `completed` via `useStrategies()`
-- Ao selecionar estratégia, preencher `clientName` com o título/nome do cliente da estratégia
-- **Adicionar** painel colapsável de configuração de excedente acima dos módulos:
-  - Toggle tipo (fixo/percentual)
-  - Input do valor
-  - Botão salvar
-  - Indicador visual discreto quando configurado (ex: badge "Excedente ativo")
-- Ao salvar proposta, incluir `strategy_id` no payload
-
-#### 5. Atualizar tabela `crm_proposals`
-
-Adicionar coluna `strategy_id uuid` (nullable) para persistir o vínculo.
-
----
+Atualizar o atalho "CRM de Vendas" nos `franqueadoraAtalhos` para apontar para `/franqueadora/crm-vendas`.
 
 ### Arquivos afetados
 
 | Arquivo | Ação |
 |---------|------|
-| Migração SQL | Criar `calculator_settings` + adicionar `strategy_id` em `crm_proposals` |
-| `src/hooks/useCalculatorSettings.ts` | Novo hook para configuração de excedente |
-| `src/hooks/useCalculator.ts` | Aplicar excedente invisível nos cálculos |
-| `src/pages/franqueado/FranqueadoPropostas.tsx` | Trocar lead→estratégia, adicionar painel excedente |
+| `src/components/FranqueadoraSidebar.tsx` | Renomear "Rede"→"Franquia", separar CRM Expansão de CRM Vendas, reorganizar itens |
+| `src/App.tsx` | Adicionar rota `/franqueadora/crm-vendas` e config |
+| `src/components/home/HomeAtalhos.tsx` | Atualizar path do atalho CRM |
+
+### Resultado
+
+A franqueadora terá duas seções claramente distintas: **Comercial** (ferramentas de venda a clientes, idênticas ao franqueado) e **Franquia** (ferramentas de gestão da rede de franquias). O CRM Expansão (prospecção de franquia) fica em Franquia, e o CRM de Vendas (pipeline comercial) fica em Comercial.
 
