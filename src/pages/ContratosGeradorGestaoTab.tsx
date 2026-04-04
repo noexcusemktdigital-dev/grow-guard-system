@@ -25,6 +25,7 @@ function daysUntilExpiry(endDate: string | null): number | null {
 interface ContractItem {
   id: string;
   title: string;
+  content?: string | null;
   signer_name?: string;
   signer_email?: string;
   client_document?: string;
