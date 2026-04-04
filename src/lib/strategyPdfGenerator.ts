@@ -310,8 +310,8 @@ function drawCoverPage(b: PdfBuilder, result: StrategyResult, title: string, log
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(28);
   pdf.setTextColor(...WHITE);
-  pdf.text("DIAGNOSTICO", A4_W / 2, 125, { align: "center" });
-  pdf.text("ESTRATEGICO", A4_W / 2, 137, { align: "center" });
+  pdf.text("DIAGN\u00d3STICO", A4_W / 2, 125, { align: "center" });
+  pdf.text("ESTRAT\u00c9GICO", A4_W / 2, 137, { align: "center" });
 
   // Company name
   const companyName = result.resumo_cliente?.nome_empresa || title || "";
