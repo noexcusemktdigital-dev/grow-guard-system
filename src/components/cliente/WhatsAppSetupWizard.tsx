@@ -408,9 +408,10 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
                     <p className="text-[10px] text-muted-foreground">
                       Sua integração ficará ativa após confirmação do pagamento de <strong>R$ 45,00/mês</strong>.
+                      <br />O status será atualizado automaticamente.
                     </p>
                   </div>
-                  <Button className="w-full" onClick={() => setPaymentDone(true)}>Concluir</Button>
+                  <PaymentPolling orgId={orgId} onConfirmed={() => setPaymentDone(true)} />
                 </div>
               ) : (
                 <div className="space-y-5">
