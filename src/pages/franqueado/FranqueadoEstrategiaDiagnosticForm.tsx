@@ -418,7 +418,7 @@ export function DiagnosticForm({
         {step === 0 && (
           <div>
             <FieldLabel label="Título do Diagnóstico" optional tooltip="Opcional. Se não preencher, será gerado automaticamente." />
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Diagnóstico Clínica Dr. Silva" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Diagnóstico Clínica Dr. Silva, Estratégia Restaurante Sabor & Arte, Análise Loja Virtual TechStore" />
           </div>
         )}
 
