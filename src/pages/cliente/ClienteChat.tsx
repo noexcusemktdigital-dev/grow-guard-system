@@ -34,7 +34,7 @@ import { setCachedContacts, getCachedContacts } from "@/lib/chatCache";
 export default function ClienteChat() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: instance, isLoading: loadingInstance } = useWhatsAppInstance();
+  const { data: instance, isLoading: loadingInstance, pendingInstance } = useWhatsAppInstance();
   const { data: contacts = [], isLoading: loadingContacts } = useWhatsAppContacts(instance?.id ?? null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
@@ -56,6 +56,19 @@ export default function ClienteChat() {
   const linkMutation = useLinkContactToCrmLead();
 
   const isConnected = instance?.status === "connected";
+
+  // Realtime: auto-refresh when whatsapp_instances billing_status changes (unblock after payment)
+  const pendingOrgId = pendingInstance?.organization_id;
+  useEffect(() => {
+    if (!pendingOrgId) return;
+    const channel = supabase
+      .channel(`chat-billing-${pendingOrgId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_instances", filter: `organization_id=eq.${pendingOrgId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [pendingOrgId, queryClient]);
 
   // Cache contacts to IndexedDB
   useEffect(() => {
@@ -189,6 +202,29 @@ export default function ClienteChat() {
       <div className="space-y-4">
         <PageHeader title="Conversas" subtitle="Central de atendimento WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
         <Skeleton className="h-[500px] rounded-xl" />
+      </div>
+    );
+  }
+
+  if (pendingInstance && !isConnected) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Conversas" subtitle="Central de atendimento integrada ao WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
+        <Card className="border-dashed border-amber-500/30">
+          <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+              <MessageCircle className="w-7 h-7 text-amber-500/50" />
+            </div>
+            <Badge variant="outline" className="gap-1.5 mb-3 text-amber-500 border-amber-500/30">Pagamento pendente</Badge>
+            <p className="text-sm font-medium">Seu WhatsApp está aguardando confirmação de pagamento</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-md mb-4">
+              A integração será liberada automaticamente após a confirmação do pagamento de R$ 45,00/mês.
+            </p>
+            <Button size="sm" onClick={() => navigate("/cliente/integracoes")}>
+              <Settings2 className="w-4 h-4 mr-1" /> Ir para Integrações
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

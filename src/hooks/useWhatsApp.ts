@@ -69,15 +69,20 @@ export function useWhatsAppInstances() {
   });
 }
 
-// Legacy alias — returns the first connected instance (or first available)
+// Legacy alias — returns the first connected instance with active billing (or null billing for legacy)
 export function useWhatsAppInstance() {
   const { data: instances, ...rest } = useWhatsAppInstances();
   const best = instances && instances.length > 0
-    ? instances.find((i) => i.status === "connected") || instances[0]
+    ? instances.find((i) => i.status === "connected" && ((i as any).billing_status === "active" || !(i as any).billing_status)) || null
+    : null;
+  // Also expose pending instance for UI blocking screen
+  const pendingInstance = instances && instances.length > 0
+    ? instances.find((i) => i.status === "connected" && (i as any).billing_status === "pending") || null
     : null;
   return {
     ...rest,
     data: best,
+    pendingInstance,
   };
 }
 

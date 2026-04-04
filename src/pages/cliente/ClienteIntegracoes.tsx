@@ -58,6 +58,18 @@ export default function ClienteIntegracoes() {
     }
   }, [settings]);
 
+  // Realtime subscription for whatsapp_instances billing_status updates
+  useEffect(() => {
+    if (!orgId) return;
+    const channel = supabase
+      .channel(`whatsapp-billing-${orgId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_instances", filter: `organization_id=eq.${orgId}` }, () => {
+        refetch();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [orgId, refetch]);
+
   const generateApiKey = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.rpc("generate_org_api_key", { _org_id: orgId! });

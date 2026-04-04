@@ -408,9 +408,10 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
                     <p className="text-[10px] text-muted-foreground">
                       Sua integração ficará ativa após confirmação do pagamento de <strong>R$ 45,00/mês</strong>.
+                      <br />O status será atualizado automaticamente.
                     </p>
                   </div>
-                  <Button className="w-full" onClick={() => setPaymentDone(true)}>Concluir</Button>
+                  <PaymentPolling orgId={orgId} onConfirmed={() => setPaymentDone(true)} />
                 </div>
               ) : (
                 <div className="space-y-5">
@@ -521,6 +522,38 @@ function StepHeader({ number, title, description }: { number: number; title: str
         <h3 className="text-sm font-bold">{title}</h3>
         <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
       </div>
+    </div>
+  );
+}
+
+function PaymentPolling({ orgId, onConfirmed }: { orgId: string | null | undefined; onConfirmed: () => void }) {
+  const [checking, setChecking] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!orgId) return;
+    intervalRef.current = setInterval(async () => {
+      try {
+        setChecking(true);
+        const { data } = await supabase
+          .from("whatsapp_instances" as any)
+          .select("billing_status")
+          .eq("organization_id", orgId)
+          .limit(1)
+          .single();
+        if ((data as any)?.billing_status === "active") {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          onConfirmed();
+        }
+      } catch {} finally { setChecking(false); }
+    }, 5000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [orgId, onConfirmed]);
+
+  return (
+    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+      <Loader2 className={`w-3.5 h-3.5 ${checking ? "animate-spin" : ""}`} />
+      Aguardando confirmação de pagamento...
     </div>
   );
 }
