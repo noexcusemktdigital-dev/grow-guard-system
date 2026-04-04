@@ -119,21 +119,21 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
           </Button>
         </div>
 
-        {/* Link to Lead */}
+        {/* Link to Strategy */}
         <div className="flex items-end gap-2 mb-4">
           <div className="flex-1">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Vincular a Lead</label>
-            <Select value={linkLeadId} onValueChange={setLinkLeadId}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione um lead" /></SelectTrigger>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Vincular à Estratégia</label>
+            <Select value={linkStrategyId} onValueChange={setLinkStrategyId}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione uma estratégia" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem vínculo</SelectItem>
-                {(leads ?? []).map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.name} {l.company ? `- ${l.company}` : ""}</SelectItem>
+                {(strategies ?? []).filter(s => s.status === "completed").map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Button size="sm" variant="outline" onClick={handleLinkLead} disabled={!linkLeadId || linkLeadId === "none"} aria-label="Vincular lead">
+          <Button size="sm" variant="outline" onClick={handleLinkStrategy} disabled={!linkStrategyId || linkStrategyId === "none"} aria-label="Vincular estratégia">
             <Link className="w-4 h-4" />
           </Button>
         </div>
