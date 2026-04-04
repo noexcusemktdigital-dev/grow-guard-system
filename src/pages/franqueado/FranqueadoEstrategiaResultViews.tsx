@@ -17,7 +17,6 @@ import {
   LineChart as ReLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   BarChart, Bar,
 } from "recharts";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 
 // ── PDF Export Helper (Professional A4) ─────────────────────────
@@ -110,7 +109,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
   pdf.setFont("helvetica", "normal");
   pdf.text("Metodologia NoExcuse — 5 Etapas", pageW / 2, pageH * 0.35 + 28, { align: "center" });
 
-  // Divider line
   pdf.setDrawColor(255, 255, 255);
   pdf.setLineWidth(0.5);
   pdf.line(pageW * 0.3, pageH * 0.5, pageW * 0.7, pageH * 0.5);
@@ -132,12 +130,10 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
   // ── CONTENT PAGES ──
   addPage();
 
-  // Resumo Executivo
   drawSectionHeader("Resumo Executivo");
   drawText(result.resumo_executivo || "", 9);
   y += 4;
 
-  // Empresa
   if (result.resumo_cliente) {
     drawSectionHeader("Sobre a Empresa");
     drawKeyValue("Empresa", result.resumo_cliente.nome_empresa);
@@ -148,7 +144,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     y += 4;
   }
 
-  // Scores
   if (result.diagnostico_gps) {
     const gps = result.diagnostico_gps;
     drawSectionHeader(`GPS do Negócio — Score Geral: ${gps.score_geral}% (${gps.nivel})`);
@@ -157,7 +152,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     drawKeyValue("Score Marketing", `${result.score_marketing ?? 0}%`);
     drawKeyValue("Score Comercial", `${result.score_comercial ?? 0}%`);
 
-    // ECE
     if (gps.gargalos_ece) {
       y += 2;
       drawText("GARGALOS ECE", 9, PRIMARY, true);
@@ -166,7 +160,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
       drawKeyValue("Escala", gps.gargalos_ece.escala);
     }
 
-    // Insights
     if (gps.insights?.length) {
       y += 2;
       drawText("INSIGHTS", 9, PRIMARY, true);
@@ -175,7 +168,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     y += 4;
   }
 
-  // Persona
   if (result.persona) {
     drawSectionHeader("Persona — Cliente Ideal");
     drawText(result.persona.descricao, 9);
@@ -186,7 +178,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     y += 4;
   }
 
-  // Concorrência
   if (result.analise_concorrencia) {
     drawSectionHeader("Análise de Concorrência");
     result.analise_concorrencia.concorrentes?.forEach((c) => {
@@ -201,7 +192,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     y += 4;
   }
 
-  // 5 Etapas
   if (result.etapas) {
     const etapasOrder = ["conteudo", "trafego", "web", "sales", "validacao"] as const;
     const labels: Record<string, string> = {
@@ -233,7 +223,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     }
   }
 
-  // Projeções
   if (result.projecoes) {
     drawSectionHeader("Projeções Financeiras");
     const ue = result.projecoes.unit_economics;
@@ -253,7 +242,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     y += 4;
   }
 
-  // Entregáveis / Execuções
   if (result.entregaveis_calculadora?.length) {
     drawSectionHeader("Execuções do Plano — Entregáveis NoExcuse");
     const grouped: Record<string, typeof result.entregaveis_calculadora> = {};
@@ -274,7 +262,6 @@ async function exportProfessionalPdf(element: HTMLElement, title: string, result
     });
   }
 
-  // Footer on last page
   pdf.setFontSize(8);
   pdf.setTextColor(...GRAY);
   pdf.text("Documento gerado automaticamente — NoExcuse Digital", pageW / 2, pageH - 8, { align: "center" });
@@ -308,6 +295,14 @@ const etapaNumbers: Record<string, string> = {
   validacao: "05",
 };
 
+const etapaColors: Record<string, { accent: string; bg: string; border: string }> = {
+  conteudo: { accent: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/30" },
+  trafego: { accent: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/30" },
+  web: { accent: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/30" },
+  sales: { accent: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/30" },
+  validacao: { accent: "text-violet-500", bg: "bg-violet-500/10", border: "border-violet-500/30" },
+};
+
 // ── Strategy Result View (Entry Point) ──────────────────────────
 
 export function StrategyResultView({
@@ -333,7 +328,6 @@ export function StrategyResultView({
 
   const handleGoToCalculator = () => {
     if (result.entregaveis_calculadora?.length) {
-      // Store deliverables in sessionStorage for the calculator to pick up
       sessionStorage.setItem("strategy_deliverables", JSON.stringify(result.entregaveis_calculadora));
     }
     navigate("/franqueado/propostas");
@@ -351,28 +345,52 @@ export function StrategyResultView({
         )}
       </div>
 
-      {/* Action Buttons at the bottom */}
       {showExport && (
-        <div className="flex flex-col sm:flex-row items-stretch gap-3 pt-4 border-t border-border">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 h-14 text-base gap-2"
-            onClick={handleExportPdf}
-          >
-            <Download className="w-5 h-5" /> Salvar em PDF
-          </Button>
-          {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
+        <div className="bg-zinc-950 rounded-2xl p-6 -mx-2">
+          <div className="flex flex-col sm:flex-row items-stretch gap-3">
             <Button
+              variant="outline"
               size="lg"
-              className="flex-1 h-14 text-base gap-2"
-              onClick={onSendToCalculator || handleGoToCalculator}
+              className="flex-1 h-14 text-base gap-2 border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800"
+              onClick={handleExportPdf}
             >
-              <Calculator className="w-5 h-5" /> Gerar Proposta
+              <Download className="w-5 h-5" /> Salvar em PDF
             </Button>
-          )}
+            {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
+              <Button
+                size="lg"
+                className="flex-1 h-14 text-base gap-2 bg-red-600 hover:bg-red-700 text-white"
+                onClick={onSendToCalculator || handleGoToCalculator}
+              >
+                <Calculator className="w-5 h-5" /> Gerar Proposta
+              </Button>
+            )}
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Score Circle Component ───────────────────────────────────────
+
+function ScoreCircle({ score, size = 64, strokeWidth = 5, className = "" }: { score: number; size?: number; strokeWidth?: number; className?: string }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = score <= 25 ? "#ef4444" : score <= 50 ? "#f97316" : score <= 75 ? "#eab308" : "#22c55e";
+
+  return (
+    <div className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={strokeWidth} />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          className="transition-all duration-1000 ease-out"
+        />
+      </svg>
+      <span className="absolute text-sm font-black text-white">{score}%</span>
     </div>
   );
 }
@@ -395,6 +413,8 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
 
   return (
     <div className="space-y-4">
+      {/* ═══════════════ ZONA 1: DIAGNÓSTICO (Fundo Claro) ═══════════════ */}
+
       {/* Resumo Executivo */}
       <Card className="glass-card">
         <CardHeader className="pb-2">
@@ -627,8 +647,6 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
         </Card>
       )}
 
-
-
       {/* Insights */}
       {gps.insights && gps.insights.length > 0 && (
         <Card className="glass-card">
@@ -648,295 +666,288 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
         </Card>
       )}
 
-      {/* Visão Geral das 5 Etapas */}
-      {result.etapas && (
-        <>
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Map className="w-4 h-4 text-primary" /> Visão Geral — 5 Etapas Estratégicas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+      {/* ═══════════════ ZONA 2: PLANO ESTRATÉGICO (Fundo Escuro) ═══════════════ */}
+
+      {(result.etapas || result.projecoes || result.entregaveis_calculadora?.length) && (
+        <div className="bg-zinc-950 rounded-2xl p-4 md:p-6 -mx-2 space-y-6 mt-8">
+          {/* Divider / Header */}
+          <div className="text-center space-y-2 pb-4 border-b border-zinc-800">
+            <p className="text-xs font-bold tracking-[0.3em] text-red-500 uppercase">NoExcuse</p>
+            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">PLANO ESTRATÉGICO</h2>
+            <p className="text-sm text-zinc-500">Metodologia 5 Etapas — Execução personalizada para o seu negócio</p>
+          </div>
+
+          {/* Visão Geral das 5 Etapas */}
+          {result.etapas && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {(["conteudo", "trafego", "web", "sales", "validacao"] as const).map((key) => {
                   const etapa = result.etapas![key];
-                  const etapaScoreColor =
-                    etapa.score <= 25 ? "text-destructive" :
-                    etapa.score <= 50 ? "text-orange-500" :
-                    etapa.score <= 75 ? "text-amber-500" : "text-green-500";
+                  const colors = etapaColors[key];
                   return (
-                    <div key={key} className="border rounded-lg p-3 text-center">
-                      <p className="text-lg font-black text-primary">{etapaNumbers[key]}</p>
-                      <div className="flex items-center justify-center gap-1 text-primary my-1">{etapaIcons[key]}</div>
-                      <p className="text-[11px] font-semibold leading-tight">{etapaLabels[key]}</p>
-                      <p className={`text-sm font-bold mt-1 ${etapaScoreColor}`}>{etapa.score}%</p>
+                    <div key={key} className={`bg-zinc-900 border ${colors.border} rounded-xl p-4 text-center`}>
+                      <p className={`text-2xl font-black ${colors.accent}`}>{etapaNumbers[key]}</p>
+                      <div className={`flex items-center justify-center gap-1 ${colors.accent} my-2`}>{etapaIcons[key]}</div>
+                      <p className="text-[11px] font-semibold leading-tight text-zinc-300">{etapaLabels[key]}</p>
+                      <ScoreCircle score={etapa.score} size={48} strokeWidth={4} className="mt-2" />
                     </div>
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Detailed view for each etapa */}
-          {(["conteudo", "trafego", "web", "sales", "validacao"] as const).map((key) => (
-            <EtapaDetailCard key={key} etapaKey={key} etapa={result.etapas![key]} />
-          ))}
-        </>
-      )}
+              {/* Detailed Etapas — Expanded Cards */}
+              {(["conteudo", "trafego", "web", "sales", "validacao"] as const).map((key) => (
+                <EtapaDetailCardDark key={key} etapaKey={key} etapa={result.etapas![key]} />
+              ))}
+            </>
+          )}
 
-      {/* Projeções */}
-      {result.projecoes && <ProjecoesSection projecoes={result.projecoes} />}
+          {/* Projeções */}
+          {result.projecoes && <ProjecoesSectionDark projecoes={result.projecoes} />}
 
-      {/* Execuções do Plano — Entregáveis agrupados por etapa */}
-      {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Package className="w-4 h-4 text-primary" /> Execuções do Plano — O Que Precisa Ser Feito
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-              Para que o plano estratégico seja executado com sucesso, os seguintes serviços do catálogo NoExcuse precisam ser contratados e implementados:
-            </p>
-            {(() => {
-              const grouped: Record<string, typeof result.entregaveis_calculadora> = {};
-              result.entregaveis_calculadora!.forEach((e) => {
-                const key = e.etapa || "geral";
-                if (!grouped[key]) grouped[key] = [];
-                grouped[key]!.push(e);
-              });
-              const order = ["conteudo", "trafego", "web", "sales", "validacao", "geral"];
-              return order.filter((k) => grouped[k]?.length).map((key) => (
-                <div key={key} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {etapaIcons[key] || <Package className="w-4 h-4" />}
-                    <p className="text-xs font-bold text-primary uppercase">
-                      {etapaNumbers[key] ? `${etapaNumbers[key]} — ` : ""}{etapaLabels[key] || "Geral"}
-                    </p>
-                  </div>
-                  {grouped[key]!.map((e, i) => (
-                    <div key={i} className="border rounded-md p-3 flex items-start gap-3 ml-6">
-                      <Badge variant="outline" className="text-[10px] shrink-0 font-bold">x{e.quantity}</Badge>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{e.service_name}</p>
-                        <p className="text-xs text-muted-foreground">{e.justificativa}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ));
-            })()}
-            <div className="bg-primary/5 rounded-lg p-3 text-center mt-2">
-              <p className="text-xs text-muted-foreground">
-                Total de <span className="font-bold text-primary">{result.entregaveis_calculadora.length}</span> serviços recomendados para execução do plano
+          {/* Execuções do Plano */}
+          {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Package className="w-5 h-5 text-red-500" />
+                <h3 className="text-lg font-bold text-white">Execuções do Plano — O Que Precisa Ser Feito</h3>
+              </div>
+              <p className="text-sm text-zinc-500">
+                Para que o plano estratégico seja executado com sucesso, os seguintes serviços do catálogo NoExcuse precisam ser contratados e implementados:
               </p>
+              {(() => {
+                const grouped: Record<string, typeof result.entregaveis_calculadora> = {};
+                result.entregaveis_calculadora!.forEach((e) => {
+                  const key = e.etapa || "geral";
+                  if (!grouped[key]) grouped[key] = [];
+                  grouped[key]!.push(e);
+                });
+                const order = ["conteudo", "trafego", "web", "sales", "validacao", "geral"];
+                return order.filter((k) => grouped[k]?.length).map((key) => {
+                  const colors = etapaColors[key] || { accent: "text-zinc-400", bg: "bg-zinc-800", border: "border-zinc-700" };
+                  return (
+                    <div key={key} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`${colors.accent}`}>{etapaIcons[key] || <Package className="w-4 h-4" />}</span>
+                        <p className={`text-sm font-bold ${colors.accent} uppercase`}>
+                          {etapaNumbers[key] ? `${etapaNumbers[key]} — ` : ""}{etapaLabels[key] || "Geral"}
+                        </p>
+                      </div>
+                      {grouped[key]!.map((e, i) => (
+                        <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 flex items-start gap-3 ml-6">
+                          <Badge className="text-[10px] shrink-0 font-bold bg-red-600/20 text-red-400 border-red-600/30">x{e.quantity}</Badge>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white">{e.service_name}</p>
+                            <p className="text-xs text-zinc-500">{e.justificativa}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                });
+              })()}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-center mt-2">
+                <p className="text-sm text-zinc-400">
+                  Total de <span className="font-bold text-red-500">{result.entregaveis_calculadora.length}</span> serviços recomendados para execução do plano
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-// ── Etapa Detail Card ───────────────────────────────────────────
+// ── Etapa Detail Card (Dark Theme — Expanded) ───────────────────
 
-function EtapaDetailCard({ etapaKey, etapa }: { etapaKey: string; etapa: EtapaEstrategica }) {
-  const [open, setOpen] = useState(false);
-
-  const scoreColor =
-    etapa.score <= 25 ? "text-destructive" :
-    etapa.score <= 50 ? "text-orange-500" :
-    etapa.score <= 75 ? "text-amber-500" : "text-green-500";
+function EtapaDetailCardDark({ etapaKey, etapa }: { etapaKey: string; etapa: EtapaEstrategica }) {
+  const colors = etapaColors[etapaKey];
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="glass-card">
-        <CollapsibleTrigger asChild>
-          <CardHeader className="pb-2 cursor-pointer hover:bg-accent/5 transition-colors">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="text-primary font-black">{etapaNumbers[etapaKey]}</span>
-                {etapaIcons[etapaKey]}
-                {etapaLabels[etapaKey]}
-                <Badge variant="outline" className={`text-[10px] ${scoreColor}`}>{etapa.score}%</Badge>
-              </CardTitle>
-              {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="space-y-4 pt-0">
-            {/* Diagnóstico */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Diagnóstico</p>
-              <p className="text-sm whitespace-pre-line">{etapa.diagnostico}</p>
-            </div>
+    <div className={`bg-zinc-900 border ${colors.border} rounded-xl overflow-hidden`}>
+      {/* Header */}
+      <div className="p-5 flex items-center gap-4">
+        <div className="flex-shrink-0">
+          <p className={`text-5xl font-black ${colors.accent} opacity-80 leading-none`}>{etapaNumbers[etapaKey]}</p>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={colors.accent}>{etapaIcons[etapaKey]}</span>
+            <h3 className="text-base font-bold text-white">{etapaLabels[etapaKey]}</h3>
+          </div>
+          <p className="text-sm text-zinc-400 line-clamp-2">{etapa.diagnostico}</p>
+        </div>
+        <ScoreCircle score={etapa.score} size={56} strokeWidth={4} />
+      </div>
 
-            {/* Problemas */}
-            {etapa.problemas.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Problemas Identificados</p>
-                <div className="space-y-1">
-                  {etapa.problemas.map((p, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
-                      <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
-                      <span>{p}</span>
-                    </div>
-                  ))}
+      {/* Content */}
+      <div className="px-5 pb-5 space-y-5">
+        {/* Problemas */}
+        {etapa.problemas.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-red-400 uppercase tracking-wide">⚠ Problemas Identificados</p>
+            <div className="space-y-1.5">
+              {etapa.problemas.map((p, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm bg-red-500/5 border border-red-500/20 rounded-lg px-3 py-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                  <span className="text-zinc-300">{p}</span>
                 </div>
-              </div>
-            )}
-
-            {/* Ações */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Ações Estratégicas</p>
-              <div className="space-y-1">
-                {etapa.acoes.map((a, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                    <span>{a}</span>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
+          </div>
+        )}
 
-            {/* Métricas-alvo */}
-            {etapa.metricas_alvo && Object.keys(etapa.metricas_alvo).length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Métricas-Alvo</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {Object.entries(etapa.metricas_alvo).map(([key, val]) => (
-                    <div key={key} className="bg-primary/5 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase">{key.replace(/_/g, " ")}</p>
-                      <p className="text-sm font-bold text-primary">{val}</p>
-                    </div>
-                  ))}
+        {/* Ações Estratégicas */}
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wide">✓ Ações Estratégicas</p>
+          <div className="space-y-1.5">
+            {etapa.acoes.map((a, i) => (
+              <div key={i} className="flex items-start gap-3 text-sm">
+                <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                 </div>
-              </div>
-            )}
-
-            {/* Entregáveis */}
-            {etapa.entregaveis.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Entregáveis NoExcuse</p>
-                <div className="flex flex-wrap gap-1">
-                  {etapa.entregaveis.map((e, i) => (
-                    <Badge key={i} variant="secondary" className="text-[10px]">{e}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-}
-
-// ── Projeções Section ───────────────────────────────────────────
-
-function ProjecoesSection({ projecoes }: { projecoes: NonNullable<StrategyResult["projecoes"]> }) {
-  return (
-    <>
-      {/* Unit Economics */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-primary" /> Unit Economics
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {[
-              { label: "CAC", value: projecoes.unit_economics.cac },
-              { label: "LTV", value: projecoes.unit_economics.ltv },
-              { label: "LTV/CAC", value: projecoes.unit_economics.ltv_cac_ratio },
-              { label: "Ticket Médio", value: projecoes.unit_economics.ticket_medio },
-              { label: "Margem", value: projecoes.unit_economics.margem },
-            ].map((item) => (
-              <div key={item.label} className="bg-primary/5 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className="text-lg font-bold text-primary">{item.value}</p>
+                <span className="text-zinc-200">{a}</span>
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Métricas-alvo */}
+        {etapa.metricas_alvo && Object.keys(etapa.metricas_alvo).length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-blue-400 uppercase tracking-wide">📊 Métricas-Alvo</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {Object.entries(etapa.metricas_alvo).map(([key, val]) => (
+                <div key={key} className={`${colors.bg} border ${colors.border} rounded-lg p-2.5 text-center`}>
+                  <p className="text-[10px] text-zinc-500 uppercase">{key.replace(/_/g, " ")}</p>
+                  <p className={`text-sm font-bold ${colors.accent}`}>{val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Entregáveis */}
+        {etapa.entregaveis.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wide">📦 Entregáveis NoExcuse</p>
+            <div className="flex flex-wrap gap-1.5">
+              {etapa.entregaveis.map((e, i) => (
+                <Badge key={i} className="text-[10px] bg-zinc-800 text-zinc-300 border-zinc-700">{e}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Projeções Section (Dark Theme) ──────────────────────────────
+
+function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyResult["projecoes"]> }) {
+  return (
+    <div className="space-y-4">
+      {/* Unit Economics */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Calculator className="w-5 h-5 text-red-500" />
+          <h3 className="text-lg font-bold text-white">Unit Economics</h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[
+            { label: "CAC", value: projecoes.unit_economics.cac },
+            { label: "LTV", value: projecoes.unit_economics.ltv },
+            { label: "LTV/CAC", value: projecoes.unit_economics.ltv_cac_ratio },
+            { label: "Ticket Médio", value: projecoes.unit_economics.ticket_medio },
+            { label: "Margem", value: projecoes.unit_economics.margem },
+          ].map((item) => (
+            <div key={item.label} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-center">
+              <p className="text-[10px] text-zinc-500 uppercase">{item.label}</p>
+              <p className="text-lg font-bold text-red-500">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Funil de Conversão */}
       {projecoes.funil_conversao && projecoes.funil_conversao.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" /> Funil de Conversão
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Layers className="w-5 h-5 text-red-500" />
+            <h3 className="text-lg font-bold text-white">Funil de Conversão</h3>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2">
             {projecoes.funil_conversao.map((etapa, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{i + 1}</div>
+                <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-xs font-bold text-red-400">{i + 1}</div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{etapa.etapa}</p>
+                  <p className="text-sm font-medium text-zinc-200">{etapa.etapa}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold">{etapa.volume.toLocaleString("pt-BR")}</p>
-                  <p className="text-[10px] text-muted-foreground">{etapa.taxa}</p>
+                  <p className="text-sm font-bold text-white">{etapa.volume.toLocaleString("pt-BR")}</p>
+                  <p className="text-[10px] text-zinc-500">{etapa.taxa}</p>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Projeção Mensal Chart */}
       {projecoes.projecao_mensal && projecoes.projecao_mensal.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" /> Projeção de 6 Meses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="w-5 h-5 text-red-500" />
+            <h3 className="text-lg font-bold text-white">Projeção de 6 Meses</h3>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={projecoes.projecao_mensal.map(p => ({ ...p, nome: `Mês ${p.mes}` }))}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="receita" name="Receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="investimento" name="Investimento" fill="hsl(var(--primary) / 0.3)" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "#71717a" }} />
+                <YAxis tick={{ fontSize: 10, fill: "#71717a" }} />
+                <Tooltip
+                  formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
+                  contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: 8, color: "#fff" }}
+                  labelStyle={{ color: "#a1a1aa" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 10, color: "#a1a1aa" }} />
+                <Bar dataKey="receita" name="Receita" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="investimento" name="Investimento" fill="rgba(239,68,68,0.25)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Crescimento Acumulado */}
       {projecoes.crescimento_acumulado && projecoes.crescimento_acumulado.length > 0 && (
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <LineChart className="w-4 h-4 text-primary" /> Crescimento Acumulado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <LineChart className="w-5 h-5 text-red-500" />
+            <h3 className="text-lg font-bold text-white">Crescimento Acumulado</h3>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <ResponsiveContainer width="100%" height={250}>
               <ReLineChart data={projecoes.crescimento_acumulado.map(p => ({ ...p, nome: `Mês ${p.mes}` }))}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="nome" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Line type="monotone" dataKey="receita_acumulada" name="Receita Acumulada" stroke="hsl(var(--primary))" strokeWidth={2} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "#71717a" }} />
+                <YAxis tick={{ fontSize: 10, fill: "#71717a" }} />
+                <Tooltip
+                  formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`}
+                  contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: 8, color: "#fff" }}
+                  labelStyle={{ color: "#a1a1aa" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 10, color: "#a1a1aa" }} />
+                <Line type="monotone" dataKey="receita_acumulada" name="Receita Acumulada" stroke="#ef4444" strokeWidth={2} dot={{ fill: "#ef4444" }} />
               </ReLineChart>
             </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
