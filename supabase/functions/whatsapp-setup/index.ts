@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const evolutionWebhookSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET") || "";
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -112,6 +113,7 @@ Deno.serve(async (req) => {
                 byEvents: true,
                 base64: true,
                 events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"],
+                headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
               },
             }),
           });
@@ -389,7 +391,7 @@ Deno.serve(async (req) => {
             byEvents: true,
             base64: true,
             events,
-            headers: { "x-evolution-secret": key },
+            headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
           },
         },
         {
@@ -564,7 +566,7 @@ Deno.serve(async (req) => {
               byEvents: true,
               base64: true,
               events,
-              headers: { "x-evolution-secret": effectiveApiKey },
+              headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
             },
           },
           {
@@ -572,7 +574,7 @@ Deno.serve(async (req) => {
             webhook_by_events: true,
             webhook_base64: true,
             events,
-            headers: { "x-evolution-secret": effectiveApiKey },
+            headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
           },
         ];
 
@@ -655,7 +657,7 @@ Deno.serve(async (req) => {
               byEvents: true,
               base64: true,
               events: reconfigEvents,
-              headers: { "x-evolution-secret": effectiveApiKey },
+              headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
             },
           },
           {

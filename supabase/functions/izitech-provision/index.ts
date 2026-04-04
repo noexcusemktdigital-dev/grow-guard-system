@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
 
     // ── Call IZITECH provision API ──
     const izitechKey = Deno.env.get("IZITECH_CROSS_API_KEY") || "";
+    const evolutionWebhookSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET") || "";
     if (!izitechKey) return json({ error: "IZITECH integration not configured" }, 500);
 
     const izitechRes = await fetch(IZITECH_URL, {
@@ -75,6 +76,7 @@ Deno.serve(async (req) => {
         action,
         instance_name: instance_name || undefined,
         customer_webhook_url: noeWebhookUrl,
+        webhook_headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
       }),
       signal: AbortSignal.timeout(30000),
     });
