@@ -22,10 +22,10 @@ const noBorders = {
 
 interface ContractData {
   title: string;
-  content: string;
-  signer_name?: string;
-  client_document?: string;
-  contract_type?: string;
+  content?: string | null;
+  signer_name?: string | null;
+  client_document?: string | null;
+  contract_type?: string | null;
 }
 
 function parseContractContent(content: string): Paragraph[] {
