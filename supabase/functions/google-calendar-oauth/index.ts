@@ -38,7 +38,8 @@ serve(async (req) => {
       if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
 
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
+      const portalCtx = portal || "saas";
+      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portalCtx });
       if (!orgId) return jsonRes(req, { error: "Organização não encontrada" }, 400);
 
       const { error: upsertErr } = await serviceClient
