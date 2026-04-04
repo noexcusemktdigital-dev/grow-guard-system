@@ -40,7 +40,7 @@ const saveToStorage = (state: CalculatorState) => {
   }
 };
 
-export const useCalculator = () => {
+export const useCalculator = (surplus?: { type: 'fixed' | 'percentage'; value: number }) => {
   const [state, setState] = useState<CalculatorState>(() => {
     const saved = loadFromStorage();
     return saved || {
