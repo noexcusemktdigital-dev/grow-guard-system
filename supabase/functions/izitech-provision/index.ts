@@ -53,7 +53,6 @@ Deno.serve(async (req) => {
     const { action, instance_name } = body;
 
     if (!action) return json({ error: "Missing action" }, 400);
-    // instance_name not required for list/cleanup
     if (!instance_name && !["list", "cleanup"].includes(action)) {
       return json({ error: "Missing instance_name" }, 400);
     }
@@ -82,50 +81,48 @@ Deno.serve(async (req) => {
 
     const data = await izitechRes.json().catch(() => ({ error: "Invalid response from IZITECH" }));
 
-    // ── Sync local DB based on action result ──
+    // ── Sync local DB (errors here must NOT fail the response) ──
+    try {
+      if (action === "create" && data.success && data.instance) {
+        await supabase.from("whatsapp_instances").upsert({
+          organization_id: orgId, instance_id: sanitizedName,
+          label: instance_name, provider: "evolution", status: "pending",
+          webhook_url: noeWebhookUrl, base_url: "https://evo.grupolamadre.com.br",
+          token: "managed-by-izitech", client_token: "managed-by-izitech",
+        }, { onConflict: "organization_id,instance_id", ignoreDuplicates: false });
+      }
 
-    // CREATE: save instance reference
-    if (action === "create" && data.success && data.instance) {
-      await supabase.from("whatsapp_instances").upsert({
-        organization_id: orgId, instance_id: sanitizedName,
-        label: instance_name, provider: "evolution", status: "pending",
-        webhook_url: noeWebhookUrl, base_url: "https://evo.grupolamadre.com.br",
-        token: "managed-by-izitech", client_token: "managed-by-izitech",
-      }, { onConflict: "organization_id,instance_id" });
-    }
+      if (["qr", "status", "reconnect"].includes(action) && data.status === "connected") {
+        await supabase.from("whatsapp_instances").update({
+          status: "connected", phone_number: data.phone_number || null,
+        }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+      }
 
-    // CONNECTED: update status + phone
-    if (["qr", "status", "reconnect"].includes(action) && data.status === "connected") {
-      await supabase.from("whatsapp_instances").update({
-        status: "connected", phone_number: data.phone_number || null,
-      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
-    }
+      if (action === "disconnect" && data.success) {
+        await supabase.from("whatsapp_instances").update({
+          status: "disconnected", phone_number: null,
+        }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+      }
 
-    // DISCONNECT: update status
-    if (action === "disconnect" && data.success) {
-      await supabase.from("whatsapp_instances").update({
-        status: "disconnected", phone_number: null,
-      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
-    }
+      if (action === "reconnect" && data.success) {
+        await supabase.from("whatsapp_instances").update({
+          status: "pending",
+        }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+      }
 
-    // RECONNECT with QR: update status
-    if (action === "reconnect" && data.success) {
-      await supabase.from("whatsapp_instances").update({
-        status: "pending",
-      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
-    }
+      if (action === "delete" && data.success) {
+        await supabase.from("whatsapp_instances").delete()
+          .eq("organization_id", orgId).eq("instance_id", sanitizedName);
+      }
 
-    // DELETE: remove from local DB
-    if (action === "delete" && data.success) {
-      await supabase.from("whatsapp_instances").delete()
-        .eq("organization_id", orgId).eq("instance_id", sanitizedName);
-    }
-
-    // RESTART: update status
-    if (action === "restart" && data.success) {
-      await supabase.from("whatsapp_instances").update({
-        status: "pending",
-      }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+      if (action === "restart" && data.success) {
+        await supabase.from("whatsapp_instances").update({
+          status: "pending",
+        }).eq("organization_id", orgId).eq("instance_id", sanitizedName);
+      }
+    } catch (dbErr: unknown) {
+      // Log DB sync failure but don't fail the response — IZITECH already processed the action
+      console.error("[izitech-provision] DB sync error (non-fatal):", dbErr instanceof Error ? dbErr.message : String(dbErr));
     }
 
     return json(data, izitechRes.status);
