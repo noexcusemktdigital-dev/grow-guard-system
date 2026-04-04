@@ -42,7 +42,7 @@ const franquiaSection: SidebarItem[] = [
 ];
 
 const comercialSection: SidebarItem[] = [
-  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm" },
+  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm-vendas" },
   { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
   { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
   { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
