@@ -646,7 +646,7 @@ async function drawStrategicPlanSection(b: PdfBuilder, result: StrategyResult, c
 
   // ── Projeções ──
   if (result.projecoes) {
-    drawProjecoes(b, result.projecoes, chartRefs);
+    await drawProjecoes(b, result.projecoes, chartRefs);
   }
 
   // ── Entregáveis ──
