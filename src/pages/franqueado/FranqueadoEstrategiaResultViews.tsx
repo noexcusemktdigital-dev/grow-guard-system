@@ -688,24 +688,51 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
       {/* Projeções */}
       {result.projecoes && <ProjecoesSection projecoes={result.projecoes} />}
 
-      {/* Entregáveis para Calculadora */}
+      {/* Execuções do Plano — Entregáveis agrupados por etapa */}
       {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
         <Card className="glass-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Package className="w-4 h-4 text-primary" /> Entregáveis Recomendados — Catálogo NoExcuse
+              <Package className="w-4 h-4 text-primary" /> Execuções do Plano — O Que Precisa Ser Feito
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {result.entregaveis_calculadora.map((e, i) => (
-              <div key={i} className="border rounded-md p-3 flex items-start gap-3">
-                <Badge variant="outline" className="text-[10px] shrink-0">x{e.quantity}</Badge>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{e.service_name}</p>
-                  <p className="text-xs text-muted-foreground">{e.justificativa}</p>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Para que o plano estratégico seja executado com sucesso, os seguintes serviços do catálogo NoExcuse precisam ser contratados e implementados:
+            </p>
+            {(() => {
+              const grouped: Record<string, typeof result.entregaveis_calculadora> = {};
+              result.entregaveis_calculadora!.forEach((e) => {
+                const key = e.etapa || "geral";
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key]!.push(e);
+              });
+              const order = ["conteudo", "trafego", "web", "sales", "validacao", "geral"];
+              return order.filter((k) => grouped[k]?.length).map((key) => (
+                <div key={key} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {etapaIcons[key] || <Package className="w-4 h-4" />}
+                    <p className="text-xs font-bold text-primary uppercase">
+                      {etapaNumbers[key] ? `${etapaNumbers[key]} — ` : ""}{etapaLabels[key] || "Geral"}
+                    </p>
+                  </div>
+                  {grouped[key]!.map((e, i) => (
+                    <div key={i} className="border rounded-md p-3 flex items-start gap-3 ml-6">
+                      <Badge variant="outline" className="text-[10px] shrink-0 font-bold">x{e.quantity}</Badge>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{e.service_name}</p>
+                        <p className="text-xs text-muted-foreground">{e.justificativa}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              ));
+            })()}
+            <div className="bg-primary/5 rounded-lg p-3 text-center mt-2">
+              <p className="text-xs text-muted-foreground">
+                Total de <span className="font-bold text-primary">{result.entregaveis_calculadora.length}</span> serviços recomendados para execução do plano
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
