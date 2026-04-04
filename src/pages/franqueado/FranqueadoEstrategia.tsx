@@ -45,6 +45,9 @@ import {
   Download,
   Upload,
   FileUp,
+  Globe,
+  ShoppingCart,
+  LineChart,
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -64,121 +67,115 @@ import {
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/lib/supabase";
-import {
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  ResponsiveContainer,
-} from "recharts";
-import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
+
+// ── Diagnostic Sections (5 Etapas + Contexto + Maturidade + Financeiro) ──
 
 const diagnosticSections: DiagSection[] = [
   {
     title: "Contexto do Negócio",
-    subtitle: "SPIN – Situação",
+    subtitle: "Informações gerais da empresa",
     icon: <FileText className="w-4 h-4 text-primary" />,
     fields: [
       { key: "nome_empresa", label: "Nome da empresa", type: "text", placeholder: "Ex: Empresa Exemplo LTDA" },
       { key: "segmento", label: "Qual é o segmento/nicho de mercado?", type: "text", placeholder: "Ex: Marketing digital, Saúde, Educação..." },
       { key: "tempo_mercado", label: "Há quanto tempo está no mercado?", type: "select", options: ["Menos de 1 ano", "1 a 2 anos", "2 a 5 anos", "Mais de 5 anos"] },
-      { key: "faturamento_atual", label: "Qual é o faturamento mensal atual? (R$)", type: "text", placeholder: "Ex: 50000" },
-      { key: "ticket_medio_atual", label: "Qual é o ticket médio atual? (R$)", type: "text", placeholder: "Ex: 2000" },
-      { key: "clientes_ativos", label: "Quantos clientes ativos possui hoje?", type: "text", placeholder: "Ex: 20" },
-      { key: "modelo_negocio", label: "Como é o modelo de negócio principal?", type: "select", options: ["Prestação de serviços", "Produto físico", "SaaS/Digital", "Recorrência/Assinatura", "Consultoria", "Outro"] },
+      { key: "faturamento_atual", label: "Faturamento mensal atual (R$)", type: "text", placeholder: "Ex: 50000" },
+      { key: "ticket_medio_atual", label: "Ticket médio atual (R$)", type: "text", placeholder: "Ex: 2000" },
+      { key: "clientes_ativos", label: "Quantos clientes ativos possui?", type: "text", placeholder: "Ex: 20" },
+      { key: "modelo_negocio", label: "Modelo de negócio principal", type: "select", options: ["Prestação de serviços", "Produto físico", "SaaS/Digital", "Recorrência/Assinatura", "Consultoria", "Outro"] },
+      { key: "meta_faturamento", label: "Meta de faturamento mensal (R$)", type: "text", placeholder: "Ex: 150000" },
+      { key: "meta_clientes_mes", label: "Meta de novos clientes por mês", type: "text", placeholder: "Ex: 10" },
     ],
   },
   {
-    title: "Estrutura Comercial",
-    subtitle: "Termômetro – Estrutura",
-    icon: <Layers className="w-4 h-4 text-primary" />,
+    title: "01 — Conteúdo e Linha Editorial",
+    subtitle: "Como está a produção de conteúdo hoje",
+    icon: <FileText className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "processo_comercial", label: "Você possui um processo comercial definido?", type: "select", options: ["Não", "Parcial", "Sim"] },
-      { key: "atendimento_leads", label: "Como os leads são atendidos hoje?", type: "select", options: ["WhatsApp manual", "CRM", "Planilha", "Equipe de vendas", "Outro"] },
-      { key: "tamanho_time_comercial", label: "Quantas pessoas existem no time comercial hoje?", type: "text", placeholder: "Ex: 3" },
-      { key: "script_atendimento", label: "Existe um script ou padrão de atendimento para vendas?", type: "select", options: ["Sim", "Não", "Parcial"] },
-      { key: "funil_definido", label: "Existe um funil comercial definido?", type: "select", options: ["Sim", "Não", "Parcial"] },
-      { key: "usa_crm", label: "Você possui CRM implementado?", type: "select", options: ["Sim", "Não"] },
-      { key: "qual_crm", label: "Qual CRM utiliza?", type: "text", placeholder: "Ex: RD Station, Pipedrive...", conditionKey: "usa_crm", conditionValues: ["Sim"] },
-      { key: "mede_conversao", label: "Hoje você mede taxa de conversão de vendas?", type: "select", options: ["Sim", "Não", "Parcialmente"] },
+      { key: "produz_conteudo", label: "A empresa produz conteúdo para redes sociais?", type: "select", options: ["Sim, com frequência", "Sim, mas irregular", "Não"] },
+      { key: "frequencia_conteudo", label: "Qual a frequência de publicações?", type: "select", options: ["Diária", "3-5x por semana", "1-2x por semana", "Quinzenal ou menos", "Não publica"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"] },
+      { key: "canais_conteudo", label: "Em quais canais publica?", type: "checkbox-group", options: ["Instagram", "Facebook", "LinkedIn", "TikTok", "YouTube", "Blog", "Newsletter", "Outros"] },
+      { key: "linha_editorial", label: "Existe uma linha editorial definida?", type: "select", options: ["Sim, estruturada", "Parcial", "Não"] },
+      { key: "funil_conteudo", label: "O conteúdo segue um funil (topo/meio/fundo)?", type: "select", options: ["Sim", "Parcialmente", "Não", "Não sei o que é"] },
+      { key: "formatos_usados", label: "Quais formatos de conteúdo utiliza?", type: "checkbox-group", options: ["Carrossel", "Reels/Vídeos curtos", "Stories", "Lives", "Blog/Artigos", "E-books", "Podcast", "YouTube longo"] },
     ],
   },
   {
-    title: "Geração de Demanda",
-    subtitle: "Termômetro – Aquisição",
+    title: "02 — Tráfego e Distribuição",
+    subtitle: "Como os leads chegam até a empresa",
     icon: <TrendingUp className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "leads_mes", label: "Quantos leads sua empresa gera por mês hoje?", type: "text", placeholder: "Ex: 50" },
-      { key: "custo_por_lead", label: "Você sabe qual é o custo médio por lead? (R$)", type: "text", placeholder: "Ex: 30 ou Não sei" },
-      { key: "canal_mais_clientes", label: "Qual canal hoje gera mais clientes?", type: "text", placeholder: "Ex: Instagram, Indicação..." },
-      { key: "investe_trafego_pago", label: "Você já investe em tráfego pago?", type: "select", options: ["Sim", "Não"] },
-      { key: "plataformas_trafego", label: "Em quais plataformas?", type: "checkbox-group", options: ["Meta Ads", "Google Ads", "TikTok Ads", "Outros"], conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
-      { key: "maior_resultado_marketing", label: "Qual foi o maior resultado que já teve com marketing?", type: "textarea", placeholder: "Descreva o melhor resultado obtido..." },
-      { key: "producao_conteudo", label: "Existe produção de conteúdo frequente?", type: "select", options: ["Sim", "Não", "Irregular"] },
-      { key: "estrategia_posicionamento", label: "Existe estratégia de posicionamento da marca?", type: "select", options: ["Sim", "Não", "Parcial"] },
+      { key: "investe_trafego_pago", label: "Investe em tráfego pago?", type: "select", options: ["Sim", "Não", "Já investiu mas parou"] },
+      { key: "investimento_mensal_trafego", label: "Quanto investe por mês em tráfego? (R$)", type: "text", placeholder: "Ex: 5000", conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
+      { key: "plataformas_trafego", label: "Quais plataformas de tráfego usa?", type: "checkbox-group", options: ["Meta Ads", "Google Ads", "TikTok Ads", "LinkedIn Ads", "YouTube Ads", "Outros"], conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
+      { key: "cpl_atual", label: "Qual o CPL (custo por lead) atual? (R$)", type: "text", placeholder: "Ex: 30 ou Não sei" },
+      { key: "leads_mes", label: "Quantos leads gera por mês?", type: "text", placeholder: "Ex: 50" },
+      { key: "canal_mais_converte", label: "Qual canal gera mais clientes hoje?", type: "text", placeholder: "Ex: Instagram, Google, Indicação..." },
     ],
   },
   {
-    title: "Problemas e Gargalos",
-    subtitle: "SPIN – Problema",
-    icon: <AlertTriangle className="w-4 h-4 text-primary" />,
+    title: "03 — Web e Conversão",
+    subtitle: "Presença web e conversão de visitantes",
+    icon: <Globe className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "problema_geracao_clientes", label: "Qual é hoje o maior problema na geração de clientes?", type: "textarea", placeholder: "Descreva..." },
-      { key: "problema_processo_vendas", label: "Qual é hoje o maior problema no processo de vendas?", type: "textarea", placeholder: "Descreva..." },
-      { key: "perde_oportunidades", label: "Você sente que perde oportunidades de venda?", type: "select", options: ["Sim", "Não", "Talvez"] },
-      { key: "motivo_perda_oportunidades", label: "Por que acredita que perde essas oportunidades?", type: "textarea", placeholder: "Descreva os motivos...", conditionKey: "perde_oportunidades", conditionValues: ["Sim", "Talvez"] },
-      { key: "dificuldade_organizar_leads", label: "Existe dificuldade em organizar leads ou acompanhar negociações?", type: "select", options: ["Sim", "Não", "Parcialmente"] },
-      { key: "marketing_gera_qualificados", label: "O marketing atual gera clientes qualificados?", type: "select", options: ["Sim", "Não", "Parcialmente"] },
-      { key: "falta_previsibilidade", label: "Você sente falta de previsibilidade nas vendas?", type: "select", options: ["Sim", "Não"] },
+      { key: "tem_site", label: "A empresa possui site/landing page?", type: "select", options: ["Sim, site completo", "Sim, apenas LPs", "Não"] },
+      { key: "quantidade_lps", label: "Quantas landing pages ativas possui?", type: "text", placeholder: "Ex: 3", conditionKey: "tem_site", conditionValues: ["Sim, site completo", "Sim, apenas LPs"] },
+      { key: "taxa_conversao_site", label: "Qual a taxa de conversão do site/LP?", type: "select", options: ["Acima de 5%", "Entre 2% e 5%", "Abaixo de 2%", "Não mede", "Não sei"] },
+      { key: "faz_teste_ab", label: "Realiza testes A/B?", type: "select", options: ["Sim, regularmente", "Às vezes", "Não"] },
+      { key: "elementos_prova", label: "Possui elementos de prova social no site?", type: "select", options: ["Sim (depoimentos, cases)", "Parcial", "Não"] },
+      { key: "cta_principal", label: "Qual o CTA principal do site?", type: "text", placeholder: "Ex: Agendar reunião, Solicitar orçamento..." },
     ],
   },
   {
-    title: "Impacto dos Problemas",
-    subtitle: "SPIN – Implicação",
-    icon: <Target className="w-4 h-4 text-primary" />,
+    title: "04 — Sales e Fechamento",
+    subtitle: "Processo comercial e vendas",
+    icon: <ShoppingCart className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "impacto_se_continuar", label: "O que acontece com a empresa se o volume de vendas continuar como está hoje?", type: "textarea", placeholder: "Descreva o impacto..." },
-      { key: "impacto_faturamento", label: "Qual impacto esses problemas geram no faturamento?", type: "textarea", placeholder: "Descreva..." },
-      { key: "vendas_perdidas_mes", label: "Quantas vendas você acredita que perde por mês hoje?", type: "text", placeholder: "Ex: 5" },
-      { key: "impacto_se_resolver", label: "Qual seria o impacto financeiro se esses problemas fossem resolvidos?", type: "textarea", placeholder: "Descreva..." },
-      { key: "aguenta_dobrar_demanda", label: "Se o negócio dobrasse de demanda hoje, a empresa conseguiria atender?", type: "select", options: ["Sim, tranquilamente", "Sim, com dificuldade", "Não, precisaria estruturar", "Não, seria caótico"] },
+      { key: "processo_comercial", label: "Possui um processo comercial definido?", type: "select", options: ["Sim, documentado", "Parcial", "Não"] },
+      { key: "tamanho_time_comercial", label: "Quantas pessoas no time comercial?", type: "text", placeholder: "Ex: 3" },
+      { key: "usa_crm", label: "Utiliza CRM?", type: "select", options: ["Sim", "Não", "Planilha/Manual"] },
+      { key: "script_atendimento", label: "Possui script ou padrão de atendimento?", type: "select", options: ["Sim", "Não", "Parcial"] },
+      { key: "funil_definido", label: "Possui funil comercial definido com etapas?", type: "select", options: ["Sim", "Não", "Parcial"] },
+      { key: "taxa_conversao_comercial", label: "Qual a taxa de conversão de lead para cliente?", type: "select", options: ["Acima de 20%", "Entre 10% e 20%", "Abaixo de 10%", "Não mede"] },
+      { key: "followup", label: "Realiza follow-up estruturado?", type: "select", options: ["Sim, com cadência", "Às vezes", "Não"] },
     ],
   },
   {
-    title: "Resultado Esperado",
-    subtitle: "SPIN – Need Payoff",
-    icon: <Sparkles className="w-4 h-4 text-primary" />,
+    title: "05 — Validação e Escala",
+    subtitle: "Métricas, validação e capacidade de escala",
+    icon: <LineChart className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "clientes_desejados_mes", label: "Quantos clientes novos por mês você gostaria de gerar?", type: "text", placeholder: "Ex: 30" },
-      { key: "faturamento_ideal", label: "Qual faturamento mensal seria ideal para o seu negócio? (R$)", type: "text", placeholder: "Ex: 150000" },
-      { key: "ticket_medio_futuro", label: "Qual ticket médio você gostaria de trabalhar no futuro? (R$)", type: "text", placeholder: "Ex: 3000" },
-      { key: "cenario_ideal_12_meses", label: "Qual seria o cenário ideal para sua empresa nos próximos 12 meses?", type: "textarea", placeholder: "Descreva seu cenário ideal..." },
-      { key: "o_que_precisa_mudar", label: "O que você acredita que precisa mudar para chegar nesse resultado?", type: "textarea", placeholder: "Descreva..." },
+      { key: "mede_metricas", label: "Acompanha métricas de marketing e vendas?", type: "select", options: ["Sim, com dashboards", "Sim, manualmente", "Parcialmente", "Não"] },
+      { key: "kpis_acompanha", label: "Quais KPIs acompanha?", type: "checkbox-group", options: ["Leads/mês", "CPL", "Taxa de conversão", "CAC", "LTV", "ROI", "Faturamento", "Nenhum"] },
+      { key: "ja_escalou", label: "Já escalou algum canal de aquisição?", type: "select", options: ["Sim, com sucesso", "Sim, mas sem resultado", "Não"] },
+      { key: "capacidade_atendimento", label: "Se dobrar a demanda hoje, consegue atender?", type: "select", options: ["Sim, tranquilamente", "Sim, com dificuldade", "Não, precisaria estruturar", "Não, seria caótico"] },
+      { key: "maior_resultado", label: "Qual foi o maior resultado que já obteve com marketing?", type: "textarea", placeholder: "Descreva brevemente..." },
     ],
   },
   {
     title: "Termômetro de Maturidade",
-    subtitle: "Autoavaliação (1 a 5)",
+    subtitle: "Autoavaliação (1 a 5) para cada etapa",
     icon: <BarChart3 className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "nota_marketing", label: "Estrutura de Marketing", type: "slider", min: 1, max: 5 },
-      { key: "nota_comercial", label: "Estrutura Comercial", type: "slider", min: 1, max: 5 },
-      { key: "nota_leads", label: "Organização de Leads", type: "slider", min: 1, max: 5 },
-      { key: "nota_previsibilidade", label: "Previsibilidade de Vendas", type: "slider", min: 1, max: 5 },
-      { key: "nota_marca", label: "Posicionamento de Marca", type: "slider", min: 1, max: 5 },
-      { key: "nota_escala", label: "Escala de Aquisição de Clientes", type: "slider", min: 1, max: 5 },
+      { key: "nota_conteudo", label: "Conteúdo e Linha Editorial", type: "slider", min: 1, max: 5 },
+      { key: "nota_trafego", label: "Tráfego e Distribuição", type: "slider", min: 1, max: 5 },
+      { key: "nota_web", label: "Web e Conversão", type: "slider", min: 1, max: 5 },
+      { key: "nota_sales", label: "Sales e Fechamento", type: "slider", min: 1, max: 5 },
+      { key: "nota_escala", label: "Validação e Escala", type: "slider", min: 1, max: 5 },
+      { key: "nota_marketing_geral", label: "Marketing Geral", type: "slider", min: 1, max: 5 },
+      { key: "nota_posicionamento", label: "Posicionamento de Marca", type: "slider", min: 1, max: 5 },
     ],
   },
   {
-    title: "Financeiro Estratégico",
-    subtitle: "Dados para projeções",
+    title: "Financeiro e Projeções",
+    subtitle: "Dados para cálculos e projeções",
     icon: <Calculator className="w-4 h-4 text-primary" />,
     fields: [
-      { key: "margem_lucro", label: "Qual é sua margem média de lucro? (%)", type: "text", placeholder: "Ex: 30" },
-      { key: "custo_maximo_cliente", label: "Qual custo máximo aceitável por cliente? (R$)", type: "text", placeholder: "Ex: 500" },
-      { key: "ltv_medio", label: "Qual é o LTV médio de um cliente? (R$)", type: "text", placeholder: "Ex: 12000" },
+      { key: "margem_lucro", label: "Margem média de lucro (%)", type: "text", placeholder: "Ex: 30" },
+      { key: "ltv_medio", label: "LTV médio de um cliente (R$)", type: "text", placeholder: "Ex: 12000 ou Não sei" },
+      { key: "cac_maximo", label: "CAC máximo aceitável (R$)", type: "text", placeholder: "Ex: 500 ou Não sei" },
+      { key: "investimento_marketing_atual", label: "Investimento total atual em marketing/mês (R$)", type: "text", placeholder: "Ex: 5000" },
     ],
   },
 ];
@@ -193,7 +190,6 @@ function UploadBriefingForm({
   const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState("");
   const [loading, setLoading] = useState(false);
-  const [title, setTitle] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExtract = async () => {
@@ -239,7 +235,7 @@ function UploadBriefingForm({
           <Upload className="w-4 h-4 text-primary" /> Upload de Briefing
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Envie um arquivo de texto ou cole o briefing abaixo. A nossa IA irá extrair as informações e preencher o formulário automaticamente.
+          Envie um arquivo de texto ou cole o briefing. A IA irá extrair as informações e preencher o formulário.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -298,28 +294,75 @@ function UploadBriefingForm({
 function NovaEstrategiaTab() {
   const [result, setResult] = useState<StrategyResult | null>(null);
   const [resultTitle, setResultTitle] = useState("");
+  const [resultStrategy, setResultStrategy] = useState<Strategy | null>(null);
   const [mode, setMode] = useState<"choose" | "manual" | "upload" | "review">("choose");
   const [uploadedAnswers, setUploadedAnswers] = useState<Record<string, any> | null>(null);
   const createStrategy = useCreateStrategy();
+  const updateMut = useUpdateStrategy();
+  const { data: leads } = useCrmLeads();
+  const navigate = useNavigate();
 
   const handleSubmit = async (answers: Record<string, any>, title: string) => {
     try {
       const s = await createStrategy.mutateAsync({ title, answers });
       setResult(s.result);
       setResultTitle(title);
-      toast.success("Diagnóstico estratégico gerado com sucesso!");
+      setResultStrategy(s);
+      toast.success("Diagnóstico e planejamento estratégico gerados!");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : String(e) || "Erro ao gerar diagnóstico");
+      toast.error(e instanceof Error ? e.message : String(e) || "Erro ao gerar estratégia");
+    }
+  };
+
+  const handleSendToCalculator = () => {
+    if (!result?.entregaveis_calculadora?.length) return;
+    const items = result.entregaveis_calculadora.map((e) => ({
+      serviceId: e.service_id,
+      quantity: e.quantity,
+    }));
+    navigate("/franqueado/propostas", { state: { preSelectedItems: items } });
+    toast.success("Entregáveis enviados para a Calculadora!");
+  };
+
+  const handleLinkLead = async (leadId: string) => {
+    if (!resultStrategy) return;
+    try {
+      await updateMut.mutateAsync({ id: resultStrategy.id, lead_id: leadId });
+      toast.success("Estratégia vinculada ao lead!");
+    } catch {
+      toast.error("Erro ao vincular lead");
     }
   };
 
   if (result) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" size="sm" onClick={() => { setResult(null); setMode("choose"); setUploadedAnswers(null); }}>
-          <RefreshCw className="w-4 h-4 mr-1" /> Novo Diagnóstico
-        </Button>
-        <StrategyResultView result={result} title={resultTitle} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => { setResult(null); setMode("choose"); setUploadedAnswers(null); setResultStrategy(null); }}>
+            <RefreshCw className="w-4 h-4 mr-1" /> Novo Diagnóstico
+          </Button>
+
+          {/* CRM Link */}
+          {leads && (leads as any[]).length > 0 && (
+            <Select onValueChange={handleLinkLead}>
+              <SelectTrigger className="w-[200px] h-9 text-xs">
+                <SelectValue placeholder="Vincular ao CRM..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(leads as any[]).map((lead) => (
+                  <SelectItem key={lead.id} value={lead.id} className="text-xs">
+                    {lead.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <StrategyResultView
+          result={result}
+          title={resultTitle}
+          onSendToCalculator={result.entregaveis_calculadora?.length ? handleSendToCalculator : undefined}
+        />
       </div>
     );
   }
@@ -337,7 +380,7 @@ function NovaEstrategiaTab() {
             </div>
             <h3 className="text-sm font-bold">Preenchimento Manual</h3>
             <p className="text-xs text-muted-foreground">
-              Responda às 8 etapas do diagnóstico SPIN + NOEXCUSE passo a passo
+              Responda às 8 etapas do diagnóstico: contexto, 5 etapas estratégicas, maturidade e financeiro
             </p>
           </CardContent>
         </Card>
@@ -352,7 +395,7 @@ function NovaEstrategiaTab() {
             </div>
             <h3 className="text-sm font-bold">Upload de Briefing</h3>
             <p className="text-xs text-muted-foreground">
-              Envie um arquivo de texto ou cole o briefing e a IA extrai as respostas automaticamente
+              Envie um texto ou briefing e a IA extrai as respostas automaticamente
             </p>
           </CardContent>
         </Card>
@@ -388,7 +431,7 @@ function NovaEstrategiaTab() {
           </Badge>
         </div>
         <DiagnosticForm
-                diagnosticSections={diagnosticSections}
+          diagnosticSections={diagnosticSections}
           onSubmit={handleSubmit}
           loading={createStrategy.isPending}
           initialAnswers={uploadedAnswers}
@@ -416,22 +459,29 @@ function MeusDiagnosticosTab() {
   const updateMut = useUpdateStrategy();
   const regenerateMut = useRegenerateStrategy();
   const { data: leads } = useCrmLeads();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Strategy | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingStrategy, setEditingStrategy] = useState<Strategy | null>(null);
 
-  const filtered = (strategies ?? []).filter((s) =>
-    s.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = (strategies ?? []).filter((s) => {
+    const matchSearch = s.title.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || s.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   const getLeadName = (leadId: string | null) => {
     if (!leadId) return null;
     return ((leads ?? []) as { id: string; name?: string }[]).find((l) => l.id === leadId)?.name || null;
   };
 
-  const getMaturityInfo = (s: Strategy) => {
+  const getScoreInfo = (s: Strategy) => {
+    if (s.result?.diagnostico_gps) {
+      return { nivel: s.result.diagnostico_gps.nivel, score: s.result.diagnostico_gps.score_geral };
+    }
     if (s.result?.diagnostico_negocio?.maturidade) {
       const m = s.result.diagnostico_negocio.maturidade;
       return { nivel: m.nivel, score: m.score };
@@ -442,12 +492,38 @@ function MeusDiagnosticosTab() {
     return null;
   };
 
+  const handleSendToCalculator = (s: Strategy) => {
+    if (!s.result?.entregaveis_calculadora?.length) {
+      toast.error("Esta estratégia não possui entregáveis mapeados");
+      return;
+    }
+    const items = s.result.entregaveis_calculadora.map((e) => ({
+      serviceId: e.service_id,
+      quantity: e.quantity,
+    }));
+    navigate("/franqueado/propostas", { state: { preSelectedItems: items } });
+    toast.success("Entregáveis enviados para a Calculadora!");
+  };
+
   return (
     <>
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar diagnósticos..." className="pl-9" aria-label="Buscar diagnósticos" />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar diagnósticos..." className="pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px] h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="completed">Concluídos</SelectItem>
+              <SelectItem value="draft">Rascunhos</SelectItem>
+              <SelectItem value="error">Com erro</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {isLoading ? (
@@ -457,7 +533,12 @@ function MeusDiagnosticosTab() {
         ) : (
           <div className="space-y-2">
             {filtered.map((s) => {
-              const matInfo = getMaturityInfo(s);
+              const scoreInfo = getScoreInfo(s);
+              const scoreColor = scoreInfo
+                ? scoreInfo.score <= 25 ? "text-destructive"
+                  : scoreInfo.score <= 50 ? "text-orange-500"
+                  : scoreInfo.score <= 75 ? "text-amber-500" : "text-green-500"
+                : "";
               return (
                 <Card key={s.id} className="glass-card cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelected(s)}>
                   <CardContent className="p-4 flex items-center justify-between">
@@ -479,9 +560,9 @@ function MeusDiagnosticosTab() {
                         <Badge variant={s.status === "completed" ? "default" : "secondary"} className="text-[10px]">
                           {s.status === "completed" ? "Concluído" : s.status === "error" ? "Erro" : "Rascunho"}
                         </Badge>
-                        {matInfo && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {matInfo.nivel} ({matInfo.score}%)
+                        {scoreInfo && (
+                          <Badge variant="outline" className={`text-[10px] font-bold ${scoreColor}`}>
+                            {scoreInfo.score}% — {scoreInfo.nivel}
                           </Badge>
                         )}
                         {getLeadName(s.lead_id) && (
@@ -495,6 +576,11 @@ function MeusDiagnosticosTab() {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditTitle(s.title); setEditingId(s.id); }} aria-label="Editar">
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
+                      {s.result?.entregaveis_calculadora?.length ? (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSendToCalculator(s)} aria-label="Calculadora">
+                          <Calculator className="w-3.5 h-3.5" />
+                        </Button>
+                      ) : null}
                       {s.lead_id && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateMut.mutate({ id: s.id, lead_id: null })} aria-label="Desvincular">
                           <Unlink className="w-3.5 h-3.5" />
@@ -551,6 +637,11 @@ function MeusDiagnosticosTab() {
                 <Button variant="outline" size="sm" onClick={() => { setSelected(null); setEditingStrategy(selected); }}>
                   <Pencil className="w-4 h-4 mr-1" /> Editar e Regenerar
                 </Button>
+                {selected.result?.entregaveis_calculadora?.length ? (
+                  <Button variant="default" size="sm" onClick={() => { setSelected(null); handleSendToCalculator(selected); }}>
+                    <Calculator className="w-4 h-4 mr-1" /> Enviar para Calculadora
+                  </Button>
+                ) : null}
               </div>
               {selected.result && <StrategyResultView result={selected.result} title={selected.title} />}
             </div>
@@ -566,7 +657,7 @@ function MeusDiagnosticosTab() {
 export default function FranqueadoEstrategia() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Criador de Estratégia" subtitle="Diagnóstico SPIN Selling + Termômetro NOEXCUSE para estratégia comercial" />
+      <PageHeader title="Criador de Estratégia" subtitle="GPS do Negócio + Planejamento Estratégico 5 Etapas — Metodologia NoExcuse" />
 
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-2">
