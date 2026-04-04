@@ -32,6 +32,7 @@ const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda pa
 
 export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const { refetch } = useWhatsAppInstances();
+  const { data: orgId } = useUserOrgId();
   const setupMutation = useSetupWhatsApp();
   const [step, setStep] = useState(1);
   const [provider, setProvider] = useState<Provider>("izitech");
@@ -50,8 +51,18 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const [izitechConnected, setIzitechConnected] = useState(false);
   const [izitechPhone, setIzitechPhone] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Payment step
+  const [billingType, setBillingType] = useState<string>("PIX");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    pix_qr_code_base64?: string | null;
+    pix_copy_paste?: string | null;
+    invoice_url?: string | null;
+    bank_slip_url?: string | null;
+  } | null>(null);
+  const [paymentDone, setPaymentDone] = useState(false);
 
-  const totalSteps = provider === "izitech" ? 3 : 3;
+  const totalSteps = provider === "izitech" ? 4 : 3;
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
