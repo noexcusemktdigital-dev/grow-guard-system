@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     console.log("[asaas-test] Response body (raw):", rawBody.substring(0, 500));
 
     // Parse response
-    let parsed: Record<string, unknown> | null = null;
+    let parsed: { errors?: { code?: string }[]; totalCount?: number; data?: { name?: string }[] } | null = null;
     try { parsed = JSON.parse(rawBody); } catch { /* not JSON */ }
 
     // Detect error codes

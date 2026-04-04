@@ -9,6 +9,7 @@ const PLAN_PRICES: Record<string, number> = {
   starter: 349,
   pro: 739,
   enterprise: 1429,
+  whatsapp: 45,
 };
 
 Deno.serve(async (req) => {

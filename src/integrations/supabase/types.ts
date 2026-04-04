@@ -6000,7 +6000,9 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          asaas_subscription_id: string | null
           base_url: string | null
+          billing_status: string | null
           client_token: string
           created_at: string
           id: string
@@ -6015,7 +6017,9 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          asaas_subscription_id?: string | null
           base_url?: string | null
+          billing_status?: string | null
           client_token: string
           created_at?: string
           id?: string
@@ -6030,7 +6034,9 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          asaas_subscription_id?: string | null
           base_url?: string | null
+          billing_status?: string | null
           client_token?: string
           created_at?: string
           id?: string

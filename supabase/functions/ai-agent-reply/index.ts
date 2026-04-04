@@ -775,7 +775,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
 
     await adminClient.from("whatsapp_messages").insert({
       organization_id, contact_id,
-      message_id_zapi: sendData?.messageId || sendData?.key?.id || null,
+      message_id_zapi: (sendData as any)?.messageId || (sendData as any)?.key?.id || null,
       direction: "outbound", type: "text", content: cleanReply, status: messageStatus,
       metadata: { ...sendData, ai_generated: true, agent_id: agent.id, agent_role: agent.role, ai_actions: actions.length > 0 ? actions : undefined },
     });
