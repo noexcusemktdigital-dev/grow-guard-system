@@ -54,7 +54,7 @@ function FollowupListView({
   onEdit: (f: ClientFollowup) => void;
 }) {
   const selectedStrategy = strategies.find((s) => s.id === selectedStrategyId);
-  const clientName = selectedStrategy?.answers?.nome_empresa || selectedStrategy?.answers?.empresa || "Cliente";
+  const clientName = selectedStrategy?.title || selectedStrategy?.diagnostic_answers?.nome_empresa || "Cliente";
 
   return (
     <div className="space-y-6">
