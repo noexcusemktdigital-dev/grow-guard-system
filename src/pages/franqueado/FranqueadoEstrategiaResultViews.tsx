@@ -19,252 +19,86 @@ import {
 } from "recharts";
 import { useNavigate } from "react-router-dom";
 
-// ── PDF Export Helper (Professional A4) ─────────────────────────
+// ── PDF Export Helper (Screenshot-based A4) ─────────────────────────
 
-async function exportProfessionalPdf(element: HTMLElement, title: string, result: StrategyResult) {
+async function exportProfessionalPdf(element: HTMLElement, title: string, _result: StrategyResult) {
   const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
     import("html2canvas"),
   ]);
 
+  // Hide buttons and interactive elements during capture
+  const buttons = element.querySelectorAll("button, [data-pdf-hide]");
+  buttons.forEach((b) => (b as HTMLElement).style.display = "none");
+
+  // Force the element to be fully visible for capture
+  const originalMaxHeight = element.style.maxHeight;
+  const originalOverflow = element.style.overflow;
+  element.style.maxHeight = "none";
+  element.style.overflow = "visible";
+
+  // A4 dimensions in mm and target pixel width
+  const A4_W_MM = 210;
+  const A4_H_MM = 297;
+  const MARGIN_MM = 10;
+  const CONTENT_W_MM = A4_W_MM - MARGIN_MM * 2;
+  const CONTENT_H_MM = A4_H_MM - MARGIN_MM * 2;
+  const SCALE = 2;
+
+  const canvas = await html2canvas(element, {
+    scale: SCALE,
+    useCORS: true,
+    backgroundColor: null,
+    logging: false,
+    windowWidth: element.scrollWidth,
+    windowHeight: element.scrollHeight,
+  });
+
+  // Restore original styles
+  buttons.forEach((b) => (b as HTMLElement).style.display = "");
+  element.style.maxHeight = originalMaxHeight;
+  element.style.overflow = originalOverflow;
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.92);
+  const imgW = canvas.width;
+  const imgH = canvas.height;
+
+  // Calculate how the image maps to A4
+  const pdfImgW = CONTENT_W_MM;
+  const pdfImgH = (imgH * CONTENT_W_MM) / imgW;
+
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 15;
-  const contentW = pageW - margin * 2;
-  let y = margin;
+  const totalPages = Math.ceil(pdfImgH / CONTENT_H_MM);
 
-  const PRIMARY = [220, 38, 38]; // red-600
-  const DARK = [26, 26, 26];
-  const GRAY = [107, 114, 128];
-  const LIGHT_BG = [249, 250, 251];
+  for (let page = 0; page < totalPages; page++) {
+    if (page > 0) pdf.addPage();
 
-  function addPage() {
-    pdf.addPage();
-    y = margin;
+    // Calculate the y offset for this page slice
+    const srcY = page * (CONTENT_H_MM / pdfImgH) * imgH;
+    const srcH = Math.min((CONTENT_H_MM / pdfImgH) * imgH, imgH - srcY);
+    const destH = (srcH * pdfImgH) / imgH;
+
+    // Create a slice canvas for this page
+    const sliceCanvas = document.createElement("canvas");
+    sliceCanvas.width = imgW;
+    sliceCanvas.height = Math.round(srcH);
+    const ctx = sliceCanvas.getContext("2d")!;
+    ctx.drawImage(canvas, 0, -Math.round(srcY));
+
+    const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.92);
+    pdf.addImage(sliceData, "JPEG", MARGIN_MM, MARGIN_MM, pdfImgW, destH);
+
+    // Footer
+    pdf.setFontSize(7);
+    pdf.setTextColor(160, 160, 160);
+    pdf.text(
+      `NoExcuse Digital — ${new Date().toLocaleDateString("pt-BR")}`,
+      A4_W_MM / 2,
+      A4_H_MM - 5,
+      { align: "center" }
+    );
+    pdf.text(`${page + 1}/${totalPages}`, A4_W_MM - MARGIN_MM, A4_H_MM - 5, { align: "right" });
   }
-
-  function checkSpace(needed: number) {
-    if (y + needed > pageH - margin) addPage();
-  }
-
-  function drawSectionHeader(text: string) {
-    checkSpace(14);
-    pdf.setFillColor(...PRIMARY);
-    pdf.rect(margin, y, contentW, 8, "F");
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(11);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(text.toUpperCase(), margin + 4, y + 5.5);
-    y += 12;
-    pdf.setTextColor(...DARK);
-  }
-
-  function drawText(text: string, fontSize = 9, color = DARK, bold = false) {
-    pdf.setFontSize(fontSize);
-    pdf.setTextColor(...color);
-    pdf.setFont("helvetica", bold ? "bold" : "normal");
-    const lines = pdf.splitTextToSize(text, contentW - 4);
-    const lineH = fontSize * 0.45;
-    checkSpace(lines.length * lineH + 2);
-    pdf.text(lines, margin + 2, y);
-    y += lines.length * lineH + 2;
-  }
-
-  function drawKeyValue(key: string, value: string) {
-    pdf.setFontSize(8);
-    pdf.setTextColor(...GRAY);
-    pdf.setFont("helvetica", "bold");
-    checkSpace(8);
-    pdf.text(key.toUpperCase(), margin + 2, y);
-    y += 3.5;
-    pdf.setFontSize(9);
-    pdf.setTextColor(...DARK);
-    pdf.setFont("helvetica", "normal");
-    const lines = pdf.splitTextToSize(value, contentW - 4);
-    pdf.text(lines, margin + 2, y);
-    y += lines.length * 4 + 3;
-  }
-
-  function drawBullet(text: string, icon = "•") {
-    pdf.setFontSize(9);
-    pdf.setTextColor(...DARK);
-    pdf.setFont("helvetica", "normal");
-    const lines = pdf.splitTextToSize(text, contentW - 10);
-    checkSpace(lines.length * 4 + 1);
-    pdf.text(icon, margin + 3, y);
-    pdf.text(lines, margin + 8, y);
-    y += lines.length * 4 + 1.5;
-  }
-
-  // ── COVER PAGE ──
-  pdf.setFillColor(...PRIMARY);
-  pdf.rect(0, 0, pageW, pageH, "F");
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(32);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("DIAGNÓSTICO", pageW / 2, pageH * 0.35, { align: "center" });
-  pdf.text("ESTRATÉGICO", pageW / 2, pageH * 0.35 + 14, { align: "center" });
-  pdf.setFontSize(14);
-  pdf.setFont("helvetica", "normal");
-  pdf.text("Metodologia NoExcuse — 5 Etapas", pageW / 2, pageH * 0.35 + 28, { align: "center" });
-
-  pdf.setDrawColor(255, 255, 255);
-  pdf.setLineWidth(0.5);
-  pdf.line(pageW * 0.3, pageH * 0.5, pageW * 0.7, pageH * 0.5);
-
-  if (result.resumo_cliente?.nome_empresa) {
-    pdf.setFontSize(18);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(result.resumo_cliente.nome_empresa, pageW / 2, pageH * 0.58, { align: "center" });
-  }
-  if (title) {
-    pdf.setFontSize(12);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(title, pageW / 2, pageH * 0.64, { align: "center" });
-  }
-  pdf.setFontSize(10);
-  pdf.text(new Date().toLocaleDateString("pt-BR"), pageW / 2, pageH * 0.9, { align: "center" });
-  pdf.text("NoExcuse Digital", pageW / 2, pageH * 0.93, { align: "center" });
-
-  // ── CONTENT PAGES ──
-  addPage();
-
-  drawSectionHeader("Resumo Executivo");
-  drawText(result.resumo_executivo || "", 9);
-  y += 4;
-
-  if (result.resumo_cliente) {
-    drawSectionHeader("Sobre a Empresa");
-    drawKeyValue("Empresa", result.resumo_cliente.nome_empresa);
-    drawKeyValue("Segmento", result.resumo_cliente.segmento);
-    drawKeyValue("Modelo de Negócio", result.resumo_cliente.modelo_negocio);
-    drawKeyValue("Diferencial", result.resumo_cliente.diferencial);
-    drawKeyValue("Proposta de Valor", result.resumo_cliente.proposta_valor);
-    y += 4;
-  }
-
-  if (result.diagnostico_gps) {
-    const gps = result.diagnostico_gps;
-    drawSectionHeader(`GPS do Negócio — Score Geral: ${gps.score_geral}% (${gps.nivel})`);
-    drawText(gps.descricao, 9);
-    y += 2;
-    drawKeyValue("Score Marketing", `${result.score_marketing ?? 0}%`);
-    drawKeyValue("Score Comercial", `${result.score_comercial ?? 0}%`);
-
-    if (gps.gargalos_ece) {
-      y += 2;
-      drawText("GARGALOS ECE", 9, PRIMARY, true);
-      drawKeyValue("Estrutura", gps.gargalos_ece.estrutura || (gps.gargalos_ece as any).infraestrutura || "");
-      drawKeyValue("Coleta de Dados", gps.gargalos_ece.coleta);
-      drawKeyValue("Escala", gps.gargalos_ece.escala);
-    }
-
-    if (gps.insights?.length) {
-      y += 2;
-      drawText("INSIGHTS", 9, PRIMARY, true);
-      gps.insights.forEach((i) => drawBullet(i, "💡"));
-    }
-    y += 4;
-  }
-
-  if (result.persona) {
-    drawSectionHeader("Persona — Cliente Ideal");
-    drawText(result.persona.descricao, 9);
-    if (result.persona.faixa_etaria) drawKeyValue("Faixa Etária", result.persona.faixa_etaria);
-    if (result.persona.dor_principal) drawKeyValue("Dor Principal", result.persona.dor_principal);
-    if (result.persona.decisao_compra) drawKeyValue("Decisão de Compra", result.persona.decisao_compra);
-    if (result.persona.canais?.length) drawKeyValue("Canais", result.persona.canais.join(", "));
-    y += 4;
-  }
-
-  if (result.analise_concorrencia) {
-    drawSectionHeader("Análise de Concorrência");
-    result.analise_concorrencia.concorrentes?.forEach((c) => {
-      drawText(c.nome, 10, DARK, true);
-      c.pontos_fortes.forEach((p) => drawBullet(`Forte: ${p}`, "✓"));
-      c.pontos_fracos.forEach((p) => drawBullet(`Fraco: ${p}`, "✗"));
-      c.oportunidades.forEach((p) => drawBullet(`Oportunidade: ${p}`, "→"));
-      y += 2;
-    });
-    drawKeyValue("Diferencial", result.analise_concorrencia.diferencial_empresa);
-    drawKeyValue("Posicionamento", result.analise_concorrencia.posicionamento_recomendado);
-    y += 4;
-  }
-
-  if (result.etapas) {
-    const etapasOrder = ["conteudo", "trafego", "web", "sales", "validacao"] as const;
-    const labels: Record<string, string> = {
-      conteudo: "01 — Conteúdo e Linha Editorial",
-      trafego: "02 — Tráfego e Distribuição",
-      web: "03 — Web e Conversão",
-      sales: "04 — Sales e Fechamento",
-      validacao: "05 — Validação e Escala",
-    };
-    for (const key of etapasOrder) {
-      const etapa = result.etapas[key];
-      if (!etapa) continue;
-      drawSectionHeader(`${labels[key]} — Score: ${etapa.score}%`);
-      drawText(etapa.diagnostico, 9);
-      y += 2;
-      if (etapa.problemas?.length) {
-        drawText("PROBLEMAS", 8, GRAY, true);
-        etapa.problemas.forEach((p) => drawBullet(p, "⚠"));
-      }
-      if (etapa.acoes?.length) {
-        drawText("AÇÕES ESTRATÉGICAS", 8, GRAY, true);
-        etapa.acoes.forEach((a) => drawBullet(a, "→"));
-      }
-      if (etapa.metricas_alvo && Object.keys(etapa.metricas_alvo).length) {
-        drawText("MÉTRICAS-ALVO", 8, GRAY, true);
-        Object.entries(etapa.metricas_alvo).forEach(([k, v]) => drawKeyValue(k, v));
-      }
-      y += 4;
-    }
-  }
-
-  if (result.projecoes) {
-    drawSectionHeader("Projeções Financeiras");
-    const ue = result.projecoes.unit_economics;
-    drawKeyValue("CAC", ue.cac);
-    drawKeyValue("LTV", ue.ltv);
-    drawKeyValue("LTV/CAC", ue.ltv_cac_ratio);
-    drawKeyValue("Ticket Médio", ue.ticket_medio);
-    drawKeyValue("Margem", ue.margem);
-
-    if (result.projecoes.projecao_mensal?.length) {
-      y += 2;
-      drawText("PROJEÇÃO DE 6 MESES", 9, PRIMARY, true);
-      result.projecoes.projecao_mensal.forEach((p) => {
-        drawBullet(`Mês ${p.mes}: ${p.leads} leads → ${p.clientes} clientes → R$ ${p.receita.toLocaleString("pt-BR")} receita (inv: R$ ${p.investimento.toLocaleString("pt-BR")})`, "📊");
-      });
-    }
-    y += 4;
-  }
-
-  if (result.entregaveis_calculadora?.length) {
-    drawSectionHeader("Execuções do Plano — Entregáveis NoExcuse");
-    const grouped: Record<string, typeof result.entregaveis_calculadora> = {};
-    result.entregaveis_calculadora.forEach((e) => {
-      const key = e.etapa || "geral";
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(e);
-    });
-    const etapaNames: Record<string, string> = {
-      conteudo: "Conteúdo", trafego: "Tráfego", web: "Web", sales: "Sales", validacao: "Validação/Escala", geral: "Geral",
-    };
-    Object.entries(grouped).forEach(([key, items]) => {
-      drawText(etapaNames[key] || key, 10, PRIMARY, true);
-      items.forEach((e) => {
-        drawBullet(`${e.service_name} (x${e.quantity}) — ${e.justificativa}`, "📦");
-      });
-      y += 2;
-    });
-  }
-
-  pdf.setFontSize(8);
-  pdf.setTextColor(...GRAY);
-  pdf.text("Documento gerado automaticamente — NoExcuse Digital", pageW / 2, pageH - 8, { align: "center" });
 
   pdf.save(`${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`);
 }
