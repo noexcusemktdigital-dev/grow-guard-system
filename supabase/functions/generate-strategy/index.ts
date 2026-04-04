@@ -273,6 +273,17 @@ Use indicadores reais de mercado como benchmark:
 - Marketing: taxa de engajamento média 1-3%, CTR 1-2%, CPL referência por segmento
 - Comercial: taxa de conversão média 10-20%, tempo de fechamento, LTV/CAC > 3x
 
+CAPACIDADE OPERACIONAL:
+- Analise quantos clientes/pacientes/atendimentos o negócio consegue realizar por semana/mês
+- Se for profissional liberal (psicólogo, dentista, advogado, médico), considere limitação de agenda
+- Se for produto/e-commerce, considere capacidade logística e estoque
+- Se informado no briefing, use o dado real. Senão, estime com base no segmento
+
+RECORRÊNCIA DO MODELO DE NEGÓCIO:
+- Identifique se o modelo de receita é recorrente (assinatura, sessão semanal, mensalidade) ou avulso (venda única)
+- Para serviços recorrentes (psicologia = 4 sessões/mês, academia = mensalidade, SaaS = assinatura): o LTV deve refletir MESES de permanência, não apenas 1 compra
+- Isso impacta diretamente o cálculo de LTV, receita projetada e meta de novos clientes
+
 GERE:
 1. RESUMO EXECUTIVO: 3-4 parágrafos sobre a empresa, momento atual e oportunidades
 2. RESUMO DO CLIENTE: Nome, segmento, proposta de valor, diferencial, modelo de negócio
@@ -283,7 +294,7 @@ GERE:
    - Radar com 5 eixos (Conteúdo, Tráfego, Web, Sales, Escala) score 0-100 cada
    - Problemas identificados por etapa (2-4 por etapa)
    - Gargalos ECE: Estrutura, Coleta de dados, Escala
-   - 3-5 insights personalizados
+   - 3-5 insights personalizados — INCLUA alertas sobre gaps entre projeção e meta, limitações de capacidade operacional e oportunidades de recorrência
 5. PERSONA: Crie uma persona detalhada baseada nas respostas sobre público-alvo
 6. ANÁLISE DE CONCORRÊNCIA: Analise os concorrentes informados com pontos fortes, fracos e oportunidades
 7. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
@@ -299,41 +310,66 @@ Use a ferramenta generate_strategy para retornar.`;
 
 const STRATEGIC_PLAN_PROMPT = `Você é um estrategista de marketing e vendas sênior da No Excuse Digital. Gere o PLANEJAMENTO ESTRATÉGICO das 5 ETAPAS.
 
+POSTURA NOEXCUSE — AGRESSIVA E ESCALÁVEL:
+- Ações devem ser AGRESSIVAS, DETALHADAS e EXECUTÁVEIS — não genéricas
+- Cada ação deve ter nível de detalhe que permita execução imediata
+- RUIM: "Produzir conteúdo para redes sociais"
+- BOM: "Publicar 3 reels/semana com ângulo emocional de identificação + dor + validação, alternando entre: (1) história de transformação, (2) quebra de objeção, (3) prova social real"
+
+CONTEÚDO — ALÉM DO EDUCATIVO:
+- Para QUALQUER nicho, conteúdo puramente educativo NÃO escala sozinho
+- Incluir obrigatoriamente: conteúdo EMOCIONAL (identificação + dor + validação), conteúdo de AUTORIDADE (posicionamento pessoal/marca), conteúdo de PROVA SOCIAL (resultados reais, depoimentos, antes/depois)
+- O mix ideal é: 40% emocional/identificação, 30% autoridade/educativo, 30% prova social/conversão
+- Gatilhos obrigatórios por nicho: dor silenciosa, vergonha, urgência invisível, transformação aspiracional
+
+AUTORIDADE ORGÂNICA:
+- Para profissionais liberais e marcas pessoais, autoridade orgânica pode ser o PRINCIPAL canal de aquisição
+- Explorar posicionamento pessoal forte antes de escalar tráfego pago
+- Conteúdo orgânico bem feito reduz CAC e aumenta taxa de conversão do tráfego pago
+
+CAPACIDADE OPERACIONAL:
+- Considerar limitação de capacidade do cliente (agenda, equipe, logística)
+- Se profissional liberal com agenda limitada: não projetar mais leads do que ele consegue atender
+- Se empresa com equipe pequena: dimensionar ações para a capacidade real
+- Incluir nas métricas-alvo a "capacidade utilizada" quando relevante
+
 METODOLOGIA NO EXCUSE - 5 ETAPAS:
 
 01. CONTEÚDO E LINHA EDITORIAL
-- Funil de conteúdo (topo/meio/fundo/pós-venda)
-- Formatos recomendados por canal
-- Calendário e frequência sugeridos
-- Pilares de conteúdo
+- Funil de conteúdo (topo/meio/fundo/pós-venda) com ângulos emocionais por etapa
+- Formatos recomendados por canal com frequência exata
+- Pilares de conteúdo com mix emocional/educativo/conversão
+- Diferenciação criativa: o que torna esse conteúdo ÚNICO no feed
 
 02. TRÁFEGO E DISTRIBUIÇÃO
-- Plataformas recomendadas com investimento sugerido
-- Métricas-alvo por plataforma (CTR, CPC, CPL, MQLs)
-- Estratégia de tráfego orgânico + pago
+- Plataformas recomendadas com investimento sugerido por plataforma
+- Métricas-alvo por plataforma (CTR, CPC, CPL, MQLs) usando benchmarks REAIS do segmento no Brasil
+- Estratégia de tráfego orgânico + pago com complementaridade clara
+- Remarketing e audiências lookalike
 
 03. WEB E CONVERSÃO
-- LPs necessárias por segmento/público
-- Elementos obrigatórios (prova social, CTA, urgência)
-- Testes A/B sugeridos
-- Otimizações de conversão
+- LPs necessárias por segmento/público com objetivo específico de cada uma
+- Elementos obrigatórios (prova social, CTA, urgência, escassez)
+- Testes A/B sugeridos com hipóteses claras
+- Otimizações de conversão prioritárias
 
 04. SALES E FECHAMENTO
-- Funil de vendas com taxas por etapa
-- Processo comercial detalhado
-- Script e abordagem
-- Follow-up e cadência
+- Funil de vendas com taxas REALISTAS por etapa
+- Processo comercial detalhado passo a passo
+- Script e abordagem com ângulo emocional
+- Follow-up e cadência com tempos específicos
+- Tratamento de objeções principais do nicho
 
 05. VALIDAÇÃO E ESCALA
-- KPIs para monitorar por etapa
-- Testes controlados sugeridos
-- Critérios para escalar
-- Gargalos de capacidade
+- KPIs para monitorar por etapa com valores-alvo
+- Testes controlados sugeridos com critérios de sucesso
+- Critérios claros para escalar (quando e como)
+- Gargalos de capacidade e como superá-los
 
-Para CADA etapa, gere: título, diagnóstico da situação atual, score 0-100, problemas (2-4), ações específicas (5-8), métricas-alvo, e entregáveis NoExcuse recomendados.
+Para CADA etapa, gere: título, diagnóstico da situação atual, score 0-100, problemas (2-4), ações específicas (5-8 DETALHADAS), métricas-alvo com valores numéricos, e entregáveis NoExcuse recomendados.
 
 REGRAS:
-- Ações devem ser ESPECÍFICAS e executáveis (não genéricas)
+- Ações devem ser ESPECÍFICAS, AGRESSIVAS e executáveis (não genéricas)
 - Métricas com valores numéricos reais baseados no segmento e no mercado brasileiro
 - Entregáveis devem ser nomes de serviços do catálogo NoExcuse
 - Considere o histórico de problemas e tentativas do cliente
@@ -343,11 +379,39 @@ Use a ferramenta generate_strategy para retornar.`;
 
 const PROJECTIONS_PROMPT = `Você é um analista financeiro e estrategista da No Excuse Digital. Gere PROJEÇÕES FINANCEIRAS e mapeie ENTREGÁVEIS para a calculadora.
 
+REGRAS CRÍTICAS DE CONSISTÊNCIA FINANCEIRA:
+
+1. RECORRÊNCIA REAL:
+- Se o modelo de negócio é recorrente (psicologia = paciente semanal, academia = mensalidade, SaaS = assinatura mensal, consultoria = contrato mensal):
+  - LTV = ticket médio mensal × meses médios de permanência (não apenas 1 compra)
+  - Receita mensal = clientes ATIVOS (não apenas novos no mês) × ticket mensal
+  - Clientes acumulam mês a mês (churn aplicado)
+- Se o modelo é avulso (e-commerce, evento, projeto pontual):
+  - LTV = ticket médio × frequência anual de compra
+  - Receita = novas vendas no mês × ticket
+
+2. PROJEÇÃO DEVE BATER COM A META:
+- A projeção de 6 meses DEVE mostrar um caminho claro para atingir a meta de faturamento informada
+- Se a projeção NÃO atingir a meta no período, EXPLICAR o gap e o que seria necessário (mais investimento, mais tempo, ajuste de ticket)
+- NUNCA projetar receita inconsistente com a meta sem explicação
+
+3. CAC REALISTA POR SEGMENTO (benchmarks Brasil):
+- Saúde/Bem-estar: R$80-300
+- Educação: R$50-200
+- E-commerce: R$30-150
+- B2B/Serviços: R$200-800
+- Imobiliário: R$300-1500
+- Se o CAC calculado estiver fora dessa faixa, justificar
+
+4. CAPACIDADE OPERACIONAL COMO LIMITADOR:
+- Se o cliente informou capacidade (ex: 20 atendimentos/semana), a projeção de clientes NÃO pode exceder isso
+- Se não informou, estimar com base no segmento e incluir como nota
+
 GERE:
-1. UNIT ECONOMICS: CAC, LTV, LTV/CAC ratio, ticket médio, margem — CALCULE com base nos dados do briefing
+1. UNIT ECONOMICS: CAC, LTV, LTV/CAC ratio, ticket médio, margem — CALCULE com base nos dados do briefing considerando recorrência
 2. FUNIL DE CONVERSÃO: Etapas do funil com volumes e taxas de conversão realistas para o mercado brasileiro
-3. PROJEÇÃO MENSAL (6 meses): Leads, clientes, receita e investimento — crescimento progressivo
-4. CRESCIMENTO ACUMULADO (6 meses): Receita e clientes acumulados com recorrência se aplicável
+3. PROJEÇÃO MENSAL (6 meses): Leads, clientes, receita e investimento — considerar ACÚMULO de clientes recorrentes
+4. CRESCIMENTO ACUMULADO (6 meses): Receita e clientes acumulados com recorrência e churn aplicados
 
 5. ENTREGÁVEIS PARA CALCULADORA — EXECUÇÕES DO PLANO:
 Esta é a seção mais importante. Mapeie EXATAMENTE quais serviços do catálogo NoExcuse precisam ser executados para que o plano estratégico funcione.
@@ -388,7 +452,6 @@ function buildUserPrompt(answers: Record<string, unknown>, section: string): str
   const answersText = Object.entries(answers)
     .map(([k, v]) => {
       if (Array.isArray(v)) {
-        // Handle competitor list
         if (v.length > 0 && typeof v[0] === 'object') {
           return `- ${k}: ${JSON.stringify(v)}`;
         }
@@ -520,7 +583,6 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // If section is specified, handle single-section calls
     if (section) {
       const configs: Record<string, { schema: any; prompt: string }> = {
         "gps": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
@@ -584,7 +646,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Merge all results into single object
     const mergedResult = {
       ...(gpsResult.result || {}),
       ...(strategicResult.result || {}),
@@ -593,7 +654,6 @@ Deno.serve(async (req) => {
 
     console.log(`Full strategy generated. Total tokens: ${totalTokens}`);
 
-    // Log usage
     const { data: orgData } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "franchise" });
     if (orgData) {
       await serviceClient.from("ai_conversation_logs").insert({
