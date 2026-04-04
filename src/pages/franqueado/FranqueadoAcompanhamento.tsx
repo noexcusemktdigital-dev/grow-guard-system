@@ -1,25 +1,30 @@
-import { useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
-import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useClientFollowups, useSaveFollowup, type FollowupAnalise, type FollowupPlano, type ClientFollowup } from "@/hooks/useClientFollowups";
-import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
+import { useState } from "react";
+import {
+  useClientFolders,
+  useClientFollowups,
+  useSaveFollowup,
+  type ClientFollowup,
+  type FollowupAnalise,
+  type FollowupPlano,
+  type ConteudoSection,
+  type TrafegoPlataforma,
+  type WebSecao,
+  type VendasSection,
+} from "@/hooks/useClientFollowups";
+import { generateFollowupPdf } from "@/lib/followupPdfGenerator";
 import { MONTH_NAMES } from "@/lib/formatting";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ClipboardList, Plus, Sparkles, FileDown, Save, ChevronLeft,
-  CheckCircle2, XCircle, Clock, TrendingUp, Megaphone, Globe, Target,
-  Loader2,
+  FolderOpen, Plus, ChevronLeft, Save, FileDown, XCircle,
+  BarChart3, Megaphone, TrendingUp, Globe, Target,
 } from "lucide-react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -37,260 +42,192 @@ function getCurrentMonthRef() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-// ─── List View ───
-function FollowupListView({
-  strategies,
-  selectedStrategyId,
-  setSelectedStrategyId,
-  followups,
-  onNew,
-  onEdit,
-}: {
-  strategies: any[];
-  selectedStrategyId: string | null;
-  setSelectedStrategyId: (v: string) => void;
-  followups: ClientFollowup[];
-  onNew: () => void;
-  onEdit: (f: ClientFollowup) => void;
-}) {
-  const selectedStrategy = strategies.find((s) => s.id === selectedStrategyId);
-  const clientName = selectedStrategy?.title || selectedStrategy?.diagnostic_answers?.nome_empresa || "Cliente";
+// ─── Reusable list editor ───
+function ListEditor({ items, onChange, placeholder = "Descreva..." }: { items: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+  return (
+    <div className="space-y-2">
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-2">
+          <Input value={item} onChange={(e) => { const n = [...items]; n[i] = e.target.value; onChange(n); }} placeholder={placeholder} className="flex-1" />
+          {items.length > 1 && (
+            <Button size="icon" variant="ghost" onClick={() => onChange(items.filter((_, j) => j !== i))}><XCircle className="w-4 h-4 text-destructive" /></Button>
+          )}
+        </div>
+      ))}
+      <Button size="sm" variant="outline" onClick={() => onChange([...items, ""])}><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
+    </div>
+  );
+}
+
+// ─── LEVEL 1: Client Folders ───
+function FolderListView({ folders, onSelect, onNew }: { folders: { name: string; count: number }[]; onSelect: (name: string) => void; onNew: () => void }) {
+  const [newName, setNewName] = useState("");
+  const [showInput, setShowInput] = useState(false);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-primary" />
-            Acompanhamento do Cliente
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Ciclos mensais vinculados à estratégia</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><FolderOpen className="w-6 h-6 text-primary" /> Acompanhamento de Clientes</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie ciclos mensais por cliente</p>
         </div>
+        <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>
       </div>
 
-      {/* Strategy selector */}
-      <Card>
-        <CardContent className="pt-5">
-          <label className="text-sm font-medium mb-2 block">Vincular Estratégia</label>
-          <Select value={selectedStrategyId || ""} onValueChange={setSelectedStrategyId}>
-            <SelectTrigger><SelectValue placeholder="Selecione uma estratégia..." /></SelectTrigger>
-            <SelectContent>
-              {strategies.map((s: any) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.title || (s.diagnostic_answers as any)?.nome_empresa || "Sem nome"} — {new Date(s.created_at).toLocaleDateString("pt-BR")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      {showInput && (
+        <Card>
+          <CardContent className="pt-4 flex gap-3">
+            <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
+            <Button onClick={() => { if (newName.trim()) { onSelect(newName.trim()); setShowInput(false); setNewName(""); } }} disabled={!newName.trim()}>Criar</Button>
+            <Button variant="ghost" onClick={() => { setShowInput(false); setNewName(""); }}>Cancelar</Button>
+          </CardContent>
+        </Card>
+      )}
 
-      {selectedStrategyId && (
-        <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Ciclos de {clientName}</h2>
-            <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Ciclo</Button>
-          </div>
-
-          {followups.length === 0 ? (
-            <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum ciclo criado ainda. Clique em "Novo Ciclo" para começar.</CardContent></Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {followups.map((f) => {
-                const badge = STATUS_BADGE[f.status] || STATUS_BADGE.draft;
-                return (
-                  <Card key={f.id} className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => onEdit(f)}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{getMonthLabel(f.month_ref)}</CardTitle>
-                        <Badge variant={badge.variant}>{badge.label}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <p>{(f.analise?.destaques?.length || 0)} destaques • {(f.analise?.gaps?.length || 0)} gaps</p>
-                        <p>Criado em {new Date(f.created_at).toLocaleDateString("pt-BR")}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </>
+      {folders.length === 0 && !showInput ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum cliente cadastrado. Clique em "Nova Pasta" para começar.</CardContent></Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {folders.map((f) => (
+            <Card key={f.name} className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => onSelect(f.name)}>
+              <CardContent className="pt-5 flex items-center gap-3">
+                <FolderOpen className="w-8 h-8 text-primary/60" />
+                <div>
+                  <p className="font-semibold">{f.name}</p>
+                  <p className="text-xs text-muted-foreground">{f.count} {f.count === 1 ? "ciclo" : "ciclos"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-// ─── Cycle Editor ───
-function FollowupEditor({
-  existing,
-  strategyId,
-  strategyResult,
-  onBack,
-}: {
-  existing: ClientFollowup | null;
-  strategyId: string;
-  strategyResult: any;
-  onBack: () => void;
-}) {
-  const printRef = useRef<HTMLDivElement>(null);
+// ─── LEVEL 2: Cycle list ───
+function CycleListView({ clientName, followups, onBack, onNew, onEdit }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
+        <h1 className="text-xl font-bold flex-1">{clientName}</h1>
+        <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>
+      </div>
+
+      {followups.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum acompanhamento criado. Clique em "Novo Acompanhamento" para começar.</CardContent></Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {followups.map((f) => {
+            const badge = STATUS_BADGE[f.status] || STATUS_BADGE.draft;
+            return (
+              <Card key={f.id} className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => onEdit(f)}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{getMonthLabel(f.month_ref)}</CardTitle>
+                    <Badge variant={badge.variant}>{badge.label}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">Criado em {new Date(f.created_at).toLocaleDateString("pt-BR")}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── LEVEL 3: 5-tab Editor ───
+function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFollowup | null; clientName: string; onBack: () => void }) {
   const saveFollowup = useSaveFollowup();
   const [monthRef, setMonthRef] = useState(existing?.month_ref || getCurrentMonthRef());
   const [status, setStatus] = useState(existing?.status || "draft");
-  const [generating, setGenerating] = useState(false);
 
-  // Análise state
+  // Tab 1: Análise
+  const [metricas, setMetricas] = useState(existing?.analise?.metricas || { leads: 0, conversoes: 0, trafego: 0, engajamento: 0, faturamento: 0 });
   const [destaques, setDestaques] = useState<string[]>(existing?.analise?.destaques || [""]);
   const [gaps, setGaps] = useState<string[]>(existing?.analise?.gaps || [""]);
   const [observacoes, setObservacoes] = useState(existing?.analise?.observacoes || "");
-  const [metricas, setMetricas] = useState(existing?.analise?.metricas || { leads: 0, conversoes: 0, trafego: 0, engajamento: 0, faturamento: 0 });
-  const [entregas, setEntregas] = useState<{ nome: string; status: "feito" | "pendente" | "cancelado" }[]>(
-    existing?.analise?.entregas_realizadas ||
-    (strategyResult?.entregaveis || []).map((e: any) => ({ nome: e.nome || e.name || e, status: "pendente" as const }))
-  );
 
-  // Plano state
-  const [plano, setPlano] = useState<FollowupPlano>(existing?.plano_proximo || {
-    conteudo: { acoes: [""], entregas: [""] },
-    trafego: { acoes: [""], budget: 0, plataformas: ["Meta Ads"] },
-    web: { acoes: [""], entregas: [""] },
-    sales: { acoes: [""], entregas: [""] },
+  // Tab 2: Conteúdo
+  const [conteudo, setConteudo] = useState<ConteudoSection>(existing?.plano_proximo?.conteudo || {
+    roteiros: [""], artes: [""], qtd_postagens: 0, tipo_conteudo: [],
+    linha_editorial: "", referencias: [""], necessidades_cliente: [""],
   });
 
-  const updatePlanoField = (section: keyof FollowupPlano, field: string, value: any) => {
-    setPlano((p) => ({ ...p, [section]: { ...(p[section] as any), [field]: value } }));
-  };
+  // Tab 3: Tráfego
+  const [plataformas, setPlataformas] = useState<TrafegoPlataforma[]>(
+    existing?.plano_proximo?.trafego?.plataformas || []
+  );
+
+  // Tab 4: Web
+  const [webSecoes, setWebSecoes] = useState<WebSecao[]>(existing?.plano_proximo?.web?.secoes || []);
+
+  // Tab 5: Vendas
+  const [vendas, setVendas] = useState<VendasSection>(existing?.plano_proximo?.vendas || {
+    analise_crm: "", estrategias: [""], melhorias: [""],
+  });
+
+  const CONTENT_TYPES = ["Reels", "Stories", "Carrossel", "Post Estático", "Vídeo Longo", "Live", "Blog"];
 
   const handleSave = () => {
-    const analise: FollowupAnalise = { entregas_realizadas: entregas, metricas, destaques: destaques.filter(Boolean), gaps: gaps.filter(Boolean), observacoes };
-    saveFollowup.mutate({ id: existing?.id, strategy_id: strategyId, month_ref: monthRef, status, analise, plano_proximo: plano });
-  };
-
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      const analise_parcial = { entregas_realizadas: entregas, metricas, destaques: destaques.filter(Boolean), gaps: gaps.filter(Boolean) };
-      const { data, error } = await supabase.functions.invoke("generate-followup", {
-        body: { strategy_result: strategyResult, month_ref: monthRef, analise_parcial, ciclos_anteriores: [] },
-      });
-      if (error) throw await extractEdgeFunctionError(error);
-      if (data?.analise) {
-        if (data.analise.destaques?.length) setDestaques(data.analise.destaques);
-        if (data.analise.gaps?.length) setGaps(data.analise.gaps);
-        if (data.analise.observacoes) setObservacoes(data.analise.observacoes);
-      }
-      if (data?.plano_proximo) setPlano(data.plano_proximo);
-      toast.success("Sugestões geradas pela IA!");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar com IA");
-    } finally {
-      setGenerating(false);
-    }
+    const analise: FollowupAnalise = { metricas, destaques: destaques.filter(Boolean), gaps: gaps.filter(Boolean), observacoes };
+    const plano: FollowupPlano = {
+      conteudo,
+      trafego: { plataformas },
+      web: { secoes: webSecoes },
+      vendas,
+    };
+    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise, plano_proximo: plano });
   };
 
   const handleExportPdf = async () => {
-    if (!printRef.current) return;
     toast.info("Gerando PDF...");
-    const buttons = printRef.current.querySelectorAll("button, [data-pdf-hide]");
-    buttons.forEach((b) => ((b as HTMLElement).style.display = "none"));
+    const analise: FollowupAnalise = { metricas, destaques: destaques.filter(Boolean), gaps: gaps.filter(Boolean), observacoes };
+    const plano: FollowupPlano = {
+      conteudo,
+      trafego: { plataformas },
+      web: { secoes: webSecoes },
+      vendas,
+    };
     try {
-      const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-      const imgW = 210;
-      const pageH = 297;
-      const margin = 8;
-      const contentW = imgW - margin * 2;
-      const contentH = pageH - margin * 2;
-      const imgH = (canvas.height * contentW) / canvas.width;
-      const pdf = new jsPDF("p", "mm", "a4");
-      let y = 0;
-      let page = 0;
-      while (y < imgH) {
-        if (page > 0) pdf.addPage();
-        const srcY = (y / imgH) * canvas.height;
-        const srcH = Math.min((contentH / imgH) * canvas.height, canvas.height - srcY);
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = srcH;
-        sliceCanvas.getContext("2d")!.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
-        const sliceImg = sliceCanvas.toDataURL("image/jpeg", 0.92);
-        const drawH = (srcH * contentW) / canvas.width;
-        pdf.addImage(sliceImg, "JPEG", margin, margin, contentW, drawH);
-        y += contentH;
-        page++;
-      }
-      pdf.save(`acompanhamento-${monthRef}.pdf`);
+      await generateFollowupPdf(clientName, monthRef, analise, plano);
       toast.success("PDF exportado!");
-    } finally {
-      buttons.forEach((b) => ((b as HTMLElement).style.display = ""));
+    } catch (e: any) {
+      toast.error("Erro ao gerar PDF: " + (e.message || ""));
     }
   };
 
-  const listEditor = (items: string[], setItems: (v: string[]) => void) => (
-    <div className="space-y-2">
-      {items.map((item, i) => (
-        <div key={i} className="flex gap-2">
-          <Input value={item} onChange={(e) => { const n = [...items]; n[i] = e.target.value; setItems(n); }} placeholder="Descreva..." className="flex-1" />
-          {items.length > 1 && (
-            <Button size="icon" variant="ghost" onClick={() => setItems(items.filter((_, j) => j !== i))}><XCircle className="w-4 h-4 text-destructive" /></Button>
-          )}
-        </div>
-      ))}
-      <Button size="sm" variant="outline" onClick={() => setItems([...items, ""])}><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
-    </div>
-  );
-
-  const planoSection = (icon: React.ElementType, title: string, section: keyof FollowupPlano) => {
-    const Icon = icon;
-    const sec = (plano[section] || { acoes: [""], entregas: [""] }) as any;
-    return (
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold text-zinc-200 flex items-center gap-2"><Icon className="w-4 h-4 text-primary" />{title}</h4>
-        <div>
-          <label className="text-xs text-zinc-400 mb-1 block">Ações</label>
-          {listEditor(sec.acoes || [""], (v) => updatePlanoField(section, "acoes", v))}
-        </div>
-        {section === "trafego" ? (
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs text-zinc-400 mb-1 block">Budget (R$)</label>
-              <Input type="number" value={sec.budget || 0} onChange={(e) => updatePlanoField(section, "budget", Number(e.target.value))} />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-zinc-400 mb-1 block">Plataformas</label>
-              <Input value={(sec.plataformas || []).join(", ")} onChange={(e) => updatePlanoField(section, "plataformas", e.target.value.split(",").map((s: string) => s.trim()))} />
-            </div>
-          </div>
-        ) : (
-          <div>
-            <label className="text-xs text-zinc-400 mb-1 block">Entregas</label>
-            {listEditor(sec.entregas || [""], (v) => updatePlanoField(section, "entregas", v))}
-          </div>
-        )}
-      </div>
-    );
+  const addPlataforma = () => setPlataformas([...plataformas, { nome: "Meta Ads", tipo_campanha: "", conteudo_campanha: "", publicos: "", objetivo: "", investimento: 0, divisao_investimento: "", metricas_meta: "" }]);
+  const updatePlataforma = (idx: number, field: keyof TrafegoPlataforma, value: any) => {
+    const n = [...plataformas]; n[idx] = { ...n[idx], [field]: value }; setPlataformas(n);
   };
+  const removePlataforma = (idx: number) => setPlataformas(plataformas.filter((_, i) => i !== idx));
+
+  const addWebSecao = () => setWebSecoes([...webSecoes, { titulo: "", motivo: "", necessidades_cliente: "" }]);
+  const updateWebSecao = (idx: number, field: keyof WebSecao, value: string) => {
+    const n = [...webSecoes]; n[idx] = { ...n[idx], [field]: value }; setWebSecoes(n);
+  };
+  const removeWebSecao = (idx: number) => setWebSecoes(webSecoes.filter((_, i) => i !== idx));
 
   return (
-    <div className="space-y-6" ref={printRef}>
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3" data-pdf-hide>
+      <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
-        <h1 className="text-xl font-bold flex-1">{existing ? `Ciclo — ${getMonthLabel(monthRef)}` : "Novo Ciclo Mensal"}</h1>
+        <h1 className="text-xl font-bold flex-1">{existing ? `${clientName} — ${getMonthLabel(monthRef)}` : `Novo Acompanhamento — ${clientName}`}</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportPdf}><FileDown className="w-4 h-4 mr-1" /> PDF</Button>
-          <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
-            {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />} Gerar com IA
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}>
-            <Save className="w-4 h-4 mr-1" /> Salvar
-          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
         </div>
       </div>
 
-      {/* Config */}
-      <div className="flex gap-4 items-end" data-pdf-hide>
+      {/* Config row */}
+      <div className="flex gap-4 items-end flex-wrap">
         <div>
           <label className="text-xs font-medium mb-1 block">Mês de Referência</label>
           <Input type="month" value={monthRef} onChange={(e) => setMonthRef(e.target.value)} className="w-44" />
@@ -308,110 +245,221 @@ function FollowupEditor({
         </div>
       </div>
 
-      {/* ═══ ANÁLISE DO MÊS (light theme) ═══ */}
-      <div className="space-y-5">
-        <h2 className="text-lg font-bold uppercase tracking-wider text-foreground border-b pb-2">📊 Análise do Mês</h2>
+      {/* 5 Tabs */}
+      <Tabs defaultValue="analise" className="w-full">
+        <TabsList className="w-full grid grid-cols-5">
+          <TabsTrigger value="analise" className="text-xs gap-1"><BarChart3 className="w-3.5 h-3.5" /> Análise</TabsTrigger>
+          <TabsTrigger value="conteudo" className="text-xs gap-1"><Megaphone className="w-3.5 h-3.5" /> Conteúdo</TabsTrigger>
+          <TabsTrigger value="trafego" className="text-xs gap-1"><TrendingUp className="w-3.5 h-3.5" /> Tráfego</TabsTrigger>
+          <TabsTrigger value="web" className="text-xs gap-1"><Globe className="w-3.5 h-3.5" /> Web</TabsTrigger>
+          <TabsTrigger value="vendas" className="text-xs gap-1"><Target className="w-3.5 h-3.5" /> Vendas</TabsTrigger>
+        </TabsList>
 
-        {/* Entregas checklist */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Entregas Realizadas</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {entregas.map((e, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    const next = e.status === "feito" ? "pendente" : e.status === "pendente" ? "cancelado" : "feito";
-                    const n = [...entregas]; n[i] = { ...e, status: next as any }; setEntregas(n);
-                  }}
-                  className="flex-shrink-0"
-                >
-                  {e.status === "feito" ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : e.status === "cancelado" ? <XCircle className="w-5 h-5 text-destructive" /> : <Clock className="w-5 h-5 text-amber-500" />}
-                </button>
-                <span className={`text-sm flex-1 ${e.status === "cancelado" ? "line-through text-muted-foreground" : ""}`}>{e.nome}</span>
-              </div>
+        {/* ── TAB 1: Análise ── */}
+        <TabsContent value="analise" className="space-y-5 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {(["leads", "conversoes", "trafego", "engajamento", "faturamento"] as const).map((k) => (
+              <Card key={k}>
+                <CardContent className="pt-4 text-center">
+                  <label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{k}</label>
+                  <Input type="number" value={metricas[k] || 0} onChange={(e) => setMetricas({ ...metricas, [k]: Number(e.target.value) })} className="text-center mt-1 text-lg font-bold" />
+                </CardContent>
+              </Card>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-green-600">Pontos Positivos</CardTitle></CardHeader>
+              <CardContent><ListEditor items={destaques} onChange={setDestaques} /></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm text-destructive">Pontos Negativos</CardTitle></CardHeader>
+              <CardContent><ListEditor items={gaps} onChange={setGaps} /></CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Observações Gerais</CardTitle></CardHeader>
+            <CardContent><Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} placeholder="Análise geral do mês..." /></CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Métricas */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {(["leads", "conversoes", "trafego", "engajamento", "faturamento"] as const).map((k) => (
-            <Card key={k}>
-              <CardContent className="pt-4 text-center">
-                <label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{k}</label>
-                <Input type="number" value={metricas[k] || 0} onChange={(e) => setMetricas({ ...metricas, [k]: Number(e.target.value) })} className="text-center mt-1 text-lg font-bold" />
+        {/* ── TAB 2: Conteúdo ── */}
+        <TabsContent value="conteudo" className="space-y-5 mt-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Linha Editorial</CardTitle></CardHeader>
+            <CardContent><Textarea value={conteudo.linha_editorial || ""} onChange={(e) => setConteudo({ ...conteudo, linha_editorial: e.target.value })} rows={3} placeholder="Descreva a linha editorial..." /></CardContent>
+          </Card>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Quantidade de Postagens</CardTitle></CardHeader>
+              <CardContent><Input type="number" value={conteudo.qtd_postagens || 0} onChange={(e) => setConteudo({ ...conteudo, qtd_postagens: Number(e.target.value) })} /></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Tipos de Conteúdo</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {CONTENT_TYPES.map((t) => {
+                    const active = conteudo.tipo_conteudo?.includes(t);
+                    return (
+                      <Badge key={t} variant={active ? "default" : "outline"} className="cursor-pointer" onClick={() => {
+                        const current = conteudo.tipo_conteudo || [];
+                        setConteudo({ ...conteudo, tipo_conteudo: active ? current.filter((x) => x !== t) : [...current, t] });
+                      }}>{t}</Badge>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Roteiros</CardTitle></CardHeader>
+            <CardContent><ListEditor items={conteudo.roteiros || [""]} onChange={(v) => setConteudo({ ...conteudo, roteiros: v })} placeholder="Descrição do roteiro..." /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Artes / Criativos</CardTitle></CardHeader>
+            <CardContent><ListEditor items={conteudo.artes || [""]} onChange={(v) => setConteudo({ ...conteudo, artes: v })} placeholder="Descrição da arte..." /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Referências</CardTitle></CardHeader>
+            <CardContent><ListEditor items={conteudo.referencias || [""]} onChange={(v) => setConteudo({ ...conteudo, referencias: v })} placeholder="Link ou descrição..." /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Necessidades do Cliente</CardTitle></CardHeader>
+            <CardContent><ListEditor items={conteudo.necessidades_cliente || [""]} onChange={(v) => setConteudo({ ...conteudo, necessidades_cliente: v })} placeholder="O que precisa do cliente..." /></CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB 3: Tráfego ── */}
+        <TabsContent value="trafego" className="space-y-5 mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Plataformas</h3>
+            <Button size="sm" variant="outline" onClick={addPlataforma}><Plus className="w-3 h-3 mr-1" /> Plataforma</Button>
+          </div>
+          {plataformas.length === 0 && (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma plataforma adicionada.</CardContent></Card>
+          )}
+          {plataformas.map((p, idx) => (
+            <Card key={idx}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <Input value={p.nome} onChange={(e) => updatePlataforma(idx, "nome", e.target.value)} className="w-48 font-semibold" placeholder="Nome da plataforma" />
+                  <Button size="icon" variant="ghost" onClick={() => removePlataforma(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
+                </div>
+              </CardHeader>
+              <CardContent className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Tipo de Campanha</label>
+                  <Input value={p.tipo_campanha} onChange={(e) => updatePlataforma(idx, "tipo_campanha", e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">O que vai rodar</label>
+                  <Input value={p.conteudo_campanha} onChange={(e) => updatePlataforma(idx, "conteudo_campanha", e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Públicos-alvo</label>
+                  <Input value={p.publicos} onChange={(e) => updatePlataforma(idx, "publicos", e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Objetivo</label>
+                  <Input value={p.objetivo} onChange={(e) => updatePlataforma(idx, "objetivo", e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Investimento (R$)</label>
+                  <Input type="number" value={p.investimento} onChange={(e) => updatePlataforma(idx, "investimento", Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Divisão do Investimento</label>
+                  <Input value={p.divisao_investimento} onChange={(e) => updatePlataforma(idx, "divisao_investimento", e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-medium mb-1 block">Métricas Meta</label>
+                  <Textarea value={p.metricas_meta} onChange={(e) => updatePlataforma(idx, "metricas_meta", e.target.value)} rows={2} placeholder="KPIs que precisam ser alcançados..." />
+                </div>
               </CardContent>
             </Card>
           ))}
-        </div>
+        </TabsContent>
 
-        {/* Destaques + Gaps */}
-        <div className="grid md:grid-cols-2 gap-4">
+        {/* ── TAB 4: Web ── */}
+        <TabsContent value="web" className="space-y-5 mt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Seções / Páginas</h3>
+            <Button size="sm" variant="outline" onClick={addWebSecao}><Plus className="w-3 h-3 mr-1" /> Seção</Button>
+          </div>
+          {webSecoes.length === 0 && (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma seção web adicionada.</CardContent></Card>
+          )}
+          {webSecoes.map((s, idx) => (
+            <Card key={idx}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <Input value={s.titulo} onChange={(e) => updateWebSecao(idx, "titulo", e.target.value)} className="w-64 font-semibold" placeholder="Título da seção/página" />
+                  <Button size="icon" variant="ghost" onClick={() => removeWebSecao(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Motivo / Justificativa</label>
+                  <Textarea value={s.motivo} onChange={(e) => updateWebSecao(idx, "motivo", e.target.value)} rows={2} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Necessidades do Cliente</label>
+                  <Textarea value={s.necessidades_cliente} onChange={(e) => updateWebSecao(idx, "necessidades_cliente", e.target.value)} rows={2} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        {/* ── TAB 5: Vendas ── */}
+        <TabsContent value="vendas" className="space-y-5 mt-4">
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-green-600">✅ O que funcionou</CardTitle></CardHeader>
-            <CardContent>{listEditor(destaques, setDestaques)}</CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Análise do CRM</CardTitle></CardHeader>
+            <CardContent><Textarea value={vendas.analise_crm || ""} onChange={(e) => setVendas({ ...vendas, analise_crm: e.target.value })} rows={4} placeholder="Análise geral do CRM..." /></CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-destructive">⚠️ O que não funcionou</CardTitle></CardHeader>
-            <CardContent>{listEditor(gaps, setGaps)}</CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Estratégias Propostas</CardTitle></CardHeader>
+            <CardContent><ListEditor items={vendas.estrategias || [""]} onChange={(v) => setVendas({ ...vendas, estrategias: v })} placeholder="Descreva a estratégia..." /></CardContent>
           </Card>
-        </div>
-
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Observações Gerais</CardTitle></CardHeader>
-          <CardContent><Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} placeholder="Análise geral do mês..." /></CardContent>
-        </Card>
-      </div>
-
-      {/* ═══ PLANO DO PRÓXIMO MÊS (dark theme) ═══ */}
-      <div className="bg-zinc-950 rounded-2xl p-6 -mx-2 space-y-6">
-        <h2 className="text-lg font-bold uppercase tracking-wider text-white border-b border-zinc-800 pb-2">🚀 Plano do Próximo Mês</h2>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">{planoSection(Megaphone, "Conteúdo", "conteudo")}</div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">{planoSection(TrendingUp, "Tráfego Pago", "trafego")}</div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">{planoSection(Globe, "Web / Site", "web")}</div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">{planoSection(Target, "Sales / CRM", "sales")}</div>
-        </div>
-      </div>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Melhorias Sugeridas</CardTitle></CardHeader>
+            <CardContent><ListEditor items={vendas.melhorias || [""]} onChange={(v) => setVendas({ ...vendas, melhorias: v })} placeholder="Descreva a melhoria..." /></CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
 // ─── Main Page ───
 export default function FranqueadoAcompanhamento() {
-  const { data: orgId } = useUserOrgId();
-  const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<ClientFollowup | null | "new">(null);
 
-  const { data: strategies = [] } = useQuery({
-    queryKey: ["franqueado-strategies-list", orgId],
-    queryFn: async () => {
-      if (!orgId) return [];
-      const { data, error } = await supabase
-        .from("franqueado_strategies")
-        .select("id, diagnostic_answers, result, title, created_at, status")
-        .eq("organization_id", orgId)
-        .eq("status", "done")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!orgId,
-  });
-
-  const { data: followups = [] } = useClientFollowups(selectedStrategyId);
-
-  const selectedStrategy = strategies.find((s: any) => s.id === selectedStrategyId);
+  const { data: folders = [] } = useClientFolders();
+  const { data: followups = [] } = useClientFollowups(selectedClient);
 
   if (editing) {
     return (
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
         <FollowupEditor
           existing={editing === "new" ? null : editing}
-          strategyId={selectedStrategyId!}
-          strategyResult={selectedStrategy?.result}
+          clientName={selectedClient!}
           onBack={() => setEditing(null)}
+        />
+      </div>
+    );
+  }
+
+  if (selectedClient) {
+    return (
+      <div className="p-4 md:p-6 max-w-5xl mx-auto">
+        <CycleListView
+          clientName={selectedClient}
+          followups={followups}
+          onBack={() => setSelectedClient(null)}
+          onNew={() => setEditing("new")}
+          onEdit={(f) => setEditing(f)}
         />
       </div>
     );
@@ -419,13 +467,10 @@ export default function FranqueadoAcompanhamento() {
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <FollowupListView
-        strategies={strategies}
-        selectedStrategyId={selectedStrategyId}
-        setSelectedStrategyId={setSelectedStrategyId}
-        followups={followups}
-        onNew={() => setEditing("new")}
-        onEdit={(f) => setEditing(f)}
+      <FolderListView
+        folders={folders}
+        onSelect={setSelectedClient}
+        onNew={() => {}}
       />
     </div>
   );
