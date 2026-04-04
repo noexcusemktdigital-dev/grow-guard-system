@@ -217,14 +217,14 @@ export async function exportStrategyPdf(result: StrategyResult, title: string, c
   // ═══ DIAGNOSTIC PAGES (light background) ═══
   b.isDark = false;
   b.newPage();
-  drawDiagnosticSection(b, result, chartRefs);
+  await drawDiagnosticSection(b, result, chartRefs);
 
   // ═══ STRATEGIC PLAN PAGES (dark background) ═══
   if (result.etapas || result.projecoes || result.entregaveis_calculadora?.length) {
     b.isDark = true;
     b.newPage();
     b.drawDarkBg();
-    drawStrategicPlanSection(b, result, chartRefs);
+    await drawStrategicPlanSection(b, result, chartRefs);
   }
 
   // Footer on all pages
@@ -346,7 +346,7 @@ function drawCoverPage(b: PdfBuilder, result: StrategyResult, title: string) {
 // ═══════════════════════════════════════════════════════════════
 // DIAGNOSTIC SECTION (light bg)
 // ═══════════════════════════════════════════════════════════════
-function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
+async function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
   const gps = result.diagnostico_gps;
 
   // ── Resumo Executivo ──
@@ -575,7 +575,7 @@ function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, chartRefs?
 // ═══════════════════════════════════════════════════════════════
 // STRATEGIC PLAN SECTION (dark bg)
 // ═══════════════════════════════════════════════════════════════
-function drawStrategicPlanSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
+async function drawStrategicPlanSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
   const pdf = b.pdf;
 
   // Header
@@ -646,7 +646,7 @@ function drawStrategicPlanSection(b: PdfBuilder, result: StrategyResult, chartRe
 
   // ── Projeções ──
   if (result.projecoes) {
-    drawProjecoes(b, result.projecoes, chartRefs);
+    await drawProjecoes(b, result.projecoes, chartRefs);
   }
 
   // ── Entregáveis ──
@@ -782,7 +782,7 @@ function drawEtapaCard(b: PdfBuilder, key: string, etapa: EtapaEstrategica, ec: 
   b.y += 6;
 }
 
-function drawProjecoes(b: PdfBuilder, proj: NonNullable<StrategyResult["projecoes"]>, chartRefs?: any) {
+async function drawProjecoes(b: PdfBuilder, proj: NonNullable<StrategyResult["projecoes"]>, chartRefs?: any) {
   const pdf = b.pdf;
 
   // Unit Economics
