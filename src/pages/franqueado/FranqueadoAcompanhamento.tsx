@@ -390,7 +390,7 @@ export default function FranqueadoAcompanhamento() {
       if (!orgId) return [];
       const { data, error } = await supabase
         .from("franqueado_strategies")
-        .select("id, answers, strategy_result, created_at, status")
+        .select("id, diagnostic_answers, result, title, created_at, status")
         .eq("organization_id", orgId)
         .eq("status", "done")
         .order("created_at", { ascending: false });
