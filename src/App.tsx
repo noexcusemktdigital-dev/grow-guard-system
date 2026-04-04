@@ -164,6 +164,8 @@ function App() {
                   <Route path="unidades" element={<Unidades />} />
                   <Route path="crm" element={<CrmExpansao />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
+                  <Route path="crm-vendas" element={<PageBoundary><FranqueadoCRM /></PageBoundary>} />
+                  <Route path="crm-vendas/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="atendimento" element={<Atendimento />} />
                   <Route path="comunicados" element={<Comunicados />} />

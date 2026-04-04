@@ -33,15 +33,16 @@ const principalSection: SidebarItem[] = [
   { label: "Comunicados", icon: Megaphone, path: "/franqueadora/comunicados" },
 ];
 
-const redeSection: SidebarItem[] = [
-  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
+const franquiaSection: SidebarItem[] = [
+  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
   { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
+  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
 ];
 
 const comercialSection: SidebarItem[] = [
-  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm" },
+  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm-vendas" },
   { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
   { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
   { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
@@ -316,8 +317,8 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         <SidebarNavItems items={principalSection} collapsed={collapsed} />
         <div className="mx-3 border-t border-sidebar-border/60" />
-        <div data-tour="rede">
-          <CollapsibleSection title="Rede" items={redeSection} collapsed={collapsed} defaultOpen />
+        <div data-tour="franquia">
+          <CollapsibleSection title="Franquia" items={franquiaSection} collapsed={collapsed} defaultOpen />
         </div>
         <div data-tour="comercial">
           <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />
