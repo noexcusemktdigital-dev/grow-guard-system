@@ -193,6 +193,29 @@ export default function ClienteChat() {
     );
   }
 
+  if (pendingInstance && !isConnected) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Conversas" subtitle="Central de atendimento integrada ao WhatsApp" icon={<MessageCircle className="w-5 h-5 text-primary" />} />
+        <Card className="border-dashed border-amber-500/30">
+          <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+              <MessageCircle className="w-7 h-7 text-amber-500/50" />
+            </div>
+            <Badge variant="outline" className="gap-1.5 mb-3 text-amber-500 border-amber-500/30">Pagamento pendente</Badge>
+            <p className="text-sm font-medium">Seu WhatsApp está aguardando confirmação de pagamento</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-md mb-4">
+              A integração será liberada automaticamente após a confirmação do pagamento de R$ 45,00/mês.
+            </p>
+            <Button size="sm" onClick={() => navigate("/cliente/integracoes")}>
+              <Settings2 className="w-4 h-4 mr-1" /> Ir para Integrações
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!isConnected) {
     return (
       <div className="w-full space-y-6">
