@@ -410,7 +410,7 @@ export default function FranqueadoAcompanhamento() {
         <FollowupEditor
           existing={editing === "new" ? null : editing}
           strategyId={selectedStrategyId!}
-          strategyResult={selectedStrategy?.strategy_result}
+          strategyResult={selectedStrategy?.result}
           onBack={() => setEditing(null)}
         />
       </div>
