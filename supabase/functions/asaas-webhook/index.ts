@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
       // {orgId}|sub|{plan} → unified subscription renewal
       // Also supports legacy: {orgId}|sub|{salesPlan}|{marketingPlan}|{modules}
       if (refParts.length >= 3 && refParts[1] === "sub") {
-        // Unified: refParts[2] is the plan id (starter/pro/enterprise)
+        // Unified: refParts[2] is the plan id (starter/pro/enterprise/whatsapp)
         // Legacy: refParts[2] is salesPlan, refParts[3] is marketingPlan
         const PLAN_CREDITS: Record<string, number> = { starter: 500, pro: 1000, enterprise: 1500 };
         
@@ -239,14 +239,24 @@ Deno.serve(async (req) => {
           const salesPlan = refParts[2] || "none";
           const marketingPlan = refParts[3] || "none";
           planSlug = salesPlan !== "none" ? salesPlan : marketingPlan;
-          // Legacy credit mapping
           const LEGACY_SC: Record<string, number> = { starter: 3000, professional: 15000, enterprise: 40000 };
           const LEGACY_MC: Record<string, number> = { starter: 2000, professional: 10000, enterprise: 30000 };
           totalCredits = (salesPlan !== "none" ? (LEGACY_SC[salesPlan] || 0) : 0) + (marketingPlan !== "none" ? (LEGACY_MC[marketingPlan] || 0) : 0);
         } else {
-          // Unified format: {orgId}|sub|{plan}
           planSlug = refParts[2];
           totalCredits = PLAN_CREDITS[planSlug] || 500;
+        }
+
+        // ── WhatsApp plan: update whatsapp_instances, skip subscriptions/credits ──
+        if (planSlug === "whatsapp") {
+          await adminClient
+            .from("whatsapp_instances")
+            .update({ billing_status: "active" })
+            .eq("organization_id", org.id)
+            .eq("billing_status", "pending");
+
+          console.log(`WhatsApp billing confirmed for org ${org.id}`);
+          return jsonOk({ success: true, event, type: "whatsapp_billing" });
         }
 
         const newExpires = new Date();

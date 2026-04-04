@@ -219,21 +219,43 @@ Deno.serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    await adminClient
-      .from("subscriptions")
-      .update({
-        plan,
-        status: "pending_payment",
-        modules: null,
-        sales_plan: null,
-        marketing_plan: null,
-        asaas_subscription_id: subscriptionData.id,
-        asaas_billing_type: billing_type,
-        expires_at: expiresAt.toISOString(),
-        discount_percent: discountPercent,
-        referral_org_id: referralOrgId,
-      })
-      .eq("organization_id", org.id);
+    if (plan === "whatsapp") {
+      // WhatsApp plan: update whatsapp_instances instead of subscriptions
+      // Find the most recent instance for this org
+      const { data: latestInstance } = await adminClient
+        .from("whatsapp_instances")
+        .select("id")
+        .eq("organization_id", org.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestInstance) {
+        await adminClient
+          .from("whatsapp_instances")
+          .update({
+            asaas_subscription_id: subscriptionData.id,
+            billing_status: "pending",
+          })
+          .eq("id", latestInstance.id);
+      }
+    } else {
+      await adminClient
+        .from("subscriptions")
+        .update({
+          plan,
+          status: "pending_payment",
+          modules: null,
+          sales_plan: null,
+          marketing_plan: null,
+          asaas_subscription_id: subscriptionData.id,
+          asaas_billing_type: billing_type,
+          expires_at: expiresAt.toISOString(),
+          discount_percent: discountPercent,
+          referral_org_id: referralOrgId,
+        })
+        .eq("organization_id", org.id);
+    }
 
     // Credits will be added by asaas-webhook on PAYMENT_CONFIRMED
 
