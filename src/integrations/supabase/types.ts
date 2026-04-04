@@ -1213,6 +1213,60 @@ export type Database = {
           },
         ]
       }
+      client_followups: {
+        Row: {
+          analise: Json | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          month_ref: string
+          organization_id: string
+          plano_proximo: Json | null
+          status: string
+          strategy_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          analise?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          month_ref: string
+          organization_id: string
+          plano_proximo?: Json | null
+          status?: string
+          strategy_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          analise?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          month_ref?: string
+          organization_id?: string
+          plano_proximo?: Json | null
+          status?: string
+          strategy_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_followups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_followups_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "franqueado_strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_gamification: {
         Row: {
           badges: Json | null
