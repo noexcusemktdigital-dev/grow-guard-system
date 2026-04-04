@@ -47,6 +47,7 @@ const comercialSection: SidebarItem[] = [
   { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
   { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
   { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "Acompanhamento", icon: ClipboardList, path: "/franqueadora/acompanhamento" },
   { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
 ];
 

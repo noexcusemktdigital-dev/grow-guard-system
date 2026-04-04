@@ -77,7 +77,7 @@ function FollowupListView({
             <SelectContent>
               {strategies.map((s: any) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.answers?.nome_empresa || s.answers?.empresa || "Sem nome"} — {new Date(s.created_at).toLocaleDateString("pt-BR")}
+                  {s.title || (s.diagnostic_answers as any)?.nome_empresa || "Sem nome"} — {new Date(s.created_at).toLocaleDateString("pt-BR")}
                 </SelectItem>
               ))}
             </SelectContent>
