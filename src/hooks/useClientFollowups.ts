@@ -3,25 +3,68 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 
+/* ── Interfaces for the 5 sections ── */
+
 export interface FollowupAnalise {
-  entregas_realizadas?: { nome: string; status: "feito" | "pendente" | "cancelado" }[];
   metricas?: { leads?: number; conversoes?: number; trafego?: number; engajamento?: number; faturamento?: number };
   destaques?: string[];
   gaps?: string[];
   observacoes?: string;
 }
 
+export interface ConteudoSection {
+  roteiros?: string[];
+  artes?: string[];
+  qtd_postagens?: number;
+  tipo_conteudo?: string[];
+  linha_editorial?: string;
+  referencias?: string[];
+  necessidades_cliente?: string[];
+}
+
+export interface TrafegoPlataforma {
+  nome: string;
+  tipo_campanha: string;
+  conteudo_campanha: string;
+  publicos: string;
+  objetivo: string;
+  investimento: number;
+  divisao_investimento: string;
+  metricas_meta: string;
+}
+
+export interface TrafegoSection {
+  plataformas?: TrafegoPlataforma[];
+}
+
+export interface WebSecao {
+  titulo: string;
+  motivo: string;
+  necessidades_cliente: string;
+}
+
+export interface WebSection {
+  secoes?: WebSecao[];
+}
+
+export interface VendasSection {
+  analise_crm?: string;
+  estrategias?: string[];
+  melhorias?: string[];
+}
+
 export interface FollowupPlano {
-  conteudo?: { acoes: string[]; entregas: string[] };
-  trafego?: { acoes: string[]; budget?: number; plataformas: string[] };
-  web?: { acoes: string[]; entregas: string[] };
-  sales?: { acoes: string[]; entregas: string[] };
+  conteudo?: ConteudoSection;
+  trafego?: TrafegoSection;
+  web?: WebSection;
+  vendas?: VendasSection;
 }
 
 export interface ClientFollowup {
   id: string;
   organization_id: string;
-  strategy_id: string;
+  strategy_id: string | null;
+  client_name: string;
   month_ref: string;
   status: string;
   analise: FollowupAnalise;
@@ -31,26 +74,54 @@ export interface ClientFollowup {
   updated_at: string;
 }
 
-export function useClientFollowups(strategyId: string | null) {
+/* ── List distinct client folders ── */
+export function useClientFolders() {
   const { data: orgId } = useUserOrgId();
 
   return useQuery({
-    queryKey: ["client-followups", orgId, strategyId],
+    queryKey: ["client-folders", orgId],
     queryFn: async () => {
-      if (!orgId || !strategyId) return [];
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("client_followups")
+        .select("client_name, id")
+        .eq("organization_id", orgId)
+        .order("client_name");
+      if (error) throw error;
+      // group by client_name
+      const map = new Map<string, number>();
+      (data || []).forEach((row: any) => {
+        const name = row.client_name || "Sem nome";
+        map.set(name, (map.get(name) || 0) + 1);
+      });
+      return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+    },
+    enabled: !!orgId,
+  });
+}
+
+/* ── List cycles for a specific client ── */
+export function useClientFollowups(clientName: string | null) {
+  const { data: orgId } = useUserOrgId();
+
+  return useQuery({
+    queryKey: ["client-followups", orgId, clientName],
+    queryFn: async () => {
+      if (!orgId || !clientName) return [];
       const { data, error } = await supabase
         .from("client_followups")
         .select("*")
         .eq("organization_id", orgId)
-        .eq("strategy_id", strategyId)
+        .eq("client_name", clientName)
         .order("month_ref", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as ClientFollowup[];
     },
-    enabled: !!orgId && !!strategyId,
+    enabled: !!orgId && !!clientName,
   });
 }
 
+/* ── Save (create or update) ── */
 export function useSaveFollowup() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
@@ -58,7 +129,7 @@ export function useSaveFollowup() {
   return useMutation({
     mutationFn: async (input: {
       id?: string;
-      strategy_id: string;
+      client_name: string;
       month_ref: string;
       status?: string;
       analise: FollowupAnalise;
@@ -68,7 +139,7 @@ export function useSaveFollowup() {
 
       const payload = {
         organization_id: orgId,
-        strategy_id: input.strategy_id,
+        client_name: input.client_name,
         month_ref: input.month_ref,
         status: input.status || "draft",
         analise: input.analise as any,
@@ -96,10 +167,11 @@ export function useSaveFollowup() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-followups"] });
-      toast.success("Ciclo salvo com sucesso!");
+      qc.invalidateQueries({ queryKey: ["client-folders"] });
+      toast.success("Acompanhamento salvo com sucesso!");
     },
     onError: (e: any) => {
-      toast.error(e.message || "Erro ao salvar ciclo");
+      toast.error(e.message || "Erro ao salvar acompanhamento");
     },
   });
 }
