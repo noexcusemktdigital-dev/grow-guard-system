@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useSetupWhatsApp, useWhatsAppInstances } from "@/hooks/useWhatsApp";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -15,7 +16,7 @@ import {
   ArrowRight, ArrowLeft, KeyRound, Plug, ShieldCheck,
   AlertTriangle, QrCode, Copy, Headset,
   MessageSquare, UserPlus, Eye, EyeOff,
-  Server, HelpCircle, Zap,
+  Server, HelpCircle, Zap, CreditCard, Receipt,
 } from "lucide-react";
 import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
 
