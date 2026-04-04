@@ -145,16 +145,16 @@ export function StrategyResultView({
 function NewStrategyResultView({ result }: { result: StrategyResult }) {
   const gps = result.diagnostico_gps!;
   const score = gps.score_geral;
+  const scoreMarketing = result.score_marketing ?? 0;
+  const scoreComercial = result.score_comercial ?? 0;
 
-  const scoreColor =
-    score <= 25 ? "text-destructive" :
-    score <= 50 ? "text-orange-500" :
-    score <= 75 ? "text-amber-500" : "text-green-500";
+  const getScoreColor = (s: number) =>
+    s <= 25 ? "text-destructive" : s <= 50 ? "text-orange-500" : s <= 75 ? "text-amber-500" : "text-green-500";
+  const getScoreBg = (s: number) =>
+    s <= 25 ? "bg-destructive/10" : s <= 50 ? "bg-orange-500/10" : s <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
 
-  const scoreBg =
-    score <= 25 ? "bg-destructive/10" :
-    score <= 50 ? "bg-orange-500/10" :
-    score <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
+  const scoreColor = getScoreColor(score);
+  const scoreBg = getScoreBg(score);
 
   return (
     <div className="space-y-4">
