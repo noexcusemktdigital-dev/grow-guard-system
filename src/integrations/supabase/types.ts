@@ -1216,6 +1216,7 @@ export type Database = {
       client_followups: {
         Row: {
           analise: Json | null
+          client_name: string | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -1223,11 +1224,12 @@ export type Database = {
           organization_id: string
           plano_proximo: Json | null
           status: string
-          strategy_id: string
+          strategy_id: string | null
           updated_at: string | null
         }
         Insert: {
           analise?: Json | null
+          client_name?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -1235,11 +1237,12 @@ export type Database = {
           organization_id: string
           plano_proximo?: Json | null
           status?: string
-          strategy_id: string
+          strategy_id?: string | null
           updated_at?: string | null
         }
         Update: {
           analise?: Json | null
+          client_name?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -1247,7 +1250,7 @@ export type Database = {
           organization_id?: string
           plano_proximo?: Json | null
           status?: string
-          strategy_id?: string
+          strategy_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
