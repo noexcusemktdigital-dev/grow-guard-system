@@ -145,6 +145,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { data: existingOrg } = await supabase.rpc("get_user_org_id", { _user_id: currentUser.id, _portal: "saas" });
             if (!existingOrg) {
               try {
+                // Ensure custom client has the session before invoking edge function
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                if (!currentSession) {
+                  const { data: { session: defaultSess } } = await defaultClient.auth.getSession();
+                  if (defaultSess) {
+                    await supabase.auth.setSession({
+                      access_token: defaultSess.access_token,
+                      refresh_token: defaultSess.refresh_token,
+                    });
+                  }
+                }
+
                 const companyName = currentUser.user_metadata?.full_name
                   ? `${currentUser.user_metadata.full_name}'s Company`
                   : "Minha Empresa";
