@@ -284,6 +284,7 @@ function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: 
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div ref={radarRef}>
             <ResponsiveContainer width="100%" height={300}>
               <RadarChart data={gps.radar_data}>
                 <PolarGrid />
