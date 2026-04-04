@@ -86,6 +86,33 @@ export interface StrategyResult {
     justificativa: string;
   }[];
 
+  // Scores separados
+  score_marketing?: number;
+  score_comercial?: number;
+
+  // Persona
+  persona?: {
+    descricao: string;
+    faixa_etaria: string;
+    genero: string;
+    canais: string[];
+    dor_principal: string;
+    decisao_compra: string;
+    poder_aquisitivo: string;
+  };
+
+  // Análise de Concorrência
+  analise_concorrencia?: {
+    concorrentes: Array<{
+      nome: string;
+      pontos_fortes: string[];
+      pontos_fracos: string[];
+      oportunidades: string[];
+    }>;
+    diferencial_empresa: string;
+    posicionamento_recomendado: string;
+  };
+
   // KPIs Hero
   kpis_hero?: {
     meta_faturamento: string;
