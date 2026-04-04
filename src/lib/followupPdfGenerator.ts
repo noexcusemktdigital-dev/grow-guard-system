@@ -6,6 +6,7 @@ import type {
   WebSecao,
 } from "@/hooks/useClientFollowups";
 import { MONTH_NAMES } from "@/lib/formatting";
+import logoWhiteSrc from "@/assets/logo-noexcuse-white.png";
 
 const ML = 15; // margin left
 const MR = 15;
