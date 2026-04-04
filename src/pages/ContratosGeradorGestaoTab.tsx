@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AlertTriangle, Download, Eye, Filter, Inbox, Pencil, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, Eye, FileType, Filter, Inbox, Pencil, Search, Trash2 } from "lucide-react";
 import { downloadContractPdf } from "@/lib/contractPdfTemplate";
+import { downloadContractDocx } from "@/lib/contractDocxGenerator";
 
 const gestaoStatusLabels: Record<string, string> = { draft: "Rascunho", active: "Ativo", signed: "Assinado", expired: "Vencido", cancelled: "Cancelado" };
 const gestaoStatusColors: Record<string, string> = { draft: "bg-muted text-muted-foreground", active: "bg-emerald-500/15 text-emerald-500", signed: "bg-blue-500/15 text-blue-500", expired: "bg-red-500/15 text-red-500", cancelled: "bg-red-500/15 text-red-500" };
@@ -24,6 +25,7 @@ function daysUntilExpiry(endDate: string | null): number | null {
 interface ContractItem {
   id: string;
   title: string;
+  content?: string | null;
   signer_name?: string;
   signer_email?: string;
   client_document?: string;
@@ -185,7 +187,8 @@ export function ContratosGeradorGestaoTab({
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailContract(c)} aria-label="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(c.id)} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractPdf(c)} title="Baixar PDF" aria-label="Baixar"><Download className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractPdf(c)} title="Baixar PDF" aria-label="Baixar PDF"><Download className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractDocx(c)} title="Baixar DOCX" aria-label="Baixar DOCX"><FileType className="w-3.5 h-3.5" /></Button>
                       </div>
                     </td>
                   </tr>
