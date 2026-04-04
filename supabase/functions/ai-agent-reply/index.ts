@@ -517,8 +517,9 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         for (const ev of upcomingEvents) {
           const start = new Date(ev.start_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
           const end = new Date(ev.end_at).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-          const owner = (teamMembers || []).find((m: { user_id: string; profiles?: { full_name?: string } }) => m.user_id === ev.created_by);
-          const ownerName = owner?.profiles?.full_name || "—";
+          const owner = (teamMembers || []).find((m: any) => m.user_id === ev.created_by);
+          const ownerP = owner ? (Array.isArray(owner.profiles) ? owner.profiles[0] : owner.profiles) : null;
+          const ownerName = ownerP?.full_name || "—";
           teamContext += `\n- ${start} a ${end} — ${ev.title} (responsável: ${ownerName})`;
         }
       } else {
