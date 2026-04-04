@@ -313,6 +313,11 @@ export function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, on
                     {isConn ? "Conectado" : "Desconectado"}
                   </Badge>
                   <Badge variant="outline" className="text-[9px]">Izitech</Badge>
+                  {(instance as any).billing_status === "active" ? (
+                    <Badge variant="outline" className="text-[9px] text-emerald-500 border-emerald-500/30">Pago</Badge>
+                  ) : (instance as any).billing_status === "pending" ? (
+                    <Badge variant="outline" className="text-[9px] text-amber-500 border-amber-500/30">Pagamento pendente</Badge>
+                  ) : null}
                 </div>
                 {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
               </div>
