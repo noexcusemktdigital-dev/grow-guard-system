@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AlertTriangle, Download, Eye, Filter, Inbox, Pencil, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, Eye, FileType, Filter, Inbox, Pencil, Search, Trash2 } from "lucide-react";
 import { downloadContractPdf } from "@/lib/contractPdfTemplate";
+import { downloadContractDocx } from "@/lib/contractDocxGenerator";
 
 const gestaoStatusLabels: Record<string, string> = { draft: "Rascunho", active: "Ativo", signed: "Assinado", expired: "Vencido", cancelled: "Cancelado" };
 const gestaoStatusColors: Record<string, string> = { draft: "bg-muted text-muted-foreground", active: "bg-emerald-500/15 text-emerald-500", signed: "bg-blue-500/15 text-blue-500", expired: "bg-red-500/15 text-red-500", cancelled: "bg-red-500/15 text-red-500" };
