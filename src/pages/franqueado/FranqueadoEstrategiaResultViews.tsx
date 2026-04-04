@@ -163,7 +163,7 @@ function ScoreCircle({ score, size = 64, strokeWidth = 5, className = "" }: { sc
 
 // ── New 5-Step Strategy Result View ─────────────────────────────
 
-function NewStrategyResultView({ result }: { result: StrategyResult }) {
+function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: { result: StrategyResult; radarRef?: React.RefObject<HTMLDivElement>; barChartRef?: React.RefObject<HTMLDivElement>; lineChartRef?: React.RefObject<HTMLDivElement> }) {
   const gps = result.diagnostico_gps!;
   const score = gps.score_geral;
   const scoreMarketing = result.score_marketing ?? 0;
