@@ -1,78 +1,62 @@
 
 
-## Plano — Cobrança automática de R$45/mês (WhatsApp Izitech) via Asaas
+## Plano — Bloqueio de WhatsApp até pagamento + Atualização de status em tempo real
 
-### Contexto
+### Problema
 
-Atualmente, ao integrar WhatsApp via Izitech, a instância é criada mas nenhuma cobrança é gerada. O fluxo de cobrança precisa ser idêntico ao dos planos (Starter/Pro/Enterprise), usando a mesma infraestrutura Asaas (criar assinatura recorrente, gerar PIX/boleto, confirmar via webhook).
-
-### Arquitetura da solução
-
-```text
-WhatsAppSetupWizard (step 3, após conectar)
-  └─ Chama edge function "asaas-create-subscription" 
-     com tipo especial: plan = "whatsapp" 
-  └─ Asaas cria assinatura recorrente de R$45/mês
-  └─ Exibe QR PIX / boleto inline no wizard
-
-asaas-webhook (PAYMENT_CONFIRMED)
-  └─ Reconhece externalReference "{orgId}|sub|whatsapp"
-  └─ Marca whatsapp_subscription como ativo
-```
+1. O webhook do Asaas **funciona** e atualiza `billing_status = 'active'`, mas o frontend não recarrega os dados da instância após o pagamento — o badge continua mostrando "Pagamento pendente".
+2. Não existe bloqueio real do WhatsApp enquanto `billing_status !== 'active'` — o chat funciona mesmo sem pagar.
 
 ### Mudanças
 
-#### 1. `supabase/functions/asaas-create-subscription/index.ts`
+#### 1. `src/hooks/useWhatsApp.ts` — Bloquear instância não paga
 
-Adicionar `whatsapp: 45` ao mapa `PLAN_PRICES`. Quando `plan === "whatsapp"`:
-- Descrição: `"WhatsApp Izitech — NOE"`
-- externalReference: `"{orgId}|sub|whatsapp"`
-- NÃO atualizar a tabela `subscriptions` (o plano principal é separado)
-- Em vez disso, salvar na tabela `whatsapp_instances` um campo `asaas_subscription_id`
-- Pular créditos (WhatsApp não dá créditos)
+Na função `useWhatsAppInstance()`, filtrar apenas instâncias com `billing_status = 'active'` ou `billing_status IS NULL` (instâncias antigas sem cobrança):
 
-#### 2. `supabase/functions/asaas-webhook/index.ts`
+- Instância com `billing_status = 'pending'` **não será retornada** como conectada
+- Isso bloqueia automaticamente o chat, envio de mensagens e toda a UI que depende de `instance`
 
-No bloco `refParts[1] === "sub"` e `planSlug === "whatsapp"`:
-- NÃO atualizar `subscriptions` nem adicionar créditos
-- Atualizar `whatsapp_instances` → `billing_status = 'active'`
-- Log: "WhatsApp billing confirmed for org {id}"
+#### 2. `src/pages/cliente/ClienteChat.tsx` — Tela de bloqueio por pagamento pendente
 
-#### 3. Migração SQL
+Adicionar verificação: se existe instância com `status = 'connected'` mas `billing_status = 'pending'`, exibir tela específica:
+- Mensagem: "Seu WhatsApp está aguardando confirmação de pagamento"
+- Badge amarela: "Pagamento pendente"
+- Botão para ir a Integrações
 
-Adicionar colunas à tabela `whatsapp_instances`:
-- `asaas_subscription_id text`
-- `billing_status text default 'pending'`
+#### 3. `src/pages/cliente/ClienteIntegracoesHelpers.tsx` — Realtime para billing_status
 
-#### 4. `src/components/cliente/WhatsAppSetupWizard.tsx`
+Adicionar subscription Realtime na tabela `whatsapp_instances` para que, quando o webhook do Asaas atualizar `billing_status` para `active`, o frontend atualize automaticamente sem refresh manual.
 
-Após a instância ser conectada com sucesso (step 3, quando `izitechConnected = true`):
-- Mostrar seção de pagamento com seleção de método (PIX, Boleto, Cartão)
-- Chamar `supabase.functions.invoke("asaas-create-subscription", { body: { organization_id, plan: "whatsapp", billing_type } })`
-- Exibir QR PIX / link de boleto inline (reutilizar componente `InlinePaymentView` do ClientePlanoCreditsHelpers)
-- Mensagem: "Sua integração WhatsApp ficará ativa após confirmação do pagamento de R$45/mês"
+#### 4. Migração SQL — Habilitar Realtime para `whatsapp_instances`
 
-#### 5. `src/pages/cliente/ClienteIntegracoes.tsx`
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.whatsapp_instances;
+```
 
-Exibir badge de status de pagamento nos cards de instância:
-- `billing_status === 'active'` → Badge verde "Pago"
-- `billing_status === 'pending'` → Badge amarela "Pagamento pendente"
+#### 5. `src/components/cliente/WhatsAppSetupWizard.tsx` — Polling de status no step de pagamento
 
-### Fluxo completo
+No step 4 (pagamento), adicionar polling a cada 5s verificando `billing_status` da instância. Quando mudar para `active`:
+- Mostrar mensagem de sucesso
+- Habilitar botão "Concluir" para fechar o wizard
 
-1. Usuário escolhe Izitech → digita nome → cria instância → escaneia QR → conecta
-2. Wizard mostra tela de pagamento: "Escolha como pagar R$45/mês"
-3. Usuário seleciona PIX/Boleto → sistema gera cobrança no Asaas
-4. Exibe QR PIX ou link do boleto
-5. Webhook confirma pagamento → marca `billing_status = 'active'`
+### Fluxo completo após as mudanças
+
+```text
+1. Usuário conecta WhatsApp → billing_status = 'pending'
+2. Chat mostra tela "Pagamento pendente" (bloqueado)
+3. Wizard exibe QR PIX / boleto
+4. Usuário paga → Asaas webhook → billing_status = 'active'
+5. Realtime atualiza frontend → badge muda para "Pago"
+6. Chat desbloqueia automaticamente
+```
 
 ### Arquivos afetados
 
 | Arquivo | Ação |
 |---------|------|
-| Migração SQL | Adicionar `asaas_subscription_id` e `billing_status` em `whatsapp_instances` |
-| `supabase/functions/asaas-create-subscription/index.ts` | Suportar `plan: "whatsapp"` (R$45, sem créditos) |
-| `supabase/functions/asaas-webhook/index.ts` | Tratar `whatsapp` no bloco de subscription |
-| `src/components/cliente/WhatsAppSetupWizard.tsx` | Adicionar step de pagamento após conexão |
-| `src/pages/cliente/ClienteIntegracoes.tsx` | Badge de billing status nos cards |
+| Migração SQL | Realtime para `whatsapp_instances` |
+| `src/hooks/useWhatsApp.ts` | Filtrar instâncias pendentes |
+| `src/pages/cliente/ClienteChat.tsx` | Tela de bloqueio por pagamento |
+| `src/pages/cliente/ClienteIntegracoesHelpers.tsx` | Realtime subscription |
+| `src/components/cliente/WhatsAppSetupWizard.tsx` | Polling no step de pagamento |
 
