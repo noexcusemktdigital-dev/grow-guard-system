@@ -99,6 +99,18 @@ export function StrategyResultView({
     navigate("/franqueado/propostas");
   };
 
+  return (
+    <div className="space-y-4">
+      <div ref={contentRef}>
+        {isNewFormat ? (
+          <NewStrategyResultView result={result} radarRef={radarRef} barChartRef={barChartRef} lineChartRef={lineChartRef} />
+        ) : isLegacyNewFormat ? (
+          <LegacyNewFormatView result={result} />
+        ) : (
+          <LegacyStrategyResultView result={result} />
+        )}
+      </div>
+
       {showExport && (
         <div className="bg-zinc-950 rounded-2xl p-6 -mx-2">
           <div className="flex flex-col sm:flex-row items-stretch gap-3">
