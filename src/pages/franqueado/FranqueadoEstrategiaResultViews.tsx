@@ -285,14 +285,15 @@ function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: 
           </CardHeader>
           <CardContent>
             <div ref={radarRef}>
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={gps.radar_data}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 10 }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
-                <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
-              </RadarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={gps.radar_data}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 10 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                  <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       )}
