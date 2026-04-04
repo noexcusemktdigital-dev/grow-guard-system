@@ -84,6 +84,7 @@ export interface StrategyResult {
     service_name: string;
     quantity: number;
     justificativa: string;
+    etapa?: string;
   }[];
 
   // Scores separados
