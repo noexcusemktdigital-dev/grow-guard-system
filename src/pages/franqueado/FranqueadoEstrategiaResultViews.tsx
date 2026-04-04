@@ -389,26 +389,8 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
           </CardContent>
         </Card>
       )}
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" /> Gargalos — Metodologia ECE
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { key: "infraestrutura", label: "🏗️ Estruturar (Infraestrutura)", value: gps.gargalos_ece.infraestrutura },
-              { key: "coleta", label: "📊 Coletar (Dados)", value: gps.gargalos_ece.coleta },
-              { key: "escala", label: "📈 Escalar", value: gps.gargalos_ece.escala },
-            ].map((g) => (
-              <div key={g.key} className="border rounded-lg p-3">
-                <p className="text-xs font-bold uppercase text-primary mb-1">{g.label}</p>
-                <p className="text-sm text-muted-foreground">{g.value}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+
+
 
       {/* Insights */}
       {gps.insights && gps.insights.length > 0 && (
