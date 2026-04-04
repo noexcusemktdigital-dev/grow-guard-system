@@ -575,7 +575,7 @@ async function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, char
 // ═══════════════════════════════════════════════════════════════
 // STRATEGIC PLAN SECTION (dark bg)
 // ═══════════════════════════════════════════════════════════════
-function drawStrategicPlanSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
+async function drawStrategicPlanSection(b: PdfBuilder, result: StrategyResult, chartRefs?: any) {
   const pdf = b.pdf;
 
   // Header
