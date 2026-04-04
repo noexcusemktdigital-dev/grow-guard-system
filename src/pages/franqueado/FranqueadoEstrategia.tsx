@@ -457,8 +457,8 @@ function WelcomeScreen({ onManual, onUpload }: { onManual: () => void; onUpload:
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Metodologia ECE</p>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Infraestrutura", desc: "Site, landing pages, CRM, funil comercial", icon: "🏗️" },
-            { label: "Coleta", desc: "Tráfego, conteúdo, captura de leads", icon: "🎯" },
+            { label: "Estrutura", desc: "Site, landing pages, CRM, funil comercial", icon: "🏗️" },
+            { label: "Coleta de Dados", desc: "Tráfego, conteúdo, captura de leads", icon: "🎯" },
             { label: "Escala", desc: "Validação, métricas, crescimento previsível", icon: "🚀" },
           ].map((item) => (
             <div key={item.label} className="text-center space-y-1">

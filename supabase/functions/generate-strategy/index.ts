@@ -9,7 +9,7 @@ const GPS_DIAGNOSIS_SCHEMA = {
   type: "function",
   function: {
     name: "generate_strategy",
-    description: "Gera o diagnóstico GPS do negócio com score, radar 5 eixos e análise ECE.",
+    description: "Gera o diagnóstico GPS do negócio com scores de marketing e comercial, radar 5 eixos, persona, análise de concorrência e análise ECE.",
     parameters: {
       type: "object",
       properties: {
@@ -25,10 +25,12 @@ const GPS_DIAGNOSIS_SCHEMA = {
           },
           required: ["nome_empresa", "segmento", "proposta_valor", "diferencial", "modelo_negocio"],
         },
+        score_marketing: { type: "number", description: "Score de marketing de 0-100 calculado com base nas respostas de conteúdo, tráfego e web" },
+        score_comercial: { type: "number", description: "Score comercial de 0-100 calculado com base nas respostas de sales, processo comercial e métricas" },
         diagnostico_gps: {
           type: "object",
           properties: {
-            score_geral: { type: "number", description: "Score de 0-100" },
+            score_geral: { type: "number", description: "Média ponderada dos scores de marketing e comercial, 0-100" },
             nivel: { type: "string", description: "Crítico (0-25), Básico (26-50), Intermediário (51-75), Avançado (76-100)" },
             descricao: { type: "string" },
             radar_data: {
@@ -54,15 +56,49 @@ const GPS_DIAGNOSIS_SCHEMA = {
             gargalos_ece: {
               type: "object",
               properties: {
-                infraestrutura: { type: "string", description: "Problemas na infraestrutura (E de ECE)" },
-                coleta: { type: "string", description: "Problemas na coleta de dados (C de ECE)" },
-                escala: { type: "string", description: "Problemas na escala (E de ECE)" },
+                estrutura: { type: "string", description: "Problemas na Estrutura (E de ECE) — site, CRM, funil, processos" },
+                coleta: { type: "string", description: "Problemas na Coleta de dados (C de ECE) — métricas, tráfego, leads" },
+                escala: { type: "string", description: "Problemas na Escala (E de ECE) — validação, crescimento, capacidade" },
               },
-              required: ["infraestrutura", "coleta", "escala"],
+              required: ["estrutura", "coleta", "escala"],
             },
             insights: { type: "array", items: { type: "string" }, description: "3-5 insights personalizados" },
           },
           required: ["score_geral", "nivel", "descricao", "radar_data", "problemas_por_etapa", "gargalos_ece", "insights"],
+        },
+        persona: {
+          type: "object",
+          properties: {
+            descricao: { type: "string", description: "Descrição narrativa da persona ideal" },
+            faixa_etaria: { type: "string" },
+            genero: { type: "string" },
+            canais: { type: "array", items: { type: "string" } },
+            dor_principal: { type: "string" },
+            decisao_compra: { type: "string" },
+            poder_aquisitivo: { type: "string" },
+          },
+          required: ["descricao", "faixa_etaria", "canais", "dor_principal", "decisao_compra"],
+        },
+        analise_concorrencia: {
+          type: "object",
+          properties: {
+            concorrentes: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  nome: { type: "string" },
+                  pontos_fortes: { type: "array", items: { type: "string" } },
+                  pontos_fracos: { type: "array", items: { type: "string" } },
+                  oportunidades: { type: "array", items: { type: "string" } },
+                },
+                required: ["nome", "pontos_fortes", "pontos_fracos", "oportunidades"],
+              },
+            },
+            diferencial_empresa: { type: "string" },
+            posicionamento_recomendado: { type: "string" },
+          },
+          required: ["concorrentes", "diferencial_empresa", "posicionamento_recomendado"],
         },
         kpis_hero: {
           type: "object",
@@ -75,7 +111,7 @@ const GPS_DIAGNOSIS_SCHEMA = {
           required: ["meta_faturamento", "ticket_medio", "recorrencia", "ltv_cac"],
         },
       },
-      required: ["resumo_executivo", "resumo_cliente", "diagnostico_gps", "kpis_hero"],
+      required: ["resumo_executivo", "resumo_cliente", "score_marketing", "score_comercial", "diagnostico_gps", "persona", "analise_concorrencia", "kpis_hero"],
       additionalProperties: false,
     },
   },
@@ -100,64 +136,44 @@ const STRATEGIC_PLAN_SCHEMA = {
                 score: { type: "number" },
                 problemas: { type: "array", items: { type: "string" } },
                 acoes: { type: "array", items: { type: "string" }, description: "5-8 ações específicas" },
-                metricas_alvo: {
-                  type: "object",
-                  additionalProperties: { type: "string" },
-                  description: "Ex: posts_semana, engajamento_meta, alcance_meta",
-                },
-                entregaveis: { type: "array", items: { type: "string" }, description: "Nomes de serviços NoExcuse recomendados" },
+                metricas_alvo: { type: "object", additionalProperties: { type: "string" } },
+                entregaveis: { type: "array", items: { type: "string" } },
               },
               required: ["titulo", "diagnostico", "score", "problemas", "acoes", "metricas_alvo", "entregaveis"],
             },
             trafego: {
               type: "object",
               properties: {
-                titulo: { type: "string" },
-                diagnostico: { type: "string" },
-                score: { type: "number" },
-                problemas: { type: "array", items: { type: "string" } },
-                acoes: { type: "array", items: { type: "string" } },
-                metricas_alvo: { type: "object", additionalProperties: { type: "string" } },
-                entregaveis: { type: "array", items: { type: "string" } },
+                titulo: { type: "string" }, diagnostico: { type: "string" }, score: { type: "number" },
+                problemas: { type: "array", items: { type: "string" } }, acoes: { type: "array", items: { type: "string" } },
+                metricas_alvo: { type: "object", additionalProperties: { type: "string" } }, entregaveis: { type: "array", items: { type: "string" } },
               },
               required: ["titulo", "diagnostico", "score", "problemas", "acoes", "metricas_alvo", "entregaveis"],
             },
             web: {
               type: "object",
               properties: {
-                titulo: { type: "string" },
-                diagnostico: { type: "string" },
-                score: { type: "number" },
-                problemas: { type: "array", items: { type: "string" } },
-                acoes: { type: "array", items: { type: "string" } },
-                metricas_alvo: { type: "object", additionalProperties: { type: "string" } },
-                entregaveis: { type: "array", items: { type: "string" } },
+                titulo: { type: "string" }, diagnostico: { type: "string" }, score: { type: "number" },
+                problemas: { type: "array", items: { type: "string" } }, acoes: { type: "array", items: { type: "string" } },
+                metricas_alvo: { type: "object", additionalProperties: { type: "string" } }, entregaveis: { type: "array", items: { type: "string" } },
               },
               required: ["titulo", "diagnostico", "score", "problemas", "acoes", "metricas_alvo", "entregaveis"],
             },
             sales: {
               type: "object",
               properties: {
-                titulo: { type: "string" },
-                diagnostico: { type: "string" },
-                score: { type: "number" },
-                problemas: { type: "array", items: { type: "string" } },
-                acoes: { type: "array", items: { type: "string" } },
-                metricas_alvo: { type: "object", additionalProperties: { type: "string" } },
-                entregaveis: { type: "array", items: { type: "string" } },
+                titulo: { type: "string" }, diagnostico: { type: "string" }, score: { type: "number" },
+                problemas: { type: "array", items: { type: "string" } }, acoes: { type: "array", items: { type: "string" } },
+                metricas_alvo: { type: "object", additionalProperties: { type: "string" } }, entregaveis: { type: "array", items: { type: "string" } },
               },
               required: ["titulo", "diagnostico", "score", "problemas", "acoes", "metricas_alvo", "entregaveis"],
             },
             validacao: {
               type: "object",
               properties: {
-                titulo: { type: "string" },
-                diagnostico: { type: "string" },
-                score: { type: "number" },
-                problemas: { type: "array", items: { type: "string" } },
-                acoes: { type: "array", items: { type: "string" } },
-                metricas_alvo: { type: "object", additionalProperties: { type: "string" } },
-                entregaveis: { type: "array", items: { type: "string" } },
+                titulo: { type: "string" }, diagnostico: { type: "string" }, score: { type: "number" },
+                problemas: { type: "array", items: { type: "string" } }, acoes: { type: "array", items: { type: "string" } },
+                metricas_alvo: { type: "object", additionalProperties: { type: "string" } }, entregaveis: { type: "array", items: { type: "string" } },
               },
               required: ["titulo", "diagnostico", "score", "problemas", "acoes", "metricas_alvo", "entregaveis"],
             },
@@ -185,11 +201,8 @@ const PROJECTIONS_SCHEMA = {
             unit_economics: {
               type: "object",
               properties: {
-                cac: { type: "string" },
-                ltv: { type: "string" },
-                ltv_cac_ratio: { type: "string" },
-                ticket_medio: { type: "string" },
-                margem: { type: "string" },
+                cac: { type: "string" }, ltv: { type: "string" }, ltv_cac_ratio: { type: "string" },
+                ticket_medio: { type: "string" }, margem: { type: "string" },
               },
               required: ["cac", "ltv", "ltv_cac_ratio", "ticket_medio", "margem"],
             },
@@ -197,11 +210,7 @@ const PROJECTIONS_SCHEMA = {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  etapa: { type: "string" },
-                  volume: { type: "number" },
-                  taxa: { type: "string" },
-                },
+                properties: { etapa: { type: "string" }, volume: { type: "number" }, taxa: { type: "string" } },
                 required: ["etapa", "volume", "taxa"],
               },
             },
@@ -209,13 +218,7 @@ const PROJECTIONS_SCHEMA = {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  mes: { type: "number" },
-                  leads: { type: "number" },
-                  clientes: { type: "number" },
-                  receita: { type: "number" },
-                  investimento: { type: "number" },
-                },
+                properties: { mes: { type: "number" }, leads: { type: "number" }, clientes: { type: "number" }, receita: { type: "number" }, investimento: { type: "number" } },
                 required: ["mes", "leads", "clientes", "receita", "investimento"],
               },
               description: "Projeção de 6 meses",
@@ -224,11 +227,7 @@ const PROJECTIONS_SCHEMA = {
               type: "array",
               items: {
                 type: "object",
-                properties: {
-                  mes: { type: "number" },
-                  receita_acumulada: { type: "number" },
-                  clientes_acumulados: { type: "number" },
-                },
+                properties: { mes: { type: "number" }, receita_acumulada: { type: "number" }, clientes_acumulados: { type: "number" } },
                 required: ["mes", "receita_acumulada", "clientes_acumulados"],
               },
             },
@@ -240,17 +239,13 @@ const PROJECTIONS_SCHEMA = {
           items: {
             type: "object",
             properties: {
-              service_id: {
-                type: "string",
-                description: "ID do serviço no catálogo NoExcuse. IDs válidos: logo-manual, material-marca, midia-off, naming, registro-inpi, ebook, apresentacao-comercial, artes-organicas, videos-reels, programacao-meta, programacao-linkedin, programacao-tiktok, programacao-youtube, capa-destaques, criacao-avatar, template-canva, edicao-youtube, gestao-meta, gestao-google, gestao-linkedin, gestao-tiktok, config-gmb, artes-campanha, videos-campanha, pagina-site, lp-link-bio, lp-vsl, lp-vendas, lp-captura, lp-ebook, alterar-contato, alterar-secao, ecommerce, config-crm",
-              },
+              service_id: { type: "string", description: "ID do serviço no catálogo NoExcuse. IDs válidos: logo-manual, material-marca, midia-off, naming, registro-inpi, ebook, apresentacao-comercial, artes-organicas, videos-reels, programacao-meta, programacao-linkedin, programacao-tiktok, programacao-youtube, capa-destaques, criacao-avatar, template-canva, edicao-youtube, gestao-meta, gestao-google, gestao-linkedin, gestao-tiktok, config-gmb, artes-campanha, videos-campanha, pagina-site, lp-link-bio, lp-vsl, lp-vendas, lp-captura, lp-ebook, alterar-contato, alterar-secao, ecommerce, config-crm" },
               service_name: { type: "string" },
               quantity: { type: "number" },
               justificativa: { type: "string" },
             },
             required: ["service_id", "service_name", "quantity", "justificativa"],
           },
-          description: "Lista de entregáveis mapeados para IDs reais do catálogo de serviços NoExcuse",
         },
       },
       required: ["projecoes", "entregaveis_calculadora"],
@@ -265,23 +260,36 @@ const GPS_PROMPT = `Você é um estrategista de negócios sênior da No Excuse D
 
 METODOLOGIA NO EXCUSE:
 - 5 Etapas Estratégicas: Conteúdo e Linha Editorial, Tráfego e Distribuição, Web e Conversão, Sales e Fechamento, Validação e Escala
-- Framework ECE: Estruturar infraestrutura → Coletar dados → Escalar o que funciona
+- Framework ECE: Estrutura → Coleta de dados → Escala
+
+IMPORTANTE — SCORE AUTOMÁTICO:
+Calcule o score de MARKETING (0-100) e o score COMERCIAL (0-100) automaticamente com base nas respostas do briefing, SEM depender de autoavaliação do cliente. Analise:
+- Score Marketing: conteúdo, tráfego, presença web, funil, métricas de marketing
+- Score Comercial: processo de vendas, CRM, follow-up, taxa de conversão, time comercial, métricas comerciais
+
+Use indicadores reais de mercado como benchmark:
+- Marketing: taxa de engajamento média 1-3%, CTR 1-2%, CPL referência por segmento
+- Comercial: taxa de conversão média 10-20%, tempo de fechamento, LTV/CAC > 3x
 
 GERE:
 1. RESUMO EXECUTIVO: 3-4 parágrafos sobre a empresa, momento atual e oportunidades
 2. RESUMO DO CLIENTE: Nome, segmento, proposta de valor, diferencial, modelo de negócio
-3. DIAGNÓSTICO GPS:
-   - Score geral 0-100 baseado nas 5 etapas
+3. SCORE MARKETING (0-100) e SCORE COMERCIAL (0-100)
+4. DIAGNÓSTICO GPS:
+   - Score geral (média ponderada dos dois scores)
    - Nível: Crítico (0-25), Básico (26-50), Intermediário (51-75), Avançado (76-100)
    - Radar com 5 eixos (Conteúdo, Tráfego, Web, Sales, Escala) score 0-100 cada
    - Problemas identificados por etapa (2-4 por etapa)
-   - Gargalos ECE (infraestrutura, coleta, escala)
+   - Gargalos ECE: Estrutura, Coleta de dados, Escala
    - 3-5 insights personalizados
-4. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
+5. PERSONA: Crie uma persona detalhada baseada nas respostas sobre público-alvo
+6. ANÁLISE DE CONCORRÊNCIA: Analise os concorrentes informados com pontos fortes, fracos e oportunidades
+7. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
 
 REGRAS:
 - Seja ESPECÍFICO com base nas respostas
 - Use CÁLCULOS REAIS baseados nos dados informados
+- Scores devem ser calculados pela IA, não informados pelo cliente
 - Sempre em português brasileiro
 - Valores monetários em R$
 
@@ -324,8 +332,9 @@ Para CADA etapa, gere: título, diagnóstico da situação atual, score 0-100, p
 
 REGRAS:
 - Ações devem ser ESPECÍFICAS e executáveis (não genéricas)
-- Métricas com valores numéricos reais baseados no segmento
+- Métricas com valores numéricos reais baseados no segmento e no mercado brasileiro
 - Entregáveis devem ser nomes de serviços do catálogo NoExcuse
+- Considere o histórico de problemas e tentativas do cliente
 - Sempre em português brasileiro
 
 Use a ferramenta generate_strategy para retornar.`;
@@ -334,7 +343,7 @@ const PROJECTIONS_PROMPT = `Você é um analista financeiro e estrategista da No
 
 GERE:
 1. UNIT ECONOMICS: CAC, LTV, LTV/CAC ratio, ticket médio, margem — CALCULE com base nos dados do briefing
-2. FUNIL DE CONVERSÃO: Etapas do funil com volumes e taxas de conversão realistas
+2. FUNIL DE CONVERSÃO: Etapas do funil com volumes e taxas de conversão realistas para o mercado brasileiro
 3. PROJEÇÃO MENSAL (6 meses): Leads, clientes, receita e investimento — crescimento progressivo
 4. CRESCIMENTO ACUMULADO (6 meses): Receita e clientes acumulados com recorrência se aplicável
 
@@ -346,15 +355,22 @@ Mapeie os serviços necessários usando EXATAMENTE estes IDs do catálogo:
 - Web: pagina-site, lp-link-bio, lp-vsl, lp-vendas, lp-captura, lp-ebook, alterar-contato, alterar-secao, ecommerce
 - Dados/CRM: config-crm
 
+INDICADORES REAIS DE REFERÊNCIA:
+- Taxa de conversão de site: 2-5% é bom, acima de 5% é excelente
+- CPL médio Brasil: R$15-50 dependendo do segmento
+- Taxa de fechamento: 10-20% é aceitável, acima de 20% é bom
+- LTV/CAC: acima de 3x é saudável
+- Margem de lucro serviços: 30-60%
+
 Para cada serviço: service_id (ID exato acima), service_name, quantity (número), justificativa.
 Escolha 5-12 serviços mais relevantes para o cliente baseado no diagnóstico.
 
 REGRAS:
-- CÁLCULOS REAIS baseados em ticket médio, faturamento, margem informados
-- Projeções realistas para o segmento
+- CÁLCULOS REAIS baseados em ticket médio, faturamento, metas informadas
+- Projeções realistas para o mercado brasileiro
 - IDs de serviço devem ser EXATOS conforme lista acima
 - Sempre em português brasileiro
-- Valores monetários em R$
+- Valores monetários em R$ formatados com separadores
 
 Use a ferramenta generate_strategy para retornar.`;
 
@@ -362,11 +378,20 @@ Use a ferramenta generate_strategy para retornar.`;
 
 function buildUserPrompt(answers: Record<string, unknown>, section: string): string {
   const answersText = Object.entries(answers)
-    .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+    .map(([k, v]) => {
+      if (Array.isArray(v)) {
+        // Handle competitor list
+        if (v.length > 0 && typeof v[0] === 'object') {
+          return `- ${k}: ${JSON.stringify(v)}`;
+        }
+        return `- ${k}: ${v.join(", ")}`;
+      }
+      return `- ${k}: ${v}`;
+    })
     .join("\n");
 
   return `Com base nas respostas do briefing do cliente abaixo, gere o ${
-    section === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO" :
+    section === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO (com scores automáticos de marketing e comercial, persona e análise de concorrência)" :
     section === "strategic" ? "PLANEJAMENTO ESTRATÉGICO DAS 5 ETAPAS" :
     "PROJEÇÕES FINANCEIRAS E ENTREGÁVEIS"
   }.
@@ -487,7 +512,7 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // If section is specified, handle single-section calls (legacy or selective)
+    // If section is specified, handle single-section calls
     if (section) {
       const configs: Record<string, { schema: any; prompt: string }> = {
         "gps": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
@@ -521,11 +546,17 @@ Deno.serve(async (req) => {
     console.log("Generating full strategy (3 parallel calls)...");
 
     const userPromptBase = Object.entries(answers)
-      .map(([k, v]) => `- ${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+      .map(([k, v]) => {
+        if (Array.isArray(v)) {
+          if (v.length > 0 && typeof v[0] === 'object') return `- ${k}: ${JSON.stringify(v)}`;
+          return `- ${k}: ${v.join(", ")}`;
+        }
+        return `- ${k}: ${v}`;
+      })
       .join("\n");
 
     const makePrompt = (s: string) => `Com base nas respostas do briefing do cliente abaixo, gere o ${
-      s === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO" :
+      s === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO (com scores automáticos de marketing e comercial, persona e análise de concorrência)" :
       s === "strategic" ? "PLANEJAMENTO ESTRATÉGICO DAS 5 ETAPAS" :
       "PROJEÇÕES FINANCEIRAS E ENTREGÁVEIS"
     }.\n\nRESPOSTAS DO BRIEFING:\n${userPromptBase}\n\nUse a ferramenta generate_strategy para retornar.`;
