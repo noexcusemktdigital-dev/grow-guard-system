@@ -475,15 +475,11 @@ function WelcomeScreen({ onManual, onUpload }: { onManual: () => void; onUpload:
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.8 }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+        className="flex justify-center"
       >
-        <Button size="lg" className="h-14 text-sm font-semibold" onClick={onManual}>
+        <Button size="lg" className="h-14 text-sm font-semibold w-full max-w-md" onClick={onManual}>
           <ClipboardCheck className="w-5 h-5 mr-2" />
           Preencher Diagnóstico
-        </Button>
-        <Button size="lg" variant="outline" className="h-14 text-sm font-semibold" onClick={onUpload}>
-          <FileUp className="w-5 h-5 mr-2" />
-          Upload de Briefing
         </Button>
       </motion.div>
     </motion.div>
