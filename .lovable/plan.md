@@ -1,51 +1,92 @@
 
 
-## Plano — Correção completa do PDF do Diagnóstico Estratégico
+## Plano — Redesign do Acompanhamento de Clientes (Ferramenta Manual do Gestor)
 
-### Problemas identificados (análise visual das 9 páginas)
+### Mudança conceitual
 
-1. **Capa (pag 1)**: Logo achatada (forçada em 55x18mm sem respeitar aspect ratio). Scores e dados desnecessários na capa. Grande espaço vazio. O usuário quer: logo + título + data apenas.
-2. **KPIs (pag 2)**: Texto transborda dos cards — valores longos estouram a largura e sobrepõem outros elementos.
-3. **Emojis (pag 3, 6-8)**: jsPDF não renderiza emojis (🏗️📊📈📦). Aparecem como "Ø<ß×þ" e "Ø=ÜË".
-4. **Texto cortado à direita (pag 4-7)**: Ações Estratégicas e Concorrência usam checkmarks que jsPDF renderiza com espaçamento largo, cortando texto na margem direita.
-5. **Páginas quase vazias (pag 5, 9)**: Conteúdo "sobra" de uma seção e deixa o resto da página em branco.
-6. **Ações Estratégicas**: O caractere "✓" usado nos bullets é renderizado com letter-spacing distorcido no Helvetica do jsPDF.
+A ferramenta atual vincula ciclos a uma estratégia e tem geração por IA. O novo modelo é uma **plataforma de preenchimento manual** organizada por **pastas de clientes**, onde o gestor de performance preenche 5 seções que geram automaticamente uma apresentação padronizada em PDF.
 
-### Correções no `strategyPdfGenerator.ts`
+### Estrutura de dados
 
-#### 1. Capa simplificada
-- Carregar logo e calcular aspect ratio real da imagem (via `Image()` no browser) em vez de forçar dimensões fixas
-- Remover GPS Score, Score Marketing/Comercial, segmento da capa
-- Manter apenas: logo (proporção correta, centralizada ou topo-esquerda), título "DIAGNÓSTICO ESTRATÉGICO", nome da empresa, e data. Fundo preto com accent vermelho
+**Migração SQL:**
+- Adicionar coluna `client_name text` na tabela `client_followups`
+- Tornar `strategy_id` nullable (não mais obrigatório)
+- Remover o unique index `client_followups_strategy_month_idx` e criar novo por `(organization_id, client_name, month_ref)`
 
-#### 2. KPIs — Wrapping seguro
-- Usar `splitTextToSize` para valores dos KPIs com largura máxima do card
-- Reduzir font size do valor quando o texto for longo (fallback para 8pt)
-- Adicionar altura dinâmica ao card baseado no número de linhas
+**Novo schema JSONB do `plano_proximo`** (5 seções):
 
-#### 3. Substituir emojis por texto
-- `🏗️ ESTRUTURA` → `ESTRUTURA`
-- `📊 COLETA DE DADOS` → `COLETA DE DADOS`
-- `📈 ESCALA` → `ESCALA`
-- `📦 ENTREGÁVEIS` → `ENTREGÁVEIS`
-- `⚠ PROBLEMAS` → `PROBLEMAS IDENTIFICADOS`
-- Usar um pequeno quadrado colorido (`roundedRect`) como ícone visual no lugar do emoji
+```text
+1. analise       → metricas, destaques, gaps, observacoes (já existe)
+2. conteudo      → roteiros[], artes[], qtd_postagens, tipo_conteudo[], 
+                    linha_editorial, referencias[], necessidades_cliente[]
+3. trafego       → plataformas[{nome, tipo_campanha, conteudo_campanha, 
+                    publicos, objetivo, investimento, metricas_meta}]
+4. web           → secoes[{titulo, motivo, necessidades_cliente}]
+5. vendas        → analise_crm, estrategias[], melhorias[]
+```
 
-#### 4. Substituir "✓" por ">" ou "-" nos bullets
-- O caractere "✓" causa espaçamento largo no Helvetica do jsPDF
-- Trocar por traço ou seta simples: `"> ${acao}"` ou `"- ${acao}"`
+### Interface — 3 níveis de navegação
 
-#### 5. Wrapping correto em todas as seções de texto
-- Garantir que `splitTextToSize` usa `CW - margem_interna` em todas as seções (Ações, Concorrência, Persona)
-- Na seção de Ações Estratégicas, usar margem `CW - 12` em vez do valor atual que ignora indentação
+```text
+┌─────────────────────────────────────────┐
+│  ACOMPANHAMENTO DE CLIENTES             │
+│                                         │
+│  [+ Nova Pasta de Cliente]              │
+│                                         │
+│  📁 Cliente A (3 ciclos)                │
+│  📁 Cliente B (1 ciclo)                 │
+│  📁 Cliente C (5 ciclos)                │
+└─────────────────────────────────────────┘
+         ↓ click na pasta
+┌─────────────────────────────────────────┐
+│  ← Voltar    Cliente A                  │
+│  [+ Novo Acompanhamento]                │
+│                                         │
+│  📄 Abril 2026 — Rascunho              │
+│  📄 Março 2026 — Apresentado           │
+│  📄 Fevereiro 2026 — Aprovado          │
+└─────────────────────────────────────────┘
+         ↓ click no ciclo
+┌─────────────────────────────────────────┐
+│  FORMULÁRIO DE 5 ABAS (preenchimento)   │
+│  [Análise] [Conteúdo] [Tráfego]         │
+│  [Web] [Vendas]                         │
+│                                         │
+│  Botões: Salvar | Exportar PDF          │
+└─────────────────────────────────────────┘
+```
 
-#### 6. Evitar páginas vazias
-- Na seção de Concorrência (que é longa e transborda), calcular altura real antes de inserir e usar `ensureSpace` com estimativa melhor
-- Na seção de entregáveis, agrupar melhor para não deixar 2 itens na última página com 80% vazio
+### Detalhes das 5 abas do formulário
 
-### Arquivo afetado
+1. **Análise do Mês** — Métricas (leads, conversoes, trafego, engajamento, faturamento), pontos positivos (lista), pontos negativos (lista), observações gerais
+
+2. **Conteúdo** — Dividido em Orgânico e Pago. Campos: roteiros (lista de textos), artes/criativos (lista), quantidade de postagens, tipos de conteúdo (multi-select: reels, stories, carrossel, etc.), linha editorial (textarea), referências (lista de links/descrições), necessidades do cliente (lista)
+
+3. **Tráfego Pago** — Tabela dinâmica por plataforma (Meta, Google, TikTok, LinkedIn). Para cada: tipo de campanha, o que vai rodar, públicos-alvo, objetivo, investimento (R$), divisão do investimento, métricas-meta a alcançar
+
+4. **Web / Landing Pages** — Lista de seções/páginas a criar ou alterar. Para cada: título da seção, motivo/justificativa, o que precisa do cliente para executar
+
+5. **Vendas / CRM** — Análise do CRM (textarea), estratégias propostas (lista), melhorias sugeridas (lista)
+
+### PDF gerado automaticamente
+
+- Capa com logo No Excuse + nome do cliente + mês de referência
+- 5 seções correspondentes às 5 abas, formatadas em A4 com layout profissional
+- Dual-theme: Análise em fundo claro, Plano (Conteúdo/Tráfego/Web/Vendas) em fundo escuro
+- Gerado via jsPDF programático (mesmo padrão da estratégia)
+
+### O que é removido
+
+- Vínculo obrigatório com `franqueado_strategies` (select de estratégia)
+- Botão "Gerar com IA" e chamada à edge function `generate-followup`
+- Checklist de entregas vindas da estratégia
+
+### Arquivos afetados
 
 | Arquivo | Acao |
 |---------|------|
-| `src/lib/strategyPdfGenerator.ts` | Reescrever `drawCoverPage`, corrigir emojis/checkmarks, fix wrapping KPIs e Ações, melhorar estimativa de `ensureSpace` |
+| Migração SQL | `client_name` column, nullable `strategy_id`, novo unique index |
+| `src/hooks/useClientFollowups.ts` | Refatorar interfaces (novo schema 5 seções), queries por `client_name`, listar pastas distintas |
+| `src/pages/franqueado/FranqueadoAcompanhamento.tsx` | Reescrever: navegação por pastas → ciclos → formulário 5 abas, remover IA, novo PDF |
+| `src/lib/followupPdfGenerator.ts` | Novo gerador de PDF programático para o acompanhamento |
 
