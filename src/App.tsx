@@ -195,6 +195,7 @@ function App() {
                   <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
                   <Route path="estrategia" element={<FranqueadoEstrategia />} />
                   <Route path="propostas" element={<FranqueadoPropostas />} />
+                  <Route path="acompanhamento" element={<PageBoundary><FranqueadoAcompanhamento /></PageBoundary>} />
                   <Route path="crm" element={<FranqueadoCRM />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
                   <Route path="materiais" element={<FranqueadoMateriais />} />
