@@ -176,6 +176,7 @@ function App() {
                   <Route path="propostas" element={<FranqueadoraPropostas />} />
                   <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
                   <Route path="estrategia" element={<FranqueadoEstrategia />} />
+                  <Route path="acompanhamento" element={<PageBoundary><FranqueadoAcompanhamento /></PageBoundary>} />
                   <Route path="perfil" element={<FranqueadoraPerfil />} />
                   <Route path="playbooks" element={<Playbooks />} />
                   <Route path="candidatos" element={<FranqueadoraCandidatos />} />
