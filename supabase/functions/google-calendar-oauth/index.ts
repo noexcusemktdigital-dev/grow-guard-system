@@ -26,7 +26,7 @@ serve(async (req) => {
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const { action, code, redirect_uri, client_id, client_secret } = await req.json();
+    const { action, code, redirect_uri, client_id, client_secret, portal } = await req.json();
 
     // ── Save credentials (step before OAuth) ──
     if (action === "save_credentials") {
