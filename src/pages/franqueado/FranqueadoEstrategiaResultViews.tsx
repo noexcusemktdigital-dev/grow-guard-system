@@ -697,7 +697,7 @@ function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyRe
             <LineChart className="w-5 h-5 text-red-500" />
             <h3 className="text-lg font-bold text-white">Crescimento Acumulado</h3>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" ref={lineChartRef}>
             <ResponsiveContainer width="100%" height={250}>
               <ReLineChart data={projecoes.crescimento_acumulado.map(p => ({ ...p, nome: `Mês ${p.mes}` }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
