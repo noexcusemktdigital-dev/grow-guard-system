@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, RefreshCw, HelpCircle, Mic, MicOff, Plus, Trash2, Upload } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Sparkles, RefreshCw, HelpCircle, Mic, MicOff, Plus, Trash2, Upload, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
 import type { DiagField, DiagSection } from "./FranqueadoEstrategiaData";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const STEP_COLORS = [
   "from-slate-500 to-slate-600",
@@ -31,6 +32,8 @@ const STEP_COLORS = [
   "from-rose-500 to-red-500",
   "from-indigo-500 to-blue-600",
 ];
+
+const MAX_RECORDING_SECONDS = 120;
 
 // ── Currency Mask ─────────────────────────────────────────────
 
@@ -71,25 +74,51 @@ function CurrencyInput({ value, onChange, placeholder }: { value: string; onChan
 
 function AudioTextField({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       chunksRef.current = [];
+      setElapsed(0);
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       recorder.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         transcribeAudio(blob);
       };
+
       recorder.start();
       setMediaRecorder(recorder);
       setRecording(true);
+
+      timerRef.current = setInterval(() => {
+        setElapsed(prev => {
+          const next = prev + 1;
+          if (next >= MAX_RECORDING_SECONDS) {
+            recorder.stop();
+            setRecording(false);
+            toast.info("Limite de 2 minutos atingido. Transcrevendo...");
+          }
+          return next;
+        });
+      }, 1000);
+
       toast.info("Gravando áudio... Clique em parar quando terminar.");
     } catch {
       toast.error("Não foi possível acessar o microfone. Verifique as permissões.");
@@ -103,10 +132,35 @@ function AudioTextField({ value, onChange, placeholder }: { value: string; onCha
     setRecording(false);
   };
 
-  const transcribeAudio = async (_blob: Blob) => {
-    // For now, just inform user to type — full transcription would require a dedicated edge function
-    toast.info("Áudio gravado! Por enquanto, transcreva manualmente o conteúdo no campo de texto.");
+  const transcribeAudio = async (blob: Blob) => {
+    setTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+
+      const { data, error } = await supabase.functions.invoke("transcribe-audio", {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      const text = data?.text?.trim();
+      if (text) {
+        onChange(value ? `${value}\n\n${text}` : text);
+        toast.success("Áudio transcrito com sucesso!");
+      } else {
+        toast.warning("Não foi possível identificar fala no áudio. Tente novamente ou escreva manualmente.");
+      }
+    } catch (err) {
+      console.error("Transcription error:", err);
+      toast.error("Erro ao transcrever áudio. Tente novamente ou escreva manualmente.");
+    } finally {
+      setTranscribing(false);
+      setElapsed(0);
+    }
   };
+
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   return (
     <div className="space-y-2">
@@ -114,21 +168,48 @@ function AudioTextField({ value, onChange, placeholder }: { value: string; onCha
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || "Escreva aqui..."}
-        rows={5}
-        className="min-h-[120px]"
+        rows={6}
+        className="min-h-[140px]"
+        disabled={transcribing}
       />
+
+      {recording && (
+        <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 border border-destructive/20">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+          </span>
+          <span className="text-sm font-medium text-destructive">
+            Gravando {formatTime(elapsed)} / {formatTime(MAX_RECORDING_SECONDS)}
+          </span>
+          <div className="flex-1 h-1.5 rounded-full bg-destructive/20 overflow-hidden">
+            <div
+              className="h-full bg-destructive rounded-full transition-all duration-1000"
+              style={{ width: `${(elapsed / MAX_RECORDING_SECONDS) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {transcribing && (
+        <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-sm font-medium text-primary">Transcrevendo áudio...</span>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         {recording ? (
           <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
             <MicOff className="w-4 h-4 mr-1" /> Parar Gravação
           </Button>
         ) : (
-          <Button type="button" variant="outline" size="sm" onClick={startRecording}>
+          <Button type="button" variant="outline" size="sm" onClick={startRecording} disabled={transcribing}>
             <Mic className="w-4 h-4 mr-1" /> Gravar Áudio
           </Button>
         )}
         <span className="text-[10px] text-muted-foreground">
-          Grave um áudio ou escreva diretamente no campo acima
+          ⚠️ Áudio de até 2 minutos · Grave um áudio ou escreva diretamente
         </span>
       </div>
     </div>
@@ -337,7 +418,7 @@ export function DiagnosticForm({
         {step === 0 && (
           <div>
             <FieldLabel label="Título do Diagnóstico" optional tooltip="Opcional. Se não preencher, será gerado automaticamente." />
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Diagnóstico Clínica Dr. Silva" />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Diagnóstico Clínica Dr. Silva, Estratégia Restaurante Sabor & Arte, Análise Loja Virtual TechStore" />
           </div>
         )}
 
