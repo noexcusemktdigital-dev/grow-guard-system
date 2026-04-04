@@ -113,6 +113,7 @@ Deno.serve(async (req) => {
                 byEvents: true,
                 base64: true,
                 events: ["QRCODE_UPDATED", "CONNECTION_UPDATE", "MESSAGES_UPSERT", "MESSAGES_UPDATE"],
+                headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
               },
             }),
           });
