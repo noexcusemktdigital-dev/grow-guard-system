@@ -70,13 +70,26 @@ export function StrategyResultView({
   onSendToCalculator?: () => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const radarRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
+  const lineChartRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const isNewFormat = !!result.diagnostico_gps;
   const isLegacyNewFormat = !!result.diagnostico_negocio;
 
   const handleExportPdf = async () => {
-    await exportProfessionalPdf(contentRef.current!, title || "Planejamento Estratégico", result);
-    toast.success("PDF gerado com sucesso!");
+    toast.info("Gerando PDF profissional...");
+    try {
+      await exportStrategyPdf(result, title || "Planejamento Estratégico", {
+        radar: radarRef.current || undefined,
+        bar: barChartRef.current || undefined,
+        line: lineChartRef.current || undefined,
+      });
+      toast.success("PDF gerado com sucesso!");
+    } catch (e) {
+      console.error("PDF error:", e);
+      toast.error("Erro ao gerar PDF");
+    }
   };
 
   const handleGoToCalculator = () => {
@@ -85,18 +98,6 @@ export function StrategyResultView({
     }
     navigate("/franqueado/propostas");
   };
-
-  return (
-    <div className="space-y-4">
-      <div ref={contentRef}>
-        {isNewFormat ? (
-          <NewStrategyResultView result={result} />
-        ) : isLegacyNewFormat ? (
-          <LegacyNewFormatView result={result} />
-        ) : (
-          <LegacyStrategyResultView result={result} />
-        )}
-      </div>
 
       {showExport && (
         <div className="bg-zinc-950 rounded-2xl p-6 -mx-2">
