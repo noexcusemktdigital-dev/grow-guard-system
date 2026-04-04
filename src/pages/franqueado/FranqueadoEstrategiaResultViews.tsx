@@ -4,6 +4,7 @@ import {
   CheckCircle2, FileText, ClipboardCheck, Target, AlertTriangle,
   TrendingUp, Package, Layers, Map, BarChart3, Calculator, Download,
   ChevronDown, ChevronUp, Zap, Globe, ShoppingCart, LineChart,
+  Users, Crosshair, Award, Shield,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
