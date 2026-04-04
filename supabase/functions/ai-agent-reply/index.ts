@@ -481,12 +481,18 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
         .select("user_id, profiles(full_name)")
         .eq("organization_id", organization_id);
 
-      const memberNames = (teamMembers || []).map((m: { profiles?: { full_name?: string }; user_id: string }) => m.profiles?.full_name || "Sem nome").filter(Boolean);
+      const memberNames = (teamMembers || []).map((m: any) => {
+        const p = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+        return p?.full_name || "Sem nome";
+      }).filter(Boolean);
 
       let assignedName = "Nenhum atribuído";
       if (leadData?.assigned_to) {
-        const assigned = (teamMembers || []).find((m: { user_id: string; profiles?: { full_name?: string } }) => m.user_id === leadData.assigned_to);
-        if (assigned) assignedName = assigned.profiles?.full_name || "Sem nome";
+        const assigned = (teamMembers || []).find((m: any) => m.user_id === leadData.assigned_to);
+        if (assigned) {
+          const p = Array.isArray(assigned.profiles) ? assigned.profiles[0] : assigned.profiles;
+          assignedName = p?.full_name || "Sem nome";
+        }
       }
 
       teamContext += `\n\nInformações da equipe:`;
