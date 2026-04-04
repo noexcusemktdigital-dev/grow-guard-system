@@ -211,14 +211,24 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
 
 function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?: Record<string, unknown>; onEditComplete?: () => void }) {
   const [searchParams] = useSearchParams();
-  const leadIdFromUrl = searchParams.get("lead_id");
-  const { data: leads } = useCrmLeads();
+  const strategyIdFromUrl = searchParams.get("strategy_id");
+  const { data: strategies } = useStrategies();
   const { createProposal, updateProposal } = useCrmProposalMutations();
+  const { surplusType, surplusValue, upsert: upsertSettings } = useCalculatorSettings();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
-  const [leadId, setLeadId] = useState(leadIdFromUrl || "");
+  const [strategyId, setStrategyId] = useState(strategyIdFromUrl || "");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [localSurplusType, setLocalSurplusType] = useState<"fixed" | "percentage">(surplusType);
+  const [localSurplusValue, setLocalSurplusValue] = useState(String(surplusValue));
   const proposalRef = useRef<HTMLDivElement>(null);
+
+  // Sync settings from DB
+  useEffect(() => {
+    setLocalSurplusType(surplusType);
+    setLocalSurplusValue(String(surplusValue));
+  }, [surplusType, surplusValue]);
 
   const {
     duration, selectedServices, clientName, paymentOption,
@@ -226,7 +236,18 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
     toggleService, updateServiceQuantity, updateServicePackage,
     updateYoutubeMinutes, clearSelection, isServiceSelected,
     getServiceSelection, totals, getSelectedServicesByModule,
-  } = useCalculator();
+  } = useCalculator(surplusValue > 0 ? { type: surplusType, value: surplusValue } : undefined);
+
+  // Auto-fill client name from strategy
+  useEffect(() => {
+    if (strategyId && strategyId !== "none" && strategies) {
+      const strat = strategies.find(s => s.id === strategyId);
+      if (strat?.title) {
+        const name = strat.title.replace(/^Diagnóstico\s*-?\s*/i, "").trim();
+        if (name) setClientName(name);
+      }
+    }
+  }, [strategyId, strategies]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (editingProposal?.content) {
@@ -234,8 +255,8 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
       if (c.client_name) setClientName(c.client_name);
       if (c.duration) setDuration(c.duration);
       if (c.payment_option) setPaymentOption(c.payment_option);
-      if (editingProposal.lead_id) setLeadId(editingProposal.lead_id);
-    } else if (!leadIdFromUrl) {
+      if (editingProposal.strategy_id) setStrategyId(editingProposal.strategy_id);
+    } else if (!strategyIdFromUrl) {
       clearSelection();
     }
   }, [editingProposal]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -247,6 +268,14 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
 
   const handleClear = () => { clearSelection(); setShowProposal(false); };
 
+  const handleSaveSurplus = () => {
+    const val = parseFloat(localSurplusValue) || 0;
+    upsertSettings.mutate({ surplus_type: localSurplusType, surplus_value: val }, {
+      onSuccess: () => { toast.success("Configuração de excedente salva!"); setSettingsOpen(false); },
+      onError: () => toast.error("Erro ao salvar configuração"),
+    });
+  };
+
   const handleSave = () => {
     const title = clientName ? `Proposta - ${clientName}` : `Proposta - ${new Date().toLocaleDateString("pt-BR")}`;
     const selectedByModule = getSelectedServicesByModule();
@@ -255,7 +284,8 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
     );
     const payload = {
       title, value: totals.totalPeriod, status: "draft" as const,
-      lead_id: leadId || null, items, payment_terms: paymentOption,
+      strategy_id: (strategyId && strategyId !== "none") ? strategyId : null,
+      items, payment_terms: paymentOption,
       content: { client_name: clientName, duration, payment_option: paymentOption, services: selectedServices } as Record<string, unknown>,
     };
     if (editingProposal) {
@@ -272,21 +302,70 @@ function CalculadoraTab({ editingProposal, onEditComplete }: { editingProposal?:
   };
 
   const hasSelections = selectedServices.length > 0;
+  const completedStrategies = (strategies ?? []).filter(s => s.status === "completed");
 
   return (
     <div className="space-y-8">
+      {/* Strategy link */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Vincular ao Lead (opcional)</label>
-        <Select value={leadId} onValueChange={setLeadId}>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Vincular à Estratégia (opcional)</label>
+        <Select value={strategyId} onValueChange={setStrategyId}>
           <SelectTrigger className="h-9 max-w-sm"><SelectValue placeholder="Sem vínculo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Sem vínculo</SelectItem>
-            {(leads ?? []).map((l) => (
-              <SelectItem key={l.id} value={l.id}>{l.name} {l.company ? `- ${l.company}` : ""}</SelectItem>
+            {completedStrategies.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+
+      {/* Surplus config panel */}
+      <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+            <Settings className="w-4 h-4" />
+            Configuração de Excedente
+            {surplusValue > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {surplusType === "percentage" ? `${surplusValue}%` : formatBRL(surplusValue)} ativo
+              </Badge>
+            )}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <Card className="p-4 mt-2 space-y-3 border-dashed">
+            <p className="text-xs text-muted-foreground">Defina um valor de excedente que será aplicado invisível sobre todos os preços da calculadora.</p>
+            <div className="flex items-end gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Tipo</label>
+                <Select value={localSurplusType} onValueChange={(v) => setLocalSurplusType(v as "fixed" | "percentage")}>
+                  <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage"><span className="flex items-center gap-1"><Percent className="w-3 h-3" /> Percentual</span></SelectItem>
+                    <SelectItem value="fixed"><span className="flex items-center gap-1"><DollarSign className="w-3 h-3" /> Valor fixo (R$)</span></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Valor</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step={localSurplusType === "percentage" ? "1" : "0.01"}
+                  value={localSurplusValue}
+                  onChange={(e) => setLocalSurplusValue(e.target.value)}
+                  className="h-9 w-32"
+                  placeholder={localSurplusType === "percentage" ? "Ex: 15" : "Ex: 100"}
+                />
+              </div>
+              <Button size="sm" onClick={handleSaveSurplus} disabled={upsertSettings.isPending}>
+                Salvar
+              </Button>
+            </div>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
 
       <section>
         <div className="mb-4 text-center">
