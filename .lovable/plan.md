@@ -1,62 +1,35 @@
 
 
-## Plano — Bloqueio de WhatsApp até pagamento + Atualização de status em tempo real
+## Plano — Corrigir erro "Organização não encontrada" no Google Calendar OAuth
 
 ### Problema
 
-1. O webhook do Asaas **funciona** e atualiza `billing_status = 'active'`, mas o frontend não recarrega os dados da instância após o pagamento — o badge continua mostrando "Pagamento pendente".
-2. Não existe bloqueio real do WhatsApp enquanto `billing_status !== 'active'` — o chat funciona mesmo sem pagar.
+Na edge function `google-calendar-oauth`, a chamada `get_user_org_id` na linha 41 não passa o parâmetro `_portal`. Como a função SQL possui múltiplas sobrecargas, sem o parâmetro ela assume o contexto "franchise", falhando para clientes SaaS.
+
+### Solução
+
+Adicionar `_portal: "saas"` à chamada RPC no action `save_credentials`. Para ser mais robusto, receber o `portal` do frontend no body da requisição (o wizard já roda em `/cliente/agenda`, então sabemos que é SaaS), com fallback para `"saas"`.
 
 ### Mudanças
 
-#### 1. `src/hooks/useWhatsApp.ts` — Bloquear instância não paga
-
-Na função `useWhatsAppInstance()`, filtrar apenas instâncias com `billing_status = 'active'` ou `billing_status IS NULL` (instâncias antigas sem cobrança):
-
-- Instância com `billing_status = 'pending'` **não será retornada** como conectada
-- Isso bloqueia automaticamente o chat, envio de mensagens e toda a UI que depende de `instance`
-
-#### 2. `src/pages/cliente/ClienteChat.tsx` — Tela de bloqueio por pagamento pendente
-
-Adicionar verificação: se existe instância com `status = 'connected'` mas `billing_status = 'pending'`, exibir tela específica:
-- Mensagem: "Seu WhatsApp está aguardando confirmação de pagamento"
-- Badge amarela: "Pagamento pendente"
-- Botão para ir a Integrações
-
-#### 3. `src/pages/cliente/ClienteIntegracoesHelpers.tsx` — Realtime para billing_status
-
-Adicionar subscription Realtime na tabela `whatsapp_instances` para que, quando o webhook do Asaas atualizar `billing_status` para `active`, o frontend atualize automaticamente sem refresh manual.
-
-#### 4. Migração SQL — Habilitar Realtime para `whatsapp_instances`
-
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.whatsapp_instances;
-```
-
-#### 5. `src/components/cliente/WhatsAppSetupWizard.tsx` — Polling de status no step de pagamento
-
-No step 4 (pagamento), adicionar polling a cada 5s verificando `billing_status` da instância. Quando mudar para `active`:
-- Mostrar mensagem de sucesso
-- Habilitar botão "Concluir" para fechar o wizard
-
-### Fluxo completo após as mudanças
-
-```text
-1. Usuário conecta WhatsApp → billing_status = 'pending'
-2. Chat mostra tela "Pagamento pendente" (bloqueado)
-3. Wizard exibe QR PIX / boleto
-4. Usuário paga → Asaas webhook → billing_status = 'active'
-5. Realtime atualiza frontend → badge muda para "Pago"
-6. Chat desbloqueia automaticamente
-```
-
-### Arquivos afetados
-
 | Arquivo | Ação |
 |---------|------|
-| Migração SQL | Realtime para `whatsapp_instances` |
-| `src/hooks/useWhatsApp.ts` | Filtrar instâncias pendentes |
-| `src/pages/cliente/ClienteChat.tsx` | Tela de bloqueio por pagamento |
-| `src/pages/cliente/ClienteIntegracoesHelpers.tsx` | Realtime subscription |
-| `src/components/cliente/WhatsAppSetupWizard.tsx` | Polling no step de pagamento |
+| `supabase/functions/google-calendar-oauth/index.ts` | Linha 41: adicionar `_portal` ao RPC. Extrair `portal` do body da request com default `"saas"` |
+| Deploy da edge function | `google-calendar-oauth` |
+
+### Detalhe técnico
+
+```typescript
+// Antes (linha 41):
+const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
+
+// Depois:
+const portalCtx = portal || "saas";
+const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portalCtx });
+```
+
+E no destructuring do body (linha 30), adicionar `portal`:
+```typescript
+const { action, code, redirect_uri, client_id, client_secret, portal } = await req.json();
+```
 
