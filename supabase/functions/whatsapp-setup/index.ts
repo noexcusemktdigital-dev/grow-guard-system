@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
       }
 
       const cleanBaseUrl = (baseUrl || Deno.env.get("EVOLUTION_API_URL") || "https://evo.grupolamadre.com.br").replace(/\/+$/, "");
-      const effectiveApiKey = apiKey || Deno.env.get("EVOLUTION_API_KEY") || "izitech_evo_key_2026";
+      const effectiveApiKey = apiKey || Deno.env.get("EVOLUTION_API_KEY") || "";
       const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook/${orgId}`;
 
       // Step 1: Create instance on Evolution API (ignore if already exists)
