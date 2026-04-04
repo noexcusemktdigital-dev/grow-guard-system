@@ -6,6 +6,7 @@ import {
   type ClientFollowup,
   type FollowupAnalise,
   type FollowupPlano,
+  type AnaliseSubSection,
   type ConteudoSection,
   type TrafegoPlataforma,
   type WebSecao,
@@ -16,13 +17,16 @@ import { MONTH_NAMES } from "@/lib/formatting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   FolderOpen, Plus, ChevronLeft, Save, FileDown, XCircle,
   BarChart3, Megaphone, TrendingUp, Globe, Target,
+  ThumbsUp, ThumbsDown, Eye, Palette, MousePointerClick, ShoppingCart,
+  ArrowUpRight, ArrowDownRight, Sparkles, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,8 +63,111 @@ function ListEditor({ items, onChange, placeholder = "Descreva..." }: { items: s
   );
 }
 
+// ─── Metric input card ───
+function MetricInput({ label, value, onChange, icon: Icon }: { label: string; value: number; onChange: (v: number) => void; icon?: React.ElementType }) {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+      {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+      <div className="flex-1 min-w-0">
+        <label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider block">{label}</label>
+        <Input type="number" value={value || 0} onChange={(e) => onChange(Number(e.target.value))} className="h-8 mt-0.5 text-base font-semibold border-0 bg-transparent p-0 shadow-none focus-visible:ring-0" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Analysis sub-section editor ───
+function AnaliseAreaEditor({
+  title,
+  description,
+  icon: Icon,
+  accentColor,
+  metricLabels,
+  metricIcons,
+  section,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  accentColor: string;
+  metricLabels: string[];
+  metricIcons?: Record<string, React.ElementType>;
+  section: AnaliseSubSection;
+  onChange: (s: AnaliseSubSection) => void;
+}) {
+  const metricas = section.metricas || {};
+  const positivos = section.positivos || [""];
+  const negativos = section.negativos || [""];
+
+  return (
+    <Card className="overflow-hidden">
+      <div className={`h-1 ${accentColor}`} />
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-lg ${accentColor} bg-opacity-10 flex items-center justify-center`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <CardTitle className="text-base">{title}</CardTitle>
+            <CardDescription className="text-xs">{description}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Metrics */}
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Métricas do Mês</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {metricLabels.map((label) => (
+              <MetricInput
+                key={label}
+                label={label}
+                value={metricas[label] || 0}
+                onChange={(v) => onChange({ ...section, metricas: { ...metricas, [label]: v } })}
+                icon={metricIcons?.[label]}
+              />
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Positivos & Negativos side by side */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <ThumbsUp className="w-4 h-4 text-green-500" />
+              <label className="text-xs font-semibold text-green-600 uppercase tracking-wider">Pontos Positivos</label>
+            </div>
+            <ListEditor items={positivos} onChange={(v) => onChange({ ...section, positivos: v })} placeholder="O que deu certo..." />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <ThumbsDown className="w-4 h-4 text-destructive" />
+              <label className="text-xs font-semibold text-destructive uppercase tracking-wider">Pontos Negativos</label>
+            </div>
+            <ListEditor items={negativos} onChange={(v) => onChange({ ...section, negativos: v })} placeholder="O que precisa melhorar..." />
+          </div>
+        </div>
+
+        {/* Observações */}
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Observações</label>
+          <Textarea
+            value={section.observacoes || ""}
+            onChange={(e) => onChange({ ...section, observacoes: e.target.value })}
+            rows={2}
+            placeholder="Observações específicas desta área..."
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── LEVEL 1: Client Folders ───
-function FolderListView({ folders, onSelect, onNew }: { folders: { name: string; count: number }[]; onSelect: (name: string) => void; onNew: () => void }) {
+function FolderListView({ folders, onSelect }: { folders: { name: string; count: number }[]; onSelect: (name: string) => void }) {
   const [newName, setNewName] = useState("");
   const [showInput, setShowInput] = useState(false);
 
@@ -147,11 +254,14 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
   const [monthRef, setMonthRef] = useState(existing?.month_ref || getCurrentMonthRef());
   const [status, setStatus] = useState(existing?.status || "draft");
 
-  // Tab 1: Análise
-  const [metricas, setMetricas] = useState(existing?.analise?.metricas || { leads: 0, conversoes: 0, trafego: 0, engajamento: 0, faturamento: 0 });
-  const [destaques, setDestaques] = useState<string[]>(existing?.analise?.destaques || [""]);
-  const [gaps, setGaps] = useState<string[]>(existing?.analise?.gaps || [""]);
-  const [observacoes, setObservacoes] = useState(existing?.analise?.observacoes || "");
+  // Tab 1: Análise (4 sub-seções)
+  const [analiseConteudo, setAnaliseConteudo] = useState<AnaliseSubSection>(existing?.analise?.conteudo || { metricas: {}, positivos: [""], negativos: [""], observacoes: "" });
+  const [analiseTrafego, setAnaliseTrafego] = useState<AnaliseSubSection>(existing?.analise?.trafego || { metricas: {}, positivos: [""], negativos: [""], observacoes: "" });
+  const [analiseWeb, setAnaliseWeb] = useState<AnaliseSubSection>(existing?.analise?.web || { metricas: {}, positivos: [""], negativos: [""], observacoes: "" });
+  const [analiseVendas, setAnaliseVendas] = useState<AnaliseSubSection>(existing?.analise?.vendas || { metricas: {}, positivos: [""], negativos: [""], observacoes: "" });
+  const [resumoGeral, setResumoGeral] = useState(existing?.analise?.resumo_geral || "");
+  const [avancosMes, setAvancosMes] = useState<string[]>(existing?.analise?.avancos_mes || [""]);
+  const [pontosMelhorar, setPontosMelhorar] = useState<string[]>(existing?.analise?.pontos_melhorar || [""]);
 
   // Tab 2: Conteúdo
   const [conteudo, setConteudo] = useState<ConteudoSection>(existing?.plano_proximo?.conteudo || {
@@ -174,28 +284,31 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
 
   const CONTENT_TYPES = ["Reels", "Stories", "Carrossel", "Post Estático", "Vídeo Longo", "Live", "Blog"];
 
+  const buildAnalise = (): FollowupAnalise => ({
+    conteudo: analiseConteudo,
+    trafego: analiseTrafego,
+    web: analiseWeb,
+    vendas: analiseVendas,
+    resumo_geral: resumoGeral,
+    avancos_mes: avancosMes.filter(Boolean),
+    pontos_melhorar: pontosMelhorar.filter(Boolean),
+  });
+
+  const buildPlano = (): FollowupPlano => ({
+    conteudo,
+    trafego: { plataformas },
+    web: { secoes: webSecoes },
+    vendas,
+  });
+
   const handleSave = () => {
-    const analise: FollowupAnalise = { metricas, destaques: destaques.filter(Boolean), gaps: gaps.filter(Boolean), observacoes };
-    const plano: FollowupPlano = {
-      conteudo,
-      trafego: { plataformas },
-      web: { secoes: webSecoes },
-      vendas,
-    };
-    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise, plano_proximo: plano });
+    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise: buildAnalise(), plano_proximo: buildPlano() });
   };
 
   const handleExportPdf = async () => {
     toast.info("Gerando PDF...");
-    const analise: FollowupAnalise = { metricas, destaques: destaques.filter(Boolean), gaps: gaps.filter(Boolean), observacoes };
-    const plano: FollowupPlano = {
-      conteudo,
-      trafego: { plataformas },
-      web: { secoes: webSecoes },
-      vendas,
-    };
     try {
-      await generateFollowupPdf(clientName, monthRef, analise, plano);
+      await generateFollowupPdf(clientName, monthRef, buildAnalise(), buildPlano());
       toast.success("PDF exportado!");
     } catch (e: any) {
       toast.error("Erro ao gerar PDF: " + (e.message || ""));
@@ -255,36 +368,106 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
           <TabsTrigger value="vendas" className="text-xs gap-1"><Target className="w-3.5 h-3.5" /> Vendas</TabsTrigger>
         </TabsList>
 
-        {/* ── TAB 1: Análise ── */}
-        <TabsContent value="analise" className="space-y-5 mt-4">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {(["leads", "conversoes", "trafego", "engajamento", "faturamento"] as const).map((k) => (
-              <Card key={k}>
-                <CardContent className="pt-4 text-center">
-                  <label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider">{k}</label>
-                  <Input type="number" value={metricas[k] || 0} onChange={(e) => setMetricas({ ...metricas, [k]: Number(e.target.value) })} className="text-center mt-1 text-lg font-bold" />
-                </CardContent>
-              </Card>
-            ))}
+        {/* ── TAB 1: Análise (4 sub-seções) ── */}
+        <TabsContent value="analise" className="space-y-6 mt-4">
+          <div className="bg-muted/30 rounded-lg p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <Eye className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold">Análise do Mês Atual</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Analise o estado atual de cada área para fundamentar o plano do próximo mês.</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-green-600">Pontos Positivos</CardTitle></CardHeader>
-              <CardContent><ListEditor items={destaques} onChange={setDestaques} /></CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm text-destructive">Pontos Negativos</CardTitle></CardHeader>
-              <CardContent><ListEditor items={gaps} onChange={setGaps} /></CardContent>
-            </Card>
-          </div>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Observações Gerais</CardTitle></CardHeader>
-            <CardContent><Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} placeholder="Análise geral do mês..." /></CardContent>
+
+          {/* 1. Conteúdo & Criativos */}
+          <AnaliseAreaEditor
+            title="Conteúdo & Criativos"
+            description="Análise dos criativos orgânicos e pagos — alcance, engajamento e performance"
+            icon={Palette}
+            accentColor="bg-violet-500"
+            metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
+            section={analiseConteudo}
+            onChange={setAnaliseConteudo}
+          />
+
+          {/* 2. Tráfego Pago */}
+          <AnaliseAreaEditor
+            title="Tráfego Pago"
+            description="Números das campanhas pagas — investimento, custo por resultado e conversões"
+            icon={MousePointerClick}
+            accentColor="bg-blue-500"
+            metricLabels={["Investimento Total", "Impressões", "Cliques", "CTR (%)", "CPC (R$)", "CPL (R$)", "Conversões", "ROAS"]}
+            section={analiseTrafego}
+            onChange={setAnaliseTrafego}
+          />
+
+          {/* 3. Web / Site */}
+          <AnaliseAreaEditor
+            title="Web / Site"
+            description="Desempenho do site e landing pages — visitas, taxa de conversão e comportamento"
+            icon={Globe}
+            accentColor="bg-emerald-500"
+            metricLabels={["Sessões", "Usuários Únicos", "Taxa de Rejeição (%)", "Tempo Médio (s)", "Conversões Site", "Páginas/Sessão"]}
+            section={analiseWeb}
+            onChange={setAnaliseWeb}
+          />
+
+          {/* 4. Vendas */}
+          <AnaliseAreaEditor
+            title="Vendas / CRM"
+            description="Resultados comerciais — leads qualificados, propostas e fechamentos"
+            icon={ShoppingCart}
+            accentColor="bg-orange-500"
+            metricLabels={["Leads Gerados", "Leads Qualificados", "Propostas Enviadas", "Vendas Fechadas", "Ticket Médio (R$)", "Faturamento (R$)"]}
+            section={analiseVendas}
+            onChange={setAnaliseVendas}
+          />
+
+          <Separator className="my-2" />
+
+          {/* Resumo Geral */}
+          <Card className="border-primary/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <CardTitle className="text-base">Resumo Geral do Mês</CardTitle>
+              </div>
+              <CardDescription className="text-xs">Visão consolidada do desempenho e próximos passos</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Análise Geral</label>
+                <Textarea value={resumoGeral} onChange={(e) => setResumoGeral(e.target.value)} rows={3} placeholder="Resumo geral do mês — contexto e insights..." />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowUpRight className="w-4 h-4 text-green-500" />
+                    <label className="text-xs font-semibold text-green-600 uppercase tracking-wider">Avanços do Mês</label>
+                  </div>
+                  <ListEditor items={avancosMes} onChange={setAvancosMes} placeholder="Conquista ou avanço..." />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <label className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Pontos a Melhorar</label>
+                  </div>
+                  <ListEditor items={pontosMelhorar} onChange={setPontosMelhorar} placeholder="Ponto de melhoria..." />
+                </div>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
         {/* ── TAB 2: Conteúdo ── */}
         <TabsContent value="conteudo" className="space-y-5 mt-4">
+          <div className="bg-muted/30 rounded-lg p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <Megaphone className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold">Plano de Conteúdo — Próximo Mês</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Defina a estratégia de conteúdo baseada na análise do mês atual.</p>
+          </div>
+
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Linha Editorial</CardTitle></CardHeader>
             <CardContent><Textarea value={conteudo.linha_editorial || ""} onChange={(e) => setConteudo({ ...conteudo, linha_editorial: e.target.value })} rows={3} placeholder="Descreva a linha editorial..." /></CardContent>
@@ -331,6 +514,14 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
 
         {/* ── TAB 3: Tráfego ── */}
         <TabsContent value="trafego" className="space-y-5 mt-4">
+          <div className="bg-muted/30 rounded-lg p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold">Plano de Tráfego Pago — Próximo Mês</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Defina as campanhas e investimentos baseados na análise do mês atual.</p>
+          </div>
+
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Plataformas</h3>
             <Button size="sm" variant="outline" onClick={addPlataforma}><Plus className="w-3 h-3 mr-1" /> Plataforma</Button>
@@ -382,6 +573,14 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
 
         {/* ── TAB 4: Web ── */}
         <TabsContent value="web" className="space-y-5 mt-4">
+          <div className="bg-muted/30 rounded-lg p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold">Plano Web / Landing Pages — Próximo Mês</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Defina alterações e criação de páginas baseadas na análise do mês atual.</p>
+          </div>
+
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Seções / Páginas</h3>
             <Button size="sm" variant="outline" onClick={addWebSecao}><Plus className="w-3 h-3 mr-1" /> Seção</Button>
@@ -413,6 +612,14 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
 
         {/* ── TAB 5: Vendas ── */}
         <TabsContent value="vendas" className="space-y-5 mt-4">
+          <div className="bg-muted/30 rounded-lg p-4 border">
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-bold">Plano de Vendas / CRM — Próximo Mês</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Defina estratégias comerciais baseadas na análise do mês atual.</p>
+          </div>
+
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Análise do CRM</CardTitle></CardHeader>
             <CardContent><Textarea value={vendas.analise_crm || ""} onChange={(e) => setVendas({ ...vendas, analise_crm: e.target.value })} rows={4} placeholder="Análise geral do CRM..." /></CardContent>
@@ -470,7 +677,6 @@ export default function FranqueadoAcompanhamento() {
       <FolderListView
         folders={folders}
         onSelect={setSelectedClient}
-        onNew={() => {}}
       />
     </div>
   );

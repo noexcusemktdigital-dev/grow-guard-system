@@ -2,21 +2,22 @@ import jsPDF from "jspdf";
 import type {
   FollowupAnalise,
   FollowupPlano,
+  AnaliseSubSection,
   TrafegoPlataforma,
   WebSecao,
 } from "@/hooks/useClientFollowups";
 import { MONTH_NAMES } from "@/lib/formatting";
 import logoWhiteSrc from "@/assets/logo-noexcuse-white.png";
 
-const ML = 15; // margin left
+const ML = 15;
 const MR = 15;
 const MT = 20;
 const PW = 210;
 const PH = 297;
 const CW = PW - ML - MR;
-const ACCENT = [220, 38, 38]; // red
-const DARK_BG = [15, 15, 15];
-const LIGHT_BG = [255, 255, 255];
+const ACCENT = [220, 38, 38] as [number, number, number];
+const DARK_BG = [15, 15, 15] as [number, number, number];
+const LIGHT_BG = [255, 255, 255] as [number, number, number];
 
 function getMonthLabel(ref: string) {
   const [y, m] = ref.split("-");
@@ -59,6 +60,12 @@ export async function generateFollowupPdf(
     }
   };
 
+  const setPageBg = (isDark: boolean) => {
+    const bg = isDark ? DARK_BG : LIGHT_BG;
+    pdf.setFillColor(...bg);
+    pdf.rect(0, 0, PW, PH, "F");
+  };
+
   const drawSectionTitle = (title: string, isDark = false) => {
     ensureSpace(14);
     pdf.setFontSize(13);
@@ -66,7 +73,7 @@ export async function generateFollowupPdf(
     pdf.setTextColor(isDark ? 255 : 30, isDark ? 255 : 30, isDark ? 255 : 30);
     pdf.text(safeText(title.toUpperCase()), ML, y);
     y += 2;
-    pdf.setDrawColor(...ACCENT as [number, number, number]);
+    pdf.setDrawColor(...ACCENT);
     pdf.setLineWidth(0.8);
     pdf.line(ML, y, ML + CW, y);
     y += 8;
@@ -108,10 +115,84 @@ export async function generateFollowupPdf(
     y += 2;
   };
 
-  const setPageBg = (isDark: boolean) => {
-    const bg = isDark ? DARK_BG : LIGHT_BG;
-    pdf.setFillColor(...bg as [number, number, number]);
-    pdf.rect(0, 0, PW, PH, "F");
+  // ─── Draw analysis sub-section ───
+  const drawAnaliseArea = (title: string, section: AnaliseSubSection | undefined, isDark: boolean) => {
+    if (!section) return;
+
+    ensureSpace(20);
+
+    // Area title with accent bar
+    pdf.setFillColor(...ACCENT);
+    pdf.rect(ML, y - 1, 2, 7, "F");
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(isDark ? 255 : 30, isDark ? 255 : 30, isDark ? 255 : 30);
+    pdf.text(safeText(title), ML + 5, y + 4);
+    y += 12;
+
+    // Metrics as cards
+    const metricas = section.metricas || {};
+    const metricEntries = Object.entries(metricas).filter(([, v]) => v !== undefined && v !== 0);
+    if (metricEntries.length > 0) {
+      const cols = Math.min(metricEntries.length, 4);
+      const cardW = (CW - (cols - 1) * 3) / cols;
+      const rows = Math.ceil(metricEntries.length / cols);
+
+      for (let row = 0; row < rows; row++) {
+        ensureSpace(22);
+        for (let col = 0; col < cols; col++) {
+          const idx = row * cols + col;
+          if (idx >= metricEntries.length) break;
+          const [label, val] = metricEntries[idx];
+          const x = ML + col * (cardW + 3);
+
+          pdf.setFillColor(isDark ? 25 : 245, isDark ? 25 : 245, isDark ? 25 : 245);
+          pdf.roundedRect(x, y, cardW, 18, 2, 2, "F");
+
+          pdf.setFontSize(6.5);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(isDark ? 160 : 120, isDark ? 160 : 120, isDark ? 160 : 120);
+          const truncLabel = safeText(label).substring(0, 18).toUpperCase();
+          pdf.text(truncLabel, x + cardW / 2, y + 6, { align: "center" });
+
+          pdf.setFontSize(13);
+          pdf.setTextColor(isDark ? 255 : 30, isDark ? 255 : 30, isDark ? 255 : 30);
+          const valStr = typeof val === "number" ? val.toLocaleString("pt-BR") : String(val ?? 0);
+          pdf.text(valStr, x + cardW / 2, y + 14, { align: "center" });
+        }
+        y += 22;
+      }
+      y += 2;
+    }
+
+    // Positivos
+    if (section.positivos?.filter(Boolean).length) {
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(34, 197, 94);
+      pdf.text("PONTOS POSITIVOS", ML + 2, y);
+      y += 4;
+      drawBulletList(section.positivos, isDark);
+    }
+
+    // Negativos
+    if (section.negativos?.filter(Boolean).length) {
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(239, 68, 68);
+      pdf.text("PONTOS NEGATIVOS", ML + 2, y);
+      y += 4;
+      drawBulletList(section.negativos, isDark);
+    }
+
+    // Observações
+    if (section.observacoes) {
+      drawLabel("OBSERVACOES", isDark);
+      drawText(section.observacoes, isDark, 2);
+      y += 2;
+    }
+
+    y += 4;
   };
 
   // ═══ COVER PAGE ═══
@@ -129,8 +210,7 @@ export async function generateFollowupPdf(
     y = 80;
   }
 
-  // Accent line
-  pdf.setDrawColor(...ACCENT as [number, number, number]);
+  pdf.setDrawColor(...ACCENT);
   pdf.setLineWidth(1.5);
   pdf.line(PW / 2 - 30, y, PW / 2 + 30, y);
   y += 15;
@@ -150,58 +230,51 @@ export async function generateFollowupPdf(
   pdf.setTextColor(180, 180, 180);
   pdf.text(getMonthLabel(monthRef), PW / 2, y, { align: "center" });
 
-  // ═══ SECTION 1: ANALISE (light) ═══
+  // ═══ SECTION 1: ANÁLISE (light page) ═══
   pdf.addPage();
   setPageBg(false);
   y = MT;
-  drawSectionTitle("1. Analise do Mes");
+  drawSectionTitle("1. Analise do Mes Atual");
 
-  // Metricas
-  const m = analise.metricas || {};
-  const metricPairs = [
-    ["Leads", m.leads], ["Conversoes", m.conversoes], ["Trafego", m.trafego],
-    ["Engajamento", m.engajamento], ["Faturamento", m.faturamento],
-  ].filter(([, v]) => v !== undefined && v !== 0);
+  drawAnaliseArea("Conteudo & Criativos", analise.conteudo, false);
+  drawAnaliseArea("Trafego Pago", analise.trafego, false);
+  drawAnaliseArea("Web / Site", analise.web, false);
+  drawAnaliseArea("Vendas / CRM", analise.vendas, false);
 
-  if (metricPairs.length > 0) {
-    drawLabel("METRICAS DO MES");
-    const cardW = (CW - 8) / Math.min(metricPairs.length, 5);
-    metricPairs.forEach(([label, val], i) => {
-      const x = ML + i * (cardW + 2);
-      pdf.setFillColor(245, 245, 245);
-      pdf.roundedRect(x, y, cardW, 18, 2, 2, "F");
-      pdf.setFontSize(7);
+  // Resumo Geral
+  if (analise.resumo_geral || analise.avancos_mes?.length || analise.pontos_melhorar?.length) {
+    ensureSpace(20);
+    drawSectionTitle("Resumo Geral");
+
+    if (analise.resumo_geral) {
+      drawText(analise.resumo_geral);
+      y += 4;
+    }
+
+    if (analise.avancos_mes?.filter(Boolean).length) {
+      pdf.setFontSize(8);
       pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(120, 120, 120);
-      pdf.text(String(label).toUpperCase(), x + cardW / 2, y + 6, { align: "center" });
-      pdf.setFontSize(14);
-      pdf.setTextColor(30, 30, 30);
-      pdf.text(String(val ?? 0), x + cardW / 2, y + 14, { align: "center" });
-    });
-    y += 24;
+      pdf.setTextColor(34, 197, 94);
+      pdf.text("AVANCOS DO MES", ML, y);
+      y += 4;
+      drawBulletList(analise.avancos_mes);
+    }
+
+    if (analise.pontos_melhorar?.filter(Boolean).length) {
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(245, 158, 11);
+      pdf.text("PONTOS A MELHORAR", ML, y);
+      y += 4;
+      drawBulletList(analise.pontos_melhorar);
+    }
   }
 
-  if (analise.destaques?.length) {
-    drawLabel("PONTOS POSITIVOS");
-    drawBulletList(analise.destaques);
-  }
-
-  if (analise.gaps?.length) {
-    drawLabel("PONTOS NEGATIVOS");
-    drawBulletList(analise.gaps);
-  }
-
-  if (analise.observacoes) {
-    drawLabel("OBSERVACOES GERAIS");
-    drawText(analise.observacoes);
-    y += 4;
-  }
-
-  // ═══ SECTION 2: CONTEUDO (dark) ═══
+  // ═══ SECTION 2: CONTEÚDO (dark) ═══
   pdf.addPage();
   setPageBg(true);
   y = MT;
-  drawSectionTitle("2. Conteudo", true);
+  drawSectionTitle("2. Plano de Conteudo - Proximo Mes", true);
 
   const c = plano.conteudo || {};
 
@@ -243,22 +316,22 @@ export async function generateFollowupPdf(
     drawBulletList(c.necessidades_cliente, true);
   }
 
-  // ═══ SECTION 3: TRAFEGO (dark, continued) ═══
+  // ═══ SECTION 3: TRÁFEGO (dark) ═══
   pdf.addPage();
   setPageBg(true);
   y = MT;
-  drawSectionTitle("3. Trafego Pago", true);
+  drawSectionTitle("3. Plano de Trafego Pago - Proximo Mes", true);
 
   const plats = plano.trafego?.plataformas || [];
   plats.forEach((p: TrafegoPlataforma, idx: number) => {
     ensureSpace(45);
-    // Card background
-    pdf.setFillColor(25, 25, 25);
+    pdf.setDrawColor(50, 50, 50);
+    pdf.setLineWidth(0.3);
     const cardY = y;
-    
+
     pdf.setFontSize(11);
     pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(...ACCENT as [number, number, number]);
+    pdf.setTextColor(...ACCENT);
     pdf.text(safeText(p.nome || `Plataforma ${idx + 1}`), ML + 4, y + 6);
     y += 12;
 
@@ -293,10 +366,6 @@ export async function generateFollowupPdf(
     });
 
     const cardH = y - cardY + 4;
-    // Draw card bg behind (we draw it after to know height, but jsPDF layers last-on-top, so we re-render)
-    // Instead, just draw a border
-    pdf.setDrawColor(50, 50, 50);
-    pdf.setLineWidth(0.3);
     pdf.roundedRect(ML, cardY - 2, CW, cardH, 3, 3, "S");
     y += 6;
   });
@@ -309,14 +378,14 @@ export async function generateFollowupPdf(
   pdf.addPage();
   setPageBg(true);
   y = MT;
-  drawSectionTitle("4. Web / Landing Pages", true);
+  drawSectionTitle("4. Plano Web / Landing Pages - Proximo Mes", true);
 
   const secoes = plano.web?.secoes || [];
   secoes.forEach((s: WebSecao, idx: number) => {
     ensureSpace(20);
     pdf.setFontSize(10);
     pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(...ACCENT as [number, number, number]);
+    pdf.setTextColor(...ACCENT);
     pdf.text(`${idx + 1}. ${safeText(s.titulo || "Secao")}`, ML, y);
     y += 6;
 
@@ -339,7 +408,7 @@ export async function generateFollowupPdf(
   pdf.addPage();
   setPageBg(true);
   y = MT;
-  drawSectionTitle("5. Vendas / CRM", true);
+  drawSectionTitle("5. Plano de Vendas / CRM - Proximo Mes", true);
 
   const v = plano.vendas || {};
 
