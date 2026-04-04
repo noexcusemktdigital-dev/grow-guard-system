@@ -48,8 +48,11 @@ import {
   Globe,
   ShoppingCart,
   LineChart,
+  Compass,
+  Clock,
+  Zap,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { DiagnosticForm } from "./FranqueadoEstrategiaDiagnosticForm";
 import { StrategyResultView } from "./FranqueadoEstrategiaResultViews";
@@ -68,6 +71,7 @@ import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ── Diagnostic Sections (5 Etapas + Contexto + Maturidade + Financeiro) ──
 
@@ -75,7 +79,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "Contexto do Negócio",
     subtitle: "Informações gerais da empresa",
-    icon: <FileText className="w-4 h-4 text-primary" />,
+    icon: <FileText className="w-5 h-5 text-primary" />,
     fields: [
       { key: "nome_empresa", label: "Nome da empresa", type: "text", placeholder: "Ex: Empresa Exemplo LTDA" },
       { key: "segmento", label: "Qual é o segmento/nicho de mercado?", type: "text", placeholder: "Ex: Marketing digital, Saúde, Educação..." },
@@ -91,7 +95,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "01 — Conteúdo e Linha Editorial",
     subtitle: "Como está a produção de conteúdo hoje",
-    icon: <FileText className="w-4 h-4 text-primary" />,
+    icon: <FileText className="w-5 h-5 text-primary" />,
     fields: [
       { key: "produz_conteudo", label: "A empresa produz conteúdo para redes sociais?", type: "select", options: ["Sim, com frequência", "Sim, mas irregular", "Não"] },
       { key: "frequencia_conteudo", label: "Qual a frequência de publicações?", type: "select", options: ["Diária", "3-5x por semana", "1-2x por semana", "Quinzenal ou menos", "Não publica"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"] },
@@ -104,7 +108,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "02 — Tráfego e Distribuição",
     subtitle: "Como os leads chegam até a empresa",
-    icon: <TrendingUp className="w-4 h-4 text-primary" />,
+    icon: <TrendingUp className="w-5 h-5 text-primary" />,
     fields: [
       { key: "investe_trafego_pago", label: "Investe em tráfego pago?", type: "select", options: ["Sim", "Não", "Já investiu mas parou"] },
       { key: "investimento_mensal_trafego", label: "Quanto investe por mês em tráfego? (R$)", type: "text", placeholder: "Ex: 5000", conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
@@ -117,7 +121,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "03 — Web e Conversão",
     subtitle: "Presença web e conversão de visitantes",
-    icon: <Globe className="w-4 h-4 text-primary" />,
+    icon: <Globe className="w-5 h-5 text-primary" />,
     fields: [
       { key: "tem_site", label: "A empresa possui site/landing page?", type: "select", options: ["Sim, site completo", "Sim, apenas LPs", "Não"] },
       { key: "quantidade_lps", label: "Quantas landing pages ativas possui?", type: "text", placeholder: "Ex: 3", conditionKey: "tem_site", conditionValues: ["Sim, site completo", "Sim, apenas LPs"] },
@@ -130,7 +134,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "04 — Sales e Fechamento",
     subtitle: "Processo comercial e vendas",
-    icon: <ShoppingCart className="w-4 h-4 text-primary" />,
+    icon: <ShoppingCart className="w-5 h-5 text-primary" />,
     fields: [
       { key: "processo_comercial", label: "Possui um processo comercial definido?", type: "select", options: ["Sim, documentado", "Parcial", "Não"] },
       { key: "tamanho_time_comercial", label: "Quantas pessoas no time comercial?", type: "text", placeholder: "Ex: 3" },
@@ -144,7 +148,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "05 — Validação e Escala",
     subtitle: "Métricas, validação e capacidade de escala",
-    icon: <LineChart className="w-4 h-4 text-primary" />,
+    icon: <LineChart className="w-5 h-5 text-primary" />,
     fields: [
       { key: "mede_metricas", label: "Acompanha métricas de marketing e vendas?", type: "select", options: ["Sim, com dashboards", "Sim, manualmente", "Parcialmente", "Não"] },
       { key: "kpis_acompanha", label: "Quais KPIs acompanha?", type: "checkbox-group", options: ["Leads/mês", "CPL", "Taxa de conversão", "CAC", "LTV", "ROI", "Faturamento", "Nenhum"] },
@@ -156,7 +160,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "Termômetro de Maturidade",
     subtitle: "Autoavaliação (1 a 5) para cada etapa",
-    icon: <BarChart3 className="w-4 h-4 text-primary" />,
+    icon: <BarChart3 className="w-5 h-5 text-primary" />,
     fields: [
       { key: "nota_conteudo", label: "Conteúdo e Linha Editorial", type: "slider", min: 1, max: 5 },
       { key: "nota_trafego", label: "Tráfego e Distribuição", type: "slider", min: 1, max: 5 },
@@ -170,7 +174,7 @@ const diagnosticSections: DiagSection[] = [
   {
     title: "Financeiro e Projeções",
     subtitle: "Dados para cálculos e projeções",
-    icon: <Calculator className="w-4 h-4 text-primary" />,
+    icon: <Calculator className="w-5 h-5 text-primary" />,
     fields: [
       { key: "margem_lucro", label: "Margem média de lucro (%)", type: "text", placeholder: "Ex: 30" },
       { key: "ltv_medio", label: "LTV médio de um cliente (R$)", type: "text", placeholder: "Ex: 12000 ou Não sei" },
@@ -178,6 +182,14 @@ const diagnosticSections: DiagSection[] = [
       { key: "investimento_marketing_atual", label: "Investimento total atual em marketing/mês (R$)", type: "text", placeholder: "Ex: 5000" },
     ],
   },
+];
+
+const STEP_CARDS = [
+  { num: "01", title: "Conteúdo", subtitle: "Linha editorial e produção", icon: FileText, color: "from-violet-500 to-purple-600" },
+  { num: "02", title: "Tráfego", subtitle: "Distribuição e aquisição", icon: TrendingUp, color: "from-blue-500 to-cyan-500" },
+  { num: "03", title: "Web", subtitle: "Conversão e presença digital", icon: Globe, color: "from-emerald-500 to-green-500" },
+  { num: "04", title: "Sales", subtitle: "Vendas e fechamento", icon: ShoppingCart, color: "from-orange-500 to-amber-500" },
+  { num: "05", title: "Escala", subtitle: "Validação e crescimento", icon: LineChart, color: "from-rose-500 to-red-500" },
 ];
 
 // ── Upload Briefing Component ───────────────────────────────────
@@ -229,7 +241,7 @@ function UploadBriefingForm({
   };
 
   return (
-    <Card className="glass-card">
+    <Card className="border border-border/50 bg-card/80 backdrop-blur-none">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
           <Upload className="w-4 h-4 text-primary" /> Upload de Briefing
@@ -289,6 +301,192 @@ function UploadBriefingForm({
   );
 }
 
+// ── Loading Animation ───────────────────────────────────────────
+
+const LOADING_STAGES = [
+  "Analisando o negócio...",
+  "Calculando score de maturidade...",
+  "Mapeando gargalos estratégicos...",
+  "Gerando plano das 5 etapas...",
+  "Criando projeções financeiras...",
+  "Finalizando diagnóstico...",
+];
+
+function GeneratingAnimation() {
+  const [stageIndex, setStageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStageIndex((prev) => (prev < LOADING_STAGES.length - 1 ? prev + 1 : prev));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center py-20 space-y-8"
+    >
+      <div className="relative">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+        >
+          <Compass className="w-10 h-10 text-primary" />
+        </motion.div>
+        <motion.div
+          animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.2, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 rounded-full border-2 border-primary/30"
+        />
+      </div>
+
+      <div className="text-center space-y-3 max-w-md">
+        <h3 className="text-lg font-bold text-foreground">Gerando Diagnóstico Estratégico</h3>
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={stageIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-sm text-muted-foreground"
+          >
+            {LOADING_STAGES[stageIndex]}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+
+      <div className="flex gap-1.5">
+        {LOADING_STAGES.map((_, i) => (
+          <motion.div
+            key={i}
+            className="h-1.5 rounded-full"
+            animate={{
+              width: i <= stageIndex ? 24 : 8,
+              backgroundColor: i <= stageIndex ? "hsl(var(--primary))" : "hsl(var(--muted))",
+            }}
+            transition={{ duration: 0.3 }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Welcome Screen ──────────────────────────────────────────────
+
+function WelcomeScreen({ onManual, onUpload }: { onManual: () => void; onUpload: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-8"
+    >
+      {/* Hero */}
+      <div className="text-center space-y-4 pt-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20"
+        >
+          <Compass className="w-10 h-10 text-primary-foreground" />
+        </motion.div>
+
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+            Diagnóstico Estratégico
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1 max-w-lg mx-auto">
+            Analise o negócio do seu cliente em 5 dimensões estratégicas com a metodologia NoExcuse.
+            Gere um plano completo com GPS de maturidade, ações detalhadas e projeções financeiras.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex items-center justify-center gap-4 text-xs text-muted-foreground"
+        >
+          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> ~10 min</span>
+          <span className="h-3 w-px bg-border" />
+          <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Framework ECE</span>
+          <span className="h-3 w-px bg-border" />
+          <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> IA Generativa</span>
+        </motion.div>
+      </div>
+
+      {/* 5 Step Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {STEP_CARDS.map((step, i) => (
+          <motion.div
+            key={step.num}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 + i * 0.08 }}
+          >
+            <div className="rounded-xl border border-border/50 bg-card/80 p-4 text-center space-y-2 h-full">
+              <div className={`w-10 h-10 mx-auto rounded-lg bg-gradient-to-br ${step.color} flex items-center justify-center`}>
+                <step.icon className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{step.num}</p>
+              <p className="text-xs font-semibold text-foreground leading-tight">{step.title}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{step.subtitle}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ECE Methodology */}
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.7 }}
+        className="rounded-xl border border-border/50 bg-card/80 p-5"
+      >
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Metodologia ECE</p>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Infraestrutura", desc: "Site, landing pages, CRM, funil comercial", icon: "🏗️" },
+            { label: "Coleta", desc: "Tráfego, conteúdo, captura de leads", icon: "🎯" },
+            { label: "Escala", desc: "Validação, métricas, crescimento previsível", icon: "🚀" },
+          ].map((item) => (
+            <div key={item.label} className="text-center space-y-1">
+              <span className="text-xl">{item.icon}</span>
+              <p className="text-xs font-semibold text-foreground">{item.label}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Action Buttons */}
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+      >
+        <Button size="lg" className="h-14 text-sm font-semibold" onClick={onManual}>
+          <ClipboardCheck className="w-5 h-5 mr-2" />
+          Preencher Diagnóstico
+        </Button>
+        <Button size="lg" variant="outline" className="h-14 text-sm font-semibold" onClick={onUpload}>
+          <FileUp className="w-5 h-5 mr-2" />
+          Upload de Briefing
+        </Button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ── Nova Estratégia Tab ─────────────────────────────────────────
 
 function NovaEstrategiaTab() {
@@ -297,12 +495,14 @@ function NovaEstrategiaTab() {
   const [resultStrategy, setResultStrategy] = useState<Strategy | null>(null);
   const [mode, setMode] = useState<"choose" | "manual" | "upload" | "review">("choose");
   const [uploadedAnswers, setUploadedAnswers] = useState<Record<string, any> | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const createStrategy = useCreateStrategy();
   const updateMut = useUpdateStrategy();
   const { data: leads } = useCrmLeads();
   const navigate = useNavigate();
 
   const handleSubmit = async (answers: Record<string, any>, title: string) => {
+    setIsGenerating(true);
     try {
       const s = await createStrategy.mutateAsync({ title, answers });
       setResult(s.result);
@@ -311,6 +511,8 @@ function NovaEstrategiaTab() {
       toast.success("Diagnóstico e planejamento estratégico gerados!");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e) || "Erro ao gerar estratégia");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -334,15 +536,18 @@ function NovaEstrategiaTab() {
     }
   };
 
+  if (isGenerating) {
+    return <GeneratingAnimation />;
+  }
+
   if (result) {
     return (
-      <div className="space-y-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => { setResult(null); setMode("choose"); setUploadedAnswers(null); setResultStrategy(null); }}>
             <RefreshCw className="w-4 h-4 mr-1" /> Novo Diagnóstico
           </Button>
 
-          {/* CRM Link */}
           {leads && (leads as any[]).length > 0 && (
             <Select onValueChange={handleLinkLead}>
               <SelectTrigger className="w-[200px] h-9 text-xs">
@@ -363,44 +568,12 @@ function NovaEstrategiaTab() {
           title={resultTitle}
           onSendToCalculator={result.entregaveis_calculadora?.length ? handleSendToCalculator : undefined}
         />
-      </div>
+      </motion.div>
     );
   }
 
   if (mode === "choose") {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card
-          className="glass-card cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all group"
-          onClick={() => setMode("manual")}
-        >
-          <CardContent className="p-6 text-center space-y-3">
-            <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <ClipboardCheck className="w-7 h-7 text-primary" />
-            </div>
-            <h3 className="text-sm font-bold">Preenchimento Manual</h3>
-            <p className="text-xs text-muted-foreground">
-              Responda às 8 etapas do diagnóstico: contexto, 5 etapas estratégicas, maturidade e financeiro
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="glass-card cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all group"
-          onClick={() => setMode("upload")}
-        >
-          <CardContent className="p-6 text-center space-y-3">
-            <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <FileUp className="w-7 h-7 text-primary" />
-            </div>
-            <h3 className="text-sm font-bold">Upload de Briefing</h3>
-            <p className="text-xs text-muted-foreground">
-              Envie um texto ou briefing e a IA extrai as respostas automaticamente
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <WelcomeScreen onManual={() => setMode("manual")} onUpload={() => setMode("upload")} />;
   }
 
   if (mode === "upload") {
@@ -540,7 +713,7 @@ function MeusDiagnosticosTab() {
                   : scoreInfo.score <= 75 ? "text-amber-500" : "text-green-500"
                 : "";
               return (
-                <Card key={s.id} className="glass-card cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelected(s)}>
+                <Card key={s.id} className="border border-border/50 bg-card/80 cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all" onClick={() => setSelected(s)}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="space-y-1 flex-1 min-w-0">
                       {editingId === s.id ? (
@@ -598,7 +771,6 @@ function MeusDiagnosticosTab() {
         )}
       </div>
 
-      {/* Edit Strategy Dialog */}
       {editingStrategy && (
         <Sheet open={!!editingStrategy} onOpenChange={() => setEditingStrategy(null)}>
           <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
@@ -657,12 +829,16 @@ function MeusDiagnosticosTab() {
 export default function FranqueadoEstrategia() {
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Criador de Estratégia" subtitle="GPS do Negócio + Planejamento Estratégico 5 Etapas — Metodologia NoExcuse" />
+      <PageHeader
+        title="Diagnóstico Estratégico"
+        subtitle="Análise completa em 5 dimensões — Metodologia NoExcuse"
+        icon={<Compass className="w-5 h-5 text-primary" />}
+      />
 
       <Tabs defaultValue="nova">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="nova"><ClipboardCheck className="w-4 h-4 mr-1" /> Novo Diagnóstico</TabsTrigger>
-          <TabsTrigger value="diagnosticos"><FolderOpen className="w-4 h-4 mr-1" /> Meus Diagnósticos</TabsTrigger>
+          <TabsTrigger value="nova"><Target className="w-4 h-4 mr-1" /> Novo Diagnóstico Estratégico</TabsTrigger>
+          <TabsTrigger value="diagnosticos"><FolderOpen className="w-4 h-4 mr-1" /> Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="nova" className="space-y-6">
