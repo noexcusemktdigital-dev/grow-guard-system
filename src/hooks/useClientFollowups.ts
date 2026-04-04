@@ -3,8 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 
-/* ── Sub-seção de análise (cada área tem métricas + positivos + negativos) ── */
-
+/* ── Sub-seção de análise ── */
 export interface AnaliseSubSection {
   metricas?: Record<string, number>;
   positivos?: string[];
@@ -22,16 +21,62 @@ export interface FollowupAnalise {
   pontos_melhorar?: string[];
 }
 
-export interface ConteudoSection {
-  roteiros?: string[];
-  artes?: string[];
-  qtd_postagens?: number;
-  tipo_conteudo?: string[];
-  linha_editorial?: string;
-  referencias?: string[];
-  necessidades_cliente?: string[];
+/* ── Pauta de conteúdo (cada post/criativo) ── */
+export interface ConteudoPauta {
+  titulo: string;
+  formato: string;          // Reels, Stories, Carrossel, etc.
+  objetivo: string;
+  roteiro: string;
+  tempo_duracao: string;     // ex: "30s", "1min", "60s"
+  data_postagem: string;     // YYYY-MM-DD
+  plataforma: string;        // Instagram, TikTok, YouTube, LinkedIn
+  tipo: "organico" | "pago";
+  cta: string;
+  referencias: string;
+  necessidades_cliente: string;
+  observacoes: string;
 }
 
+export interface ConteudoSection {
+  linha_editorial?: string;
+  qtd_postagens?: number;
+  tipo_conteudo?: string[];
+  pautas?: ConteudoPauta[];
+  necessidades_cliente?: string[];
+  // Legacy fields for backwards compat
+  roteiros?: string[];
+  artes?: string[];
+  referencias?: string[];
+}
+
+/* ── Campanha de tráfego pago (detalhada) ── */
+export interface TrafegoCampanha {
+  nome_campanha: string;
+  plataforma: string;         // Meta Ads, Google Ads, TikTok Ads, LinkedIn Ads
+  objetivo_campanha: string;  // Conversão, Tráfego, Reconhecimento, etc.
+  tipo_campanha: string;      // Campanha de vendas, Remarketing, LAL, etc.
+  formato_anuncio: string;    // Vídeo, Imagem, Carrossel, Coleção
+  publico_alvo: string;
+  segmentacao: string;        // Interesses, LAL, Custom Audience, etc.
+  localizacao: string;
+  faixa_etaria: string;
+  investimento_diario: number;
+  investimento_total: number;
+  duracao_dias: number;
+  data_inicio: string;
+  data_fim: string;
+  copy_principal: string;
+  cta: string;
+  url_destino: string;
+  meta_cpl: number;
+  meta_cpc: number;
+  meta_ctr: number;
+  meta_conversoes: number;
+  meta_roas: number;
+  observacoes: string;
+}
+
+// Legacy compat
 export interface TrafegoPlataforma {
   nome: string;
   tipo_campanha: string;
@@ -44,23 +89,42 @@ export interface TrafegoPlataforma {
 }
 
 export interface TrafegoSection {
-  plataformas?: TrafegoPlataforma[];
+  campanhas?: TrafegoCampanha[];
+  plataformas?: TrafegoPlataforma[]; // legacy
 }
 
+/* ── Web / Landing Pages ── */
 export interface WebSecao {
   titulo: string;
-  motivo: string;
+  tipo: string;               // Landing Page, Página Institucional, Blog, E-commerce
+  objetivo: string;
+  descricao: string;
+  secoes_pagina: string[];     // Seções que a página terá
+  expectativa_resultado: string;
   necessidades_cliente: string;
+  prazo_estimado: string;
+  status: string;              // A criar, Em alteração, Em revisão
+  observacoes: string;
+  // legacy
+  motivo?: string;
 }
 
 export interface WebSection {
   secoes?: WebSecao[];
 }
 
+/* ── Vendas / CRM ── */
 export interface VendasSection {
   analise_crm?: string;
+  funil_atual?: string;
+  taxa_conversao?: string;
+  ticket_medio?: string;
+  meta_vendas?: string;
   estrategias?: string[];
   melhorias?: string[];
+  acoes_equipe?: string[];
+  ferramentas?: string[];
+  observacoes?: string;
 }
 
 export interface FollowupPlano {
@@ -87,7 +151,6 @@ export interface ClientFollowup {
 /* ── List distinct client folders ── */
 export function useClientFolders() {
   const { data: orgId } = useUserOrgId();
-
   return useQuery({
     queryKey: ["client-folders", orgId],
     queryFn: async () => {
@@ -112,7 +175,6 @@ export function useClientFolders() {
 /* ── List cycles for a specific client ── */
 export function useClientFollowups(clientName: string | null) {
   const { data: orgId } = useUserOrgId();
-
   return useQuery({
     queryKey: ["client-followups", orgId, clientName],
     queryFn: async () => {
@@ -134,7 +196,6 @@ export function useClientFollowups(clientName: string | null) {
 export function useSaveFollowup() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
-
   return useMutation({
     mutationFn: async (input: {
       id?: string;
@@ -145,7 +206,6 @@ export function useSaveFollowup() {
       plano_proximo: FollowupPlano;
     }) => {
       if (!orgId) throw new Error("Organização não encontrada");
-
       const payload = {
         organization_id: orgId,
         client_name: input.client_name,
@@ -154,22 +214,12 @@ export function useSaveFollowup() {
         analise: input.analise as any,
         plano_proximo: input.plano_proximo as any,
       };
-
       if (input.id) {
-        const { data, error } = await supabase
-          .from("client_followups")
-          .update(payload)
-          .eq("id", input.id)
-          .select()
-          .single();
+        const { data, error } = await supabase.from("client_followups").update(payload).eq("id", input.id).select().single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase
-          .from("client_followups")
-          .insert(payload)
-          .select()
-          .single();
+        const { data, error } = await supabase.from("client_followups").insert(payload).select().single();
         if (error) throw error;
         return data;
       }
