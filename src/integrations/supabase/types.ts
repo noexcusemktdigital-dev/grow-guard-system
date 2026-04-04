@@ -621,6 +621,38 @@ export type Database = {
         }
         Relationships: []
       }
+      calculator_settings: {
+        Row: {
+          id: string
+          organization_id: string
+          surplus_type: string
+          surplus_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          surplus_type?: string
+          surplus_value?: number
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          surplus_type?: string
+          surplus_value?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calculator_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_event_invites: {
         Row: {
           created_at: string
@@ -2557,6 +2589,7 @@ export type Database = {
           rejected_at: string | null
           sent_at: string | null
           status: string
+          strategy_id: string | null
           title: string
           updated_at: string
           valid_until: string | null
@@ -2578,6 +2611,7 @@ export type Database = {
           rejected_at?: string | null
           sent_at?: string | null
           status?: string
+          strategy_id?: string | null
           title: string
           updated_at?: string
           valid_until?: string | null
@@ -2599,6 +2633,7 @@ export type Database = {
           rejected_at?: string | null
           sent_at?: string | null
           status?: string
+          strategy_id?: string | null
           title?: string
           updated_at?: string
           valid_until?: string | null
@@ -2624,6 +2659,13 @@ export type Database = {
             columns: ["partner_company_id"]
             isOneToOne: false
             referencedRelation: "crm_partner_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_proposals_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "franqueado_strategies"
             referencedColumns: ["id"]
           },
         ]
