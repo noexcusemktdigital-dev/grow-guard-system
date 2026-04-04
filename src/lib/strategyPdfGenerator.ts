@@ -217,7 +217,7 @@ export async function exportStrategyPdf(result: StrategyResult, title: string, c
   // ═══ DIAGNOSTIC PAGES (light background) ═══
   b.isDark = false;
   b.newPage();
-  drawDiagnosticSection(b, result, chartRefs);
+  await drawDiagnosticSection(b, result, chartRefs);
 
   // ═══ STRATEGIC PLAN PAGES (dark background) ═══
   if (result.etapas || result.projecoes || result.entregaveis_calculadora?.length) {
