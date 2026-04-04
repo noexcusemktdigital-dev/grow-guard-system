@@ -92,6 +92,10 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     setShowToken(false);
     setShowClientToken(false);
     setShowApiKey(false);
+    setBillingType("PIX");
+    setPaymentLoading(false);
+    setPaymentData(null);
+    setPaymentDone(false);
   };
 
   const validateIzitechName = (name: string): string => {
