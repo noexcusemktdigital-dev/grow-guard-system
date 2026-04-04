@@ -782,7 +782,7 @@ function drawEtapaCard(b: PdfBuilder, key: string, etapa: EtapaEstrategica, ec: 
   b.y += 6;
 }
 
-function drawProjecoes(b: PdfBuilder, proj: NonNullable<StrategyResult["projecoes"]>, chartRefs?: any) {
+async function drawProjecoes(b: PdfBuilder, proj: NonNullable<StrategyResult["projecoes"]>, chartRefs?: any) {
   const pdf = b.pdf;
 
   // Unit Economics
