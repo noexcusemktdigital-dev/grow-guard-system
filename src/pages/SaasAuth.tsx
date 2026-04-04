@@ -416,18 +416,18 @@ const SaasAuth = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-start space-x-2">
+                  <div className="flex items-start space-x-2 border border-[hsl(355,78%,50%)]/30 rounded-lg p-3 bg-[hsl(355,78%,50%)]/5">
                     <Checkbox
                       id="terms"
                       checked={acceptedTerms}
                       onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-                      className="mt-0.5 border-white/20 data-[state=checked]:bg-[hsl(355,78%,50%)] data-[state=checked]:border-[hsl(355,78%,50%)]"
+                      className="mt-0.5 border-[hsl(355,78%,50%)] data-[state=checked]:bg-[hsl(355,78%,50%)] data-[state=checked]:border-[hsl(355,78%,50%)]"
                     />
-                    <label htmlFor="terms" className="text-xs text-white/50 leading-relaxed cursor-pointer">
+                    <label htmlFor="terms" className="text-sm text-white/80 leading-relaxed cursor-pointer">
                       Li e aceito os{" "}
-                      <Link to="/termos" target="_blank" className="text-[hsl(355,78%,60%)] hover:underline">Termos de Uso</Link>
+                      <Link to="/termos" target="_blank" className="text-[hsl(355,78%,60%)] font-semibold underline hover:text-[hsl(355,78%,70%)]">Termos de Uso</Link>
                       {" "}e a{" "}
-                      <Link to="/privacidade" target="_blank" className="text-[hsl(355,78%,60%)] hover:underline">Política de Privacidade</Link>
+                      <Link to="/privacidade" target="_blank" className="text-[hsl(355,78%,60%)] font-semibold underline hover:text-[hsl(355,78%,70%)]">Política de Privacidade</Link>
                     </label>
                   </div>
                   <Button type="submit" className="w-full bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white" disabled={loading || !acceptedTerms || !isPasswordValid}>
