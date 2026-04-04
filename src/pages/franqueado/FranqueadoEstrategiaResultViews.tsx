@@ -4,6 +4,7 @@ import {
   CheckCircle2, FileText, ClipboardCheck, Target, AlertTriangle,
   TrendingUp, Package, Layers, Map, BarChart3, Calculator, Download,
   ChevronDown, ChevronUp, Zap, Globe, ShoppingCart, LineChart,
+  Users, Crosshair, Award, Shield,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -144,16 +145,16 @@ export function StrategyResultView({
 function NewStrategyResultView({ result }: { result: StrategyResult }) {
   const gps = result.diagnostico_gps!;
   const score = gps.score_geral;
+  const scoreMarketing = result.score_marketing ?? 0;
+  const scoreComercial = result.score_comercial ?? 0;
 
-  const scoreColor =
-    score <= 25 ? "text-destructive" :
-    score <= 50 ? "text-orange-500" :
-    score <= 75 ? "text-amber-500" : "text-green-500";
+  const getScoreColor = (s: number) =>
+    s <= 25 ? "text-destructive" : s <= 50 ? "text-orange-500" : s <= 75 ? "text-amber-500" : "text-green-500";
+  const getScoreBg = (s: number) =>
+    s <= 25 ? "bg-destructive/10" : s <= 50 ? "bg-orange-500/10" : s <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
 
-  const scoreBg =
-    score <= 25 ? "bg-destructive/10" :
-    score <= 50 ? "bg-orange-500/10" :
-    score <= 75 ? "bg-amber-500/10" : "bg-green-500/10";
+  const scoreColor = getScoreColor(score);
+  const scoreBg = getScoreBg(score);
 
   return (
     <div className="space-y-4">
@@ -217,14 +218,14 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
         </div>
       )}
 
-      {/* GPS Score + Termômetro */}
+      {/* GPS Score + Scores Separados */}
       <Card className="glass-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Target className="w-4 h-4 text-primary" /> GPS do Negócio — Diagnóstico
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className={`rounded-lg p-4 ${scoreBg} flex items-center gap-4`}>
             <div className="text-center">
               <p className={`text-4xl font-black ${scoreColor}`}>{score}%</p>
@@ -232,7 +233,17 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
             </div>
             <p className="text-sm flex-1">{gps.descricao}</p>
           </div>
-          <div className="mt-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className={`rounded-lg p-3 ${getScoreBg(scoreMarketing)} text-center`}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Score Marketing</p>
+              <p className={`text-2xl font-black ${getScoreColor(scoreMarketing)}`}>{scoreMarketing}%</p>
+            </div>
+            <div className={`rounded-lg p-3 ${getScoreBg(scoreComercial)} text-center`}>
+              <p className="text-xs font-semibold text-muted-foreground uppercase">Score Comercial</p>
+              <p className={`text-2xl font-black ${getScoreColor(scoreComercial)}`}>{scoreComercial}%</p>
+            </div>
+          </div>
+          <div>
             <Progress value={score} className="h-2" />
             <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
               <span>Crítico</span><span>Básico</span><span>Intermediário</span><span>Avançado</span>
@@ -272,9 +283,9 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { key: "infraestrutura", label: "🏗️ Estruturar (Infraestrutura)", value: gps.gargalos_ece.infraestrutura },
-              { key: "coleta", label: "📊 Coletar (Dados)", value: gps.gargalos_ece.coleta },
-              { key: "escala", label: "📈 Escalar", value: gps.gargalos_ece.escala },
+              { key: "estrutura", label: "🏗️ Estrutura", value: gps.gargalos_ece.estrutura || (gps.gargalos_ece as any).infraestrutura },
+              { key: "coleta", label: "📊 Coleta de Dados", value: gps.gargalos_ece.coleta },
+              { key: "escala", label: "📈 Escala", value: gps.gargalos_ece.escala },
             ].map((g) => (
               <div key={g.key} className="border rounded-lg p-3">
                 <p className="text-xs font-bold uppercase text-primary mb-1">{g.label}</p>
@@ -284,6 +295,102 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Persona */}
+      {result.persona && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" /> Persona — Cliente Ideal
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{result.persona.descricao}</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {[
+                { label: "Faixa Etária", value: result.persona.faixa_etaria },
+                { label: "Gênero", value: result.persona.genero },
+                { label: "Poder Aquisitivo", value: result.persona.poder_aquisitivo },
+              ].filter(i => i.value).map((item) => (
+                <div key={item.label} className="bg-primary/5 rounded-lg p-2 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase">{item.label}</p>
+                  <p className="text-sm font-bold">{item.value}</p>
+                </div>
+              ))}
+            </div>
+            {result.persona.canais?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Canais Principais</p>
+                <div className="flex flex-wrap gap-1">
+                  {result.persona.canais.map((c, i) => (
+                    <Badge key={i} variant="secondary" className="text-[10px]">{c}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Dor Principal</p>
+              <p className="text-sm">{result.persona.dor_principal}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Decisão de Compra</p>
+              <p className="text-sm">{result.persona.decisao_compra}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Análise de Concorrência */}
+      {result.analise_concorrencia && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Crosshair className="w-4 h-4 text-primary" /> Análise de Concorrência
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {result.analise_concorrencia.concorrentes?.map((c, i) => (
+              <div key={i} className="border rounded-lg p-3 space-y-2">
+                <p className="text-sm font-bold flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-primary" /> {c.nome}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-[10px] font-semibold text-green-600 uppercase">Pontos Fortes</p>
+                    {c.pontos_fortes.map((p, pi) => (
+                      <p key={pi} className="text-xs text-muted-foreground">• {p}</p>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-destructive uppercase">Pontos Fracos</p>
+                    {c.pontos_fracos.map((p, pi) => (
+                      <p key={pi} className="text-xs text-muted-foreground">• {p}</p>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-blue-600 uppercase">Oportunidades</p>
+                    {c.oportunidades.map((p, pi) => (
+                      <p key={pi} className="text-xs text-muted-foreground">• {p}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="border-t pt-3 space-y-2">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Diferencial da Empresa</p>
+                <p className="text-sm">{result.analise_concorrencia.diferencial_empresa}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Posicionamento Recomendado</p>
+                <p className="text-sm">{result.analise_concorrencia.posicionamento_recomendado}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
 
       {/* Insights */}
       {gps.insights && gps.insights.length > 0 && (

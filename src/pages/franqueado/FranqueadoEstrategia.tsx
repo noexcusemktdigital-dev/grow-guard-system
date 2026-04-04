@@ -73,117 +73,120 @@ import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ── Diagnostic Sections (5 Etapas + Contexto + Maturidade + Financeiro) ──
+// ── Diagnostic Sections (7 blocos reestruturados) ──
 
 const diagnosticSections: DiagSection[] = [
   {
     title: "Contexto do Negócio",
-    subtitle: "Informações gerais da empresa",
+    subtitle: "Informações gerais da empresa e metas",
     icon: <FileText className="w-5 h-5 text-primary" />,
     fields: [
-      { key: "nome_empresa", label: "Nome da empresa", type: "text", placeholder: "Ex: Empresa Exemplo LTDA" },
-      { key: "segmento", label: "Qual é o segmento/nicho de mercado?", type: "text", placeholder: "Ex: Marketing digital, Saúde, Educação..." },
-      { key: "tempo_mercado", label: "Há quanto tempo está no mercado?", type: "select", options: ["Menos de 1 ano", "1 a 2 anos", "2 a 5 anos", "Mais de 5 anos"] },
-      { key: "faturamento_atual", label: "Faturamento mensal atual (R$)", type: "text", placeholder: "Ex: 50000" },
-      { key: "ticket_medio_atual", label: "Ticket médio atual (R$)", type: "text", placeholder: "Ex: 2000" },
-      { key: "clientes_ativos", label: "Quantos clientes ativos possui?", type: "text", placeholder: "Ex: 20" },
-      { key: "modelo_negocio", label: "Modelo de negócio principal", type: "select", options: ["Prestação de serviços", "Produto físico", "SaaS/Digital", "Recorrência/Assinatura", "Consultoria", "Outro"] },
-      { key: "meta_faturamento", label: "Meta de faturamento mensal (R$)", type: "text", placeholder: "Ex: 150000" },
-      { key: "meta_clientes_mes", label: "Meta de novos clientes por mês", type: "text", placeholder: "Ex: 10" },
+      { key: "nome_empresa", label: "Nome da empresa", type: "text", placeholder: "Ex: Empresa Exemplo LTDA", tooltip: "Razão social ou nome fantasia do negócio do cliente." },
+      { key: "segmento", label: "Qual é o segmento/nicho de mercado?", type: "text", placeholder: "Ex: Marketing digital, Saúde, Educação...", tooltip: "O segmento principal de atuação do negócio." },
+      { key: "tempo_mercado", label: "Há quanto tempo está no mercado?", type: "select", options: ["Menos de 1 ano", "1 a 2 anos", "2 a 5 anos", "Mais de 5 anos"], tooltip: "Tempo de existência do negócio." },
+      { key: "servicos_produtos", label: "Quais serviços e produtos a empresa oferece?", type: "textarea", placeholder: "Liste os principais serviços e/ou produtos oferecidos...", tooltip: "Descreva detalhadamente os serviços e produtos que a empresa comercializa." },
+      { key: "localizacao", label: "Localização / Unidades", type: "text", placeholder: "Ex: São Paulo - SP (2 unidades)", optional: true, tooltip: "Cidade e estado. Se tiver mais de uma unidade, informe aqui." },
+      { key: "ticket_medio_atual", label: "Ticket médio (R$)", type: "currency", placeholder: "2.000", tooltip: "Valor médio que cada cliente paga por uma compra ou contrato." },
+      { key: "faturamento_atual", label: "Faturamento mensal atual (R$)", type: "currency", placeholder: "50.000", optional: true, tooltip: "Receita mensal aproximada do negócio." },
+      { key: "meta_faturamento", label: "Meta de faturamento mensal (R$)", type: "currency", placeholder: "150.000", optional: true, tooltip: "Quanto a empresa deseja faturar por mês." },
+      { key: "meta_clientes_mes", label: "Meta de novos clientes por mês", type: "text", placeholder: "Ex: 10", tooltip: "Quantos novos clientes a empresa deseja conquistar mensalmente." },
+      { key: "metas_alternativas", label: "Metas alternativas ou objetivos a serem alcançados", type: "textarea", placeholder: "Descreva outras metas ou objetivos importantes do negócio...", optional: true, tooltip: "Outros objetivos além de faturamento e novos clientes, como posicionamento de marca, expansão territorial, etc." },
+      { key: "pitch_negocio", label: "Fale sobre o seu negócio e tente me vender seus serviços", type: "audio-text", placeholder: "Escreva aqui um pitch completo sobre o negócio: o que faz, para quem, como se diferencia, por que o cliente deveria escolher essa empresa...", tooltip: "Quanto mais detalhes aqui, melhor será o diagnóstico. Imagine que está apresentando o negócio a um potencial investidor. Pode também gravar um áudio." },
     ],
   },
   {
-    title: "01 — Conteúdo e Linha Editorial",
-    subtitle: "Como está a produção de conteúdo hoje",
-    icon: <FileText className="w-5 h-5 text-primary" />,
+    title: "Público-Alvo e Persona",
+    subtitle: "Entendendo o cliente ideal do negócio",
+    icon: <Target className="w-5 h-5 text-primary" />,
     fields: [
-      { key: "produz_conteudo", label: "A empresa produz conteúdo para redes sociais?", type: "select", options: ["Sim, com frequência", "Sim, mas irregular", "Não"] },
-      { key: "frequencia_conteudo", label: "Qual a frequência de publicações?", type: "select", options: ["Diária", "3-5x por semana", "1-2x por semana", "Quinzenal ou menos", "Não publica"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"] },
-      { key: "canais_conteudo", label: "Em quais canais publica?", type: "checkbox-group", options: ["Instagram", "Facebook", "LinkedIn", "TikTok", "YouTube", "Blog", "Newsletter", "Outros"] },
-      { key: "linha_editorial", label: "Existe uma linha editorial definida?", type: "select", options: ["Sim, estruturada", "Parcial", "Não"] },
-      { key: "funil_conteudo", label: "O conteúdo segue um funil (topo/meio/fundo)?", type: "select", options: ["Sim", "Parcialmente", "Não", "Não sei o que é"] },
-      { key: "formatos_usados", label: "Quais formatos de conteúdo utiliza?", type: "checkbox-group", options: ["Carrossel", "Reels/Vídeos curtos", "Stories", "Lives", "Blog/Artigos", "E-books", "Podcast", "YouTube longo"] },
+      { key: "cliente_ideal", label: "Quem é o cliente ideal do negócio?", type: "textarea", placeholder: "Descreva o perfil do cliente ideal: quem é, o que faz, qual o porte...", tooltip: "Quanto mais específico for sobre o cliente ideal, melhor a IA poderá construir a persona." },
+      { key: "faixa_etaria", label: "Faixa etária predominante", type: "select", options: ["18-24 anos", "25-34 anos", "35-44 anos", "45-54 anos", "55+ anos", "Variada"], tooltip: "A faixa etária mais comum entre os clientes do negócio." },
+      { key: "genero_predominante", label: "Gênero predominante", type: "select", options: ["Masculino", "Feminino", "Misto/Equilibrado", "Outros"], tooltip: "O gênero predominante da base de clientes." },
+      { key: "poder_aquisitivo", label: "Renda/poder aquisitivo do público", type: "select", options: ["Classe A (alta)", "Classe B (média-alta)", "Classe C (média)", "Classe D/E (baixa)", "Variado"], tooltip: "O poder aquisitivo médio do público-alvo." },
+      { key: "canais_publico", label: "Onde o público está? Canais digitais", type: "checkbox-group", options: ["Instagram", "Facebook", "LinkedIn", "TikTok", "YouTube", "Google/Pesquisa", "WhatsApp", "E-mail"], tooltip: "Selecione os canais digitais onde o público-alvo está mais presente." },
+      { key: "dor_principal", label: "Qual a principal dor ou necessidade do público?", type: "textarea", placeholder: "Ex: Falta de tempo, custo alto, qualidade insuficiente...", tooltip: "A principal dor ou problema que o público-alvo enfrenta e que o negócio resolve." },
+      { key: "como_encontra", label: "Como o público encontra a empresa hoje?", type: "checkbox-group", options: ["Indicação", "Redes sociais", "Google/Pesquisa", "Tráfego pago", "Eventos", "Parcerias", "Outros"], tooltip: "Os principais canais através dos quais novos clientes chegam à empresa." },
+      { key: "decisao_compra", label: "O que mais influencia a decisão de compra?", type: "textarea", placeholder: "Ex: Preço, qualidade, indicação, prova social, atendimento...", tooltip: "Os fatores que mais pesam na hora do público decidir comprar.", optional: true },
     ],
   },
   {
-    title: "02 — Tráfego e Distribuição",
-    subtitle: "Como os leads chegam até a empresa",
+    title: "Concorrência",
+    subtitle: "Análise dos principais concorrentes",
+    icon: <Search className="w-5 h-5 text-primary" />,
+    fields: [
+      { key: "concorrentes", label: "Principais concorrentes (3 a 5)", type: "competitor-list", tooltip: "Adicione os principais concorrentes com nome, site e redes sociais (se tiver). Isso ajudará a IA a analisar o mercado e posicionamento." },
+      { key: "diferencial_empresa", label: "Qual o principal diferencial da empresa sobre os concorrentes?", type: "textarea", placeholder: "O que torna essa empresa única e diferente dos concorrentes?", tooltip: "Descreva o que a empresa faz de diferente ou melhor que os concorrentes." },
+    ],
+  },
+  {
+    title: "Histórico e Problemas",
+    subtitle: "O que já foi feito e o que precisa melhorar",
+    icon: <AlertTriangle className="w-5 h-5 text-primary" />,
+    fields: [
+      { key: "problemas_marketing", label: "Quais os principais problemas no marketing hoje?", type: "textarea", placeholder: "Ex: Não gera leads, baixo engajamento, não tem presença digital...", tooltip: "Os maiores desafios e dores que o negócio enfrenta no marketing." },
+      { key: "tentativas_marketing", label: "O que já tentou fazer no marketing? O que deu certo ou errado?", type: "textarea", placeholder: "Descreva ações passadas e seus resultados...", tooltip: "Saber o que já foi tentado ajuda a evitar erros repetidos e identificar oportunidades." },
+      { key: "problemas_comercial", label: "Quais os principais problemas no comercial/vendas?", type: "textarea", placeholder: "Ex: Não fecha vendas, ciclo longo, sem processo definido...", tooltip: "Os maiores desafios na área de vendas e comercial." },
+      { key: "tentativas_comercial", label: "O que já tentou fazer no comercial? O que deu certo ou errado?", type: "textarea", placeholder: "Descreva ações passadas e seus resultados...", tooltip: "Histórico de tentativas na área comercial." },
+    ],
+  },
+  {
+    title: "Conteúdo e Linha Editorial",
+    subtitle: "Produção de conteúdo e presença nas redes",
+    icon: <FileText className="w-5 h-5 text-primary" />,
+    fields: [
+      { key: "produz_conteudo", label: "A empresa produz conteúdo para redes sociais?", type: "select", options: ["Sim, com frequência", "Sim, mas irregular", "Não"], tooltip: "Se a empresa publica conteúdo regularmente em alguma rede social." },
+      { key: "canais_conteudo", label: "Em quais redes sociais publica?", type: "checkbox-group", options: ["Instagram", "Facebook", "LinkedIn", "TikTok", "YouTube", "Blog", "Newsletter", "Outros"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"], optional: true, tooltip: "Selecione todas as plataformas onde o conteúdo é publicado." },
+      { key: "frequencia_conteudo", label: "Qual a frequência de publicações?", type: "select", options: ["Diária", "3-5x por semana", "1-2x por semana", "Quinzenal ou menos"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"], optional: true, tooltip: "Com que frequência o conteúdo é publicado." },
+      { key: "funil_conteudo", label: "O conteúdo segue um funil (topo/meio/fundo)?", type: "select", options: ["Sim", "Parcialmente", "Não", "Não sei o que é"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"], optional: true, tooltip: "Se o conteúdo é dividido em etapas do funil: atração (topo), consideração (meio) e decisão (fundo)." },
+      { key: "formatos_usados", label: "Quais formatos de conteúdo utiliza?", type: "checkbox-group", options: ["Carrossel", "Reels/Vídeos curtos", "Stories", "Lives", "Blog/Artigos", "E-books", "Podcast", "YouTube longo"], conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"], optional: true, tooltip: "Os formatos de conteúdo que a empresa utiliza." },
+      { key: "conteudo_funciona", label: "Sabe o que funciona melhor? O que dá mais resultado?", type: "textarea", placeholder: "Ex: Reels geram mais engajamento, carrosséis geram mais salvamentos...", conditionKey: "produz_conteudo", conditionValues: ["Sim, com frequência", "Sim, mas irregular"], optional: true, tooltip: "Se a empresa sabe quais tipos de conteúdo performam melhor." },
+      { key: "redes_sociais_urls", label: "Links das redes sociais da empresa", type: "textarea", placeholder: "Instagram: @empresa\nFacebook: facebook.com/empresa\nLinkedIn: ...", optional: true, tooltip: "Informe os links ou @ das redes sociais da empresa." },
+    ],
+  },
+  {
+    title: "Tráfego e Distribuição",
+    subtitle: "Investimento e resultados em tráfego pago",
     icon: <TrendingUp className="w-5 h-5 text-primary" />,
     fields: [
-      { key: "investe_trafego_pago", label: "Investe em tráfego pago?", type: "select", options: ["Sim", "Não", "Já investiu mas parou"] },
-      { key: "investimento_mensal_trafego", label: "Quanto investe por mês em tráfego? (R$)", type: "text", placeholder: "Ex: 5000", conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
-      { key: "plataformas_trafego", label: "Quais plataformas de tráfego usa?", type: "checkbox-group", options: ["Meta Ads", "Google Ads", "TikTok Ads", "LinkedIn Ads", "YouTube Ads", "Outros"], conditionKey: "investe_trafego_pago", conditionValues: ["Sim"] },
-      { key: "cpl_atual", label: "Qual o CPL (custo por lead) atual? (R$)", type: "text", placeholder: "Ex: 30 ou Não sei" },
-      { key: "leads_mes", label: "Quantos leads gera por mês?", type: "text", placeholder: "Ex: 50" },
-      { key: "canal_mais_converte", label: "Qual canal gera mais clientes hoje?", type: "text", placeholder: "Ex: Instagram, Google, Indicação..." },
+      { key: "investe_trafego_pago", label: "Investe em tráfego pago?", type: "select", options: ["Sim", "Não", "Já investiu mas parou"], tooltip: "Se a empresa investe atualmente em anúncios pagos (Meta Ads, Google Ads, etc.)." },
+      { key: "investimento_mensal_trafego", label: "Quanto investe por mês em tráfego? (R$)", type: "currency", placeholder: "5.000", conditionKey: "investe_trafego_pago", conditionValues: ["Sim"], optional: true, tooltip: "O valor mensal investido em plataformas de anúncios." },
+      { key: "plataformas_trafego", label: "Quais plataformas de tráfego usa?", type: "checkbox-group", options: ["Meta Ads", "Google Ads", "TikTok Ads", "LinkedIn Ads", "YouTube Ads", "Outros"], conditionKey: "investe_trafego_pago", conditionValues: ["Sim"], optional: true, tooltip: "As plataformas de anúncios que a empresa utiliza." },
+      { key: "sabe_indicadores", label: "Sabe quais indicadores de tráfego tem hoje?", type: "select", options: ["Sim", "Não", "Parcialmente"], conditionKey: "investe_trafego_pago", conditionValues: ["Sim"], optional: true, tooltip: "Se a empresa monitora KPIs como CPL, CTR, CPC, etc." },
+      { key: "cpl_atual", label: "Qual o CPL (custo por lead) atual? (R$)", type: "text", placeholder: "Ex: 30 ou Não sei", conditionKey: "sabe_indicadores", conditionValues: ["Sim", "Parcialmente"], optional: true, tooltip: "Quanto a empresa paga em média por cada lead gerado." },
+      { key: "leads_mes", label: "Quantos leads gera por mês?", type: "text", placeholder: "Ex: 50", conditionKey: "sabe_indicadores", conditionValues: ["Sim", "Parcialmente"], optional: true, tooltip: "Volume mensal de leads gerados através das campanhas." },
+      { key: "canal_mais_converte", label: "Qual canal gera mais clientes hoje?", type: "text", placeholder: "Ex: Instagram, Google, Indicação...", conditionKey: "investe_trafego_pago", conditionValues: ["Sim"], optional: true, tooltip: "O canal que mais converte leads em clientes." },
+      { key: "objetivos_trafego", label: "Quais objetivos já testou? O que funcionou e o que não?", type: "textarea", placeholder: "Ex: Testei conversão e tráfego. Conversão gerou mais leads qualificados...", conditionKey: "investe_trafego_pago", conditionValues: ["Sim", "Já investiu mas parou"], optional: true, tooltip: "Descreva os objetivos de campanha já testados e seus resultados." },
     ],
   },
   {
-    title: "03 — Web e Conversão",
-    subtitle: "Presença web e conversão de visitantes",
+    title: "Web, Sales e Validação",
+    subtitle: "Presença digital, processo comercial e métricas",
     icon: <Globe className="w-5 h-5 text-primary" />,
     fields: [
-      { key: "tem_site", label: "A empresa possui site/landing page?", type: "select", options: ["Sim, site completo", "Sim, apenas LPs", "Não"] },
-      { key: "quantidade_lps", label: "Quantas landing pages ativas possui?", type: "text", placeholder: "Ex: 3", conditionKey: "tem_site", conditionValues: ["Sim, site completo", "Sim, apenas LPs"] },
-      { key: "taxa_conversao_site", label: "Qual a taxa de conversão do site/LP?", type: "select", options: ["Acima de 5%", "Entre 2% e 5%", "Abaixo de 2%", "Não mede", "Não sei"] },
-      { key: "faz_teste_ab", label: "Realiza testes A/B?", type: "select", options: ["Sim, regularmente", "Às vezes", "Não"] },
-      { key: "elementos_prova", label: "Possui elementos de prova social no site?", type: "select", options: ["Sim (depoimentos, cases)", "Parcial", "Não"] },
-      { key: "cta_principal", label: "Qual o CTA principal do site?", type: "text", placeholder: "Ex: Agendar reunião, Solicitar orçamento..." },
-    ],
-  },
-  {
-    title: "04 — Sales e Fechamento",
-    subtitle: "Processo comercial e vendas",
-    icon: <ShoppingCart className="w-5 h-5 text-primary" />,
-    fields: [
-      { key: "processo_comercial", label: "Possui um processo comercial definido?", type: "select", options: ["Sim, documentado", "Parcial", "Não"] },
-      { key: "tamanho_time_comercial", label: "Quantas pessoas no time comercial?", type: "text", placeholder: "Ex: 3" },
-      { key: "usa_crm", label: "Utiliza CRM?", type: "select", options: ["Sim", "Não", "Planilha/Manual"] },
-      { key: "script_atendimento", label: "Possui script ou padrão de atendimento?", type: "select", options: ["Sim", "Não", "Parcial"] },
-      { key: "funil_definido", label: "Possui funil comercial definido com etapas?", type: "select", options: ["Sim", "Não", "Parcial"] },
-      { key: "taxa_conversao_comercial", label: "Qual a taxa de conversão de lead para cliente?", type: "select", options: ["Acima de 20%", "Entre 10% e 20%", "Abaixo de 10%", "Não mede"] },
-      { key: "followup", label: "Realiza follow-up estruturado?", type: "select", options: ["Sim, com cadência", "Às vezes", "Não"] },
-    ],
-  },
-  {
-    title: "05 — Validação e Escala",
-    subtitle: "Métricas, validação e capacidade de escala",
-    icon: <LineChart className="w-5 h-5 text-primary" />,
-    fields: [
-      { key: "mede_metricas", label: "Acompanha métricas de marketing e vendas?", type: "select", options: ["Sim, com dashboards", "Sim, manualmente", "Parcialmente", "Não"] },
-      { key: "kpis_acompanha", label: "Quais KPIs acompanha?", type: "checkbox-group", options: ["Leads/mês", "CPL", "Taxa de conversão", "CAC", "LTV", "ROI", "Faturamento", "Nenhum"] },
-      { key: "ja_escalou", label: "Já escalou algum canal de aquisição?", type: "select", options: ["Sim, com sucesso", "Sim, mas sem resultado", "Não"] },
-      { key: "capacidade_atendimento", label: "Se dobrar a demanda hoje, consegue atender?", type: "select", options: ["Sim, tranquilamente", "Sim, com dificuldade", "Não, precisaria estruturar", "Não, seria caótico"] },
-      { key: "maior_resultado", label: "Qual foi o maior resultado que já obteve com marketing?", type: "textarea", placeholder: "Descreva brevemente..." },
-    ],
-  },
-  {
-    title: "Termômetro de Maturidade",
-    subtitle: "Autoavaliação (1 a 5) para cada etapa",
-    icon: <BarChart3 className="w-5 h-5 text-primary" />,
-    fields: [
-      { key: "nota_conteudo", label: "Conteúdo e Linha Editorial", type: "slider", min: 1, max: 5 },
-      { key: "nota_trafego", label: "Tráfego e Distribuição", type: "slider", min: 1, max: 5 },
-      { key: "nota_web", label: "Web e Conversão", type: "slider", min: 1, max: 5 },
-      { key: "nota_sales", label: "Sales e Fechamento", type: "slider", min: 1, max: 5 },
-      { key: "nota_escala", label: "Validação e Escala", type: "slider", min: 1, max: 5 },
-      { key: "nota_marketing_geral", label: "Marketing Geral", type: "slider", min: 1, max: 5 },
-      { key: "nota_posicionamento", label: "Posicionamento de Marca", type: "slider", min: 1, max: 5 },
-    ],
-  },
-  {
-    title: "Financeiro e Projeções",
-    subtitle: "Dados para cálculos e projeções",
-    icon: <Calculator className="w-5 h-5 text-primary" />,
-    fields: [
-      { key: "margem_lucro", label: "Margem média de lucro (%)", type: "text", placeholder: "Ex: 30" },
-      { key: "ltv_medio", label: "LTV médio de um cliente (R$)", type: "text", placeholder: "Ex: 12000 ou Não sei" },
-      { key: "cac_maximo", label: "CAC máximo aceitável (R$)", type: "text", placeholder: "Ex: 500 ou Não sei" },
-      { key: "investimento_marketing_atual", label: "Investimento total atual em marketing/mês (R$)", type: "text", placeholder: "Ex: 5000" },
+      // Sub-seção Web
+      { key: "tem_site", label: "A empresa possui e-commerce, site ou landing page?", type: "select", options: ["Sim", "Não"], tooltip: "Se a empresa tem alguma presença web (site, loja online, landing page)." },
+      { key: "url_site", label: "URL do site/landing page", type: "text", placeholder: "Ex: www.empresa.com.br", conditionKey: "tem_site", conditionValues: ["Sim"], optional: true, tooltip: "O endereço do site principal da empresa." },
+      { key: "taxa_conversao_site", label: "Qual a taxa de conversão do site/LP?", type: "select", options: ["Acima de 5%", "Entre 2% e 5%", "Abaixo de 2%", "Não mede", "Não sei"], conditionKey: "tem_site", conditionValues: ["Sim"], optional: true, tooltip: "Porcentagem de visitantes que realizam a ação desejada (contato, compra, etc.)." },
+      { key: "faz_teste_ab", label: "Realiza testes A/B?", type: "select", options: ["Sim, regularmente", "Às vezes", "Não"], conditionKey: "tem_site", conditionValues: ["Sim"], optional: true, tooltip: "Se a empresa testa variações de páginas para otimizar conversão." },
+      { key: "elementos_prova", label: "Possui elementos de prova social no site?", type: "select", options: ["Sim (depoimentos, cases)", "Parcial", "Não"], conditionKey: "tem_site", conditionValues: ["Sim"], optional: true, tooltip: "Se o site tem depoimentos, avaliações, cases de sucesso, selos de confiança, etc." },
+      { key: "sites_concorrentes_analise", label: "Sites de concorrentes para análise", type: "text", placeholder: "Ex: www.concorrente1.com.br, www.concorrente2.com.br", conditionKey: "tem_site", conditionValues: ["Não"], optional: true, tooltip: "Informe sites de concorrentes para que possamos analisar como referência." },
+
+      // Sub-seção Sales
+      { key: "processo_comercial", label: "Possui processo comercial definido?", type: "select", options: ["Sim, documentado", "Parcial", "Não"], tooltip: "Se a empresa tem um processo estruturado de vendas com etapas definidas." },
+      { key: "descricao_processo_comercial", label: "Descreva como funciona o processo comercial hoje", type: "textarea", placeholder: "Ex: Lead chega pelo WhatsApp, vendedor faz contato em 24h, agenda reunião...", conditionKey: "processo_comercial", conditionValues: ["Sim, documentado", "Parcial"], optional: true, tooltip: "Descreva o fluxo desde que o lead chega até o fechamento da venda." },
+      { key: "tamanho_time_comercial", label: "Quantas pessoas no time comercial?", type: "text", placeholder: "Ex: 3", optional: true, tooltip: "Tamanho da equipe de vendas." },
+      { key: "usa_crm", label: "Utiliza CRM?", type: "select", options: ["Sim", "Não", "Planilha/Manual"], optional: true, tooltip: "Se utiliza uma ferramenta de gestão de relacionamento com clientes." },
+      { key: "taxa_conversao_comercial", label: "Qual a taxa de conversão de lead para cliente?", type: "select", options: ["Acima de 20%", "Entre 10% e 20%", "Abaixo de 10%", "Não mede"], optional: true, tooltip: "Porcentagem de leads que se tornam clientes pagantes." },
+      { key: "followup", label: "Realiza follow-up estruturado?", type: "select", options: ["Sim, com cadência", "Às vezes", "Não"], optional: true, tooltip: "Se a empresa tem um processo de acompanhamento (follow-up) com os leads." },
+
+      // Sub-seção Validação
+      { key: "mede_metricas", label: "Acompanha métricas de marketing e vendas?", type: "select", options: ["Sim, com dashboards", "Sim, manualmente", "Parcialmente", "Não"], tooltip: "Se a empresa monitora indicadores de performance de marketing e vendas." },
+      { key: "kpis_marketing", label: "Quais indicadores de marketing acompanha?", type: "checkbox-group", options: ["Leads/mês", "CPL", "Taxa de conversão", "CAC", "ROI", "Engajamento", "Alcance", "Nenhum"], conditionKey: "mede_metricas", conditionValues: ["Sim, com dashboards", "Sim, manualmente", "Parcialmente"], optional: true, tooltip: "Os KPIs de marketing que são monitorados regularmente." },
+      { key: "kpis_comercial", label: "Quais indicadores comerciais acompanha?", type: "checkbox-group", options: ["Taxa de fechamento", "Tempo de fechamento", "Ticket médio", "LTV", "Churn", "Pipeline", "Nenhum"], conditionKey: "mede_metricas", conditionValues: ["Sim, com dashboards", "Sim, manualmente", "Parcialmente"], optional: true, tooltip: "Os KPIs comerciais que são monitorados regularmente." },
+      { key: "capacidade_atendimento", label: "Se atingir sua meta de clientes, consegue atender ou precisará reestruturar o comercial?", type: "select", options: ["Consigo atender tranquilamente", "Consigo com ajustes pontuais", "Precisarei reestruturar o comercial", "Precisarei contratar mais gente"], optional: true, tooltip: "Avalia se a empresa tem capacidade operacional para absorver o crescimento planejado." },
     ],
   },
 ];
-
 const STEP_CARDS = [
   { num: "01", title: "Conteúdo", subtitle: "Linha editorial e produção", icon: FileText, color: "from-violet-500 to-purple-600" },
   { num: "02", title: "Tráfego", subtitle: "Distribuição e aquisição", icon: TrendingUp, color: "from-blue-500 to-cyan-500" },
@@ -454,8 +457,8 @@ function WelcomeScreen({ onManual, onUpload }: { onManual: () => void; onUpload:
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Metodologia ECE</p>
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Infraestrutura", desc: "Site, landing pages, CRM, funil comercial", icon: "🏗️" },
-            { label: "Coleta", desc: "Tráfego, conteúdo, captura de leads", icon: "🎯" },
+            { label: "Estrutura", desc: "Site, landing pages, CRM, funil comercial", icon: "🏗️" },
+            { label: "Coleta de Dados", desc: "Tráfego, conteúdo, captura de leads", icon: "🎯" },
             { label: "Escala", desc: "Validação, métricas, crescimento previsível", icon: "🚀" },
           ].map((item) => (
             <div key={item.label} className="text-center space-y-1">

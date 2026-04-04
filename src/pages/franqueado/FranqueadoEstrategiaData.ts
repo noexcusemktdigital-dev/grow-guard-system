@@ -1,7 +1,7 @@
 export interface DiagField {
   key: string;
   label: string;
-  type: "text" | "select" | "textarea" | "checkbox-group" | "conditional-text" | "slider";
+  type: "text" | "select" | "textarea" | "checkbox-group" | "conditional-text" | "slider" | "currency" | "audio-text" | "competitor-list";
   placeholder?: string;
   options?: string[];
   conditionKey?: string;
@@ -9,6 +9,8 @@ export interface DiagField {
   subFields?: DiagField[];
   min?: number;
   max?: number;
+  optional?: boolean;
+  tooltip?: string;
 }
 
 export interface DiagSection {
