@@ -5,10 +5,96 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-// ── New SPIN + NOEXCUSE schema ──────────────────────────────────
+// ── New 5-Step + GPS schema ──────────────────────────────────────
+
+export interface EtapaEstrategica {
+  titulo: string;
+  diagnostico: string;
+  score: number;
+  problemas: string[];
+  acoes: string[];
+  metricas_alvo: Record<string, string>;
+  entregaveis: string[];
+}
 
 export interface StrategyResult {
-  // New SPIN+NOEXCUSE format
+  // GPS Diagnosis
+  resumo_executivo: string;
+  resumo_cliente?: {
+    nome_empresa: string;
+    segmento: string;
+    proposta_valor: string;
+    diferencial: string;
+    modelo_negocio: string;
+  };
+  diagnostico_gps?: {
+    score_geral: number;
+    nivel: string;
+    descricao: string;
+    radar_data: { eixo: string; score: number; max: number }[];
+    problemas_por_etapa: Record<string, string[]>;
+    gargalos_ece: {
+      infraestrutura: string;
+      coleta: string;
+      escala: string;
+    };
+    insights: string[];
+  };
+
+  // 5-Step Strategic Plan
+  etapas?: {
+    conteudo: EtapaEstrategica;
+    trafego: EtapaEstrategica;
+    web: EtapaEstrategica;
+    sales: EtapaEstrategica;
+    validacao: EtapaEstrategica;
+  };
+
+  // Projections
+  projecoes?: {
+    unit_economics: {
+      cac: string;
+      ltv: string;
+      ltv_cac_ratio: string;
+      ticket_medio: string;
+      margem: string;
+    };
+    funil_conversao: {
+      etapa: string;
+      volume: number;
+      taxa: string;
+    }[];
+    projecao_mensal: {
+      mes: number;
+      leads: number;
+      clientes: number;
+      receita: number;
+      investimento: number;
+    }[];
+    crescimento_acumulado: {
+      mes: number;
+      receita_acumulada: number;
+      clientes_acumulados: number;
+    }[];
+  };
+
+  // Calculator deliverables
+  entregaveis_calculadora?: {
+    service_id: string;
+    service_name: string;
+    quantity: number;
+    justificativa: string;
+  }[];
+
+  // KPIs Hero
+  kpis_hero?: {
+    meta_faturamento: string;
+    ticket_medio: string;
+    recorrencia: string;
+    ltv_cac: string;
+  };
+
+  // Legacy fields for backward compatibility
   diagnostico_negocio?: {
     modelo: string;
     momento: string;
@@ -51,9 +137,6 @@ export interface StrategyResult {
     periodo: string;
     acoes: string[];
   }[];
-  resumo_executivo: string;
-
-  // Legacy fields for backward compatibility
   maturidade?: {
     score: number;
     nivel: string;
@@ -65,7 +148,7 @@ export interface StrategyResult {
     periodo: string;
     acoes: { acao: string; responsavel: string; prioridade: string }[];
   }[];
-  projecoes?: {
+  projecoes_legacy?: {
     leads: { mes: string; sem_estrategia: number; com_estrategia: number }[];
     receita: { mes: string; sem_estrategia: number; com_estrategia: number }[];
   };
