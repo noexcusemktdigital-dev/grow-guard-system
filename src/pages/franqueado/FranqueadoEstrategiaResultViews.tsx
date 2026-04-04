@@ -18,6 +18,7 @@ import {
   BarChart, Bar,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { exportStrategyPdf } from "@/lib/strategyPdfGenerator";
 
 // ── PDF Export Helper (Screenshot-based A4) ─────────────────────────
 
