@@ -89,8 +89,8 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
   };
 
   const handleGenerateContract = () => {
-    const leadId = proposal.lead_id || linkLeadId;
-    navigate(`/franqueado/contratos?tab=novo&proposal_id=${proposal.id}${leadId ? `&lead_id=${leadId}` : ""}`);
+    const strategyId = proposal.strategy_id || linkStrategyId;
+    navigate(`/franqueado/contratos?tab=novo&proposal_id=${proposal.id}${strategyId ? `&strategy_id=${strategyId}` : ""}`);
     onClose();
   };
 
