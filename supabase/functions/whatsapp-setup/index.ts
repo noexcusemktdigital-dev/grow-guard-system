@@ -657,7 +657,7 @@ Deno.serve(async (req) => {
               byEvents: true,
               base64: true,
               events: reconfigEvents,
-              headers: { "x-evolution-secret": effectiveApiKey },
+              headers: evolutionWebhookSecret ? { "x-evolution-secret": evolutionWebhookSecret } : undefined,
             },
           },
           {
