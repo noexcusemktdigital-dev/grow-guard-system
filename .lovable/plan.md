@@ -1,74 +1,114 @@
 
 
-## Plano — Redesign visual do Plano Estratégico (fundo escuro, premium) + Refinamento do prompt da IA
+## Plano — Ferramenta de Acompanhamento do Cliente (Reunião Mensal)
 
-### Duas frentes de trabalho
+### Conceito
 
----
+Uma nova ferramenta abaixo do "Gerador de Proposta" na sidebar, chamada **"Acompanhamento"**. Serve como base para reuniões mensais com o cliente, vinculada a uma estratégia aprovada. Cada mês gera um ciclo com duas partes:
 
-### Frente 1: Redesign visual dos resultados
+1. **Análise do mês anterior** — O que foi feito, o que deu certo, o que não deu certo (com dados e métricas)
+2. **Plano do próximo mês** — Ações organizadas nas 4 etapas (Conteúdo, Tráfego, Web/Site, Sales/CRM) com entregas específicas
 
-**Conceito:** Dividir a visualização em duas zonas visuais claras:
-- **Zona 1 (Diagnóstico)** — fundo claro (branco/glass): Resumo Executivo, Empresa, KPIs, GPS Score, Radar, ECE, Persona, Concorrência, Insights
-- **Zona 2 (Plano + Execuções)** — fundo escuro (preto/dark): Visão Geral das 5 Etapas, Etapas detalhadas, Projeções, Entregáveis, botões de ação
+### Fluxo de uso
 
-**Mudanças visuais nas 5 Etapas (zona escura):**
-- Cada etapa vira um card grande com número enorme (01-05), cor de destaque por etapa, score circular visual, e conteúdo expandido por padrão (não colapsável)
-- Ações estratégicas com ícones de check animados, tipografia maior e mais destaque
-- Métricas-alvo em cards visuais com fundo colorido
-- Problemas com destaque visual forte (border vermelho)
-- Separador visual entre Diagnóstico e Plano (divider estilizado com título "PLANO ESTRATÉGICO")
+```text
+┌─────────────────────────────────────────────────┐
+│  ACOMPANHAMENTO DO CLIENTE                      │
+│                                                 │
+│  1. Vincular Estratégia (select)                │
+│  2. Ver histórico de ciclos mensais             │
+│  3. Criar novo ciclo mensal:                    │
+│     ┌──────────────────────────────────┐        │
+│     │ ANÁLISE DO MÊS (retrospectiva)  │        │
+│     │ • Entregas realizadas ✓/✗       │        │
+│     │ • Métricas: leads, conversões,  │        │
+│     │   tráfego, engajamento          │        │
+│     │ • O que funcionou (highlights)  │        │
+│     │ • O que não funcionou (gaps)    │        │
+│     └──────────────────────────────────┘        │
+│     ┌──────────────────────────────────┐        │
+│     │ PLANO DO PRÓXIMO MÊS            │        │
+│     │ • Conteúdo: posts, vídeos, etc  │        │
+│     │ • Tráfego: campanhas, budget    │        │
+│     │ • Web: alterações no site       │        │
+│     │ • Sales: CRM, scripts, funil    │        │
+│     └──────────────────────────────────┘        │
+│  4. Exportar em PDF (apresentação reunião)      │
+└─────────────────────────────────────────────────┘
+```
 
-**Cards das etapas no tema escuro:**
-- Background: `bg-[#0a0a0a]` ou `bg-zinc-950`
-- Cards: `bg-zinc-900 border-zinc-800`
-- Texto: `text-white` e `text-zinc-400`
-- Acentos: vermelho primary para números e destaques
-- Badges e métricas com contraste alto
+### Mudanças
 
-**Aplica a todos os diagnósticos do histórico** (mesma `NewStrategyResultView`).
+#### 1. Tabela `client_followups` (migração)
 
-#### Arquivo: `src/pages/franqueado/FranqueadoEstrategiaResultViews.tsx`
+```sql
+CREATE TABLE public.client_followups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  strategy_id uuid NOT NULL REFERENCES franqueado_strategies(id) ON DELETE CASCADE,
+  month_ref text NOT NULL,           -- "2026-04"
+  status text NOT NULL DEFAULT 'draft', -- draft, presented, approved
 
-- Na `NewStrategyResultView`, após os cards de Insights, inserir um wrapper `<div className="bg-zinc-950 rounded-2xl p-6 -mx-4 space-y-6">` que engloba: Visão Geral 5 Etapas, Etapas detalhadas, Projeções, Entregáveis
-- Refazer `EtapaDetailCard`: remover Collapsible, expandir por padrão, layout premium com número gigante, score circular, seções com cores distintas
-- Projeções e Entregáveis também dentro do wrapper escuro
-- Botões "Salvar em PDF" e "Gerar Proposta" ficam dentro do wrapper escuro com estilo invertido
+  -- Análise do mês
+  analise jsonb DEFAULT '{}',
+  -- { entregas_realizadas: [{service_id, nome, status: "feito"|"pendente"|"cancelado"}],
+  --   metricas: {leads, conversoes, trafego, engajamento, faturamento},
+  --   destaques: string[], gaps: string[], observacoes: string }
 
----
+  -- Plano do próximo mês
+  plano_proximo jsonb DEFAULT '{}',
+  -- { conteudo: {acoes: string[], entregas: string[]},
+  --   trafego: {acoes: string[], budget: number, plataformas: string[]},
+  --   web: {acoes: string[], entregas: string[]},
+  --   sales: {acoes: string[], entregas: string[]} }
 
-### Frente 2: Refinamento dos prompts da IA
+  created_by uuid REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
-Baseado na análise crítica do usuário, atualizar os prompts para gerar estratégias mais agressivas e consistentes.
+ALTER TABLE public.client_followups ENABLE ROW LEVEL SECURITY;
 
-#### Arquivo: `supabase/functions/generate-strategy/index.ts`
+CREATE POLICY "Members can manage followups"
+  ON public.client_followups FOR ALL TO authenticated
+  USING (public.is_member_of_org(auth.uid(), organization_id))
+  WITH CHECK (public.is_member_of_org(auth.uid(), organization_id));
+```
 
-**GPS_PROMPT — Adicionar instruções:**
-- Considerar **capacidade operacional** do cliente (quantos clientes consegue atender por semana/mês)
-- Ao calcular projeções, considerar **recorrência real** (ex: psicólogo = paciente semanal, não avulso)
-- CAC deve ser calculado com benchmark realista do segmento, não conservador demais
-- Insights devem incluir alertas sobre gaps entre projeção e meta (se houver inconsistência, explicar)
+#### 2. Nova página `FranqueadoAcompanhamento.tsx`
 
-**STRATEGIC_PLAN_PROMPT — Adicionar instruções:**
-- Ações devem ser **agressivas e escaláveis** no padrão NoExcuse (não genéricas)
-- Conteúdo: além de educativo, incluir **conteúdo emocional, de identificação e validação** (não só racional)
-- Diferenciação criativa forte — não apenas "conteúdo educativo"
-- Explorar **autoridade orgânica** como canal principal quando aplicável
-- Considerar limitação de capacidade (ex: profissional liberal com agenda limitada)
-- Cada ação deve ter **nível de detalhe executável** (ex: "Publicar 3 reels/semana com ângulo emocional de identificação + dor + validação" em vez de "Produzir conteúdo para redes sociais")
+- **Tela inicial**: Select para vincular estratégia + lista de ciclos mensais (cards com mês, status, badge)
+- **Formulário de ciclo**: Dividido em duas seções (Análise + Plano). A análise puxa automaticamente os entregáveis da estratégia vinculada como checklist. O plano é organizado nas 4 etapas com campos de ações e entregas
+- **IA auxiliar**: Botão "Gerar com IA" que analisa a estratégia, os entregáveis e o histórico de ciclos anteriores para sugerir análise e plano do próximo mês
+- **Visual**: Segue o padrão dual-theme (análise em fundo claro, plano em fundo escuro)
+- **Exportar PDF**: Mesmo padrão A4 screenshot-based já usado na estratégia
 
-**PROJECTIONS_PROMPT — Adicionar instruções:**
-- Modelo financeiro deve considerar **recorrência** (paciente semanal, mensalista, etc.)
-- Projeção de receita deve bater com a meta informada — se não bater, explicar o gap e o que seria necessário
-- CAC realista para o segmento (usar benchmarks brasileiros por vertical)
-- Incluir **capacidade operacional** como limitador na projeção
+#### 3. Hook `useClientFollowups.ts`
 
----
+- CRUD para `client_followups`
+- Query por `strategy_id` com ordenação por `month_ref`
+- Mutation para criar/atualizar ciclos
+
+#### 4. Edge Function `generate-followup`
+
+- Recebe: `strategy_id`, `month_ref`, dados de análise parciais, ciclos anteriores
+- Retorna: Sugestões de análise (destaques/gaps) + plano detalhado para o próximo mês nas 4 etapas, baseado na estratégia original e no que foi executado
+
+#### 5. Sidebar + Rotas
+
+- Adicionar "Acompanhamento" na sidebar do franqueado (seção Comercial, abaixo de "Gerador de Proposta") com ícone `ClipboardList`
+- Adicionar rota `/franqueado/acompanhamento` no `App.tsx`
+- Replicar na sidebar da franqueadora com rota `/franqueadora/acompanhamento`
 
 ### Arquivos afetados
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `src/pages/franqueado/FranqueadoEstrategiaResultViews.tsx` | Redesign visual: zona escura para plano, etapas expandidas, cards premium |
-| `supabase/functions/generate-strategy/index.ts` | Refinamento dos 3 prompts com instruções de recorrência, capacidade, ações agressivas e consistência financeira |
+| Migração SQL | Criar tabela `client_followups` com RLS |
+| `src/pages/franqueado/FranqueadoAcompanhamento.tsx` | Nova página completa |
+| `src/hooks/useClientFollowups.ts` | Novo hook CRUD |
+| `supabase/functions/generate-followup/index.ts` | Nova edge function IA |
+| `src/components/FranqueadoSidebar.tsx` | Adicionar item "Acompanhamento" |
+| `src/components/FranqueadoraSidebar.tsx` | Adicionar item "Acompanhamento" |
+| `src/App.tsx` | Adicionar rotas para ambos portais |
 
