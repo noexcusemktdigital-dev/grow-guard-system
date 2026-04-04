@@ -186,7 +186,8 @@ export function ContratosGeradorGestaoTab({
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailContract(c)} aria-label="Visualizar"><Eye className="w-3.5 h-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)} aria-label="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(c.id)} aria-label="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractPdf(c)} title="Baixar PDF" aria-label="Baixar"><Download className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractPdf(c)} title="Baixar PDF" aria-label="Baixar PDF"><Download className="w-3.5 h-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => downloadContractDocx(c)} title="Baixar DOCX" aria-label="Baixar DOCX"><FileType className="w-3.5 h-3.5" /></Button>
                       </div>
                     </td>
                   </tr>
