@@ -5,7 +5,7 @@
  * Uses html2canvas ONLY for chart captures (Radar, Bar, Line).
  */
 import type { StrategyResult, EtapaEstrategica } from "@/hooks/useFranqueadoStrategies";
-import logoSrc from "@/assets/logo-noexcuse.png";
+import logoSrc from "@/assets/logo-noexcuse-white.png";
 
 // ─── Constants ───
 const A4_W = 210;
