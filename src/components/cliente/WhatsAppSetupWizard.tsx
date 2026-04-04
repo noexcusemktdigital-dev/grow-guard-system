@@ -525,3 +525,35 @@ function StepHeader({ number, title, description }: { number: number; title: str
     </div>
   );
 }
+
+function PaymentPolling({ orgId, onConfirmed }: { orgId: string | null | undefined; onConfirmed: () => void }) {
+  const [checking, setChecking] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!orgId) return;
+    intervalRef.current = setInterval(async () => {
+      try {
+        setChecking(true);
+        const { data } = await supabase
+          .from("whatsapp_instances" as any)
+          .select("billing_status")
+          .eq("organization_id", orgId)
+          .limit(1)
+          .single();
+        if ((data as any)?.billing_status === "active") {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          onConfirmed();
+        }
+      } catch {} finally { setChecking(false); }
+    }, 5000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [orgId, onConfirmed]);
+
+  return (
+    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+      <Loader2 className={`w-3.5 h-3.5 ${checking ? "animate-spin" : ""}`} />
+      Aguardando confirmação de pagamento...
+    </div>
+  );
+}
