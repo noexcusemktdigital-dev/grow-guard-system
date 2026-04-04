@@ -31,7 +31,7 @@ export function useGoogleCalendarSaveCredentials() {
   return useMutation({
     mutationFn: async ({ clientId, clientSecret }: { clientId: string; clientSecret: string }) => {
       const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
-        body: { action: "save_credentials", client_id: clientId, client_secret: clientSecret },
+        body: { action: "save_credentials", client_id: clientId, client_secret: clientSecret, portal: "saas" },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
