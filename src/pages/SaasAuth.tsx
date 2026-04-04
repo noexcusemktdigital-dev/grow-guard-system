@@ -171,7 +171,7 @@ const SaasAuth = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/cliente/inicio",
+      redirect_uri: window.location.origin,
     });
     setGoogleLoading(false);
     if (error) {
