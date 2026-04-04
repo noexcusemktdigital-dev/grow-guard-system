@@ -32,8 +32,8 @@ export function DiagnosticForm({
 }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>(initialAnswers || {
-    nota_marketing: 3, nota_comercial: 3, nota_leads: 3,
-    nota_previsibilidade: 3, nota_marca: 3, nota_escala: 3,
+    nota_conteudo: 3, nota_trafego: 3, nota_web: 3,
+    nota_sales: 3, nota_escala: 3, nota_marketing_geral: 3, nota_posicionamento: 3,
   });
   const [title, setTitle] = useState(initialTitle || "");
 
