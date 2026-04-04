@@ -322,30 +322,25 @@ export function StrategyResultView({
   onSendToCalculator?: () => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const isNewFormat = !!result.diagnostico_gps;
   const isLegacyNewFormat = !!result.diagnostico_negocio;
 
-  const handleExportPdf = () => {
-    if (contentRef.current) {
-      exportPdf(contentRef.current, title || "Planejamento Estratégico");
-      toast.success("PDF gerado com sucesso!");
+  const handleExportPdf = async () => {
+    await exportProfessionalPdf(contentRef.current!, title || "Planejamento Estratégico", result);
+    toast.success("PDF gerado com sucesso!");
+  };
+
+  const handleGoToCalculator = () => {
+    if (result.entregaveis_calculadora?.length) {
+      // Store deliverables in sessionStorage for the calculator to pick up
+      sessionStorage.setItem("strategy_deliverables", JSON.stringify(result.entregaveis_calculadora));
     }
+    navigate("/franqueado/propostas");
   };
 
   return (
     <div className="space-y-4">
-      {showExport && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handleExportPdf}>
-            <Download className="w-4 h-4 mr-1" /> Exportar PDF
-          </Button>
-          {onSendToCalculator && result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
-            <Button variant="default" size="sm" onClick={onSendToCalculator}>
-              <Calculator className="w-4 h-4 mr-1" /> Enviar para Calculadora
-            </Button>
-          )}
-        </div>
-      )}
       <div ref={contentRef}>
         {isNewFormat ? (
           <NewStrategyResultView result={result} />
@@ -355,6 +350,29 @@ export function StrategyResultView({
           <LegacyStrategyResultView result={result} />
         )}
       </div>
+
+      {/* Action Buttons at the bottom */}
+      {showExport && (
+        <div className="flex flex-col sm:flex-row items-stretch gap-3 pt-4 border-t border-border">
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex-1 h-14 text-base gap-2"
+            onClick={handleExportPdf}
+          >
+            <Download className="w-5 h-5" /> Salvar em PDF
+          </Button>
+          {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
+            <Button
+              size="lg"
+              className="flex-1 h-14 text-base gap-2"
+              onClick={onSendToCalculator || handleGoToCalculator}
+            >
+              <Calculator className="w-5 h-5" /> Gerar Proposta
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
