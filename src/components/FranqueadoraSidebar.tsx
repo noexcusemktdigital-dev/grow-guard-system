@@ -7,6 +7,7 @@ import {
   Rocket, MessageSquare, ChevronLeft, ChevronRight, ChevronDown, BarChart3,
   Shield, Settings, Calendar, Megaphone, Zap, GraduationCap, Trophy, Receipt, Sparkles, ClipboardCheck,
   ArrowRightLeft, CreditCard, FileSpreadsheet, FilePlus, Copy, User, AlertTriangle, LogOut, Users,
+  ClipboardList,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -46,6 +47,7 @@ const comercialSection: SidebarItem[] = [
   { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
   { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
   { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
+  { label: "Acompanhamento", icon: ClipboardList, path: "/franqueadora/acompanhamento" },
   { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
 ];
 

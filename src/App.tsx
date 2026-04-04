@@ -65,6 +65,7 @@ const FranqueadoConfiguracoes = lazy(() => import("./pages/franqueado/Franqueado
 const FranqueadoDiagnostico = lazy(() => import("./pages/franqueado/FranqueadoDiagnostico"));
 const FranqueadoMinhaUnidade = lazy(() => import("./pages/franqueado/FranqueadoMinhaUnidade"));
 const FranqueadoMetasRanking = lazy(() => import("./pages/franqueado/FranqueadoMetasRanking"));
+const FranqueadoAcompanhamento = lazy(() => import("./pages/franqueado/FranqueadoAcompanhamento"));
 
 // Cliente pages
 const ClienteInicio = lazy(() => import("./pages/cliente/ClienteInicio"));
@@ -175,6 +176,7 @@ function App() {
                   <Route path="propostas" element={<FranqueadoraPropostas />} />
                   <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
                   <Route path="estrategia" element={<FranqueadoEstrategia />} />
+                  <Route path="acompanhamento" element={<PageBoundary><FranqueadoAcompanhamento /></PageBoundary>} />
                   <Route path="perfil" element={<FranqueadoraPerfil />} />
                   <Route path="playbooks" element={<Playbooks />} />
                   <Route path="candidatos" element={<FranqueadoraCandidatos />} />
@@ -193,6 +195,7 @@ function App() {
                   <Route path="prospeccao" element={<FranqueadoProspeccaoIA />} />
                   <Route path="estrategia" element={<FranqueadoEstrategia />} />
                   <Route path="propostas" element={<FranqueadoPropostas />} />
+                  <Route path="acompanhamento" element={<PageBoundary><FranqueadoAcompanhamento /></PageBoundary>} />
                   <Route path="crm" element={<FranqueadoCRM />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
                   <Route path="materiais" element={<FranqueadoMateriais />} />
