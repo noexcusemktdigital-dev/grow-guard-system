@@ -129,7 +129,7 @@ class PdfBuilder {
       this.pdf.setPage(i);
       this.pdf.setFontSize(7);
       this.pdf.setTextColor(...GRAY);
-      this.pdf.text("NoExcuse Digital — Diagnostico Estrategico", A4_W / 2, A4_H - 8, { align: "center" });
+      this.pdf.text("NoExcuse Digital \u2014 Diagn\u00f3stico Estrat\u00e9gico", A4_W / 2, A4_H - 8, { align: "center" });
       this.pdf.text(`${i - 1}/${pages - 1}`, A4_W - M_RIGHT, A4_H - 8, { align: "right" });
       this.pdf.setDrawColor(200, 200, 200);
       this.pdf.setLineWidth(0.2);

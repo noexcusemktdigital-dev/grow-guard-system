@@ -28,7 +28,7 @@ function safeText(t: string) {
 
 async function loadLogoAsDataUrl(): Promise<string | null> {
   try {
-    const resp = await fetch("/logo-noexcuse.png");
+    const resp = await fetch("/logo-noexcuse-white.png");
     if (!resp.ok) return null;
     const blob = await resp.blob();
     return new Promise((resolve) => {
