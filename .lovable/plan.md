@@ -1,50 +1,78 @@
 
 
-## Plano — Remover `// @ts-nocheck` e corrigir tipos reais em todos os arquivos afetados
+## Plano — Cobrança automática de R$45/mês (WhatsApp Izitech) via Asaas
 
 ### Contexto
 
-Atualmente ~20+ arquivos usam `// @ts-nocheck` para suprimir erros de TypeScript. Isso esconde problemas reais. O objetivo é remover essa diretiva e corrigir cada erro com tipagem adequada (type assertions, interfaces, casts).
+Atualmente, ao integrar WhatsApp via Izitech, a instância é criada mas nenhuma cobrança é gerada. O fluxo de cobrança precisa ser idêntico ao dos planos (Starter/Pro/Enterprise), usando a mesma infraestrutura Asaas (criar assinatura recorrente, gerar PIX/boleto, confirmar via webhook).
 
-### Padrões de erro recorrentes e como corrigir
+### Arquitetura da solução
 
-1. **`unknown` usado como `ReactNode`, `Key`, `string`, `number`** → Adicionar `as string`, `as number`, `as React.Key` nos pontos de uso
-2. **`Record<string, unknown>` incompatível com interface esperada** → Cast com `as TipoEsperado` ou `as any`
-3. **Propriedade não existe no tipo** (ex: `start_at` em `AgendaEvent`) → Usar `(x as any).prop` ou criar interface intermediária
-4. **`unknown` em catch blocks** → `(err as Error).message`
-5. **Spread de `unknown`** → Cast antes do spread: `...(obj as Record<string, any>)`
+```text
+WhatsAppSetupWizard (step 3, após conectar)
+  └─ Chama edge function "asaas-create-subscription" 
+     com tipo especial: plan = "whatsapp" 
+  └─ Asaas cria assinatura recorrente de R$45/mês
+  └─ Exibe QR PIX / boleto inline no wizard
 
-### Arquivos a corrigir (por ordem de prioridade)
+asaas-webhook (PAYMENT_CONFIRMED)
+  └─ Reconhece externalReference "{orgId}|sub|whatsapp"
+  └─ Marca whatsapp_subscription como ativo
+```
 
-| # | Arquivo | Erros principais |
-|---|---------|-----------------|
-| 1 | `ClienteDisparos.tsx` | `data.stats.sent` em `unknown`, tipo de `dispatch` incompatível |
-| 2 | `ClienteGPSNegocio.tsx` | `GeneratingStep` enum, spread de `unknown`, `etapasText` não declarado, tipos de teams/members |
-| 3 | `ClienteGamificacao.tsx` | Insert em tabela inexistente, `xp` como `unknown` |
-| 4 | `ClienteInicio.tsx` | `a.status` em tipo reduzido, tipos de announcements |
-| 5 | `ClienteMarketingHub.tsx` | `a.publico/objetivo/diferencial/empresa` como `unknown` |
-| 6 | `ClienteOnboardingCompany.tsx` | `org` fields como `unknown`, `.join()` em `unknown` |
-| 7 | `ClientePlanoCreditsHelpers.tsx` | `tx.amount`, `tx.type`, `p.value`, `p.invoiceUrl` como `unknown` |
-| 8 | `ClientePlanoMarketing.tsx` | `aiResult.result.diagnostico`, `strategy_result` como `unknown` |
-| 9 | `ClienteAgenda.tsx` | `start_at`/`all_day`/`color`/`title` vs tipo `AgendaEvent` |
-| 10 | `ClienteAgentesIA.tsx` | `id` faltando em `Partial<AiAgent>` |
-| 11 | `ClienteAvaliacoes.tsx` | `localeCompare`, `score`, `Key` em `unknown` |
-| 12 | `ClienteCRM.tsx` | `setDraggingId` faltando em props |
-| 13 | `ClienteChat.tsx` | `contact_id` em `unknown` |
-| 14 | `ClienteComunicados.tsx` | Vários `unknown` como `string` |
-| 15 | `ClienteConfiguracoes.tsx` | `accepted_at` em `PendingInvitation` |
-| 16 | `ClienteConteudos.tsx` | `.message` em `unknown`, `.hook` em `object` |
-| 17 | `ClienteDashboard.tsx` | (verificar erros específicos) |
-| 18-20 | Outros (`NotificacoesPage`, `Unidades`, `Home`, `Matriz`, etc.) | Mesmos padrões |
+### Mudanças
 
-### Abordagem
+#### 1. `supabase/functions/asaas-create-subscription/index.ts`
 
-Para cada arquivo:
-1. Remover `// @ts-nocheck`
-2. Adicionar casts `as any` ou `as TipoEspecífico` nos pontos exatos de erro
-3. Para interfaces incompletas, estender com `& Record<string, any>` ou criar tipos locais
+Adicionar `whatsapp: 45` ao mapa `PLAN_PRICES`. Quando `plan === "whatsapp"`:
+- Descrição: `"WhatsApp Izitech — NOE"`
+- externalReference: `"{orgId}|sub|whatsapp"`
+- NÃO atualizar a tabela `subscriptions` (o plano principal é separado)
+- Em vez disso, salvar na tabela `whatsapp_instances` um campo `asaas_subscription_id`
+- Pular créditos (WhatsApp não dá créditos)
 
-### Nota
+#### 2. `supabase/functions/asaas-webhook/index.ts`
 
-Dado o volume (~20 arquivos, ~100+ erros), a correção será feita em lotes. Cada arquivo receberá casts mínimos e cirúrgicos para manter o código funcional sem suprimir verificação de tipos globalmente.
+No bloco `refParts[1] === "sub"` e `planSlug === "whatsapp"`:
+- NÃO atualizar `subscriptions` nem adicionar créditos
+- Atualizar `whatsapp_instances` → `billing_status = 'active'`
+- Log: "WhatsApp billing confirmed for org {id}"
+
+#### 3. Migração SQL
+
+Adicionar colunas à tabela `whatsapp_instances`:
+- `asaas_subscription_id text`
+- `billing_status text default 'pending'`
+
+#### 4. `src/components/cliente/WhatsAppSetupWizard.tsx`
+
+Após a instância ser conectada com sucesso (step 3, quando `izitechConnected = true`):
+- Mostrar seção de pagamento com seleção de método (PIX, Boleto, Cartão)
+- Chamar `supabase.functions.invoke("asaas-create-subscription", { body: { organization_id, plan: "whatsapp", billing_type } })`
+- Exibir QR PIX / link de boleto inline (reutilizar componente `InlinePaymentView` do ClientePlanoCreditsHelpers)
+- Mensagem: "Sua integração WhatsApp ficará ativa após confirmação do pagamento de R$45/mês"
+
+#### 5. `src/pages/cliente/ClienteIntegracoes.tsx`
+
+Exibir badge de status de pagamento nos cards de instância:
+- `billing_status === 'active'` → Badge verde "Pago"
+- `billing_status === 'pending'` → Badge amarela "Pagamento pendente"
+
+### Fluxo completo
+
+1. Usuário escolhe Izitech → digita nome → cria instância → escaneia QR → conecta
+2. Wizard mostra tela de pagamento: "Escolha como pagar R$45/mês"
+3. Usuário seleciona PIX/Boleto → sistema gera cobrança no Asaas
+4. Exibe QR PIX ou link do boleto
+5. Webhook confirma pagamento → marca `billing_status = 'active'`
+
+### Arquivos afetados
+
+| Arquivo | Ação |
+|---------|------|
+| Migração SQL | Adicionar `asaas_subscription_id` e `billing_status` em `whatsapp_instances` |
+| `supabase/functions/asaas-create-subscription/index.ts` | Suportar `plan: "whatsapp"` (R$45, sem créditos) |
+| `supabase/functions/asaas-webhook/index.ts` | Tratar `whatsapp` no bloco de subscription |
+| `src/components/cliente/WhatsAppSetupWizard.tsx` | Adicionar step de pagamento após conexão |
+| `src/pages/cliente/ClienteIntegracoes.tsx` | Badge de billing status nos cards |
 
