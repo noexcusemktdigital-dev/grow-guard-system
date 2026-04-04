@@ -136,6 +136,7 @@ serve(async (req) => {
         }
       }
 
+      console.log(`Google sync pull: ${imported} imported, ${googleEvents.length} total from Google, org=${orgId}`);
       return jsonRes({ success: true, imported, total: googleEvents.length });
     }
 
