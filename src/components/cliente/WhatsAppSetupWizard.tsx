@@ -34,7 +34,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const [izitechName, setIzitechName] = useState("");
   const [izitechNameError, setIzitechNameError] = useState("");
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
-  // IZITECH QR flow
+  // QR flow state
   const [izitechQr, setIzitechQr] = useState<string | null>(null);
   const [izitechLoading, setIzitechLoading] = useState(false);
   const [izitechConnected, setIzitechConnected] = useState(false);
@@ -79,18 +79,20 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     setPaymentDone(false);
   };
 
-  const validateIzitechName = (name: string): string => {
+  const validateName = (name: string): string => {
     if (name.length < 3) return "Nome deve ter no mínimo 3 caracteres";
     if (!INSTANCE_NAME_REGEX.test(name)) return "Apenas letras, números e hífens";
     return "";
   };
 
-  const canConnect = izitechName.trim().length >= 3 && !validateIzitechName(izitechName.trim());
+  const canConnect = izitechName.trim().length >= 3 && !validateName(izitechName.trim());
 
-  // ── IZITECH: Create instance + QR polling ──
-  const handleIzitechConnect = async () => {
-    const err = validateIzitechName(izitechName);
+  // ── Automatic connect: uses whatsapp-setup (Evolution API) ──
+  const handleAutoConnect = async () => {
+    const err = validateName(izitechName);
     if (err) { setIzitechNameError(err); return; }
+
+    const instanceName = izitechName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
     setStep(3);
     setIzitechLoading(true);
@@ -98,33 +100,59 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     setIzitechConnected(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("izitech-provision", {
-        body: { action: "create", instance_name: izitechName.trim() },
+      // Step 1: Create instance via whatsapp-setup (Evolution, no manual credentials needed)
+      const { data: createData, error: createError } = await supabase.functions.invoke("whatsapp-setup", {
+        body: { provider: "evolution", instanceName, label: izitechName.trim() },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (createError) throw createError;
+      if (createData?.error) throw new Error(createData.error);
 
-      if (data?.qr_code) {
-        setIzitechQr(data.qr_code);
+      // If already connected, skip QR
+      if (createData?.status === "connected") {
+        setIzitechConnected(true);
+        setIzitechPhone(createData.phone || null);
+        setIzitechLoading(false);
+        refetch();
+        setStep(4);
+        return;
+      }
+
+      // Step 2: Get QR code
+      const { data: qrData } = await supabase.functions.invoke("whatsapp-setup", {
+        body: { action: "get-qr", instanceName },
+      });
+
+      if (qrData?.status === "connected") {
+        setIzitechConnected(true);
+        setIzitechPhone(qrData.phone || null);
+        setIzitechLoading(false);
+        refetch();
+        setStep(4);
+        return;
+      }
+
+      if (qrData?.qr_code) {
+        setIzitechQr(qrData.qr_code);
       }
       setIzitechLoading(false);
 
-      const pollName = izitechName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      // Step 3: Poll for connection
       pollingRef.current = setInterval(async () => {
         try {
-          const { data: qrData } = await supabase.functions.invoke("izitech-provision", {
-            body: { action: "qr", instance_name: pollName },
+          const { data: pollData } = await supabase.functions.invoke("whatsapp-setup", {
+            body: { action: "get-qr", instanceName },
           });
-          if (qrData?.status === "connected") {
+
+          if (pollData?.status === "connected") {
             stopPolling();
             setIzitechConnected(true);
-            setIzitechPhone(qrData.phone_number || null);
+            setIzitechPhone(pollData.phone || null);
             setIzitechQr(null);
             refetch();
             toast({ title: "WhatsApp conectado!", description: "Agora configure o pagamento." });
             setStep(4);
-          } else if (qrData?.qr_code) {
-            setIzitechQr(qrData.qr_code);
+          } else if (pollData?.status === "qr_ready" && pollData.qr_code) {
+            setIzitechQr(pollData.qr_code);
           }
         } catch {
           // Ignore polling errors
@@ -132,8 +160,11 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
       }, 4000);
     } catch (err: unknown) {
       setIzitechLoading(false);
-      const realErr = await (await import("@/lib/edgeFunctionError")).extractEdgeFunctionError(err);
-      toast({ title: "Erro", description: realErr.message || "Falha ao criar instância", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: (err instanceof Error ? err.message : String(err)) || "Falha ao criar instância",
+        variant: "destructive",
+      });
       setStep(2);
     }
   };
@@ -177,7 +208,6 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                 </div>
               </div>
 
-              {/* Pricing highlight */}
               <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-emerald-500" />
@@ -189,7 +219,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <span className="text-xs text-muted-foreground">/mês</span>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse. O valor normal da integração via Izitech é R$ 90,00/mês.
+                  Você tem <strong>50% de desconto</strong> na integração WhatsApp por ser cliente NoExcuse.
                 </p>
               </div>
 
@@ -198,22 +228,17 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Zap className="w-5 h-5 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold">Izitech</p>
-                      <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]">Recomendado</Badge>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-                      Automático — criamos e gerenciamos a instância para você. Basta escanear o QR code.
+                  <div>
+                    <p className="text-sm font-bold">Automático via Izitech</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Criamos e gerenciamos a instância para você. Basta escanear o QR code.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
-                <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">
-                  O que você vai precisar
-                </h4>
+                <h4 className="text-xs font-extrabold uppercase tracking-[0.2em] text-muted-foreground">O que você vai precisar</h4>
                 <div className="grid gap-2">
                   {[
                     { icon: QrCode, text: "Um celular com WhatsApp para escanear o QR Code" },
@@ -269,8 +294,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   <p className="text-xs font-semibold">Powered by Izitech</p>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  A instância será criada automaticamente pela Izitech.
-                  Os webhooks serão configurados para receber mensagens diretamente neste sistema.
+                  A instância será criada e os webhooks configurados automaticamente.
                 </p>
               </div>
 
@@ -278,7 +302,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                 <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
                   <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
                 </Button>
-                <Button className="flex-1" disabled={!canConnect} onClick={handleIzitechConnect}>
+                <Button className="flex-1" disabled={!canConnect} onClick={handleAutoConnect}>
                   <Zap className="w-4 h-4 mr-1" /> Criar e Conectar
                 </Button>
               </div>
@@ -288,46 +312,39 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
           {/* ─── STEP 3: QR Code ─── */}
           {step === 3 && (
             <div className="space-y-5">
-              {izitechConnected ? (
-                <div className="flex flex-col items-center py-10 text-center space-y-5">
-                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                  <p className="text-sm font-semibold">Preparando pagamento...</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center text-center space-y-5">
-                  {izitechLoading ? (
-                    <>
-                      <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                      <p className="text-sm font-semibold">Criando instância via Izitech...</p>
-                      <p className="text-xs text-muted-foreground">Aguarde enquanto configuramos tudo</p>
-                    </>
-                  ) : izitechQr ? (
-                    <>
-                      <div className="space-y-2">
-                        <h3 className="text-sm font-bold">Escaneie o QR Code</h3>
-                        <p className="text-xs text-muted-foreground">Abra o WhatsApp no celular → Menu → Aparelhos conectados → Conectar</p>
-                      </div>
-                      <div className="rounded-2xl border-2 border-primary/20 p-4 bg-white">
-                        <img src={izitechQr} alt="QR Code WhatsApp" className="w-64 h-64 mx-auto" />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Aguardando conexão...
-                      </div>
-                      <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
-                        <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                          <Zap className="w-3 h-3 text-primary" /> Powered by Izitech
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                      <p className="text-sm font-semibold">Gerando QR Code...</p>
-                    </>
-                  )}
-                </div>
-              )}
+              <div className="flex flex-col items-center text-center space-y-5">
+                {izitechLoading ? (
+                  <>
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <p className="text-sm font-semibold">Criando instância...</p>
+                    <p className="text-xs text-muted-foreground">Aguarde enquanto configuramos tudo</p>
+                  </>
+                ) : izitechQr ? (
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-bold">Escaneie o QR Code</h3>
+                      <p className="text-xs text-muted-foreground">Abra o WhatsApp no celular → Menu → Aparelhos conectados → Conectar</p>
+                    </div>
+                    <div className="rounded-2xl border-2 border-primary/20 p-4 bg-white">
+                      <img src={izitechQr} alt="QR Code WhatsApp" className="w-64 h-64 mx-auto" />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Aguardando conexão...
+                    </div>
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                        <Zap className="w-3 h-3 text-primary" /> Powered by Izitech
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <p className="text-sm font-semibold">Gerando QR Code...</p>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -348,7 +365,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     <ul className="space-y-1.5 text-xs text-foreground">
                       <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp conectado</li>
                       <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Cobrança gerada — R$ 45,00/mês</li>
-                      <li className="flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5 text-primary" /> Sua integração será ativada após confirmação do pagamento</li>
+                      <li className="flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5 text-primary" /> Integração ativa após confirmação do pagamento</li>
                     </ul>
                   </div>
                   <Button className="w-full" onClick={() => { reset(); onOpenChange(false); }}>Concluir</Button>
@@ -378,25 +395,21 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                       )}
                     </div>
                   )}
-
                   {paymentData.bank_slip_url && (
                     <Button variant="outline" className="w-full" onClick={() => window.open(paymentData.bank_slip_url!, "_blank")}>
                       <Receipt className="w-4 h-4 mr-2" /> Abrir Boleto
                     </Button>
                   )}
-
                   {paymentData.invoice_url && (
                     <Button variant="outline" className="w-full" onClick={() => window.open(paymentData.invoice_url!, "_blank")}>
                       <ExternalLink className="w-4 h-4 mr-2" /> Abrir Fatura
                     </Button>
                   )}
-
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
                     <p className="text-[10px] text-muted-foreground">
-                      Sua integração WhatsApp ficará ativa após confirmação do pagamento de <strong>R$ 45,00/mês</strong>.
+                      Sua integração ficará ativa após confirmação do pagamento de <strong>R$ 45,00/mês</strong>.
                     </p>
                   </div>
-
                   <Button className="w-full" onClick={() => setPaymentDone(true)}>Concluir</Button>
                 </div>
               ) : (
@@ -432,7 +445,9 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                   </div>
 
                   <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-500/5 p-4 text-center">
-                    <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">R$ 45,00<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                    <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                      R$ 45,00<span className="text-sm font-normal text-muted-foreground">/mês</span>
+                    </p>
                     <p className="text-[10px] text-muted-foreground mt-1">Desconto exclusivo NoExcuse (50% off)</p>
                   </div>
 
@@ -458,8 +473,11 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                           setPaymentDone(true);
                         }
                       } catch (err: unknown) {
-                        const realErr = await (await import("@/lib/edgeFunctionError")).extractEdgeFunctionError(err);
-                        toast({ title: "Erro ao gerar cobrança", description: realErr.message || "Tente novamente", variant: "destructive" });
+                        toast({
+                          title: "Erro ao gerar cobrança",
+                          description: (err instanceof Error ? err.message : String(err)) || "Tente novamente",
+                          variant: "destructive",
+                        });
                       } finally {
                         setPaymentLoading(false);
                       }
