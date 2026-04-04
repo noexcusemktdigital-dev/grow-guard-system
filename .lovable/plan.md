@@ -1,35 +1,41 @@
 
 
-## Plano — Corrigir erro "Organização não encontrada" no Google Calendar OAuth
+## Plano — Corrigir eventos não aparecendo no calendário após sincronização Google
 
-### Problema
+### Problema raiz
 
-Na edge function `google-calendar-oauth`, a chamada `get_user_org_id` na linha 41 não passa o parâmetro `_portal`. Como a função SQL possui múltiplas sobrecargas, sem o parâmetro ela assume o contexto "franchise", falhando para clientes SaaS.
+A edge function `google-calendar-sync` tem o mesmo bug que corrigimos no `google-calendar-oauth`: a chamada `get_user_org_id` na linha 44 não passa `_portal`, o que pode retornar `null` ou o org errado para clientes SaaS. Se `orgId` for `null`, os eventos são inseridos com `organization_id = null` ou simplesmente não são encontrados na busca.
 
-### Solução
-
-Adicionar `_portal: "saas"` à chamada RPC no action `save_credentials`. Para ser mais robusto, receber o `portal` do frontend no body da requisição (o wizard já roda em `/cliente/agenda`, então sabemos que é SaaS), com fallback para `"saas"`.
+Confirmação: o org `9a3bb183...` (p2y) tem apenas 1 evento manual e **zero eventos com google_event_id**, provando que o pull não importou nada.
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/google-calendar-oauth/index.ts` | Linha 41: adicionar `_portal` ao RPC. Extrair `portal` do body da request com default `"saas"` |
-| Deploy da edge function | `google-calendar-oauth` |
+| `supabase/functions/google-calendar-sync/index.ts` | Adicionar `_portal: "saas"` ao RPC `get_user_org_id` (linha 44). Adicionar validação se `orgId` é null. Adicionar logs de debug para contagem de eventos importados. |
+| Deploy | `google-calendar-sync` |
 
 ### Detalhe técnico
 
 ```typescript
-// Antes (linha 41):
+// Antes (linha 44):
 const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
 
 // Depois:
-const portalCtx = portal || "saas";
-const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portalCtx });
+const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "saas" });
+if (!orgId) return jsonRes({ error: "Organização não encontrada" }, 400);
 ```
 
-E no destructuring do body (linha 30), adicionar `portal`:
+Também adicionar `console.log` no resultado do pull para facilitar debug futuro:
 ```typescript
-const { action, code, redirect_uri, client_id, client_secret, portal } = await req.json();
+console.log(`Google sync pull: ${imported} imported, ${googleEvents.length} total from Google, org=${orgId}`);
 ```
+
+### Fluxo após a correção
+
+1. Usuário conecta Google Calendar (OAuth ok)
+2. Clica "Sincronizar" → chama `google-calendar-sync` com `action: "pull"`
+3. Function busca org com `_portal: "saas"` → retorna org correta
+4. Busca eventos do Google API → insere na tabela `calendar_events` com org correto
+5. Frontend recarrega eventos → aparecem no calendário
 
