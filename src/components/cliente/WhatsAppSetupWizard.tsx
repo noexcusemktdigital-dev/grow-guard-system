@@ -140,7 +140,8 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
             setIzitechPhone(qrData.phone_number || null);
             setIzitechQr(null);
             refetch();
-            toast({ title: "WhatsApp conectado!", description: "Tudo configurado automaticamente." });
+            toast({ title: "WhatsApp conectado!", description: "Agora configure o pagamento." });
+            setStep(4); // advance to payment step
           } else if (qrData?.qr_code) {
             setIzitechQr(qrData.qr_code);
           }
