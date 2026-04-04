@@ -27,15 +27,15 @@ export function useCalculatorSettings() {
 
   const upsert = useMutation({
     mutationFn: async (settings: CalculatorSettings) => {
-      const { error } = await supabase
-        .from("calculator_settings")
+      const { error } = await (supabase
+        .from("calculator_settings") as any)
         .upsert(
           {
             organization_id: orgId!,
             surplus_type: settings.surplus_type,
             surplus_value: settings.surplus_value,
             updated_at: new Date().toISOString(),
-          } as Record<string, unknown>,
+          },
           { onConflict: "organization_id" }
         );
       if (error) throw error;

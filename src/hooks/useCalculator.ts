@@ -129,22 +129,29 @@ export const useCalculator = (surplus?: { type: 'fixed' | 'percentage'; value: n
     return state.selectedServices.find(s => s.serviceId === serviceId);
   }, [state.selectedServices]);
 
+  const applySurplus = useCallback((price: number): number => {
+    if (!surplus || !surplus.value) return price;
+    if (surplus.type === 'percentage') return price * (1 + surplus.value / 100);
+    return price + surplus.value;
+  }, [surplus]);
+
   const calculateServicePrice = useCallback((selection: SelectedService) => {
     const module = modules.find(m => m.id === selection.moduleId);
     const service = module?.services.find(s => s.id === selection.serviceId);
     if (!service) return 0;
 
+    let basePrice = 0;
     if (service.quantityType === 'youtube_time' && selection.youtubeMinutes) {
-      return getYoutubePrice(selection.youtubeMinutes) * (selection.quantity || 1);
+      basePrice = getYoutubePrice(selection.youtubeMinutes) * (selection.quantity || 1);
+    } else if (service.quantityType === 'package' && selection.packageSize) {
+      basePrice = service.price * selection.packageSize;
+    } else if (service.quantityType === 'quantity') {
+      basePrice = service.price * selection.quantity;
+    } else {
+      basePrice = service.price;
     }
-    if (service.quantityType === 'package' && selection.packageSize) {
-      return service.price * selection.packageSize;
-    }
-    if (service.quantityType === 'quantity') {
-      return service.price * selection.quantity;
-    }
-    return service.price;
-  }, []);
+    return applySurplus(basePrice);
+  }, [applySurplus]);
 
   const totals = (() => {
     let totalOneTime = 0;
