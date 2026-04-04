@@ -224,7 +224,7 @@ export async function exportStrategyPdf(result: StrategyResult, title: string, c
     b.isDark = true;
     b.newPage();
     b.drawDarkBg();
-    drawStrategicPlanSection(b, result, chartRefs);
+    await drawStrategicPlanSection(b, result, chartRefs);
   }
 
   // Footer on all pages
