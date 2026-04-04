@@ -317,8 +317,8 @@ export function FranqueadoraSidebarContent({ collapsed, setCollapsed }: { collap
       <div className="flex-1 overflow-y-auto py-3 space-y-4">
         <SidebarNavItems items={principalSection} collapsed={collapsed} />
         <div className="mx-3 border-t border-sidebar-border/60" />
-        <div data-tour="rede">
-          <CollapsibleSection title="Rede" items={redeSection} collapsed={collapsed} defaultOpen />
+        <div data-tour="franquia">
+          <CollapsibleSection title="Franquia" items={franquiaSection} collapsed={collapsed} defaultOpen />
         </div>
         <div data-tour="comercial">
           <CollapsibleSection title="Comercial" items={comercialSection} collapsed={collapsed} defaultOpen />

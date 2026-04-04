@@ -6,7 +6,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 
 const franqueadoraAtalhos = [
-  { label: "Marketing", icon: Zap, path: "/franqueadora/marketing" },
+  { label: "CRM Vendas", icon: Zap, path: "/franqueadora/crm-vendas" },
   { label: "NOE Academy", icon: GraduationCap, path: "/franqueadora/treinamentos" },
   { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
   { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
