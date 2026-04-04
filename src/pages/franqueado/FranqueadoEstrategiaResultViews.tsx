@@ -20,47 +20,266 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 
-// ── PDF Export Helper ────────────────────────────────────────────
+// ── PDF Export Helper (Professional A4) ─────────────────────────
 
-function exportPdf(element: HTMLElement, title: string) {
-  Promise.all([import("jspdf"), import("html2canvas")]).then(([{ default: jsPDF }, { default: html2canvas }]) => {
-    const clone = element.cloneNode(true) as HTMLElement;
-    clone.style.background = "#ffffff";
-    clone.style.color = "#1a1a1a";
-    clone.style.padding = "24px";
-    clone.style.width = "800px";
-    clone.querySelectorAll(".glass-card").forEach((el) => {
-      (el as HTMLElement).style.background = "#ffffff";
-      (el as HTMLElement).style.border = "1px solid #e5e7eb";
-      (el as HTMLElement).style.boxShadow = "none";
-    });
-    clone.querySelectorAll("[class*='text-muted']").forEach((el) => {
-      (el as HTMLElement).style.color = "#4b5563";
-    });
-    clone.querySelectorAll("[class*='text-primary']").forEach((el) => {
-      (el as HTMLElement).style.color = "#dc2626";
-    });
+async function exportProfessionalPdf(element: HTMLElement, title: string, result: StrategyResult) {
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas"),
+  ]);
 
-    document.body.appendChild(clone);
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentW = pageW - margin * 2;
+  let y = margin;
 
-    html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: "#ffffff" }).then((canvas) => {
-      document.body.removeChild(clone);
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW - 20;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      let y = 0;
-      const margin = 10;
-      while (y < imgH) {
-        if (y > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", margin, margin - y, imgW, imgH);
-        y += pageH - margin * 2;
+  const PRIMARY = [220, 38, 38]; // red-600
+  const DARK = [26, 26, 26];
+  const GRAY = [107, 114, 128];
+  const LIGHT_BG = [249, 250, 251];
+
+  function addPage() {
+    pdf.addPage();
+    y = margin;
+  }
+
+  function checkSpace(needed: number) {
+    if (y + needed > pageH - margin) addPage();
+  }
+
+  function drawSectionHeader(text: string) {
+    checkSpace(14);
+    pdf.setFillColor(...PRIMARY);
+    pdf.rect(margin, y, contentW, 8, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(text.toUpperCase(), margin + 4, y + 5.5);
+    y += 12;
+    pdf.setTextColor(...DARK);
+  }
+
+  function drawText(text: string, fontSize = 9, color = DARK, bold = false) {
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(...color);
+    pdf.setFont("helvetica", bold ? "bold" : "normal");
+    const lines = pdf.splitTextToSize(text, contentW - 4);
+    const lineH = fontSize * 0.45;
+    checkSpace(lines.length * lineH + 2);
+    pdf.text(lines, margin + 2, y);
+    y += lines.length * lineH + 2;
+  }
+
+  function drawKeyValue(key: string, value: string) {
+    pdf.setFontSize(8);
+    pdf.setTextColor(...GRAY);
+    pdf.setFont("helvetica", "bold");
+    checkSpace(8);
+    pdf.text(key.toUpperCase(), margin + 2, y);
+    y += 3.5;
+    pdf.setFontSize(9);
+    pdf.setTextColor(...DARK);
+    pdf.setFont("helvetica", "normal");
+    const lines = pdf.splitTextToSize(value, contentW - 4);
+    pdf.text(lines, margin + 2, y);
+    y += lines.length * 4 + 3;
+  }
+
+  function drawBullet(text: string, icon = "•") {
+    pdf.setFontSize(9);
+    pdf.setTextColor(...DARK);
+    pdf.setFont("helvetica", "normal");
+    const lines = pdf.splitTextToSize(text, contentW - 10);
+    checkSpace(lines.length * 4 + 1);
+    pdf.text(icon, margin + 3, y);
+    pdf.text(lines, margin + 8, y);
+    y += lines.length * 4 + 1.5;
+  }
+
+  // ── COVER PAGE ──
+  pdf.setFillColor(...PRIMARY);
+  pdf.rect(0, 0, pageW, pageH, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(32);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("DIAGNÓSTICO", pageW / 2, pageH * 0.35, { align: "center" });
+  pdf.text("ESTRATÉGICO", pageW / 2, pageH * 0.35 + 14, { align: "center" });
+  pdf.setFontSize(14);
+  pdf.setFont("helvetica", "normal");
+  pdf.text("Metodologia NoExcuse — 5 Etapas", pageW / 2, pageH * 0.35 + 28, { align: "center" });
+
+  // Divider line
+  pdf.setDrawColor(255, 255, 255);
+  pdf.setLineWidth(0.5);
+  pdf.line(pageW * 0.3, pageH * 0.5, pageW * 0.7, pageH * 0.5);
+
+  if (result.resumo_cliente?.nome_empresa) {
+    pdf.setFontSize(18);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(result.resumo_cliente.nome_empresa, pageW / 2, pageH * 0.58, { align: "center" });
+  }
+  if (title) {
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(title, pageW / 2, pageH * 0.64, { align: "center" });
+  }
+  pdf.setFontSize(10);
+  pdf.text(new Date().toLocaleDateString("pt-BR"), pageW / 2, pageH * 0.9, { align: "center" });
+  pdf.text("NoExcuse Digital", pageW / 2, pageH * 0.93, { align: "center" });
+
+  // ── CONTENT PAGES ──
+  addPage();
+
+  // Resumo Executivo
+  drawSectionHeader("Resumo Executivo");
+  drawText(result.resumo_executivo || "", 9);
+  y += 4;
+
+  // Empresa
+  if (result.resumo_cliente) {
+    drawSectionHeader("Sobre a Empresa");
+    drawKeyValue("Empresa", result.resumo_cliente.nome_empresa);
+    drawKeyValue("Segmento", result.resumo_cliente.segmento);
+    drawKeyValue("Modelo de Negócio", result.resumo_cliente.modelo_negocio);
+    drawKeyValue("Diferencial", result.resumo_cliente.diferencial);
+    drawKeyValue("Proposta de Valor", result.resumo_cliente.proposta_valor);
+    y += 4;
+  }
+
+  // Scores
+  if (result.diagnostico_gps) {
+    const gps = result.diagnostico_gps;
+    drawSectionHeader(`GPS do Negócio — Score Geral: ${gps.score_geral}% (${gps.nivel})`);
+    drawText(gps.descricao, 9);
+    y += 2;
+    drawKeyValue("Score Marketing", `${result.score_marketing ?? 0}%`);
+    drawKeyValue("Score Comercial", `${result.score_comercial ?? 0}%`);
+
+    // ECE
+    if (gps.gargalos_ece) {
+      y += 2;
+      drawText("GARGALOS ECE", 9, PRIMARY, true);
+      drawKeyValue("Estrutura", gps.gargalos_ece.estrutura || (gps.gargalos_ece as any).infraestrutura || "");
+      drawKeyValue("Coleta de Dados", gps.gargalos_ece.coleta);
+      drawKeyValue("Escala", gps.gargalos_ece.escala);
+    }
+
+    // Insights
+    if (gps.insights?.length) {
+      y += 2;
+      drawText("INSIGHTS", 9, PRIMARY, true);
+      gps.insights.forEach((i) => drawBullet(i, "💡"));
+    }
+    y += 4;
+  }
+
+  // Persona
+  if (result.persona) {
+    drawSectionHeader("Persona — Cliente Ideal");
+    drawText(result.persona.descricao, 9);
+    if (result.persona.faixa_etaria) drawKeyValue("Faixa Etária", result.persona.faixa_etaria);
+    if (result.persona.dor_principal) drawKeyValue("Dor Principal", result.persona.dor_principal);
+    if (result.persona.decisao_compra) drawKeyValue("Decisão de Compra", result.persona.decisao_compra);
+    if (result.persona.canais?.length) drawKeyValue("Canais", result.persona.canais.join(", "));
+    y += 4;
+  }
+
+  // Concorrência
+  if (result.analise_concorrencia) {
+    drawSectionHeader("Análise de Concorrência");
+    result.analise_concorrencia.concorrentes?.forEach((c) => {
+      drawText(c.nome, 10, DARK, true);
+      c.pontos_fortes.forEach((p) => drawBullet(`Forte: ${p}`, "✓"));
+      c.pontos_fracos.forEach((p) => drawBullet(`Fraco: ${p}`, "✗"));
+      c.oportunidades.forEach((p) => drawBullet(`Oportunidade: ${p}`, "→"));
+      y += 2;
+    });
+    drawKeyValue("Diferencial", result.analise_concorrencia.diferencial_empresa);
+    drawKeyValue("Posicionamento", result.analise_concorrencia.posicionamento_recomendado);
+    y += 4;
+  }
+
+  // 5 Etapas
+  if (result.etapas) {
+    const etapasOrder = ["conteudo", "trafego", "web", "sales", "validacao"] as const;
+    const labels: Record<string, string> = {
+      conteudo: "01 — Conteúdo e Linha Editorial",
+      trafego: "02 — Tráfego e Distribuição",
+      web: "03 — Web e Conversão",
+      sales: "04 — Sales e Fechamento",
+      validacao: "05 — Validação e Escala",
+    };
+    for (const key of etapasOrder) {
+      const etapa = result.etapas[key];
+      if (!etapa) continue;
+      drawSectionHeader(`${labels[key]} — Score: ${etapa.score}%`);
+      drawText(etapa.diagnostico, 9);
+      y += 2;
+      if (etapa.problemas?.length) {
+        drawText("PROBLEMAS", 8, GRAY, true);
+        etapa.problemas.forEach((p) => drawBullet(p, "⚠"));
       }
-      pdf.save(`${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`);
+      if (etapa.acoes?.length) {
+        drawText("AÇÕES ESTRATÉGICAS", 8, GRAY, true);
+        etapa.acoes.forEach((a) => drawBullet(a, "→"));
+      }
+      if (etapa.metricas_alvo && Object.keys(etapa.metricas_alvo).length) {
+        drawText("MÉTRICAS-ALVO", 8, GRAY, true);
+        Object.entries(etapa.metricas_alvo).forEach(([k, v]) => drawKeyValue(k, v));
+      }
+      y += 4;
+    }
+  }
+
+  // Projeções
+  if (result.projecoes) {
+    drawSectionHeader("Projeções Financeiras");
+    const ue = result.projecoes.unit_economics;
+    drawKeyValue("CAC", ue.cac);
+    drawKeyValue("LTV", ue.ltv);
+    drawKeyValue("LTV/CAC", ue.ltv_cac_ratio);
+    drawKeyValue("Ticket Médio", ue.ticket_medio);
+    drawKeyValue("Margem", ue.margem);
+
+    if (result.projecoes.projecao_mensal?.length) {
+      y += 2;
+      drawText("PROJEÇÃO DE 6 MESES", 9, PRIMARY, true);
+      result.projecoes.projecao_mensal.forEach((p) => {
+        drawBullet(`Mês ${p.mes}: ${p.leads} leads → ${p.clientes} clientes → R$ ${p.receita.toLocaleString("pt-BR")} receita (inv: R$ ${p.investimento.toLocaleString("pt-BR")})`, "📊");
+      });
+    }
+    y += 4;
+  }
+
+  // Entregáveis / Execuções
+  if (result.entregaveis_calculadora?.length) {
+    drawSectionHeader("Execuções do Plano — Entregáveis NoExcuse");
+    const grouped: Record<string, typeof result.entregaveis_calculadora> = {};
+    result.entregaveis_calculadora.forEach((e) => {
+      const key = e.etapa || "geral";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(e);
     });
-  });
+    const etapaNames: Record<string, string> = {
+      conteudo: "Conteúdo", trafego: "Tráfego", web: "Web", sales: "Sales", validacao: "Validação/Escala", geral: "Geral",
+    };
+    Object.entries(grouped).forEach(([key, items]) => {
+      drawText(etapaNames[key] || key, 10, PRIMARY, true);
+      items.forEach((e) => {
+        drawBullet(`${e.service_name} (x${e.quantity}) — ${e.justificativa}`, "📦");
+      });
+      y += 2;
+    });
+  }
+
+  // Footer on last page
+  pdf.setFontSize(8);
+  pdf.setTextColor(...GRAY);
+  pdf.text("Documento gerado automaticamente — NoExcuse Digital", pageW / 2, pageH - 8, { align: "center" });
+
+  pdf.save(`${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`);
 }
 
 // ── Etapa icons map ──────────────────────────────────────────────
