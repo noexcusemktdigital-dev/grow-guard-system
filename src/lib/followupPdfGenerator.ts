@@ -6,6 +6,7 @@ import type {
   WebSecao,
 } from "@/hooks/useClientFollowups";
 import { MONTH_NAMES } from "@/lib/formatting";
+import logoWhiteSrc from "@/assets/logo-noexcuse-white.png";
 
 const ML = 15; // margin left
 const MR = 15;
@@ -28,7 +29,7 @@ function safeText(t: string) {
 
 async function loadLogoAsDataUrl(): Promise<string | null> {
   try {
-    const resp = await fetch("/logo-noexcuse.png");
+    const resp = await fetch(logoWhiteSrc);
     if (!resp.ok) return null;
     const blob = await resp.blob();
     return new Promise((resolve) => {

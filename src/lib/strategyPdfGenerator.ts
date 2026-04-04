@@ -5,7 +5,7 @@
  * Uses html2canvas ONLY for chart captures (Radar, Bar, Line).
  */
 import type { StrategyResult, EtapaEstrategica } from "@/hooks/useFranqueadoStrategies";
-import logoSrc from "@/assets/logo-noexcuse.png";
+import logoSrc from "@/assets/logo-noexcuse-white.png";
 
 // ─── Constants ───
 const A4_W = 210;
@@ -129,7 +129,7 @@ class PdfBuilder {
       this.pdf.setPage(i);
       this.pdf.setFontSize(7);
       this.pdf.setTextColor(...GRAY);
-      this.pdf.text("NoExcuse Digital — Diagnostico Estrategico", A4_W / 2, A4_H - 8, { align: "center" });
+      this.pdf.text("NoExcuse Digital \u2014 Diagn\u00f3stico Estrat\u00e9gico", A4_W / 2, A4_H - 8, { align: "center" });
       this.pdf.text(`${i - 1}/${pages - 1}`, A4_W - M_RIGHT, A4_H - 8, { align: "right" });
       this.pdf.setDrawColor(200, 200, 200);
       this.pdf.setLineWidth(0.2);
@@ -310,8 +310,8 @@ function drawCoverPage(b: PdfBuilder, result: StrategyResult, title: string, log
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(28);
   pdf.setTextColor(...WHITE);
-  pdf.text("DIAGNOSTICO", A4_W / 2, 125, { align: "center" });
-  pdf.text("ESTRATEGICO", A4_W / 2, 137, { align: "center" });
+  pdf.text("DIAGN\u00d3STICO", A4_W / 2, 125, { align: "center" });
+  pdf.text("ESTRAT\u00c9GICO", A4_W / 2, 137, { align: "center" });
 
   // Company name
   const companyName = result.resumo_cliente?.nome_empresa || title || "";
