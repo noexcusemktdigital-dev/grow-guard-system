@@ -18,90 +18,9 @@ import {
   BarChart, Bar,
 } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { exportStrategyPdf } from "@/lib/strategyPdfGenerator";
 
-// ── PDF Export Helper (Screenshot-based A4) ─────────────────────────
-
-async function exportProfessionalPdf(element: HTMLElement, title: string, _result: StrategyResult) {
-  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-    import("jspdf"),
-    import("html2canvas"),
-  ]);
-
-  // Hide buttons and interactive elements during capture
-  const buttons = element.querySelectorAll("button, [data-pdf-hide]");
-  buttons.forEach((b) => (b as HTMLElement).style.display = "none");
-
-  // Force the element to be fully visible for capture
-  const originalMaxHeight = element.style.maxHeight;
-  const originalOverflow = element.style.overflow;
-  element.style.maxHeight = "none";
-  element.style.overflow = "visible";
-
-  // A4 dimensions in mm and target pixel width
-  const A4_W_MM = 210;
-  const A4_H_MM = 297;
-  const MARGIN_MM = 10;
-  const CONTENT_W_MM = A4_W_MM - MARGIN_MM * 2;
-  const CONTENT_H_MM = A4_H_MM - MARGIN_MM * 2;
-  const SCALE = 2;
-
-  const canvas = await html2canvas(element, {
-    scale: SCALE,
-    useCORS: true,
-    backgroundColor: null,
-    logging: false,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight,
-  });
-
-  // Restore original styles
-  buttons.forEach((b) => (b as HTMLElement).style.display = "");
-  element.style.maxHeight = originalMaxHeight;
-  element.style.overflow = originalOverflow;
-
-  const imgData = canvas.toDataURL("image/jpeg", 0.92);
-  const imgW = canvas.width;
-  const imgH = canvas.height;
-
-  // Calculate how the image maps to A4
-  const pdfImgW = CONTENT_W_MM;
-  const pdfImgH = (imgH * CONTENT_W_MM) / imgW;
-
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const totalPages = Math.ceil(pdfImgH / CONTENT_H_MM);
-
-  for (let page = 0; page < totalPages; page++) {
-    if (page > 0) pdf.addPage();
-
-    // Calculate the y offset for this page slice
-    const srcY = page * (CONTENT_H_MM / pdfImgH) * imgH;
-    const srcH = Math.min((CONTENT_H_MM / pdfImgH) * imgH, imgH - srcY);
-    const destH = (srcH * pdfImgH) / imgH;
-
-    // Create a slice canvas for this page
-    const sliceCanvas = document.createElement("canvas");
-    sliceCanvas.width = imgW;
-    sliceCanvas.height = Math.round(srcH);
-    const ctx = sliceCanvas.getContext("2d")!;
-    ctx.drawImage(canvas, 0, -Math.round(srcY));
-
-    const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.92);
-    pdf.addImage(sliceData, "JPEG", MARGIN_MM, MARGIN_MM, pdfImgW, destH);
-
-    // Footer
-    pdf.setFontSize(7);
-    pdf.setTextColor(160, 160, 160);
-    pdf.text(
-      `NoExcuse Digital — ${new Date().toLocaleDateString("pt-BR")}`,
-      A4_W_MM / 2,
-      A4_H_MM - 5,
-      { align: "center" }
-    );
-    pdf.text(`${page + 1}/${totalPages}`, A4_W_MM - MARGIN_MM, A4_H_MM - 5, { align: "right" });
-  }
-
-  pdf.save(`${title.replace(/[^a-zA-Z0-9À-ú ]/g, "")}.pdf`);
-}
+// PDF generation is now handled by src/lib/strategyPdfGenerator.ts
 
 // ── Etapa icons map ──────────────────────────────────────────────
 
@@ -151,13 +70,26 @@ export function StrategyResultView({
   onSendToCalculator?: () => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const radarRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
+  const lineChartRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const isNewFormat = !!result.diagnostico_gps;
   const isLegacyNewFormat = !!result.diagnostico_negocio;
 
   const handleExportPdf = async () => {
-    await exportProfessionalPdf(contentRef.current!, title || "Planejamento Estratégico", result);
-    toast.success("PDF gerado com sucesso!");
+    toast.info("Gerando PDF profissional...");
+    try {
+      await exportStrategyPdf(result, title || "Planejamento Estratégico", {
+        radar: radarRef.current || undefined,
+        bar: barChartRef.current || undefined,
+        line: lineChartRef.current || undefined,
+      });
+      toast.success("PDF gerado com sucesso!");
+    } catch (e) {
+      console.error("PDF error:", e);
+      toast.error("Erro ao gerar PDF");
+    }
   };
 
   const handleGoToCalculator = () => {
@@ -171,7 +103,7 @@ export function StrategyResultView({
     <div className="space-y-4">
       <div ref={contentRef}>
         {isNewFormat ? (
-          <NewStrategyResultView result={result} />
+          <NewStrategyResultView result={result} radarRef={radarRef} barChartRef={barChartRef} lineChartRef={lineChartRef} />
         ) : isLegacyNewFormat ? (
           <LegacyNewFormatView result={result} />
         ) : (
@@ -231,7 +163,7 @@ function ScoreCircle({ score, size = 64, strokeWidth = 5, className = "" }: { sc
 
 // ── New 5-Step Strategy Result View ─────────────────────────────
 
-function NewStrategyResultView({ result }: { result: StrategyResult }) {
+function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: { result: StrategyResult; radarRef?: React.RefObject<HTMLDivElement>; barChartRef?: React.RefObject<HTMLDivElement>; lineChartRef?: React.RefObject<HTMLDivElement> }) {
   const gps = result.diagnostico_gps!;
   const score = gps.score_geral;
   const scoreMarketing = result.score_marketing ?? 0;
@@ -352,14 +284,16 @@ function NewStrategyResultView({ result }: { result: StrategyResult }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={gps.radar_data}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 10 }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
-                <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
-              </RadarChart>
-            </ResponsiveContainer>
+            <div ref={radarRef}>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={gps.radar_data}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="eixo" tick={{ fontSize: 10 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9 }} />
+                  <Radar name="Score" dataKey="score" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -736,7 +670,7 @@ function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyRe
             <TrendingUp className="w-5 h-5 text-red-500" />
             <h3 className="text-lg font-bold text-white">Projeção de 6 Meses</h3>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" ref={barChartRef}>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={projecoes.projecao_mensal.map(p => ({ ...p, nome: `Mês ${p.mes}` }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -763,7 +697,7 @@ function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyRe
             <LineChart className="w-5 h-5 text-red-500" />
             <h3 className="text-lg font-bold text-white">Crescimento Acumulado</h3>
           </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4" ref={lineChartRef}>
             <ResponsiveContainer width="100%" height={250}>
               <ReLineChart data={projecoes.crescimento_acumulado.map(p => ({ ...p, nome: `Mês ${p.mes}` }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
