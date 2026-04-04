@@ -471,7 +471,7 @@ function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: 
           )}
 
           {/* Projeções */}
-          {result.projecoes && <ProjecoesSectionDark projecoes={result.projecoes} />}
+          {result.projecoes && <ProjecoesSectionDark projecoes={result.projecoes} barChartRef={barChartRef} lineChartRef={lineChartRef} />}
 
           {/* Execuções do Plano */}
           {result.entregaveis_calculadora && result.entregaveis_calculadora.length > 0 && (
