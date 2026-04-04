@@ -243,9 +243,11 @@ const PROJECTIONS_SCHEMA = {
               service_name: { type: "string" },
               quantity: { type: "number" },
               justificativa: { type: "string" },
+              etapa: { type: "string", enum: ["conteudo", "trafego", "web", "sales", "validacao"], description: "Etapa do plano estratégico à qual este entregável pertence" },
             },
-            required: ["service_id", "service_name", "quantity", "justificativa"],
+            required: ["service_id", "service_name", "quantity", "justificativa", "etapa"],
           },
+          description: "Lista de serviços do catálogo NoExcuse necessários para executar o plano. Cada item deve estar vinculado à etapa estratégica correspondente.",
         },
       },
       required: ["projecoes", "entregaveis_calculadora"],
@@ -347,13 +349,20 @@ GERE:
 3. PROJEÇÃO MENSAL (6 meses): Leads, clientes, receita e investimento — crescimento progressivo
 4. CRESCIMENTO ACUMULADO (6 meses): Receita e clientes acumulados com recorrência se aplicável
 
-5. ENTREGÁVEIS PARA CALCULADORA:
-Mapeie os serviços necessários usando EXATAMENTE estes IDs do catálogo:
+5. ENTREGÁVEIS PARA CALCULADORA — EXECUÇÕES DO PLANO:
+Esta é a seção mais importante. Mapeie EXATAMENTE quais serviços do catálogo NoExcuse precisam ser executados para que o plano estratégico funcione.
+
+CATÁLOGO DE SERVIÇOS (use EXATAMENTE estes IDs):
 - Branding: logo-manual, material-marca, midia-off, naming, registro-inpi, ebook, apresentacao-comercial
-- Social Media: artes-organicas, videos-reels, programacao-meta, programacao-linkedin, programacao-tiktok, programacao-youtube, capa-destaques, criacao-avatar, template-canva, edicao-youtube
-- Performance: gestao-meta, gestao-google, gestao-linkedin, gestao-tiktok, config-gmb, artes-campanha, videos-campanha
-- Web: pagina-site, lp-link-bio, lp-vsl, lp-vendas, lp-captura, lp-ebook, alterar-contato, alterar-secao, ecommerce
-- Dados/CRM: config-crm
+- Social Media: artes-organicas (artes orgânicas p/ redes sociais), videos-reels (vídeos reels), programacao-meta (programação de posts Meta), programacao-linkedin, programacao-tiktok, programacao-youtube, capa-destaques, criacao-avatar, template-canva, edicao-youtube
+- Performance/Tráfego: gestao-meta (gestão de tráfego Meta Ads), gestao-google (gestão Google Ads), gestao-linkedin (gestão LinkedIn Ads), gestao-tiktok (gestão TikTok Ads), config-gmb (configuração Google Meu Negócio), artes-campanha (artes para campanhas), videos-campanha (vídeos para campanhas)
+- Web: pagina-site (página de site), lp-link-bio (LP link bio), lp-vsl (LP com VSL), lp-vendas (LP de vendas), lp-captura (LP de captura), lp-ebook (LP de ebook), alterar-contato (alteração de contato site), alterar-secao (alteração de seção site), ecommerce (e-commerce)
+- CRM: config-crm (configuração de CRM)
+
+VINCULE CADA ENTREGÁVEL À ETAPA DO PLANO:
+- Cada serviço deve ter o campo "etapa" indicando a qual etapa estratégica ele pertence: conteudo, trafego, web, sales ou validacao
+- A justificativa deve referenciar ações ESPECÍFICAS do planejamento (ex: "Para implementar a ação de publicar 8 posts/semana conforme definido na etapa de conteúdo")
+- Quantidades devem ser REAIS e praticáveis (ex: 8 artes orgânicas/mês, 4 vídeos reels/mês, 1 LP de captura)
 
 INDICADORES REAIS DE REFERÊNCIA:
 - Taxa de conversão de site: 2-5% é bom, acima de 5% é excelente
@@ -362,8 +371,7 @@ INDICADORES REAIS DE REFERÊNCIA:
 - LTV/CAC: acima de 3x é saudável
 - Margem de lucro serviços: 30-60%
 
-Para cada serviço: service_id (ID exato acima), service_name, quantity (número), justificativa.
-Escolha 5-12 serviços mais relevantes para o cliente baseado no diagnóstico.
+Escolha 5-15 serviços mais relevantes. CADA serviço precisa de: service_id (ID exato), service_name, quantity (mensal), justificativa (vinculada ao plano), etapa (conteudo/trafego/web/sales/validacao).
 
 REGRAS:
 - CÁLCULOS REAIS baseados em ticket médio, faturamento, metas informadas
