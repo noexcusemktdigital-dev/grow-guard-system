@@ -42,7 +42,8 @@ serve(async (req) => {
     const userId = user.id;
 
     const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId });
+    const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "saas" });
+    if (!orgId) return jsonRes({ error: "Organização não encontrada" }, 400);
 
     // Get stored tokens + credentials from DB
     const { data: tokenRow } = await serviceClient
@@ -135,6 +136,7 @@ serve(async (req) => {
         }
       }
 
+      console.log(`Google sync pull: ${imported} imported, ${googleEvents.length} total from Google, org=${orgId}`);
       return jsonRes({ success: true, imported, total: googleEvents.length });
     }
 
