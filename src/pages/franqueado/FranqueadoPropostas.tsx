@@ -75,10 +75,10 @@ function ProposalViewerSheet({ proposal, open, onClose }: { proposal: Record<str
     toast.success("PDF gerado!");
   };
 
-  const handleLinkLead = () => {
-    if (!linkLeadId || linkLeadId === "none") return;
-    updateProposal.mutate({ id: proposal.id, lead_id: linkLeadId }, {
-      onSuccess: () => toast.success("Lead vinculado!"),
+  const handleLinkStrategy = () => {
+    if (!linkStrategyId || linkStrategyId === "none") return;
+    updateProposal.mutate({ id: proposal.id, strategy_id: linkStrategyId }, {
+      onSuccess: () => toast.success("Estratégia vinculada!"),
     });
   };
 
