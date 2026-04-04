@@ -65,6 +65,7 @@ const FranqueadoConfiguracoes = lazy(() => import("./pages/franqueado/Franqueado
 const FranqueadoDiagnostico = lazy(() => import("./pages/franqueado/FranqueadoDiagnostico"));
 const FranqueadoMinhaUnidade = lazy(() => import("./pages/franqueado/FranqueadoMinhaUnidade"));
 const FranqueadoMetasRanking = lazy(() => import("./pages/franqueado/FranqueadoMetasRanking"));
+const FranqueadoAcompanhamento = lazy(() => import("./pages/franqueado/FranqueadoAcompanhamento"));
 
 // Cliente pages
 const ClienteInicio = lazy(() => import("./pages/cliente/ClienteInicio"));
