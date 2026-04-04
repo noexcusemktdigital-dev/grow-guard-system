@@ -614,7 +614,7 @@ function EtapaDetailCardDark({ etapaKey, etapa }: { etapaKey: string; etapa: Eta
 
 // ── Projeções Section (Dark Theme) ──────────────────────────────
 
-function ProjecoesSectionDark({ projecoes }: { projecoes: NonNullable<StrategyResult["projecoes"]> }) {
+function ProjecoesSectionDark({ projecoes, barChartRef, lineChartRef }: { projecoes: NonNullable<StrategyResult["projecoes"]>; barChartRef?: React.RefObject<HTMLDivElement>; lineChartRef?: React.RefObject<HTMLDivElement> }) {
   return (
     <div className="space-y-4">
       {/* Unit Economics */}
