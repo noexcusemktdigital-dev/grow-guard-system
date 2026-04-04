@@ -1,72 +1,74 @@
 
 
-## Plano — Reorganizar sidebar da Franqueadora separando Comercial de Franquia
+## Plano — Redesign visual do Plano Estratégico (fundo escuro, premium) + Refinamento do prompt da IA
 
-### Situação atual
+### Duas frentes de trabalho
 
-A sidebar da Franqueadora já possui as ferramentas comerciais (CRM, Prospecção, Estratégia, Propostas, Metas) e as rotas já apontam para os mesmos componentes do Franqueado. Porém, a seção "Rede" mistura ferramentas de franquia (Unidades, Onboarding, Candidatos) com Atendimento, e a organização não está clara.
+---
 
-### Mudanças
+### Frente 1: Redesign visual dos resultados
 
-#### 1. Reorganizar seções da sidebar (`FranqueadoraSidebar.tsx`)
+**Conceito:** Dividir a visualização em duas zonas visuais claras:
+- **Zona 1 (Diagnóstico)** — fundo claro (branco/glass): Resumo Executivo, Empresa, KPIs, GPS Score, Radar, ECE, Persona, Concorrência, Insights
+- **Zona 2 (Plano + Execuções)** — fundo escuro (preto/dark): Visão Geral das 5 Etapas, Etapas detalhadas, Projeções, Entregáveis, botões de ação
 
-Nova organização:
+**Mudanças visuais nas 5 Etapas (zona escura):**
+- Cada etapa vira um card grande com número enorme (01-05), cor de destaque por etapa, score circular visual, e conteúdo expandido por padrão (não colapsável)
+- Ações estratégicas com ícones de check animados, tipografia maior e mais destaque
+- Métricas-alvo em cards visuais com fundo colorido
+- Problemas com destaque visual forte (border vermelho)
+- Separador visual entre Diagnóstico e Plano (divider estilizado com título "PLANO ESTRATÉGICO")
 
-- **Principal**: Início, Chat da Equipe, Agenda, Comunicados (sem mudança)
-- **Comercial**: CRM de Vendas, Prospecção, Criador de Estratégia, Gerador de Proposta, Metas & Ranking (sem mudança — já existe e já funciona)
-- **Franquia** (renomear "Rede"): Unidades, Onboarding, Candidatos, CRM Expansão, Atendimento
-- **Marketing & Academy**: Marketing, NOE Academy, Playbooks (sem mudança)
-- **Gestão**: Matriz, Contratos, Financeiro, Logs & Erros (sem mudança)
+**Cards das etapas no tema escuro:**
+- Background: `bg-[#0a0a0a]` ou `bg-zinc-950`
+- Cards: `bg-zinc-900 border-zinc-800`
+- Texto: `text-white` e `text-zinc-400`
+- Acentos: vermelho primary para números e destaques
+- Badges e métricas com contraste alto
 
-A principal alteração visual é renomear "Rede" para "Franquia" e mover o CRM Expansão (que é o CRM de prospecção de franquia, diferente do CRM de vendas comercial) para dentro dessa seção com label "CRM Expansão". O CRM de Vendas comercial fica na seção Comercial.
+**Aplica a todos os diagnósticos do histórico** (mesma `NewStrategyResultView`).
 
-#### 2. Ajustar `redeSection` → `franquiaSection`
+#### Arquivo: `src/pages/franqueado/FranqueadoEstrategiaResultViews.tsx`
 
-Renomear a constante e atualizar os itens:
-```
-franquiaSection = [
-  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
-  { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
-  { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
-  { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
-  { label: "Atendimento", icon: MessageSquare, path: "/franqueadora/atendimento" },
-]
-```
+- Na `NewStrategyResultView`, após os cards de Insights, inserir um wrapper `<div className="bg-zinc-950 rounded-2xl p-6 -mx-4 space-y-6">` que engloba: Visão Geral 5 Etapas, Etapas detalhadas, Projeções, Entregáveis
+- Refazer `EtapaDetailCard`: remover Collapsible, expandir por padrão, layout premium com número gigante, score circular, seções com cores distintas
+- Projeções e Entregáveis também dentro do wrapper escuro
+- Botões "Salvar em PDF" e "Gerar Proposta" ficam dentro do wrapper escuro com estilo invertido
 
-#### 3. Adicionar rota de CRM comercial para franqueadora
+---
 
-No `App.tsx`, adicionar uma nova rota `/franqueadora/crm-vendas` que aponta para o mesmo componente `FranqueadoCRM` (CRM de vendas do franqueado). Atualizar o path na sidebar comercial de `/franqueadora/crm` para `/franqueadora/crm-vendas`.
+### Frente 2: Refinamento dos prompts da IA
 
-A seção comercial fica:
-```
-comercialSection = [
-  { label: "CRM de Vendas", icon: Target, path: "/franqueadora/crm-vendas" },
-  { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
-  { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
-  { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },
-  { label: "Metas & Ranking", icon: Trophy, path: "/franqueadora/metas" },
-]
-```
+Baseado na análise crítica do usuário, atualizar os prompts para gerar estratégias mais agressivas e consistentes.
 
-#### 4. Importar e adicionar rota no `App.tsx`
+#### Arquivo: `supabase/functions/generate-strategy/index.ts`
 
-- Importar `FranqueadoCRM` (lazy)
-- Adicionar `<Route path="crm-vendas" element={<FranqueadoCRM />} />`
-- Adicionar `<Route path="crm-vendas/config" element={<CrmConfigPage />} />`
+**GPS_PROMPT — Adicionar instruções:**
+- Considerar **capacidade operacional** do cliente (quantos clientes consegue atender por semana/mês)
+- Ao calcular projeções, considerar **recorrência real** (ex: psicólogo = paciente semanal, não avulso)
+- CAC deve ser calculado com benchmark realista do segmento, não conservador demais
+- Insights devem incluir alertas sobre gaps entre projeção e meta (se houver inconsistência, explicar)
 
-#### 5. Atualizar atalhos na Home (`HomeAtalhos.tsx`)
+**STRATEGIC_PLAN_PROMPT — Adicionar instruções:**
+- Ações devem ser **agressivas e escaláveis** no padrão NoExcuse (não genéricas)
+- Conteúdo: além de educativo, incluir **conteúdo emocional, de identificação e validação** (não só racional)
+- Diferenciação criativa forte — não apenas "conteúdo educativo"
+- Explorar **autoridade orgânica** como canal principal quando aplicável
+- Considerar limitação de capacidade (ex: profissional liberal com agenda limitada)
+- Cada ação deve ter **nível de detalhe executável** (ex: "Publicar 3 reels/semana com ângulo emocional de identificação + dor + validação" em vez de "Produzir conteúdo para redes sociais")
 
-Atualizar o atalho "CRM de Vendas" nos `franqueadoraAtalhos` para apontar para `/franqueadora/crm-vendas`.
+**PROJECTIONS_PROMPT — Adicionar instruções:**
+- Modelo financeiro deve considerar **recorrência** (paciente semanal, mensalista, etc.)
+- Projeção de receita deve bater com a meta informada — se não bater, explicar o gap e o que seria necessário
+- CAC realista para o segmento (usar benchmarks brasileiros por vertical)
+- Incluir **capacidade operacional** como limitador na projeção
+
+---
 
 ### Arquivos afetados
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/FranqueadoraSidebar.tsx` | Renomear "Rede"→"Franquia", separar CRM Expansão de CRM Vendas, reorganizar itens |
-| `src/App.tsx` | Adicionar rota `/franqueadora/crm-vendas` e config |
-| `src/components/home/HomeAtalhos.tsx` | Atualizar path do atalho CRM |
-
-### Resultado
-
-A franqueadora terá duas seções claramente distintas: **Comercial** (ferramentas de venda a clientes, idênticas ao franqueado) e **Franquia** (ferramentas de gestão da rede de franquias). O CRM Expansão (prospecção de franquia) fica em Franquia, e o CRM de Vendas (pipeline comercial) fica em Comercial.
+| `src/pages/franqueado/FranqueadoEstrategiaResultViews.tsx` | Redesign visual: zona escura para plano, etapas expandidas, cards premium |
+| `supabase/functions/generate-strategy/index.ts` | Refinamento dos 3 prompts com instruções de recorrência, capacidade, ações agressivas e consistência financeira |
 
