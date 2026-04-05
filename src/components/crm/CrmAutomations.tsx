@@ -412,7 +412,19 @@ export function CrmAutomations() {
                 <div><Label className="text-xs">Filtrar por origem (opcional)</Label><Input value={triggerConfig.source_filter || ""} onChange={e => setTriggerConfig({ ...triggerConfig, source_filter: e.target.value })} placeholder="Ex: Ads, WhatsApp" className="h-8 text-xs" /></div>
               )}
               {triggerType === "lead_stuck" && (
-                <div><Label className="text-xs">Dias parado</Label><Input type="number" value={triggerConfig.days || 7} onChange={e => setTriggerConfig({ ...triggerConfig, days: Number(e.target.value) })} className="h-8 text-xs w-24" /></div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Tempo parado</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" value={triggerConfig.days || triggerConfig.stuck_value || 7} onChange={e => setTriggerConfig({ ...triggerConfig, stuck_value: Number(e.target.value), days: triggerConfig.stuck_unit === "hours" ? undefined : Number(e.target.value) })} className="h-8 text-xs w-24" min={1} />
+                    <Select value={triggerConfig.stuck_unit || "days"} onValueChange={v => setTriggerConfig({ ...triggerConfig, stuck_unit: v, days: v === "days" ? (triggerConfig.stuck_value || 7) : undefined })}>
+                      <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+                        <SelectItem value="days" className="text-xs">Dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               )}
               {triggerType === "tag_added" && (
                 <div><Label className="text-xs">Tag</Label><Input value={triggerConfig.tag || ""} onChange={e => setTriggerConfig({ ...triggerConfig, tag: e.target.value })} placeholder="Ex: qualificado" className="h-8 text-xs" /></div>
@@ -461,8 +473,18 @@ export function CrmAutomations() {
               {actionType === "create_task" && (
                 <div className="space-y-2">
                   <div><Label className="text-xs">Título da tarefa</Label><Input value={actionConfig.task_title || ""} onChange={e => setActionConfig({ ...actionConfig, task_title: e.target.value })} placeholder="Ex: Fazer follow-up" className="h-8 text-xs" /></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><Label className="text-xs">Prazo (dias)</Label><Input type="number" value={actionConfig.due_days || 1} onChange={e => setActionConfig({ ...actionConfig, due_days: Number(e.target.value) })} className="h-8 text-xs" /></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><Label className="text-xs">Prazo</Label><Input type="number" value={actionConfig.due_value || actionConfig.due_days || 1} onChange={e => setActionConfig({ ...actionConfig, due_value: Number(e.target.value), due_days: actionConfig.due_unit === "hours" ? undefined : Number(e.target.value) })} className="h-8 text-xs" min={1} /></div>
+                    <div>
+                      <Label className="text-xs">Unidade</Label>
+                      <Select value={actionConfig.due_unit || "days"} onValueChange={v => setActionConfig({ ...actionConfig, due_unit: v, due_days: v === "days" ? (actionConfig.due_value || 1) : undefined })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+                          <SelectItem value="days" className="text-xs">Dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label className="text-xs">Prioridade</Label>
                       <Select value={actionConfig.priority || "medium"} onValueChange={v => setActionConfig({ ...actionConfig, priority: v })}>
@@ -543,10 +565,20 @@ export function CrmAutomations() {
                     </div>
                   )}
                   {actionType === "ai_followup" && (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Delay (horas)</Label>
-                        <Input type="number" value={actionConfig.delay_hours || 24} onChange={e => setActionConfig({ ...actionConfig, delay_hours: Number(e.target.value) })} className="h-8 text-xs" />
+                        <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Delay</Label>
+                        <Input type="number" value={actionConfig.delay_value || actionConfig.delay_hours || 24} onChange={e => setActionConfig({ ...actionConfig, delay_value: Number(e.target.value), delay_hours: actionConfig.delay_unit === "days" ? Number(e.target.value) * 24 : Number(e.target.value) })} className="h-8 text-xs" min={1} />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Unidade</Label>
+                        <Select value={actionConfig.delay_unit || "hours"} onValueChange={v => setActionConfig({ ...actionConfig, delay_unit: v, delay_hours: v === "days" ? (actionConfig.delay_value || 24) * 24 : (actionConfig.delay_value || 24) })}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+                            <SelectItem value="days" className="text-xs">Dias</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
                         <Label className="text-xs">Máx. tentativas</Label>
