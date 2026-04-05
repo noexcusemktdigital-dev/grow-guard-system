@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-  FolderOpen, Plus, ChevronLeft, Save, FileDown, XCircle,
+  FolderOpen, Plus, ChevronLeft, Save, FileDown, XCircle, Presentation,
   BarChart3, Megaphone, TrendingUp, Globe, Target,
   ThumbsUp, ThumbsDown, Eye, Palette, MousePointerClick, ShoppingCart,
   ArrowUpRight, AlertTriangle, Sparkles, Calendar, Clock, Link2, FileText, Crosshair, DollarSign, Users,
