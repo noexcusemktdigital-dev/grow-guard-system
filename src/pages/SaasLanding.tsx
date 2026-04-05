@@ -1,165 +1,239 @@
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UNIFIED_PLANS } from "@/constants/plans";
+import { Input } from "@/components/ui/input";
 import {
-  Check, Sparkles, ArrowRight, ChevronDown, Star,
-  Compass, BrainCircuit, Rocket, BarChart3, Bot,
-  Target, X, CheckCircle2, AlertTriangle, Eye, EyeOff,
-  TrendingUp, Users, Layers, Crosshair, Zap,
-  ShieldX, ShieldCheck, CircleDot
+  Sparkles, ArrowRight, Lock, CheckCircle2,
+  Target, TrendingUp, Users, BarChart3, Bot,
+  Rocket, BrainCircuit, Compass, Zap, MessageSquare,
+  Layers, Shield, Eye, ChevronRight, Play,
 } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-/* ── Animation ────────────────────────────────────────────────── */
+/* ── Constants ──────────────────────────────────────────────── */
+
+const SEGMENTS = [
+  "Advocacia", "Imobiliário", "Saúde e Clínicas", "Odontologia", "Estética",
+  "Fitness e Academias", "Educação", "E-commerce", "Alimentação", "Moda",
+  "Tecnologia / SaaS", "Agronegócio", "Construção Civil", "Automotivo",
+  "Contabilidade", "Turismo", "Pet Shop / Veterinária", "Energia Solar",
+  "Consultoria", "Indústria", "Franquias", "Serviços Gerais",
+];
+
+const REGIONS = [
+  "São Paulo - Capital", "São Paulo - Interior", "Rio de Janeiro",
+  "Minas Gerais", "Paraná", "Santa Catarina", "Rio Grande do Sul",
+  "Bahia", "Pernambuco", "Ceará", "Goiás", "Distrito Federal",
+  "Espírito Santo", "Mato Grosso", "Mato Grosso do Sul", "Pará",
+  "Outro",
+];
+
+const CHANNELS = ["Instagram", "Google Ads", "Facebook Ads", "Indicação", "WhatsApp", "Orgânico", "TikTok", "LinkedIn"];
+
+const LOADING_PHRASES = [
+  "Analisando comportamento do seu mercado...",
+  "Mapeando concorrência na sua região...",
+  "Identificando oportunidades de aquisição...",
+  "Estruturando estratégias de vendas...",
+  "Organizando processos da sua operação...",
+  "Gerando plano inicial de crescimento...",
+];
+
+const FLOATING_WORDS = [
+  "leads", "conversão", "ROI", "funil", "tráfego", "vendas",
+  "escala", "crescimento", "pipeline", "metas", "automação",
+  "CRM", "conteúdo", "WhatsApp", "retenção", "aquisição",
+];
+
+const ANALYSIS_MARKETING = [
+  "Sua empresa não possui estratégia consistente de aquisição",
+  "Baixa presença em canais de alta intenção",
+  "Conteúdo não estruturado para geração de demanda",
+];
+const ANALYSIS_VENDAS = [
+  "Falta de processo comercial definido",
+  "Leads não acompanhados corretamente",
+  "Conversão abaixo do potencial",
+];
+const ANALYSIS_GESTAO = [
+  "Ausência de metas claras por time",
+  "Falta de indicadores de desempenho",
+  "Crescimento sem previsibilidade",
+];
+const ANALYSIS_AQUISICAO = [
+  "Dependência de poucos canais",
+  "Baixa escala de entrada de leads",
+  "Falta de estratégia contínua",
+];
+
+const VISIBLE_ACTIONS = [
+  "Campanhas estruturadas por intenção de compra",
+  "Produção de conteúdo estratégica para redes sociais",
+  "Processo comercial com follow-up ativo",
+  "Definição de metas por equipe",
+  "Acompanhamento de indicadores em tempo real",
+];
+
+const BLOCKED_ACTIONS = [
+  "Estratégia completa de marketing por canal",
+  "Planejamento de conteúdo automatizado para redes sociais",
+  "Calendário de posts gerado por IA",
+  "Estrutura completa de funil de vendas",
+  "Pipeline comercial pronto",
+  "Automação de follow-up (WhatsApp e CRM)",
+  "Metas por time e acompanhamento",
+  "Tarefas organizadas por equipe",
+  "Dashboard com números reais",
+  "Projeção de faturamento e crescimento",
+  "Agentes de IA para execução contínua",
+];
+
+const SYSTEM_BLOCKS = [
+  {
+    icon: Target, title: "Marketing", accent: "text-red-400", border: "border-red-500/20", bg: "bg-red-500/5",
+    items: ["Planejamento estratégico por canal", "Geração de conteúdo com IA", "Criação de posts para redes sociais", "Estratégias de tráfego pago", "Sugestões de criativos"],
+  },
+  {
+    icon: TrendingUp, title: "Vendas", accent: "text-blue-400", border: "border-blue-500/20", bg: "bg-blue-500/5",
+    items: ["CRM completo integrado", "Pipeline de vendas estruturado", "Gestão de leads", "Histórico e acompanhamento", "Automação de follow-up"],
+  },
+  {
+    icon: BarChart3, title: "Gestão", accent: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/5",
+    items: ["Metas por equipe e por usuário", "Indicadores em tempo real", "Dashboard de desempenho", "Previsibilidade de resultados", "Controle de crescimento"],
+  },
+  {
+    icon: Rocket, title: "Execução", accent: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/5",
+    items: ["Tarefas organizadas por time", "Fluxos de trabalho automatizados", "Gestão de atividades", "Distribuição de demandas"],
+  },
+  {
+    icon: Bot, title: "IA (Agentes)", accent: "text-purple-400", border: "border-purple-500/20", bg: "bg-purple-500/5",
+    items: ["IA que gera estratégias automaticamente", "IA que sugere ações diárias", "IA que analisa desempenho", "IA que ajusta o plano continuamente"],
+  },
+  {
+    icon: MessageSquare, title: "Integrações", accent: "text-green-400", border: "border-green-500/20", bg: "bg-green-500/5",
+    items: ["Integração com WhatsApp", "Comunicação direta com leads", "Automação de mensagens", "Centralização do atendimento"],
+  },
+];
+
+const HOW_IT_WORKS = [
+  { num: "01", icon: Compass, title: "A IA analisa", desc: "Seu segmento, região e contexto são processados pela nossa inteligência artificial" },
+  { num: "02", icon: BrainCircuit, title: "O sistema gera", desc: "Estratégias completas de marketing, vendas e gestão personalizadas" },
+  { num: "03", icon: Rocket, title: "Você executa", desc: "Com tarefas organizadas e acompanha tudo em tempo real" },
+];
+
+const STATS = [
+  { value: "+3.842", label: "empresas analisadas" },
+  { value: "+27.000", label: "oportunidades identificadas" },
+  { value: "+63%", label: "média de melhoria potencial" },
+];
+
+/* ── Animations ─────────────────────────────────────────────── */
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 } as const,
+  hidden: { opacity: 0, y: 30 },
   visible: (i: number = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5 } }),
 };
 
-const stagger = {
-  visible: { transition: { staggerChildren: 0.08 } },
+/* ── Floating Word Component ────────────────────────────────── */
+
+const FloatingWord = ({ word, index }: { word: string; index: number }) => {
+  const angle = (index / FLOATING_WORDS.length) * Math.PI * 2;
+  const radius = 120 + Math.random() * 180;
+  const x = Math.cos(angle) * radius;
+  const y = Math.sin(angle) * radius;
+
+  return (
+    <motion.span
+      className="absolute text-white/20 font-mono text-sm pointer-events-none select-none"
+      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+      animate={{
+        opacity: [0, 0.6, 0.3],
+        scale: [0, 1.2, 1],
+        x,
+        y,
+      }}
+      transition={{ delay: 0.3 + index * 0.15, duration: 1.2, ease: "easeOut" }}
+    >
+      {word}
+    </motion.span>
+  );
 };
 
-/* ── Data ─────────────────────────────────────────────────────── */
+/* ── Score Ring ──────────────────────────────────────────────── */
 
-const HERO_BULLETS = [
-  "Diagnóstico completo do seu negócio (marketing, vendas e atendimento)",
-  "Identificação dos gargalos que impedem crescimento",
-  "Plano estratégico com metas claras",
-  "Execução com IA + CRM + automações",
-  "Acompanhamento em tempo real",
-];
-
-const PAIN_POINTS = [
-  { icon: EyeOff, text: "Você não sabe por que não vende" },
-  { icon: Target, text: "Seu marketing não converte" },
-  { icon: Compass, text: "Seu time não tem direção" },
-  { icon: Zap, text: "Você depende de sorte ou indicação" },
-  { icon: BarChart3, text: "Não existe previsibilidade" },
-];
-
-const MECHANISM_STEPS = [
-  {
-    num: "01",
-    icon: Compass,
-    phase: "Diagnóstico",
-    title: "GPS do Negócio",
-    desc: "A nossa IA analisa sua operação e encontra os gargalos reais",
-    details: ["Onde você perde dinheiro", "Onde seu processo quebra", "Onde sua equipe trava"],
-    color: "from-blue-500/20 to-blue-600/5",
-    border: "border-blue-500/30",
-    accent: "text-blue-400",
-  },
-  {
-    num: "02",
-    icon: BrainCircuit,
-    phase: "Direção",
-    title: "Estratégia clara",
-    desc: "Você recebe um plano completo com:",
-    details: ["Metas reais", "Estrutura comercial", "Definição de funil", "Direcionamento de marketing"],
-    color: "from-purple-500/20 to-purple-600/5",
-    border: "border-purple-500/30",
-    accent: "text-purple-400",
-  },
-  {
-    num: "03",
-    icon: Rocket,
-    phase: "Execução",
-    title: "Ferramentas integradas",
-    desc: "A própria plataforma executa com você:",
-    details: ["CRM estruturado", "Scripts comerciais", "Campanhas e conteúdos", "Automações de atendimento"],
-    color: "from-emerald-500/20 to-emerald-600/5",
-    border: "border-emerald-500/30",
-    accent: "text-emerald-400",
-  },
-  {
-    num: "04",
-    icon: BarChart3,
-    phase: "Crescimento",
-    title: "Acompanhamento",
-    desc: "Você acompanha tudo em tempo real:",
-    details: ["Metas", "Desempenho", "Evolução", "Previsibilidade"],
-    color: "from-amber-500/20 to-amber-600/5",
-    border: "border-amber-500/30",
-    accent: "text-amber-400",
-  },
-];
-
-const PRACTICE_ITEMS = [
-  { icon: Crosshair, text: "Diagnostica sua operação" },
-  { icon: Eye, text: "Mostra os erros reais" },
-  { icon: BrainCircuit, text: "Define o que precisa ser feito" },
-  { icon: Rocket, text: "Executa junto com você" },
-  { icon: BarChart3, text: "Acompanha até gerar resultado" },
-];
-
-const BEFORE_AFTER = {
-  before: [
-    "Sem clareza",
-    "Sem processo",
-    "Sem previsibilidade",
-    "Dependência do dono",
-    "Time perdido",
-  ],
-  after: [
-    "Operação estruturada",
-    "Metas claras",
-    "Funil organizado",
-    "Time produtivo",
-    "Crescimento previsível",
-  ],
+const ScoreRing = ({ score }: { score: number }) => {
+  const circumference = 2 * Math.PI * 54;
+  const offset = circumference - (score / 100) * circumference;
+  return (
+    <div className="relative w-32 h-32 mx-auto">
+      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="hsl(225,15%,15%)" strokeWidth="8" />
+        <motion.circle
+          cx="60" cy="60" r="54" fill="none" stroke="hsl(355,78%,50%)" strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <motion.span
+          className="text-3xl font-bold text-white"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+        >
+          {score}
+        </motion.span>
+        <span className="text-[10px] text-white/40 uppercase tracking-wider">/100</span>
+      </div>
+    </div>
+  );
 };
 
-const HOW_IT_WORKS = [
-  { num: "01", icon: Compass, title: "Responda o diagnóstico", desc: "Você entra e responde as perguntas do GPS do Negócio" },
-  { num: "02", icon: BrainCircuit, title: "Receba o plano estratégico", desc: "A nossa IA monta sua estratégia completa com metas e ações" },
-  { num: "03", icon: Rocket, title: "Execute na plataforma", desc: "Use as ferramentas integradas para colocar o plano em prática" },
-];
+/* ── Analysis Card ──────────────────────────────────────────── */
 
-const COMPARISON = {
-  others: [
-    "Ferramentas isoladas",
-    "Genéricas, sem contexto",
-    "Sem estratégia",
-  ],
-  n360: [
-    "Totalmente integrada",
-    "Estratégica e personalizada",
-    "Orientada a resultado",
-  ],
-};
+const AnalysisCard = ({ title, icon: Icon, items, color, delay }: {
+  title: string; icon: React.ElementType; items: string[]; color: string; delay: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.5 }}
+    className={`rounded-2xl border border-white/5 bg-white/[0.02] p-6`}
+  >
+    <div className="flex items-center gap-3 mb-4">
+      <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center`}>
+        <Icon className="w-4 h-4 text-white" />
+      </div>
+      <h4 className="text-sm font-semibold text-white uppercase tracking-wider">{title}</h4>
+    </div>
+    <ul className="space-y-2.5">
+      {items.map((item, i) => (
+        <motion.li
+          key={i}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: delay + 0.1 + i * 0.1 }}
+          className="flex items-start gap-2"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500/60 mt-1.5 flex-shrink-0" />
+          <span className="text-sm text-white/60">{item}</span>
+        </motion.li>
+      ))}
+    </ul>
+  </motion.div>
+);
 
-const QUALIFICATION = {
-  isFor: [
-    "Empresas que já vendem, mas não escalam",
-    "Quem quer previsibilidade",
-    "Quem quer organizar operação",
-  ],
-  notFor: [
-    "Quem quer resultado sem execução",
-    "Quem não tem operação mínima",
-    "Quem busca \"atalho\"",
-  ],
-};
+/* ── Main Component ─────────────────────────────────────────── */
 
-const FAQ = [
-  { q: "O que é o GPS do Negócio?", a: "É o diagnóstico completo da sua empresa feito pela nossa IA. Ele analisa marketing, vendas, público-alvo e maturidade comercial, gerando um score e um plano de ação personalizado." },
-  { q: "Preciso de cartão de crédito para começar?", a: "Não! O trial de 7 dias é 100% gratuito e inclui 500 créditos para você testar todas as funcionalidades." },
-  { q: "A IA realmente entende meu negócio?", a: "Sim. Através do GPS do Negócio, a nossa IA aprende sobre seu mercado, produtos, público e objetivos. Todas as sugestões, conteúdos e estratégias são personalizados." },
-  { q: "Posso usar para minha equipe de vendas?", a: "Sim! O sistema suporta múltiplos usuários com metas individuais, ranking, scripts personalizados e acompanhamento em tempo real." },
-  { q: "Substitui meu CRM atual?", a: "Sim. O CRM da N360 inclui funis visuais, automações, integração com WhatsApp, qualificação com IA e muito mais — tudo conectado à estratégia do GPS." },
-  { q: "Posso cancelar a qualquer momento?", a: "Sim, sem multa e sem burocracia. Você pode cancelar diretamente nas configurações da sua conta." },
-];
-
-/* ── Component ────────────────────────────────────────────────── */
+type Phase = "form" | "loading" | "result";
 
 const SaasLanding = () => {
   const { user, role } = useAuth();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   if (user && role) {
     if (role === "super_admin" || role === "admin") return <Navigate to="/franqueadora/inicio" replace />;
@@ -167,8 +241,51 @@ const SaasLanding = () => {
     return <Navigate to="/cliente/inicio" replace />;
   }
 
+  return <LandingContent />;
+};
+
+const LandingContent = () => {
+  const [phase, setPhase] = useState<Phase>("form");
+  const [segment, setSegment] = useState("");
+  const [region, setRegion] = useState("");
+  const [channel, setChannel] = useState("");
+  const [site, setSite] = useState("");
+  const [loadingIndex, setLoadingIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const resultRef = useRef<HTMLDivElement>(null);
+
   const bg = "bg-[hsl(225,20%,4%)]";
-  const red = "hsl(355,78%,50%)";
+
+  const handleSubmit = useCallback(() => {
+    if (!segment || !region) return;
+    setPhase("loading");
+    setLoadingIndex(0);
+    setProgress(0);
+  }, [segment, region]);
+
+  // Loading phase animation
+  useEffect(() => {
+    if (phase !== "loading") return;
+    const phraseInterval = setInterval(() => {
+      setLoadingIndex(prev => {
+        if (prev >= LOADING_PHRASES.length - 1) {
+          clearInterval(phraseInterval);
+          setTimeout(() => {
+            setPhase("result");
+            setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+          }, 800);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1400);
+
+    const progressInterval = setInterval(() => {
+      setProgress(prev => Math.min(prev + 1.5, 100));
+    }, 100);
+
+    return () => { clearInterval(phraseInterval); clearInterval(progressInterval); };
+  }, [phase]);
 
   return (
     <div className={`min-h-screen ${bg} text-white overflow-x-hidden`}>
@@ -181,7 +298,7 @@ const SaasLanding = () => {
             <Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/5">Entrar</Button>
           </Link>
           <Link to="/app">
-            <Button className="bg-[hsl(var(--primary))] hover:bg-[hsl(355,78%,45%)] text-white">
+            <Button className="bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white">
               Começar grátis
             </Button>
           </Link>
@@ -189,490 +306,384 @@ const SaasLanding = () => {
       </nav>
 
       {/* ══════════════════════════════════════════════════════════
-          1. HERO — PROMESSA DE CONTROLE E DIREÇÃO
+          1. HERO — FORM
           ══════════════════════════════════════════════════════════ */}
-      <section className="relative px-6 lg:px-16 py-24 lg:py-36 max-w-6xl mx-auto">
+      <section className="relative px-6 lg:px-16 py-20 lg:py-32 max-w-5xl mx-auto text-center">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-[hsl(355,78%,50%)]/8 rounded-full blur-[140px] pointer-events-none" />
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(355,78%,50%)]/10 border border-[hsl(355,78%,50%)]/20 mb-8">
-          <Sparkles className="h-4 w-4 text-[hsl(355,78%,50%)]" />
-          <span className="text-sm font-medium text-[hsl(355,78%,60%)]">7 dias grátis · 500 créditos · Sem cartão</span>
-        </motion.div>
-
-        <motion.h1 initial="hidden" animate="visible" variants={fadeUp} custom={1}
-          className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-4">
-          Eu vou encontrar o que está<br />
-          <span className="text-[hsl(355,78%,50%)]">travando seu crescimento.</span>
-        </motion.h1>
-
-        <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2}
-          className="text-lg lg:text-xl text-white/50 max-w-3xl mb-3">
-          A N360 diagnostica sua operação, mostra exatamente onde estão os gargalos e te direciona — com estratégia e execução — até o crescimento.
-        </motion.p>
-
-        <motion.p initial="hidden" animate="visible" variants={fadeUp} custom={2.5}
-          className="text-base text-white/35 italic mb-10 max-w-2xl">
-          Do ponto que você está hoje até o resultado que você quer atingir.
-        </motion.p>
-
-        <motion.ul initial="hidden" animate="visible" variants={stagger}
-          className="space-y-2 mb-12 max-w-lg">
-          {HERO_BULLETS.map((b, i) => (
-            <motion.li key={i} variants={fadeUp} custom={3 + i * 0.5}
-              className="flex items-start gap-3 text-sm text-white/60">
-              <Check className="h-4 w-4 text-[hsl(355,78%,55%)] shrink-0 mt-0.5" />
-              {b}
-            </motion.li>
-          ))}
-        </motion.ul>
-
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}>
-          <Link to="/app">
-            <Button size="lg" className="bg-[hsl(var(--primary))] hover:bg-[hsl(355,78%,45%)] text-white text-lg px-10 py-6 h-auto shadow-lg shadow-[hsl(355,78%,50%)]/25">
-              Quero descobrir onde meu negócio está travando <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-          <p className="mt-4 text-xs text-white/30">Teste grátis por 7 dias · Cancele quando quiser</p>
-        </motion.div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          2. QUEBRA DE CRENÇA — O PROBLEMA REAL
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 bg-white/[0.01]">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-3xl lg:text-5xl font-black tracking-tight mb-3">
-            Seu problema não é vender.
-          </motion.h2>
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}
-            className="text-2xl lg:text-3xl text-[hsl(355,78%,55%)] font-bold mb-10">
-            É não saber onde está errando.
-          </motion.p>
-
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={2}
-            className="text-white/50 text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
-            A maioria das empresas tenta melhorar esforço, equipe ou investimento… Mas não resolve o principal:
-          </motion.p>
-
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}
-            className="flex flex-wrap justify-center gap-4 mb-10">
-            {["Falta de diagnóstico", "Falta de direção", "Falta de processo"].map((item, i) => (
-              <motion.div key={item} variants={fadeUp} custom={i}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[hsl(355,78%,50%)]/10 border border-[hsl(355,78%,50%)]/20">
-                <AlertTriangle className="h-4 w-4 text-[hsl(355,78%,55%)]" />
-                <span className="text-sm font-semibold text-white/80">{item}</span>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={4}
-            className="text-white/40 text-base italic">
-            Sem isso, qualquer ação vira tentativa.
-          </motion.p>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          3. O MECANISMO — Diagnóstico → Direção → Execução → Crescimento
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 max-w-6xl mx-auto">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-6">
-          <h2 className="text-3xl lg:text-5xl font-black tracking-tight mb-3">
-            Antes de crescer, você precisa enxergar.
-          </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto">
-            A N360 entra no seu negócio, analisa e mostra exatamente o que precisa ser corrigido.
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="relative z-10">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight mb-5">
+            Descubra onde sua empresa está{" "}
+            <span className="text-[hsl(355,78%,50%)]">perdendo vendas</span>{" "}
+            em menos de 60 segundos
+          </h1>
+          <p className="text-base lg:text-lg text-white/50 max-w-2xl mx-auto mb-10">
+            Veja estratégias reais de marketing, vendas e gestão para o seu segmento — com base na sua região
           </p>
         </motion.div>
 
-        {/* Timeline connector line */}
-        <div className="hidden lg:block relative">
-          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-blue-500/30 via-purple-500/30 via-emerald-500/30 to-amber-500/30" />
-        </div>
+        <AnimatePresence mode="wait">
+          {phase === "form" && (
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="relative z-10 max-w-xl mx-auto"
+            >
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm p-6 lg:p-8 space-y-4">
+                {/* Segmento */}
+                <div className="text-left">
+                  <label className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Segmento da empresa *</label>
+                  <select
+                    value={segment}
+                    onChange={e => setSegment(e.target.value)}
+                    className="w-full h-12 rounded-xl border border-white/10 bg-white/5 text-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(355,78%,50%)]/50 appearance-none cursor-pointer"
+                  >
+                    <option value="" className="bg-[hsl(225,20%,8%)]">Selecione seu segmento</option>
+                    {SEGMENTS.map(s => <option key={s} value={s} className="bg-[hsl(225,20%,8%)]">{s}</option>)}
+                  </select>
+                </div>
 
-        <div className="grid gap-6 lg:gap-8 mt-14">
-          {MECHANISM_STEPS.map((step, i) => (
-            <motion.div key={step.num} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
-              className={`relative rounded-2xl p-8 border ${step.border} bg-gradient-to-br ${step.color} overflow-hidden`}>
-              <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                <div className="shrink-0">
-                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/5`}>
-                    <step.icon className={`h-7 w-7 ${step.accent}`} />
+                {/* Região */}
+                <div className="text-left">
+                  <label className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Região *</label>
+                  <select
+                    value={region}
+                    onChange={e => setRegion(e.target.value)}
+                    className="w-full h-12 rounded-xl border border-white/10 bg-white/5 text-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(355,78%,50%)]/50 appearance-none cursor-pointer"
+                  >
+                    <option value="" className="bg-[hsl(225,20%,8%)]">Selecione sua região</option>
+                    {REGIONS.map(r => <option key={r} value={r} className="bg-[hsl(225,20%,8%)]">{r}</option>)}
+                  </select>
+                </div>
+
+                {/* Row: Canal + Site */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="text-left">
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Canal principal</label>
+                    <select
+                      value={channel}
+                      onChange={e => setChannel(e.target.value)}
+                      className="w-full h-12 rounded-xl border border-white/10 bg-white/5 text-white px-4 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(355,78%,50%)]/50 appearance-none cursor-pointer"
+                    >
+                      <option value="" className="bg-[hsl(225,20%,8%)]">Opcional</option>
+                      {CHANNELS.map(c => <option key={c} value={c} className="bg-[hsl(225,20%,8%)]">{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="text-left">
+                    <label className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Site</label>
+                    <Input
+                      value={site}
+                      onChange={e => setSite(e.target.value)}
+                      placeholder="www.seusite.com.br"
+                      className="h-12 rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/20 focus-visible:ring-[hsl(355,78%,50%)]/50"
+                    />
                   </div>
                 </div>
-                <div className="flex-1">
-                  <div className={`text-xs font-bold uppercase tracking-widest mb-2 ${step.accent}`}>
-                    {step.phase}
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!segment || !region}
+                  className="w-full h-14 text-base font-semibold rounded-xl bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white disabled:opacity-40 transition-all"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Gerar análise estratégica
+                </Button>
+                <p className="text-[11px] text-white/30 text-center">Diagnóstico gratuito + acesso parcial ao plano de crescimento</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Loading Animation ─────────────────────────────── */}
+          {phase === "loading" && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative z-10 max-w-lg mx-auto py-16"
+            >
+              {/* Floating words */}
+              <div className="relative flex items-center justify-center h-64">
+                {FLOATING_WORDS.map((word, i) => (
+                  <FloatingWord key={word} word={word} index={i} />
+                ))}
+                {/* Central pulse */}
+                <div className="relative">
+                  <motion.div
+                    className="w-20 h-20 rounded-full bg-[hsl(355,78%,50%)]/20 border border-[hsl(355,78%,50%)]/30 flex items-center justify-center"
+                    animate={{ scale: [1, 1.1, 1], boxShadow: ["0 0 0 0 hsl(355,78%,50%,0.2)", "0 0 0 20px hsl(355,78%,50%,0)", "0 0 0 0 hsl(355,78%,50%,0)"] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <BrainCircuit className="w-8 h-8 text-[hsl(355,78%,50%)]" />
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Phrase */}
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={loadingIndex}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-sm text-white/60 text-center mb-6"
+                >
+                  {LOADING_PHRASES[loadingIndex]}
+                </motion.p>
+              </AnimatePresence>
+
+              {/* Progress bar */}
+              <div className="w-full max-w-xs mx-auto h-1 rounded-full bg-white/5 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-[hsl(355,78%,50%)] to-[hsl(355,78%,60%)]"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════
+          3. RESULT — ANÁLISE ESTRATÉGICA
+          ══════════════════════════════════════════════════════════ */}
+      {phase === "result" && (
+        <div ref={resultRef}>
+          <section className="px-6 lg:px-16 py-16 max-w-5xl mx-auto">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+              {/* Header */}
+              <div className="text-center mb-12">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[hsl(355,78%,50%)]/10 border border-[hsl(355,78%,50%)]/20 mb-6"
+                >
+                  <Sparkles className="w-4 h-4 text-[hsl(355,78%,50%)]" />
+                  <span className="text-sm text-[hsl(355,78%,60%)]">{segment} · {region}</span>
+                </motion.div>
+                <h2 className="text-2xl lg:text-3xl font-bold mb-3">Estratégias iniciais para o seu segmento</h2>
+                <p className="text-white/40 text-sm">Potencial de crescimento atual</p>
+                <div className="mt-6">
+                  <ScoreRing score={42} />
+                </div>
+              </div>
+
+              {/* 4 Analysis Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-16">
+                <AnalysisCard title="Marketing" icon={Target} items={ANALYSIS_MARKETING} color="bg-red-500/20" delay={0.3} />
+                <AnalysisCard title="Vendas" icon={TrendingUp} items={ANALYSIS_VENDAS} color="bg-blue-500/20" delay={0.5} />
+                <AnalysisCard title="Gestão" icon={BarChart3} items={ANALYSIS_GESTAO} color="bg-emerald-500/20" delay={0.7} />
+                <AnalysisCard title="Aquisição" icon={Layers} items={ANALYSIS_AQUISICAO} color="bg-amber-500/20" delay={0.9} />
+              </div>
+
+              {/* ── O que você deveria estar fazendo ─────────────── */}
+              <div className="mb-16">
+                <h3 className="text-xl font-bold text-center mb-8">O que você deveria estar fazendo</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl mx-auto">
+                  {VISIBLE_ACTIONS.map((item, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1 + i * 0.1 }}
+                      className="flex items-start gap-2.5 p-3 rounded-xl border border-white/5 bg-white/[0.02]"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-white/70">{item}</span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Bloqueio — Estratégia Completa ───────────────── */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.5 }}
+                className="relative rounded-2xl border border-white/10 overflow-hidden mb-16"
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[hsl(225,20%,4%)]/60 to-[hsl(225,20%,4%)] z-10 pointer-events-none" />
+                <div className="p-8 pb-24">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Lock className="w-5 h-5 text-[hsl(355,78%,50%)]" />
+                    <h3 className="text-lg font-bold">Plano completo de crescimento e operação</h3>
                   </div>
-                  <h3 className="text-xl lg:text-2xl font-bold mb-2">{step.title}</h3>
-                  <p className="text-white/50 mb-4">{step.desc}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {step.details.map((d) => (
-                      <span key={d} className="flex items-center gap-1.5 text-sm text-white/60 px-3 py-1.5 rounded-lg bg-white/5">
-                        <ArrowRight className="h-3 w-3 text-white/30" />
-                        {d}
-                      </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 blur-[2px] select-none">
+                    {BLOCKED_ACTIONS.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl border border-white/5 bg-white/[0.02]">
+                        <Lock className="w-3.5 h-3.5 text-white/20 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-white/30">{item}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
-                <div className="shrink-0 hidden lg:flex items-center justify-center w-16 h-16 rounded-full bg-white/[0.03] border border-white/10">
-                  <span className="text-2xl font-black text-white/20">{step.num}</span>
+                {/* CTA overlay */}
+                <div className="absolute bottom-0 left-0 right-0 z-20 flex justify-center pb-8">
+                  <Link to="/app">
+                    <Button className="h-14 px-8 text-base font-semibold rounded-xl bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white shadow-lg shadow-[hsl(355,78%,50%)]/20">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Desbloquear estratégia completa e sistema de gestão
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          4. PROBLEMA → CONSEQUÊNCIA (AUMENTAR DOR)
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 bg-white/[0.01]">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-3xl lg:text-5xl font-black tracking-tight mb-4">
-            Sem diagnóstico, você está<br />
-            <span className="text-[hsl(355,78%,50%)]">operando no escuro.</span>
-          </motion.h2>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-12 max-w-3xl mx-auto">
-            {PAIN_POINTS.map((p, i) => (
-              <motion.div key={p.text} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
-                className="flex items-center gap-3 px-5 py-4 rounded-xl border border-red-500/15 bg-red-500/5 text-left">
-                <p.icon className="h-5 w-5 text-red-400 shrink-0" />
-                <span className="text-sm text-white/70">{p.text}</span>
               </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          5. O QUE A N360 FAZ NA PRÁTICA
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 max-w-6xl mx-auto">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-14">
-          <h2 className="text-3xl lg:text-4xl font-black tracking-tight mb-3">
-            A gente não te entrega ferramentas.<br />
-            <span className="text-[hsl(355,78%,50%)]">A gente organiza seu crescimento.</span>
-          </h2>
-        </motion.div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
-          {PRACTICE_ITEMS.map((item, i) => (
-            <motion.div key={item.text} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
-              className="flex flex-col items-center text-center gap-3 p-6 rounded-2xl border border-white/10 bg-white/[0.02] hover:border-[hsl(355,78%,50%)]/20 transition-colors">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[hsl(355,78%,50%)]/10">
-                <item.icon className="h-6 w-6 text-[hsl(355,78%,55%)]" />
-              </div>
-              <span className="text-sm text-white/70 font-medium">{item.text}</span>
             </motion.div>
-          ))}
-        </div>
+          </section>
 
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center">
-          <p className="text-white/40 text-lg italic max-w-lg mx-auto">
-            Você não precisa de várias ferramentas.<br />
-            <span className="text-white/70 font-semibold not-italic">Você precisa de direção + execução.</span>
-          </p>
-        </motion.div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          6. TRANSFORMAÇÃO (ANTES vs DEPOIS)
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 bg-white/[0.01]">
-        <div className="max-w-4xl mx-auto">
-          <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-3xl lg:text-4xl font-black tracking-tight text-center mb-14">
-            A transformação que você vai viver
-          </motion.h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Before */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-              className="rounded-2xl p-8 border border-red-500/20 bg-red-500/5">
-              <div className="flex items-center gap-2 mb-6">
-                <X className="h-5 w-5 text-red-400" />
-                <span className="font-bold text-red-400 uppercase tracking-wider text-sm">Antes</span>
-              </div>
-              <ul className="space-y-4">
-                {BEFORE_AFTER.before.map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-white/50">
-                    <div className="w-2 h-2 rounded-full bg-red-500/50 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            {/* After */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}
-              className="rounded-2xl p-8 border border-emerald-500/20 bg-emerald-500/5">
-              <div className="flex items-center gap-2 mb-6">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                <span className="font-bold text-emerald-400 uppercase tracking-wider text-sm">Depois</span>
-              </div>
-              <ul className="space-y-4">
-                {BEFORE_AFTER.after.map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-white/70">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500/50 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          7. COMO FUNCIONA (3 PASSOS)
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 max-w-6xl mx-auto">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-14">
-          <h2 className="text-3xl lg:text-4xl font-black tracking-tight mb-3">
-            Você não precisa montar nada.<br />
-            <span className="text-white/50 font-normal text-2xl lg:text-3xl">Só seguir o processo.</span>
-          </h2>
-        </motion.div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {HOW_IT_WORKS.map((step, i) => (
-            <motion.div key={step.num} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
-              className="relative rounded-2xl p-8 border border-white/10 bg-white/[0.02] text-center group hover:border-[hsl(355,78%,50%)]/30 transition-colors">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-[hsl(355,78%,50%)]/10 mb-5">
-                <step.icon className="h-7 w-7 text-[hsl(355,78%,55%)]" />
-              </div>
-              <div className="text-xs font-bold text-[hsl(355,78%,50%)] tracking-widest uppercase mb-2">Passo {step.num}</div>
-              <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-              <p className="text-white/50 text-sm leading-relaxed">{step.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          8. DIFERENCIAL — Isso não é mais uma IA
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 bg-white/[0.01]">
-        <div className="max-w-4xl mx-auto">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-center mb-14">
-            <h2 className="text-3xl lg:text-5xl font-black tracking-tight mb-3">
-              Isso não é mais uma IA.
-            </h2>
-            <p className="text-xl text-[hsl(355,78%,55%)] font-semibold">
-              É uma IA que entende seu negócio e age dentro dele.
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Others */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-              className="rounded-2xl p-8 border border-white/10 bg-white/[0.02]">
-              <div className="flex items-center gap-2 mb-6">
-                <ShieldX className="h-5 w-5 text-white/30" />
-                <span className="font-bold text-white/30 uppercase tracking-wider text-sm">Outras ferramentas</span>
-              </div>
-              <ul className="space-y-4">
-                {COMPARISON.others.map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-white/40">
-                    <X className="h-4 w-4 text-white/20 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            {/* N360 */}
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}
-              className="rounded-2xl p-8 border border-[hsl(355,78%,50%)]/30 bg-[hsl(355,78%,50%)]/5">
-              <div className="flex items-center gap-2 mb-6">
-                <ShieldCheck className="h-5 w-5 text-[hsl(355,78%,55%)]" />
-                <span className="font-bold text-[hsl(355,78%,55%)] uppercase tracking-wider text-sm">N360</span>
-              </div>
-              <ul className="space-y-4">
-                {COMPARISON.n360.map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-white/70">
-                    <CheckCircle2 className="h-4 w-4 text-[hsl(355,78%,55%)] shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          9. QUALIFICAÇÃO
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 max-w-4xl mx-auto">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-14">
-          <h2 className="text-3xl lg:text-4xl font-black tracking-tight">
-            Isso só funciona pra quem quer<br />
-            <span className="text-[hsl(355,78%,50%)]">crescer de verdade.</span>
-          </h2>
-        </motion.div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Is for */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="rounded-2xl p-8 border border-emerald-500/20 bg-emerald-500/5">
-            <div className="flex items-center gap-2 mb-6">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              <span className="font-bold text-emerald-400 uppercase tracking-wider text-sm">É para você se</span>
-            </div>
-            <ul className="space-y-4">
-              {QUALIFICATION.isFor.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-white/70">
-                  <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Not for */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={1}
-            className="rounded-2xl p-8 border border-white/10 bg-white/[0.02]">
-            <div className="flex items-center gap-2 mb-6">
-              <X className="h-5 w-5 text-white/30" />
-              <span className="font-bold text-white/30 uppercase tracking-wider text-sm">Não é para você se</span>
-            </div>
-            <ul className="space-y-4">
-              {QUALIFICATION.notFor.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-white/40">
-                  <X className="h-4 w-4 text-white/20 shrink-0 mt-0.5" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Pricing ──────────────────────────────────────────── */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 bg-white/[0.01]" id="pricing">
-        <div className="max-w-6xl mx-auto">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-center mb-14">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-3">Planos que cabem no seu bolso</h2>
-            <p className="text-white/50">Diagnóstico + Estratégia + Execução. Tudo baseado em créditos.</p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {UNIFIED_PLANS.map((plan, i) => (
-              <motion.div key={plan.id} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i}
-                className={`relative rounded-2xl p-6 border ${
-                  plan.popular
-                    ? "border-[hsl(355,78%,50%)] bg-[hsl(355,78%,50%)]/5 shadow-lg shadow-[hsl(355,78%,50%)]/10"
-                    : "border-white/10 bg-white/[0.02]"
-                }`}>
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[hsl(355,78%,50%)] text-xs font-bold uppercase tracking-wider">
-                    Mais popular
-                  </div>
-                )}
-                <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                <p className="text-white/40 text-sm mb-4">
-                  {plan.credits.toLocaleString("pt-BR")} créditos/mês · até {plan.maxUsers >= 9999 ? "∞" : plan.maxUsers} usuários
+          {/* ══════════════════════════════════════════════════════════
+              6. SISTEMA COMPLETO
+              ══════════════════════════════════════════════════════════ */}
+          <section className="px-6 lg:px-16 py-20 border-t border-white/5">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-14">
+                <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+                  Um sistema que organiza, executa e acompanha o{" "}
+                  <span className="text-[hsl(355,78%,50%)]">crescimento</span> da sua empresa
+                </h2>
+                <p className="text-white/40 max-w-xl mx-auto">
+                  Você não precisa de mais ferramentas separadas.<br />
+                  Precisa de um sistema que conecta tudo.
                 </p>
-                <div className="mb-6">
-                  <span className="text-3xl font-black">R$ {plan.price}</span>
-                  <span className="text-white/40 text-sm">/mês</span>
-                </div>
-                <ul className="space-y-2 mb-4">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-white/60">
-                      <Check className="h-4 w-4 text-[hsl(355,78%,55%)] shrink-0 mt-0.5" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {SYSTEM_BLOCKS.map((block, bi) => (
+                  <motion.div
+                    key={block.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: bi * 0.08 }}
+                    className={`rounded-2xl border ${block.border} ${block.bg} p-6`}
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <block.icon className={`w-5 h-5 ${block.accent}`} />
+                      <h4 className="font-semibold text-white">{block.title}</h4>
+                    </div>
+                    <ul className="space-y-2">
+                      {block.items.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-white/50">
+                          <ChevronRight className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-white/20" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════
+              7. COMO FUNCIONA
+              ══════════════════════════════════════════════════════════ */}
+          <section className="px-6 lg:px-16 py-20 border-t border-white/5">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-2xl lg:text-3xl font-bold text-center mb-14">Como funciona</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {HOW_IT_WORKS.map((step, i) => (
+                  <motion.div
+                    key={step.num}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.15 }}
+                    className="text-center"
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-[hsl(355,78%,50%)]/10 border border-[hsl(355,78%,50%)]/20 flex items-center justify-center mx-auto mb-4">
+                      <step.icon className="w-6 h-6 text-[hsl(355,78%,50%)]" />
+                    </div>
+                    <span className="text-xs font-mono text-[hsl(355,78%,50%)] mb-2 block">Passo {step.num}</span>
+                    <h4 className="font-semibold text-white mb-2">{step.title}</h4>
+                    <p className="text-sm text-white/40">{step.desc}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════
+              8. PROVA
+              ══════════════════════════════════════════════════════════ */}
+          <section className="px-6 lg:px-16 py-16 border-t border-white/5">
+            <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+              {STATS.map((stat, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="text-center"
+                >
+                  <p className="text-3xl lg:text-4xl font-extrabold text-[hsl(355,78%,50%)]">{stat.value}</p>
+                  <p className="text-sm text-white/40 mt-1">{stat.label}</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════
+              9. REFORÇO DE DOR
+              ══════════════════════════════════════════════════════════ */}
+          <section className="px-6 lg:px-16 py-20 border-t border-white/5">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-2xl lg:text-3xl font-bold mb-4">
+                Empresas não quebram por falta de <span className="text-[hsl(355,78%,50%)]">esforço</span>
+              </h2>
+              <p className="text-lg text-white/50 mb-4">Elas quebram por falta de controle.</p>
+              <p className="text-sm text-white/30 max-w-lg mx-auto leading-relaxed">
+                Sem metas, sem acompanhamento e sem processo, não existe crescimento previsível.
+              </p>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════════════════════
+              10. CTA FINAL
+              ══════════════════════════════════════════════════════════ */}
+          <section className="px-6 lg:px-16 py-20 border-t border-white/5">
+            <div className="max-w-3xl mx-auto text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+              >
+                <h2 className="text-2xl lg:text-3xl font-bold mb-6">
+                  Tenha clareza, execução e controle do seu crescimento
+                </h2>
                 <Link to="/app">
-                  <Button className={`w-full ${
-                    plan.popular
-                      ? "bg-[hsl(var(--primary))] hover:bg-[hsl(355,78%,45%)] text-white"
-                      : "bg-white/10 hover:bg-white/15 text-white"
-                  }`}>
-                    Começar grátis
+                  <Button className="h-14 px-10 text-base font-semibold rounded-xl bg-[hsl(355,78%,50%)] hover:bg-[hsl(355,78%,45%)] text-white shadow-lg shadow-[hsl(355,78%,50%)]/20">
+                    Criar conta e ver plano completo
+                    <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
               </motion.div>
-            ))}
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer className="px-6 lg:px-16 py-10 border-t border-white/5">
+            <div className="max-w-6xl mx-auto flex items-center justify-between">
+              <img src={logoDark} alt="N360" className="h-6 opacity-40" />
+              <p className="text-xs text-white/20">© {new Date().getFullYear()} N360. Todos os direitos reservados.</p>
+            </div>
+          </footer>
+        </div>
+      )}
+
+      {/* Show remaining sections when still on form/loading */}
+      {phase !== "result" && (
+        <footer className="px-6 lg:px-16 py-10 border-t border-white/5">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <img src={logoDark} alt="N360" className="h-6 opacity-40" />
+            <p className="text-xs text-white/20">© {new Date().getFullYear()} N360. Todos os direitos reservados.</p>
           </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ──────────────────────────────────────────────── */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28 max-w-5xl mx-auto">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-14">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-3">Perguntas frequentes</h2>
-          <p className="text-white/50">Tudo que você precisa saber antes de começar</p>
-        </motion.div>
-
-        <div className="space-y-3">
-          {FAQ.map((item, i) => (
-            <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={i * 0.5}
-              className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
-              <button
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-white/[0.02] transition-colors">
-                <span className="text-sm font-medium pr-4">{item.q}</span>
-                <ChevronDown className={`h-4 w-4 text-white/40 shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
-              </button>
-              {openFaq === i && (
-                <div className="px-6 pb-4 text-sm text-white/50 leading-relaxed">{item.a}</div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          10. CTA FINAL — FORTE
-          ══════════════════════════════════════════════════════════ */}
-      <section className="px-6 lg:px-16 py-20 lg:py-28">
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="max-w-4xl mx-auto text-center rounded-3xl p-12 lg:p-16 border border-[hsl(355,78%,50%)]/20 bg-gradient-to-br from-[hsl(355,78%,50%)]/10 to-transparent relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[hsl(355,78%,50%)]/5 rounded-full blur-[100px] pointer-events-none" />
-          <h2 className="text-3xl lg:text-5xl font-black tracking-tight mb-4 relative z-10">
-            Se você não sabe onde está errando,<br />
-            <span className="text-[hsl(355,78%,50%)]">não tem como crescer.</span>
-          </h2>
-          <p className="text-white/50 max-w-lg mx-auto mb-8 relative z-10 text-lg">
-            A N360 te mostra, organiza e executa com você.
-          </p>
-          <Link to="/app" className="relative z-10">
-            <Button size="lg" className="bg-[hsl(var(--primary))] hover:bg-[hsl(355,78%,45%)] text-white text-lg px-10 py-6 h-auto shadow-lg shadow-[hsl(355,78%,50%)]/25">
-              Quero diagnosticar meu negócio agora <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-        </motion.div>
-      </section>
-
-      {/* ── Footer ───────────────────────────────────────────── */}
-      <footer className="border-t border-white/5 px-6 lg:px-16 py-10">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <img src={logoDark} alt="N360" className="h-6 object-contain opacity-40" />
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-white/30">
-            <Link to="/termos" className="hover:text-white/60 transition-colors">Termos de Uso</Link>
-            <Link to="/privacidade" className="hover:text-white/60 transition-colors">Política de Privacidade</Link>
-            <a href="#pricing" className="hover:text-white/60 transition-colors">Planos</a>
-          </div>
-          <span className="text-xs text-white/20">© {new Date().getFullYear()} N360. Todos os direitos reservados.</span>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 };
