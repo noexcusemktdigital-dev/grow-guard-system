@@ -473,8 +473,18 @@ export function CrmAutomations() {
               {actionType === "create_task" && (
                 <div className="space-y-2">
                   <div><Label className="text-xs">Título da tarefa</Label><Input value={actionConfig.task_title || ""} onChange={e => setActionConfig({ ...actionConfig, task_title: e.target.value })} placeholder="Ex: Fazer follow-up" className="h-8 text-xs" /></div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><Label className="text-xs">Prazo (dias)</Label><Input type="number" value={actionConfig.due_days || 1} onChange={e => setActionConfig({ ...actionConfig, due_days: Number(e.target.value) })} className="h-8 text-xs" /></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><Label className="text-xs">Prazo</Label><Input type="number" value={actionConfig.due_value || actionConfig.due_days || 1} onChange={e => setActionConfig({ ...actionConfig, due_value: Number(e.target.value), due_days: actionConfig.due_unit === "hours" ? undefined : Number(e.target.value) })} className="h-8 text-xs" min={1} /></div>
+                    <div>
+                      <Label className="text-xs">Unidade</Label>
+                      <Select value={actionConfig.due_unit || "days"} onValueChange={v => setActionConfig({ ...actionConfig, due_unit: v, due_days: v === "days" ? (actionConfig.due_value || 1) : undefined })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+                          <SelectItem value="days" className="text-xs">Dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label className="text-xs">Prioridade</Label>
                       <Select value={actionConfig.priority || "medium"} onValueChange={v => setActionConfig({ ...actionConfig, priority: v })}>
