@@ -1,92 +1,41 @@
 
 
-## Plano — Redesign do Acompanhamento de Clientes (Ferramenta Manual do Gestor)
+## Plano — Modo Apresentação (link externo em nova aba)
 
-### Mudança conceitual
+### Conceito
 
-A ferramenta atual vincula ciclos a uma estratégia e tem geração por IA. O novo modelo é uma **plataforma de preenchimento manual** organizada por **pastas de clientes**, onde o gestor de performance preenche 5 seções que geram automaticamente uma apresentação padronizada em PDF.
+Adicionar um botão **"Apresentar"** ao lado dos botões PDF e Salvar. Ao clicar, abre uma nova aba do navegador com uma rota dedicada (`/apresentacao/:followupId`) que renderiza os dados do acompanhamento como uma apresentação fullscreen com slides navegáveis — gráficos, métricas, e plano do próximo mês.
 
-### Estrutura de dados
+### Como funciona
 
-**Migração SQL:**
-- Adicionar coluna `client_name text` na tabela `client_followups`
-- Tornar `strategy_id` nullable (não mais obrigatório)
-- Remover o unique index `client_followups_strategy_month_idx` e criar novo por `(organization_id, client_name, month_ref)`
+1. **Salvar antes de apresentar** — Ao clicar em "Apresentar", o sistema salva automaticamente o acompanhamento (se ainda não salvo) e abre `window.open("/apresentacao/{id}")` em nova aba.
 
-**Novo schema JSONB do `plano_proximo`** (5 seções):
+2. **Rota pública de apresentação** — Uma nova rota `/apresentacao/:id` que carrega o followup do banco e renderiza em modo slideshow. Não usa sidebar nem layout de franqueado — é uma página standalone.
 
-```text
-1. analise       → metricas, destaques, gaps, observacoes (já existe)
-2. conteudo      → roteiros[], artes[], qtd_postagens, tipo_conteudo[], 
-                    linha_editorial, referencias[], necessidades_cliente[]
-3. trafego       → plataformas[{nome, tipo_campanha, conteudo_campanha, 
-                    publicos, objetivo, investimento, metricas_meta}]
-4. web           → secoes[{titulo, motivo, necessidades_cliente}]
-5. vendas        → analise_crm, estrategias[], melhorias[]
-```
+3. **Slides navegáveis** — A apresentação é dividida em slides (teclado ← → ou clique):
+   - **Slide 1 — Capa**: Logo No Excuse + nome do cliente + mês
+   - **Slide 2 — Análise**: Radar chart geral + métricas por pilar com gráficos de barras
+   - **Slide 3 — Análise detalhada**: Pontos positivos/negativos por área, avanços do mês
+   - **Slide 4 — Conteúdo**: Pautas orgânicas e pagas com formato, plataforma, datas
+   - **Slide 5 — Tráfego Pago**: Campanhas com investimento, metas, gráfico de distribuição
+   - **Slide 6 — Web**: Seções/páginas planejadas com status e necessidades
+   - **Slide 7 — Vendas/CRM**: Funil, metas, estratégias
+   - **Slide 8 — Resumo**: Avanços do mês + pontos a melhorar + próximos passos
 
-### Interface — 3 níveis de navegação
+4. **Visual**: Fundo escuro (#0f0f0f), cards com bordas sutis, gráficos Recharts animados, tipografia grande para projeção. Escala 16:9 (1920x1080) com `transform: scale()` para caber em qualquer tela.
 
-```text
-┌─────────────────────────────────────────┐
-│  ACOMPANHAMENTO DE CLIENTES             │
-│                                         │
-│  [+ Nova Pasta de Cliente]              │
-│                                         │
-│  📁 Cliente A (3 ciclos)                │
-│  📁 Cliente B (1 ciclo)                 │
-│  📁 Cliente C (5 ciclos)                │
-└─────────────────────────────────────────┘
-         ↓ click na pasta
-┌─────────────────────────────────────────┐
-│  ← Voltar    Cliente A                  │
-│  [+ Novo Acompanhamento]                │
-│                                         │
-│  📄 Abril 2026 — Rascunho              │
-│  📄 Março 2026 — Apresentado           │
-│  📄 Fevereiro 2026 — Aprovado          │
-└─────────────────────────────────────────┘
-         ↓ click no ciclo
-┌─────────────────────────────────────────┐
-│  FORMULÁRIO DE 5 ABAS (preenchimento)   │
-│  [Análise] [Conteúdo] [Tráfego]         │
-│  [Web] [Vendas]                         │
-│                                         │
-│  Botões: Salvar | Exportar PDF          │
-└─────────────────────────────────────────┘
-```
+### Arquivos
 
-### Detalhes das 5 abas do formulário
-
-1. **Análise do Mês** — Métricas (leads, conversoes, trafego, engajamento, faturamento), pontos positivos (lista), pontos negativos (lista), observações gerais
-
-2. **Conteúdo** — Dividido em Orgânico e Pago. Campos: roteiros (lista de textos), artes/criativos (lista), quantidade de postagens, tipos de conteúdo (multi-select: reels, stories, carrossel, etc.), linha editorial (textarea), referências (lista de links/descrições), necessidades do cliente (lista)
-
-3. **Tráfego Pago** — Tabela dinâmica por plataforma (Meta, Google, TikTok, LinkedIn). Para cada: tipo de campanha, o que vai rodar, públicos-alvo, objetivo, investimento (R$), divisão do investimento, métricas-meta a alcançar
-
-4. **Web / Landing Pages** — Lista de seções/páginas a criar ou alterar. Para cada: título da seção, motivo/justificativa, o que precisa do cliente para executar
-
-5. **Vendas / CRM** — Análise do CRM (textarea), estratégias propostas (lista), melhorias sugeridas (lista)
-
-### PDF gerado automaticamente
-
-- Capa com logo No Excuse + nome do cliente + mês de referência
-- 5 seções correspondentes às 5 abas, formatadas em A4 com layout profissional
-- Dual-theme: Análise em fundo claro, Plano (Conteúdo/Tráfego/Web/Vendas) em fundo escuro
-- Gerado via jsPDF programático (mesmo padrão da estratégia)
-
-### O que é removido
-
-- Vínculo obrigatório com `franqueado_strategies` (select de estratégia)
-- Botão "Gerar com IA" e chamada à edge function `generate-followup`
-- Checklist de entregas vindas da estratégia
-
-### Arquivos afetados
-
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| Migração SQL | `client_name` column, nullable `strategy_id`, novo unique index |
-| `src/hooks/useClientFollowups.ts` | Refatorar interfaces (novo schema 5 seções), queries por `client_name`, listar pastas distintas |
-| `src/pages/franqueado/FranqueadoAcompanhamento.tsx` | Reescrever: navegação por pastas → ciclos → formulário 5 abas, remover IA, novo PDF |
-| `src/lib/followupPdfGenerator.ts` | Novo gerador de PDF programático para o acompanhamento |
+| `src/pages/Apresentacao.tsx` | **Novo** — Página standalone de apresentação fullscreen |
+| `src/App.tsx` | Adicionar rota `/apresentacao/:id` (fora dos layouts protegidos) |
+| `src/pages/franqueado/FranqueadoAcompanhamento.tsx` | Adicionar botão "Apresentar" no header do editor |
+
+### Detalhes técnicos
+
+- A rota `/apresentacao/:id` faz `supabase.from("client_followups").select("*").eq("id", id).single()` diretamente — sem autenticação obrigatória para permitir projeção em tela de reunião
+- Componente `PresentationSlide` renderiza cada slide a 1920x1080 com scale automático
+- Navegação: Arrow keys, Space (avançar), Escape (sair), indicador de progresso no rodapé
+- Gráficos Recharts reutilizados do editor (Radar, Bar, Pie) com tamanhos maiores para projeção
 
