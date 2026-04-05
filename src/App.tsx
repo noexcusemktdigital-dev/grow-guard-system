@@ -46,6 +46,7 @@ const FranqueadoraCandidatos = lazy(() => import("./pages/franqueadora/Franquead
 const FranqueadoraPerfil = lazy(() => import("./pages/franqueadora/FranqueadoraPerfil"));
 const FranqueadoraChat = lazy(() => import("./pages/franqueadora/FranqueadoraChat"));
 const NotificacoesPage = lazy(() => import("./pages/NotificacoesPage"));
+const ApresentacaoPage = lazy(() => import("./pages/Apresentacao"));
 
 // Franqueado pages
 const FranqueadoDashboard = lazy(() => import("./pages/franqueado/FranqueadoDashboard"));

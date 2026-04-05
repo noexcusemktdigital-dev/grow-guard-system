@@ -455,6 +455,14 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
         <h1 className="text-xl font-bold flex-1">{existing ? `${clientName} — ${getMonthLabel(monthRef)}` : `Novo Acompanhamento — ${clientName}`}</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportPdf}><FileDown className="w-4 h-4 mr-1" /> PDF</Button>
+          <Button variant="outline" size="sm" className="text-violet-600 border-violet-300 hover:bg-violet-50" onClick={() => {
+            if (!existing?.id) {
+              toast.info("Salve o acompanhamento antes de apresentar");
+              return;
+            }
+            handleSave();
+            window.open(`/apresentacao/${existing.id}`, "_blank");
+          }}><Presentation className="w-4 h-4 mr-1" /> Apresentar</Button>
           <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
         </div>
       </div>
