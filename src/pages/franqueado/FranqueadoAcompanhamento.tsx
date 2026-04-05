@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-  FolderOpen, Plus, ChevronLeft, Save, FileDown, XCircle,
+  FolderOpen, Plus, ChevronLeft, Save, FileDown, XCircle, Presentation,
   BarChart3, Megaphone, TrendingUp, Globe, Target,
   ThumbsUp, ThumbsDown, Eye, Palette, MousePointerClick, ShoppingCart,
   ArrowUpRight, AlertTriangle, Sparkles, Calendar, Clock, Link2, FileText, Crosshair, DollarSign, Users,
@@ -455,6 +455,14 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
         <h1 className="text-xl font-bold flex-1">{existing ? `${clientName} — ${getMonthLabel(monthRef)}` : `Novo Acompanhamento — ${clientName}`}</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportPdf}><FileDown className="w-4 h-4 mr-1" /> PDF</Button>
+          <Button variant="outline" size="sm" className="text-violet-600 border-violet-300 hover:bg-violet-50" onClick={() => {
+            if (!existing?.id) {
+              toast.info("Salve o acompanhamento antes de apresentar");
+              return;
+            }
+            handleSave();
+            window.open(`/apresentacao/${existing.id}`, "_blank");
+          }}><Presentation className="w-4 h-4 mr-1" /> Apresentar</Button>
           <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
         </div>
       </div>
