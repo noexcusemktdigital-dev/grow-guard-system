@@ -137,7 +137,7 @@ const SaasLanding = () => {
     setPhase("loading");
   }, [segment, region]);
 
-  if (isAuthenticated) return <Navigate to="/redirect" replace />;
+  if (user) return <Navigate to="/redirect" replace />;
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "#fff" }}>
