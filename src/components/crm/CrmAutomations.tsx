@@ -412,7 +412,19 @@ export function CrmAutomations() {
                 <div><Label className="text-xs">Filtrar por origem (opcional)</Label><Input value={triggerConfig.source_filter || ""} onChange={e => setTriggerConfig({ ...triggerConfig, source_filter: e.target.value })} placeholder="Ex: Ads, WhatsApp" className="h-8 text-xs" /></div>
               )}
               {triggerType === "lead_stuck" && (
-                <div><Label className="text-xs">Dias parado</Label><Input type="number" value={triggerConfig.days || 7} onChange={e => setTriggerConfig({ ...triggerConfig, days: Number(e.target.value) })} className="h-8 text-xs w-24" /></div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Tempo parado</Label>
+                  <div className="flex gap-2">
+                    <Input type="number" value={triggerConfig.days || triggerConfig.stuck_value || 7} onChange={e => setTriggerConfig({ ...triggerConfig, stuck_value: Number(e.target.value), days: triggerConfig.stuck_unit === "hours" ? undefined : Number(e.target.value) })} className="h-8 text-xs w-24" min={1} />
+                    <Select value={triggerConfig.stuck_unit || "days"} onValueChange={v => setTriggerConfig({ ...triggerConfig, stuck_unit: v, days: v === "days" ? (triggerConfig.stuck_value || 7) : undefined })}>
+                      <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hours" className="text-xs">Horas</SelectItem>
+                        <SelectItem value="days" className="text-xs">Dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               )}
               {triggerType === "tag_added" && (
                 <div><Label className="text-xs">Tag</Label><Input value={triggerConfig.tag || ""} onChange={e => setTriggerConfig({ ...triggerConfig, tag: e.target.value })} placeholder="Ex: qualificado" className="h-8 text-xs" /></div>
