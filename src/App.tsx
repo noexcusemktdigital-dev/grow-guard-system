@@ -149,6 +149,7 @@ function App() {
               <Route path="/privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/welcome" element={<Welcome />} />
+              <Route path="/apresentacao/:id" element={<PageBoundary><ApresentacaoPage /></PageBoundary>} />
 
               <Route path="/" element={<SaasLanding />} />
 
