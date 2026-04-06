@@ -343,13 +343,13 @@ function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { nam
   );
 }
 // ─── LEVEL 2: Cycle list ───
-function CycleListView({ clientName, followups, onBack, onNew, onEdit }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void }) {
+function CycleListView({ clientName, followups, onBack, onNew, onEdit, isMatriz }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void; isMatriz: boolean }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
         <h1 className="text-xl font-bold flex-1">{clientName}</h1>
-        <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>
+        {isMatriz && <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>}
       </div>
       {followups.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum acompanhamento criado.</CardContent></Card>
