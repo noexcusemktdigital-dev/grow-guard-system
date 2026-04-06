@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   useClientFolders,
+  useClientFoldersForUnit,
   useClientFollowups,
   useSaveFollowup,
   type ClientFollowup,
@@ -13,6 +14,8 @@ import {
   type WebSecao,
   type VendasSection,
 } from "@/hooks/useClientFollowups";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUnits } from "@/hooks/useUnits";
 import { generateFollowupPdf } from "@/lib/followupPdfGenerator";
 import { MONTH_NAMES } from "@/lib/formatting";
 import { Button } from "@/components/ui/button";
