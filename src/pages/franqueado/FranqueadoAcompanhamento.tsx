@@ -282,8 +282,9 @@ function TrafegoInvestimentoChart({ campanhas }: { campanhas: TrafegoCampanha[] 
 }
 
 // ─── LEVEL 1: Client Folders ───
-function FolderListView({ folders, onSelect }: { folders: { name: string; count: number }[]; onSelect: (name: string) => void }) {
+function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; units?: any[] }) {
   const [newName, setNewName] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [showInput, setShowInput] = useState(false);
 
   return (
@@ -291,19 +292,38 @@ function FolderListView({ folders, onSelect }: { folders: { name: string; count:
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><FolderOpen className="w-6 h-6 text-primary" /> Acompanhamento de Clientes</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie ciclos mensais por cliente</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isMatriz ? "Crie e gerencie ciclos mensais vinculados às unidades" : "Visualize os acompanhamentos da sua unidade"}
+          </p>
         </div>
-        <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>
+        {isMatriz && <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>}
       </div>
-      {showInput && (
-        <Card><CardContent className="pt-4 flex gap-3">
-          <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
-          <Button onClick={() => { if (newName.trim()) { onSelect(newName.trim()); setShowInput(false); setNewName(""); } }} disabled={!newName.trim()}>Criar</Button>
-          <Button variant="ghost" onClick={() => { setShowInput(false); setNewName(""); }}>Cancelar</Button>
+      {showInput && isMatriz && (
+        <Card><CardContent className="pt-4 space-y-3">
+          <div className="flex gap-3">
+            <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
+          </div>
+          <div>
+            <label className="text-xs font-medium mb-1 block">Vincular à Unidade</label>
+            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
+              <SelectContent>
+                {(units || []).map((u: any) => (
+                  <SelectItem key={u.id} value={u.unit_org_id || u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => { if (newName.trim() && selectedUnit) { onSelect(newName.trim(), selectedUnit); setShowInput(false); setNewName(""); setSelectedUnit(""); } }} disabled={!newName.trim() || !selectedUnit}>Criar</Button>
+            <Button variant="ghost" onClick={() => { setShowInput(false); setNewName(""); setSelectedUnit(""); }}>Cancelar</Button>
+          </div>
         </CardContent></Card>
       )}
       {folders.length === 0 && !showInput ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum cliente cadastrado.</CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          {isMatriz ? "Nenhum cliente cadastrado." : "Nenhum acompanhamento vinculado à sua unidade."}
+        </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {folders.map((f) => (
@@ -322,7 +342,6 @@ function FolderListView({ folders, onSelect }: { folders: { name: string; count:
     </div>
   );
 }
-
 // ─── LEVEL 2: Cycle list ───
 function CycleListView({ clientName, followups, onBack, onNew, onEdit }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void }) {
   return (
