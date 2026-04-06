@@ -239,6 +239,7 @@ export function useSaveFollowup() {
       status?: string;
       analise: FollowupAnalise;
       plano_proximo: FollowupPlano;
+      unit_org_id?: string | null;
     }) => {
       if (!orgId) throw new Error("Organização não encontrada");
       const payload = {
@@ -248,6 +249,7 @@ export function useSaveFollowup() {
         status: input.status || "draft",
         analise: input.analise as any,
         plano_proximo: input.plano_proximo as any,
+        unit_org_id: input.unit_org_id || null,
       };
       if (input.id) {
         const { data, error } = await supabase.from("client_followups").update(payload).eq("id", input.id).select().single();
@@ -262,6 +264,7 @@ export function useSaveFollowup() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-followups"] });
       qc.invalidateQueries({ queryKey: ["client-folders"] });
+      qc.invalidateQueries({ queryKey: ["client-folders-unit"] });
       toast.success("Acompanhamento salvo com sucesso!");
     },
     onError: (e: any) => {
