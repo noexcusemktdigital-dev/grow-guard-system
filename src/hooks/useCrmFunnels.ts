@@ -37,7 +37,7 @@ export function useCrmFunnelMutations() {
       }
       const { data, error } = await supabase
         .from("crm_funnels")
-        .insert({ ...funnel, organization_id: orgId!, stages: funnel.stages || [] })
+        .insert({ ...funnel, organization_id: orgId!, stages: funnel.stages || [] } as any)
         .select()
         .single();
       if (error) throw error;
@@ -85,7 +85,7 @@ export function useEnsureDefaultFunnel() {
       createFunnel.mutate({
         name: "Funil de Vendas",
         description: "Funil padrão do CRM",
-        stages: DEFAULT_STAGES as Record<string, unknown>[],
+        stages: DEFAULT_STAGES as any[],
         is_default: true,
       });
     }

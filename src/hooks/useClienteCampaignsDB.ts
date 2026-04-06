@@ -37,9 +37,9 @@ export function useCreateClientCampaign() {
           name,
           type: type || "content",
           status: "active",
-          content: content as Record<string, unknown>,
+          content: content as any,
           created_by: user?.id,
-        })
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -58,7 +58,7 @@ export function useUpdateClientCampaign() {
     mutationFn: async ({ id, content }: { id: string; content: Record<string, unknown> }) => {
       const { data, error } = await supabase
         .from("client_campaigns")
-        .update({ content: content as Record<string, unknown> })
+        .update({ content: content as any })
         .eq("id", id)
         .select()
         .single();

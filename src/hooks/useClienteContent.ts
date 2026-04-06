@@ -112,7 +112,7 @@ export function useClienteContentMutations() {
 
   const createContent = useMutation({
     mutationFn: async (content: { title: string; body?: string; type?: string; platform?: string; scheduled_at?: string }) => {
-      const { data, error } = await supabase.from("client_content").insert({ ...content, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("client_content").insert({ ...content, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -121,7 +121,7 @@ export function useClienteContentMutations() {
 
   const createCampaign = useMutation({
     mutationFn: async (campaign: { name: string; type?: string; budget?: number; start_date?: string; end_date?: string }) => {
-      const { data, error } = await supabase.from("client_campaigns").insert({ ...campaign, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("client_campaigns").insert({ ...campaign, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -130,7 +130,7 @@ export function useClienteContentMutations() {
 
   const createScript = useMutation({
     mutationFn: async (script: { title: string; content?: string; category?: string; tags?: string[] }) => {
-      const { data, error } = await supabase.from("client_scripts").insert({ ...script, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("client_scripts").insert({ ...script, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -139,7 +139,7 @@ export function useClienteContentMutations() {
 
   const createDispatch = useMutation({
     mutationFn: async (dispatch: { title: string; channel?: string; message?: string; scheduled_at?: string }) => {
-      const { data, error } = await supabase.from("client_dispatches").insert({ ...dispatch, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("client_dispatches").insert({ ...dispatch, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -148,7 +148,7 @@ export function useClienteContentMutations() {
 
   const createSite = useMutation({
     mutationFn: async (site: { name: string; type?: string; content?: Record<string, unknown> }) => {
-      const { data, error } = await supabase.from("client_sites").insert({ ...site, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("client_sites").insert({ ...site, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -158,7 +158,7 @@ export function useClienteContentMutations() {
   const createChecklistItem = useMutation({
     mutationFn: async (item: { title: string; date?: string; source?: string; category?: string }) => {
       if (!orgId || !user) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase.from("client_checklist_items").insert({ ...item, organization_id: orgId, user_id: user.id }).select().single();
+      const { data, error } = await supabase.from("client_checklist_items").insert({ ...item, organization_id: orgId, user_id: user.id } as any).select().single();
       if (error) throw error;
       return data;
     },

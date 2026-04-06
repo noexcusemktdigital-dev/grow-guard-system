@@ -134,10 +134,10 @@ export function useGenerateContent() {
         const realError = await extractEdgeFunctionError(resp.error);
         throw realError;
       }
-      const result = resp.data as Record<string, unknown>;
+      const result = resp.data as any;
       if (result?.error) throw new Error(result.error as string);
 
-      const conteudos = (result.conteudos || []) as Record<string, unknown>[];
+      const conteudos = (result.conteudos || []) as any[];
       if (conteudos.length === 0) throw new Error("Nenhum conteúdo gerado");
 
       // Batch insert
@@ -146,7 +146,7 @@ export function useGenerateContent() {
         title: (c.titulo as string) || "Conteúdo",
         format: c.formato,
         objective: c.objetivo,
-        result: c as Record<string, unknown>,
+        result: c as any,
         status: "pending",
         created_by: user?.id,
         platform: payload.plataforma,
@@ -154,7 +154,7 @@ export function useGenerateContent() {
 
       const { data, error } = await supabase
         .from("client_content")
-        .insert(rows as Record<string, unknown>[])
+        .insert(rows as any[])
         .select();
 
       if (error) throw error;
@@ -175,7 +175,7 @@ export function useApproveContent() {
     mutationFn: async (contentId: string) => {
       if (!orgId) throw new Error("Org not found");
 
-      const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_parent_org_id", {
+      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
         _amount: CREDIT_COST_APPROVE_CONTENT,
         _description: "Conteúdo aprovado",
@@ -185,7 +185,7 @@ export function useApproveContent() {
 
       const { error } = await supabase
         .from("client_content")
-        .update({ status: "approved" } as Record<string, unknown>)
+        .update({ status: "approved" } as any)
         .eq("id", contentId);
       if (error) throw error;
     },
@@ -208,7 +208,7 @@ export function useApproveBatch() {
       // If a debit succeeds but the update fails, we throw immediately to
       // surface the error rather than silently skipping remaining items.
       for (const id of contentIds) {
-        const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_parent_org_id", {
+        const { error: debitError } = await supabase.rpc("debit_credits" as any, {
           _org_id: orgId,
           _amount: CREDIT_COST_APPROVE_CONTENT,
           _description: "Conteúdo aprovado (lote)",
@@ -218,7 +218,7 @@ export function useApproveBatch() {
 
         const { error } = await supabase
           .from("client_content")
-          .update({ status: "approved" } as Record<string, unknown>)
+          .update({ status: "approved" } as any)
           .eq("id", id);
         if (error) throw new Error(`Erro ao aprovar conteúdo ${id}: ${error.message}`);
       }

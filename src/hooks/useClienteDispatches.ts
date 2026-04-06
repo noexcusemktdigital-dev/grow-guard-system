@@ -42,7 +42,7 @@ export function useClienteDispatchMutations() {
           ...dispatch,
           organization_id: orgId!,
           recipients: dispatch.recipients || [],
-        } as Record<string, unknown>)
+        } as any)
         .select()
         .single();
       if (error) throw error;

@@ -19,11 +19,11 @@ export function useApprovalStats() {
     queryFn: async (): Promise<ApprovalStats> => {
       const [contentsRes, postsRes, sitesRes] = await Promise.all([
         supabase
-          .from("client_content" as unknown as "organizations")
+          .from("client_content" as any)
           .select("status")
           .eq("organization_id", orgId!),
         supabase
-          .from("client_posts" as unknown as "organizations")
+          .from("client_posts" as any)
           .select("status")
           .eq("organization_id", orgId!),
         supabase
