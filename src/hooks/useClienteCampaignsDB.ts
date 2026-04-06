@@ -39,7 +39,7 @@ export function useCreateClientCampaign() {
           status: "active",
           content: content as any,
           created_by: user?.id,
-        })
+        } as any)
         .select()
         .single();
       if (error) throw error;
