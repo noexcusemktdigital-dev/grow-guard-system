@@ -476,6 +476,7 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
       <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
         <h1 className="text-xl font-bold flex-1">{existing ? `${clientName} — ${getMonthLabel(monthRef)}` : `Novo Acompanhamento — ${clientName}`}</h1>
+        {readOnly && <Badge variant="secondary">Somente Leitura</Badge>}
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportPdf}><FileDown className="w-4 h-4 mr-1" /> PDF</Button>
           <Button variant="outline" size="sm" className="text-violet-600 border-violet-300 hover:bg-violet-50" onClick={() => {
@@ -483,10 +484,10 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
               toast.info("Salve o acompanhamento antes de apresentar");
               return;
             }
-            handleSave();
+            if (!readOnly) handleSave();
             window.open(`/apresentacao/${existing.id}`, "_blank");
           }}><Presentation className="w-4 h-4 mr-1" /> Apresentar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
+          {!readOnly && <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>}
         </div>
       </div>
 
