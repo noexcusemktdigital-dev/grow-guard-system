@@ -148,7 +148,7 @@ export function useClienteContentMutations() {
 
   const createSite = useMutation({
     mutationFn: async (site: { name: string; type?: string; content?: Record<string, unknown> }) => {
-      const { data, error } = await supabase.from("client_sites").insert({ ...site, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("client_sites").insert({ ...site, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },

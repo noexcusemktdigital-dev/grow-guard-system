@@ -36,7 +36,7 @@ export function useCrmAutomationMutations() {
     }) => {
       const { data, error } = await supabase
         .from("crm_automations")
-        .insert({ ...automation, organization_id: orgId! })
+        .insert({ ...automation, organization_id: orgId! } as any)
         .select()
         .single();
       if (error) throw error;

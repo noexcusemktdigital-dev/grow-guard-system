@@ -54,7 +54,7 @@ export function useContractMutations() {
 
   const createTemplate = useMutation({
     mutationFn: async (t: { name: string; content?: string; variables?: Record<string, unknown>[]; template_type?: string; description?: string }) => {
-      const { data, error } = await supabase.from("contract_templates").insert({ ...t, organization_id: orgId! }).select().single();
+      const { data, error } = await supabase.from("contract_templates").insert({ ...t, organization_id: orgId! } as any).select().single();
       if (error) throw error;
       return data;
     },
