@@ -388,7 +388,7 @@ const FORMATOS_ANUNCIO = ["Imagem Única", "Vídeo", "Carrossel", "Coleção", "
 const TIPOS_WEB = ["Landing Page", "Página Institucional", "Blog Post", "E-commerce", "Formulário", "Pop-up"];
 
 // ─── LEVEL 3: Editor ───
-function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFollowup | null; clientName: string; onBack: () => void }) {
+function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOrgId }: { existing: ClientFollowup | null; clientName: string; onBack: () => void; readOnly?: boolean; unitOrgId?: string }) {
   const saveFollowup = useSaveFollowup();
   const [monthRef, setMonthRef] = useState(existing?.month_ref || getCurrentMonthRef());
   const [status, setStatus] = useState(existing?.status || "draft");
