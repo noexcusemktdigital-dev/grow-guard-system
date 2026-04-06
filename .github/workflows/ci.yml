@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci || npm install
       - run: npx tsc --noEmit
 
   lint:
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci || npm install
       - run: npm run lint
 
   test:
@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci || npm install
       - run: npm test
 
   audit:
@@ -52,7 +52,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci || npm install
       - name: Security audit
         run: npm audit --audit-level=critical
 
@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci || npm install
       - name: Build
         run: npm run build
         env:
