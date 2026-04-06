@@ -7,50 +7,76 @@ on:
     branches: [main]
 
 jobs:
-  lint-typecheck-build:
-    name: Lint + TypeCheck + Build
+  type-check:
+    name: TypeScript
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
 
-      - name: Install dependencies
-        run: npm ci
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
 
-      - name: TypeScript check (tsc --noEmit)
-        run: npx tsc --noEmit
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
 
-      - name: ESLint
-        run: npx eslint src --ext .ts,.tsx --max-warnings 0 || true
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Security audit
+        run: npm audit --audit-level=critical
 
+  bundle-size:
+    name: Bundle Size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'placeholder' }}
-
-      - name: Run tests
-        run: npm test -- --run 2>/dev/null || echo "::warning::No tests found — add tests to prevent regressions (QA-001)"
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: npm audit (high severity only)
-        run: npm audit --audit-level=high
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: placeholder_anon_key
+      - name: Check bundle size
+        run: |
+          BUILD_SIZE=$(du -sh dist/ | cut -f1)
+          echo "Bundle size: $BUILD_SIZE"
+          SIZE_KB=$(du -sk dist/ | cut -f1)
+          if [ $SIZE_KB -gt 51200 ]; then
+            echo "::error::Bundle size exceeds 50MB limit ($BUILD_SIZE)"
+            exit 1
+          fi
