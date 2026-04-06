@@ -13,7 +13,7 @@ export function useContractTemplates() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as Record<string, unknown>[];
+      return data as any[];
     },
     enabled: !!orgId,
   });
@@ -28,7 +28,7 @@ export function useContracts() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as Record<string, unknown>[];
+      return data as any[];
     },
     enabled: !!orgId,
   });
@@ -41,7 +41,7 @@ export function useNetworkContracts() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_network_contracts", { _org_id: orgId! });
       if (error) throw error;
-      return data as Record<string, unknown>[];
+      return data as any[];
     },
     enabled: !!orgId,
   });

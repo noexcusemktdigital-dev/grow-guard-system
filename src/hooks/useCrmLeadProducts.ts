@@ -60,7 +60,7 @@ export function useCrmLeadProductMutations() {
           unit_price: input.unit_price,
           discount_percent: input.discount_percent || 0,
           notes: input.notes || null,
-        } as Record<string, unknown>)
+        } as any)
         .select()
         .single();
       if (error) throw error;

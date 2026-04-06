@@ -31,7 +31,7 @@ export function useClientPayments(month?: string) {
     queryKey: ["client-payments", orgId, month],
     queryFn: async () => {
       let q = supabase
-        .from("client_payments" as unknown as "contracts")
+        .from("client_payments" as any)
         .select("*")
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
@@ -49,7 +49,7 @@ export function useAllClientPayments() {
     queryKey: ["all-client-payments"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("client_payments" as unknown as "contracts")
+        .from("client_payments" as any)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);

@@ -85,7 +85,7 @@ export function useEnsureDefaultFunnel() {
       createFunnel.mutate({
         name: "Funil de Vendas",
         description: "Funil padrão do CRM",
-        stages: DEFAULT_STAGES as Record<string, unknown>[],
+        stages: DEFAULT_STAGES as any[],
         is_default: true,
       });
     }

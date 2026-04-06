@@ -79,7 +79,7 @@ export function useCrmContactMutations() {
     mutationFn: async (contact: Partial<CrmContact> & { name: string }) => {
       const { data, error } = await supabase
         .from("crm_contacts")
-        .insert({ ...contact, organization_id: orgId ?? "" } as Record<string, unknown>)
+        .insert({ ...contact, organization_id: orgId ?? "" } as any)
         .select()
         .single();
       if (error) throw error;
