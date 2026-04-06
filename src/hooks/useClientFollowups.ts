@@ -146,6 +146,7 @@ export interface ClientFollowup {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  unit_org_id: string | null;
 }
 
 /* ── List distinct client folders ── */
