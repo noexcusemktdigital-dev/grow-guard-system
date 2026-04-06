@@ -158,16 +158,50 @@ export function useClientFolders() {
       if (!orgId) return [];
       const { data, error } = await supabase
         .from("client_followups")
-        .select("client_name, id")
+        .select("client_name, id, unit_org_id")
         .eq("organization_id", orgId)
         .order("client_name");
       if (error) throw error;
-      const map = new Map<string, number>();
+      const map = new Map<string, { count: number; unit_org_id: string | null }>();
       (data || []).forEach((row: any) => {
         const name = row.client_name || "Sem nome";
-        map.set(name, (map.get(name) || 0) + 1);
+        const existing = map.get(name);
+        if (existing) {
+          existing.count++;
+        } else {
+          map.set(name, { count: 1, unit_org_id: row.unit_org_id });
+        }
       });
-      return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+      return Array.from(map.entries()).map(([name, { count, unit_org_id }]) => ({ name, count, unit_org_id }));
+    },
+    enabled: !!orgId,
+  });
+}
+
+/* ── List folders visible to a franqueado (their unit) ── */
+export function useClientFoldersForUnit() {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["client-folders-unit", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("client_followups")
+        .select("client_name, id, unit_org_id")
+        .eq("unit_org_id", orgId)
+        .order("client_name");
+      if (error) throw error;
+      const map = new Map<string, { count: number; unit_org_id: string | null }>();
+      (data || []).forEach((row: any) => {
+        const name = row.client_name || "Sem nome";
+        const existing = map.get(name);
+        if (existing) {
+          existing.count++;
+        } else {
+          map.set(name, { count: 1, unit_org_id: row.unit_org_id });
+        }
+      });
+      return Array.from(map.entries()).map(([name, { count, unit_org_id }]) => ({ name, count, unit_org_id }));
     },
     enabled: !!orgId,
   });
