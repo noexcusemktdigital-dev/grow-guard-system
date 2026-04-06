@@ -432,7 +432,8 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
   });
 
   const handleSave = () => {
-    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise: buildAnalise(), plano_proximo: buildPlano() });
+    if (readOnly) return;
+    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise: buildAnalise(), plano_proximo: buildPlano(), unit_org_id: existing?.unit_org_id || unitOrgId });
   };
 
   const handleExportPdf = async () => {
