@@ -146,6 +146,7 @@ export interface ClientFollowup {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  unit_org_id: string | null;
 }
 
 /* ── List distinct client folders ── */
@@ -157,16 +158,50 @@ export function useClientFolders() {
       if (!orgId) return [];
       const { data, error } = await supabase
         .from("client_followups")
-        .select("client_name, id")
+        .select("client_name, id, unit_org_id")
         .eq("organization_id", orgId)
         .order("client_name");
       if (error) throw error;
-      const map = new Map<string, number>();
+      const map = new Map<string, { count: number; unit_org_id: string | null }>();
       (data || []).forEach((row: any) => {
         const name = row.client_name || "Sem nome";
-        map.set(name, (map.get(name) || 0) + 1);
+        const existing = map.get(name);
+        if (existing) {
+          existing.count++;
+        } else {
+          map.set(name, { count: 1, unit_org_id: row.unit_org_id });
+        }
       });
-      return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+      return Array.from(map.entries()).map(([name, { count, unit_org_id }]) => ({ name, count, unit_org_id }));
+    },
+    enabled: !!orgId,
+  });
+}
+
+/* ── List folders visible to a franqueado (their unit) ── */
+export function useClientFoldersForUnit() {
+  const { data: orgId } = useUserOrgId();
+  return useQuery({
+    queryKey: ["client-folders-unit", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("client_followups")
+        .select("client_name, id, unit_org_id")
+        .eq("unit_org_id", orgId)
+        .order("client_name");
+      if (error) throw error;
+      const map = new Map<string, { count: number; unit_org_id: string | null }>();
+      (data || []).forEach((row: any) => {
+        const name = row.client_name || "Sem nome";
+        const existing = map.get(name);
+        if (existing) {
+          existing.count++;
+        } else {
+          map.set(name, { count: 1, unit_org_id: row.unit_org_id });
+        }
+      });
+      return Array.from(map.entries()).map(([name, { count, unit_org_id }]) => ({ name, count, unit_org_id }));
     },
     enabled: !!orgId,
   });
@@ -204,6 +239,7 @@ export function useSaveFollowup() {
       status?: string;
       analise: FollowupAnalise;
       plano_proximo: FollowupPlano;
+      unit_org_id?: string | null;
     }) => {
       if (!orgId) throw new Error("Organização não encontrada");
       const payload = {
@@ -213,6 +249,7 @@ export function useSaveFollowup() {
         status: input.status || "draft",
         analise: input.analise as any,
         plano_proximo: input.plano_proximo as any,
+        unit_org_id: input.unit_org_id || null,
       };
       if (input.id) {
         const { data, error } = await supabase.from("client_followups").update(payload).eq("id", input.id).select().single();
@@ -227,6 +264,7 @@ export function useSaveFollowup() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-followups"] });
       qc.invalidateQueries({ queryKey: ["client-folders"] });
+      qc.invalidateQueries({ queryKey: ["client-folders-unit"] });
       toast.success("Acompanhamento salvo com sucesso!");
     },
     onError: (e: any) => {

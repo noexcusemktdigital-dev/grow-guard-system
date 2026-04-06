@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import {
   useClientFolders,
+  useClientFoldersForUnit,
   useClientFollowups,
   useSaveFollowup,
   type ClientFollowup,
@@ -13,6 +14,8 @@ import {
   type WebSecao,
   type VendasSection,
 } from "@/hooks/useClientFollowups";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUnits } from "@/hooks/useUnits";
 import { generateFollowupPdf } from "@/lib/followupPdfGenerator";
 import { MONTH_NAMES } from "@/lib/formatting";
 import { Button } from "@/components/ui/button";
@@ -279,8 +282,9 @@ function TrafegoInvestimentoChart({ campanhas }: { campanhas: TrafegoCampanha[] 
 }
 
 // ─── LEVEL 1: Client Folders ───
-function FolderListView({ folders, onSelect }: { folders: { name: string; count: number }[]; onSelect: (name: string) => void }) {
+function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; units?: any[] }) {
   const [newName, setNewName] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [showInput, setShowInput] = useState(false);
 
   return (
@@ -288,19 +292,38 @@ function FolderListView({ folders, onSelect }: { folders: { name: string; count:
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><FolderOpen className="w-6 h-6 text-primary" /> Acompanhamento de Clientes</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie ciclos mensais por cliente</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isMatriz ? "Crie e gerencie ciclos mensais vinculados às unidades" : "Visualize os acompanhamentos da sua unidade"}
+          </p>
         </div>
-        <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>
+        {isMatriz && <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>}
       </div>
-      {showInput && (
-        <Card><CardContent className="pt-4 flex gap-3">
-          <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
-          <Button onClick={() => { if (newName.trim()) { onSelect(newName.trim()); setShowInput(false); setNewName(""); } }} disabled={!newName.trim()}>Criar</Button>
-          <Button variant="ghost" onClick={() => { setShowInput(false); setNewName(""); }}>Cancelar</Button>
+      {showInput && isMatriz && (
+        <Card><CardContent className="pt-4 space-y-3">
+          <div className="flex gap-3">
+            <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
+          </div>
+          <div>
+            <label className="text-xs font-medium mb-1 block">Vincular à Unidade</label>
+            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
+              <SelectContent>
+                {(units || []).map((u: any) => (
+                  <SelectItem key={u.id} value={u.unit_org_id || u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => { if (newName.trim() && selectedUnit) { onSelect(newName.trim(), selectedUnit); setShowInput(false); setNewName(""); setSelectedUnit(""); } }} disabled={!newName.trim() || !selectedUnit}>Criar</Button>
+            <Button variant="ghost" onClick={() => { setShowInput(false); setNewName(""); setSelectedUnit(""); }}>Cancelar</Button>
+          </div>
         </CardContent></Card>
       )}
       {folders.length === 0 && !showInput ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum cliente cadastrado.</CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          {isMatriz ? "Nenhum cliente cadastrado." : "Nenhum acompanhamento vinculado à sua unidade."}
+        </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {folders.map((f) => (
@@ -319,15 +342,14 @@ function FolderListView({ folders, onSelect }: { folders: { name: string; count:
     </div>
   );
 }
-
 // ─── LEVEL 2: Cycle list ───
-function CycleListView({ clientName, followups, onBack, onNew, onEdit }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void }) {
+function CycleListView({ clientName, followups, onBack, onNew, onEdit, isMatriz }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void; isMatriz: boolean }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
         <h1 className="text-xl font-bold flex-1">{clientName}</h1>
-        <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>
+        {isMatriz && <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>}
       </div>
       {followups.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum acompanhamento criado.</CardContent></Card>
@@ -366,7 +388,7 @@ const FORMATOS_ANUNCIO = ["Imagem Única", "Vídeo", "Carrossel", "Coleção", "
 const TIPOS_WEB = ["Landing Page", "Página Institucional", "Blog Post", "E-commerce", "Formulário", "Pop-up"];
 
 // ─── LEVEL 3: Editor ───
-function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFollowup | null; clientName: string; onBack: () => void }) {
+function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOrgId }: { existing: ClientFollowup | null; clientName: string; onBack: () => void; readOnly?: boolean; unitOrgId?: string }) {
   const saveFollowup = useSaveFollowup();
   const [monthRef, setMonthRef] = useState(existing?.month_ref || getCurrentMonthRef());
   const [status, setStatus] = useState(existing?.status || "draft");
@@ -410,7 +432,8 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
   });
 
   const handleSave = () => {
-    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise: buildAnalise(), plano_proximo: buildPlano() });
+    if (readOnly) return;
+    saveFollowup.mutate({ id: existing?.id, client_name: clientName, month_ref: monthRef, status, analise: buildAnalise(), plano_proximo: buildPlano(), unit_org_id: existing?.unit_org_id || unitOrgId });
   };
 
   const handleExportPdf = async () => {
@@ -453,6 +476,7 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
       <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
         <h1 className="text-xl font-bold flex-1">{existing ? `${clientName} — ${getMonthLabel(monthRef)}` : `Novo Acompanhamento — ${clientName}`}</h1>
+        {readOnly && <Badge variant="secondary">Somente Leitura</Badge>}
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportPdf}><FileDown className="w-4 h-4 mr-1" /> PDF</Button>
           <Button variant="outline" size="sm" className="text-violet-600 border-violet-300 hover:bg-violet-50" onClick={() => {
@@ -460,10 +484,10 @@ function FollowupEditor({ existing, clientName, onBack }: { existing: ClientFoll
               toast.info("Salve o acompanhamento antes de apresentar");
               return;
             }
-            handleSave();
+            if (!readOnly) handleSave();
             window.open(`/apresentacao/${existing.id}`, "_blank");
           }}><Presentation className="w-4 h-4 mr-1" /> Apresentar</Button>
-          <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
+          {!readOnly && <Button size="sm" onClick={handleSave} disabled={saveFollowup.isPending}><Save className="w-4 h-4 mr-1" /> Salvar</Button>}
         </div>
       </div>
 
@@ -959,28 +983,62 @@ function WebSecaoCard({ secao, idx, onChange, onRemove }: { secao: WebSecao; idx
 
 // ─── Main Page ───
 export default function FranqueadoAcompanhamento() {
+  const { role } = useAuth();
+  const isMatriz = role === "super_admin" || role === "admin";
+  const isFranqueado = role === "franqueado";
+
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [selectedUnitOrgId, setSelectedUnitOrgId] = useState<string | undefined>();
   const [editing, setEditing] = useState<ClientFollowup | null | "new">(null);
-  const { data: folders = [] } = useClientFolders();
+
+  const { data: matrizFolders = [] } = useClientFolders();
+  const { data: unitFolders = [] } = useClientFoldersForUnit();
+  const { data: units = [] } = useUnits();
   const { data: followups = [] } = useClientFollowups(selectedClient);
+
+  const folders = isMatriz ? matrizFolders : unitFolders;
+  const readOnly = isFranqueado;
+
+  const handleFolderSelect = (name: string, unitOrgId?: string) => {
+    setSelectedClient(name);
+    if (unitOrgId) setSelectedUnitOrgId(unitOrgId);
+  };
 
   if (editing) {
     return (
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
-        <FollowupEditor existing={editing === "new" ? null : editing} clientName={selectedClient!} onBack={() => setEditing(null)} />
+        <FollowupEditor
+          existing={editing === "new" ? null : editing}
+          clientName={selectedClient!}
+          onBack={() => setEditing(null)}
+          readOnly={readOnly}
+          unitOrgId={selectedUnitOrgId}
+        />
       </div>
     );
   }
   if (selectedClient) {
     return (
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
-        <CycleListView clientName={selectedClient} followups={followups} onBack={() => setSelectedClient(null)} onNew={() => setEditing("new")} onEdit={(f) => setEditing(f)} />
+        <CycleListView
+          clientName={selectedClient}
+          followups={followups}
+          onBack={() => { setSelectedClient(null); setSelectedUnitOrgId(undefined); }}
+          onNew={() => setEditing("new")}
+          onEdit={(f) => setEditing(f)}
+          isMatriz={isMatriz}
+        />
       </div>
     );
   }
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <FolderListView folders={folders} onSelect={setSelectedClient} />
+      <FolderListView
+        folders={folders}
+        onSelect={handleFolderSelect}
+        isMatriz={isMatriz}
+        units={units}
+      />
     </div>
   );
 }

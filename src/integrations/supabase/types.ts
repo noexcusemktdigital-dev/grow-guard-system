@@ -1225,6 +1225,7 @@ export type Database = {
           plano_proximo: Json | null
           status: string
           strategy_id: string | null
+          unit_org_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1238,6 +1239,7 @@ export type Database = {
           plano_proximo?: Json | null
           status?: string
           strategy_id?: string | null
+          unit_org_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1251,6 +1253,7 @@ export type Database = {
           plano_proximo?: Json | null
           status?: string
           strategy_id?: string | null
+          unit_org_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1266,6 +1269,13 @@ export type Database = {
             columns: ["strategy_id"]
             isOneToOne: false
             referencedRelation: "franqueado_strategies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_followups_unit_org_id_fkey"
+            columns: ["unit_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -6429,6 +6439,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "daily_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_followups_for_network: {
+        Args: { _org_id: string }
+        Returns: {
+          analise: Json | null
+          client_name: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          month_ref: string
+          organization_id: string
+          plano_proximo: Json | null
+          status: string
+          strategy_id: string | null
+          unit_org_id: string | null
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "client_followups"
           isOneToOne: false
           isSetofReturn: true
         }
