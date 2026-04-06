@@ -93,7 +93,7 @@ export function useContractMutations() {
       owner_type?: string;
       unit_org_id?: string;
     }) => {
-      const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id }).select().single();
+      const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -138,7 +138,7 @@ export function useContractMutations() {
         .filter(t => !existingNames.has(t.name))
         .map(t => ({ ...t, organization_id: orgId! }));
       if (toInsert.length === 0) return { inserted: 0 };
-      const { error } = await supabase.from("contract_templates").insert(toInsert);
+      const { error } = await supabase.from("contract_templates").insert(toInsert as any);
       if (error) throw error;
       return { inserted: toInsert.length };
     },
