@@ -983,28 +983,62 @@ function WebSecaoCard({ secao, idx, onChange, onRemove }: { secao: WebSecao; idx
 
 // ─── Main Page ───
 export default function FranqueadoAcompanhamento() {
+  const { role } = useAuth();
+  const isMatriz = role === "super_admin" || role === "admin";
+  const isFranqueado = role === "franqueado";
+
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [selectedUnitOrgId, setSelectedUnitOrgId] = useState<string | undefined>();
   const [editing, setEditing] = useState<ClientFollowup | null | "new">(null);
-  const { data: folders = [] } = useClientFolders();
+
+  const { data: matrizFolders = [] } = useClientFolders();
+  const { data: unitFolders = [] } = useClientFoldersForUnit();
+  const { data: units = [] } = useUnits();
   const { data: followups = [] } = useClientFollowups(selectedClient);
+
+  const folders = isMatriz ? matrizFolders : unitFolders;
+  const readOnly = isFranqueado;
+
+  const handleFolderSelect = (name: string, unitOrgId?: string) => {
+    setSelectedClient(name);
+    if (unitOrgId) setSelectedUnitOrgId(unitOrgId);
+  };
 
   if (editing) {
     return (
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
-        <FollowupEditor existing={editing === "new" ? null : editing} clientName={selectedClient!} onBack={() => setEditing(null)} />
+        <FollowupEditor
+          existing={editing === "new" ? null : editing}
+          clientName={selectedClient!}
+          onBack={() => setEditing(null)}
+          readOnly={readOnly}
+          unitOrgId={selectedUnitOrgId}
+        />
       </div>
     );
   }
   if (selectedClient) {
     return (
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
-        <CycleListView clientName={selectedClient} followups={followups} onBack={() => setSelectedClient(null)} onNew={() => setEditing("new")} onEdit={(f) => setEditing(f)} />
+        <CycleListView
+          clientName={selectedClient}
+          followups={followups}
+          onBack={() => { setSelectedClient(null); setSelectedUnitOrgId(undefined); }}
+          onNew={() => setEditing("new")}
+          onEdit={(f) => setEditing(f)}
+          isMatriz={isMatriz}
+        />
       </div>
     );
   }
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <FolderListView folders={folders} onSelect={setSelectedClient} />
+      <FolderListView
+        folders={folders}
+        onSelect={handleFolderSelect}
+        isMatriz={isMatriz}
+        units={units}
+      />
     </div>
   );
 }
