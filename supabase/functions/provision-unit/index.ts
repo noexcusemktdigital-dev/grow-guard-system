@@ -33,14 +33,16 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getUser(token);
-    if (claimsError || !claimsData?.user) {
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth failed:", claimsError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
-    const callerId = claimsData.user.id;
+    const callerId = claimsData.claims.sub as string;
+    console.log("Authenticated user:", callerId);
 
     const {
       unit_name,
@@ -69,11 +71,13 @@ Deno.serve(async (req) => {
       _org_id: parent_org_id,
     });
     if (!isMember) {
+      console.error("User not member of org:", parent_org_id);
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+    console.log("Permission verified for org:", parent_org_id);
 
     // Generate unique referral code
     let referralCode = generateReferralCode(unit_name);
@@ -98,9 +102,12 @@ Deno.serve(async (req) => {
       })
       .select()
       .single();
-    if (orgErr) throw orgErr;
-
+    if (orgErr) {
+      console.error("Org creation failed:", orgErr);
+      throw new Error("Erro ao criar organização: " + orgErr.message);
+    }
     const orgId = newOrg.id;
+    console.log("Org created:", orgId);
 
     // 1b. Create referral_discounts config (5% default)
     await adminClient.from("referral_discounts").insert({
@@ -127,7 +134,11 @@ Deno.serve(async (req) => {
       })
       .select()
       .single();
-    if (unitErr) throw unitErr;
+    if (unitErr) {
+      console.error("Unit creation failed:", unitErr);
+      throw new Error("Erro ao criar unidade: " + unitErr.message);
+    }
+    console.log("Unit created:", unitData.id);
 
     // 3. Create franchisee system payment config if system_fee provided
     if (system_fee && system_fee > 0) {
@@ -188,7 +199,7 @@ Deno.serve(async (req) => {
       if (clErr) console.error("onboarding_checklist insert error:", clErr);
     }
 
-    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, referral=${referralCode}, onboarding=${onboardingUnit?.id}`);
+    console.log(`Unit provisioned: ${unit_name} -> org ${orgId}, referral=${referralCode}`);
 
     return new Response(
       JSON.stringify({

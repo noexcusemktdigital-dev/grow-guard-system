@@ -42,7 +42,10 @@ export function useUnitMutations() {
       const { data, error } = await supabase.functions.invoke("delete-unit", {
         body: { unit_id: unitId },
       });
-      if (error) throw error;
+      if (error) {
+        const { extractEdgeFunctionError } = await import("@/lib/edgeFunctionError");
+        throw await extractEdgeFunctionError(error);
+      }
       if (data?.error) throw new Error(data.error);
       return data;
     },

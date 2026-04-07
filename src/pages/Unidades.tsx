@@ -78,14 +78,18 @@ export default function Unidades() {
           parent_org_id: orgId,
         },
       });
-      if (error) throw error;
+      if (error) {
+        const { extractEdgeFunctionError } = await import("@/lib/edgeFunctionError");
+        throw await extractEdgeFunctionError(error);
+      }
       if (data?.error) throw new Error(data.error);
 
       setWizardStep(3); // success step
       qc.invalidateQueries({ queryKey: ["units"] });
       toast({ title: "Unidade provisionada com sucesso!" });
     } catch (err: unknown) {
-      toast({ title: "Erro ao provisionar unidade", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Erro ao provisionar unidade", description: msg, variant: "destructive" });
     } finally {
       setWizardLoading(false);
     }

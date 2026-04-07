@@ -9,14 +9,19 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new Error("Não autorizado");
+    }
 
     // Validate caller
     const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user }, error: authErr } = await callerClient.auth.getUser();
-    if (authErr || !user) throw new Error("Não autorizado");
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await callerClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims) throw new Error("Não autorizado");
+    const userId = claimsData.claims.sub as string;
 
     const { unit_id } = await req.json();
     if (!unit_id) throw new Error("unit_id é obrigatório");
@@ -33,7 +38,7 @@ Deno.serve(async (req) => {
 
     // Verify caller is member of the parent org
     const { data: isMember } = await admin.rpc("is_member_of_org", {
-      _user_id: user.id,
+      _user_id: userId,
       _org_id: unit.organization_id,
     });
     if (!isMember) throw new Error("Sem permissão para excluir esta unidade");
@@ -42,12 +47,23 @@ Deno.serve(async (req) => {
 
     // Cascade delete related data
     if (unitOrgId) {
-      // Delete onboarding checklist items
-      await admin.from("onboarding_checklist").delete().eq("organization_id", unitOrgId);
-      // Delete onboarding unit record
-      await admin.from("onboarding_units").delete().eq("organization_id", unitOrgId);
-      // Delete franchisee system payments
-      await admin.from("franchisee_system_payments").delete().eq("unit_org_id", unitOrgId);
+      // Delete onboarding checklist items linked to onboarding_units of this unit
+      const { data: obUnits } = await admin
+        .from("onboarding_units")
+        .select("id")
+        .eq("unit_org_id", unitOrgId);
+
+      if (obUnits && obUnits.length > 0) {
+        const obIds = obUnits.map((u: any) => u.id);
+        await admin.from("onboarding_checklist").delete().in("onboarding_unit_id", obIds);
+      }
+
+      // Delete onboarding unit records
+      await admin.from("onboarding_units").delete().eq("unit_org_id", unitOrgId);
+
+      // Delete franchisee system payments (uses organization_id column)
+      await admin.from("franchisee_system_payments").delete().eq("organization_id", unitOrgId);
+
       // Delete referral discounts
       await admin.from("referral_discounts").delete().eq("organization_id", unitOrgId);
 
@@ -62,7 +78,7 @@ Deno.serve(async (req) => {
 
       // Delete user_roles for those members
       if (members && members.length > 0) {
-        const userIds = members.map((m) => m.user_id);
+        const userIds = members.map((m: any) => m.user_id);
         await admin.from("user_roles").delete().in("user_id", userIds);
       }
 
@@ -79,10 +95,13 @@ Deno.serve(async (req) => {
       await admin.from("organizations").delete().eq("id", unitOrgId);
     }
 
+    console.log(`Unit ${unit_id} deleted successfully`);
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
+    console.error("delete-unit error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 400,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
