@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
+import { supabase as transferClient } from "@/integrations/supabase/client";
 import { Loader2, ChevronDown, Target, TrendingUp, Globe, Megaphone, BarChart3, ShoppingCart, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
 import {
   type ClientFollowup,
@@ -587,10 +588,22 @@ export default function Apresentacao() {
 
   useEffect(() => {
     if (!id) return;
-    supabase.from("client_followups").select("*").eq("id", id).single().then(({ data }) => {
-      if (data) setFollowup(data as unknown as ClientFollowup);
+    const fetchFollowup = async () => {
+      // Try portal-scoped client first (correct storageKey)
+      const { data } = await supabase.from("client_followups").select("*").eq("id", id).single();
+      if (data) {
+        setFollowup(data as unknown as ClientFollowup);
+        setLoading(false);
+        return;
+      }
+      // Fallback: try default-key client (OAuth transfer client)
+      const { data: data2 } = await transferClient.from("client_followups").select("*").eq("id", id).single();
+      if (data2) {
+        setFollowup(data2 as unknown as ClientFollowup);
+      }
       setLoading(false);
-    });
+    };
+    fetchFollowup();
   }, [id]);
 
   if (loading) {
