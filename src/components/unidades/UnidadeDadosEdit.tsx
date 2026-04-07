@@ -2,14 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { useUnitMutations } from "@/hooks/useUnits";
 import { toast } from "sonner";
 
 interface Props {
-  unit: { id: string; name: string; city: string; state: string; phone: string; email: string; manager_name: string; address: string; status: string; opened_at: string; asaas_wallet_id: string };
+  unit: { id: string; name: string; city: string; state: string; phone: string; email: string; manager_name: string; address: string; status: string; opened_at: string; unit_org_id?: string };
   readOnly?: boolean;
 }
 
@@ -25,12 +24,10 @@ export function UnidadeDadosEdit({ unit, readOnly }: Props) {
     address: unit.address || "",
     status: unit.status || "active",
     opened_at: unit.opened_at || "",
-    asaas_wallet_id: unit.asaas_wallet_id || "",
   });
 
   const handleSave = () => {
     if (readOnly) {
-      // Franchisee can only edit contact fields
       updateUnit.mutate(
         { id: unit.id, phone: form.phone, email: form.email, address: form.address },
         {
@@ -92,7 +89,7 @@ export function UnidadeDadosEdit({ unit, readOnly }: Props) {
           <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Endereço</Label>
           <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
@@ -101,17 +98,6 @@ export function UnidadeDadosEdit({ unit, readOnly }: Props) {
           <Label>Data de Abertura</Label>
           <Input type="date" value={form.opened_at?.slice(0, 10) || ""} onChange={(e) => setForm((f) => ({ ...f, opened_at: e.target.value }))} disabled={readOnly} />
         </div>
-        {!readOnly && (
-          <div className="space-y-1.5">
-            <Label>Wallet ID Asaas</Label>
-            <Input
-              placeholder="Ex: abc123-def456..."
-              value={form.asaas_wallet_id}
-              onChange={(e) => setForm((f) => ({ ...f, asaas_wallet_id: e.target.value }))}
-            />
-            <p className="text-xs text-muted-foreground">ID da carteira Asaas para split de pagamentos</p>
-          </div>
-        )}
       </div>
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={updateUnit.isPending}>

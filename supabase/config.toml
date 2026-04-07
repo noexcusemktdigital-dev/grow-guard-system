@@ -99,7 +99,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.process-email-queue]
     verify_jwt = false
   [functions.provision-unit]
-    verify_jwt = true
+    verify_jwt = false
   [functions.recharge-credits]
     verify_jwt = true
   [functions.seed-users]
@@ -109,7 +109,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.update-member]
     verify_jwt = false
   [functions.delete-unit]
-    verify_jwt = true
+    verify_jwt = false
   [functions.send-transactional-email]
     verify_jwt = true
 
