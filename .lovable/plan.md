@@ -1,48 +1,44 @@
 
 
-## Problema
+## Diagnóstico
 
-A página `/apresentacao/:id` mostra "Acompanhamento não encontrado" porque a tabela `client_followups` tem RLS que exige `is_member_of_org(auth.uid(), organization_id)`. O `organization_id` é a **org da matriz**, mas o franqueado é membro da **org da unidade** (`unit_org_id`). O SELECT retorna vazio.
+A usuária `noexcuse.criacao3@gmail.com` (Larissa Polli, ID: `215bc2d9-91a7-4766-a642-79184746b44e`) **autenticou com sucesso** (status 200 nos logs), mas:
 
-Além disso, a apresentação foi projetada para projeção em reuniões — pode ser aberta em um dispositivo sem sessão ativa.
+- Não tem registro em `user_roles` (nenhum papel atribuído)
+- Não tem registro em `organization_memberships` (não está vinculada a nenhuma organização)
+
+Resultado: após login, o `AuthContext` não encontra role nem org, e o `ProtectedRoute` expira o timeout de 6 segundos e mostra tela de erro ou redireciona para lugar errado.
+
+A organização da matriz é: **NoExcuse Franqueadora** (`4206c8f4-dc9b-414d-9535-0c6d5f2d80b4`).
 
 ## Solução
 
-Duas correções complementares:
+Executar uma migration para inserir:
 
-### 1. Adicionar RLS policy para unit_org_id
-
-Criar migration que adiciona uma policy de SELECT permitindo acesso quando o usuário é membro da org referenciada em `unit_org_id`:
+1. **Membership**: vincular Larissa à organização `NoExcuse Franqueadora`
+2. **Role**: atribuir o papel `admin` (acesso à matriz, sem ser super_admin)
 
 ```sql
-CREATE POLICY "Unit members can view followups"
-  ON public.client_followups FOR SELECT TO authenticated
-  USING (public.is_member_of_org(auth.uid(), unit_org_id));
+INSERT INTO organization_memberships (user_id, organization_id)
+VALUES ('215bc2d9-91a7-4766-a642-79184746b44e', '4206c8f4-dc9b-414d-9535-0c6d5f2d80b4')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO user_roles (user_id, role)
+VALUES ('215bc2d9-91a7-4766-a642-79184746b44e', 'admin')
+ON CONFLICT (user_id, role) DO NOTHING;
 ```
 
-Isso permite que franqueados vejam seus acompanhamentos tanto na listagem quanto na apresentação.
+Isso fará o login redirecionar corretamente para `/franqueadora/inicio`.
 
-### 2. Fallback na página de apresentação
+## Correção secundária (código)
 
-Na `Apresentacao.tsx`, se a query autenticada falhar (sem sessão ou RLS bloqueou), tentar buscar via uma Edge Function pública que retorna apenas os dados necessários para renderização, validando por ID.
-
-Alternativa mais simples: adicionar policy anon SELECT por ID (menos seguro, mas atende o caso de projeção). A abordagem recomendada é a RLS para authenticated.
-
-### 3. Garantir storageKey correto
-
-Em `src/lib/supabase.ts`, adicionar `/apresentacao` ao mapeamento para que tente ambas as storage keys ou use a do portal que abriu a aba.
+A rota `/redirect` referenciada em `SaasLanding.tsx` na linha 126 não existe em `App.tsx`, causando 404. Trocar para redirecionar com base no role:
+- Alterar `<Navigate to="/redirect" replace />` para `<Navigate to="/cliente/inicio" replace />` (pois a SaasLanding é do portal SaaS).
 
 ## Arquivos alterados
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Nova migration SQL | Policy `Unit members can view followups` |
-| `src/lib/supabase.ts` | Mapear `/apresentacao` para detectar portal de origem |
-| `src/pages/Apresentacao.tsx` | Tentar ambos clients se primeiro falhar |
-
-## Detalhes técnicos
-
-- A policy usa `FOR SELECT` apenas — franqueados continuam sem permissão de edição via RLS
-- O `is_member_of_org` já é uma function existente no projeto
-- A migration é aditiva, sem risco para dados existentes
+| Migration SQL | Inserir membership + role para Larissa |
+| `src/pages/SaasLanding.tsx` | Corrigir redirect de `/redirect` para `/cliente/inicio` |
 
