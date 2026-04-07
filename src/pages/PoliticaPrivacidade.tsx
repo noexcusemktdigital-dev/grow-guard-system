@@ -80,12 +80,25 @@ const PoliticaPrivacidade = () => (
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground">9. Cookies</h2>
+          <h2 className="text-xl font-semibold text-foreground">9. Integração com Google Agenda (Google Calendar)</h2>
+          <p>Quando você opta por conectar sua conta Google à Plataforma, solicitamos acesso ao escopo <strong>https://www.googleapis.com/auth/calendar</strong>. Com esse acesso:</p>
+          <ul className="list-disc pl-6 space-y-1 mt-2">
+            <li><strong>O que acessamos:</strong> eventos da sua agenda Google (título, descrição, data/hora, local) para exibição e sincronização dentro da Plataforma.</li>
+            <li><strong>O que não fazemos:</strong> não lemos, armazenamos nem compartilhamos dados de outros serviços Google (Gmail, Drive, Contatos, etc.).</li>
+            <li><strong>Como armazenamos:</strong> os tokens de acesso OAuth são armazenados de forma criptografada no banco de dados e usados exclusivamente para sincronizar sua agenda.</li>
+            <li><strong>Compartilhamento:</strong> os dados do Google Agenda não são compartilhados com terceiros.</li>
+            <li><strong>Revogação:</strong> você pode desconectar a integração a qualquer momento na página de Agenda da Plataforma. Para revogar o acesso diretamente no Google, acesse <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-primary underline">myaccount.google.com/permissions</a>.</li>
+          </ul>
+          <p className="mt-2">O uso da API do Google Calendar está sujeito à <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline">Política de Dados de Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado.</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground">10. Cookies</h2>
           <p>Utilizamos cookies essenciais para o funcionamento da Plataforma (autenticação e sessão). Não utilizamos cookies de rastreamento de terceiros.</p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground">10. Contato do Encarregado (DPO)</h2>
+          <h2 className="text-xl font-semibold text-foreground">11. Contato do Encarregado (DPO)</h2>
           <p>Para questões relacionadas à proteção de dados, entre em contato: privacidade@noexcuse.com.br</p>
         </section>
       </div>
