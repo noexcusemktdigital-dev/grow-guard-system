@@ -90,7 +90,7 @@ const ScoreRing = ({ score }: { score: number }) => {
 type Phase = "form" | "loading" | "result";
 
 const SaasLanding = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [phase, setPhase] = useState<Phase>("form");
   const [segment, setSegment] = useState("");
   const [region, setRegion] = useState("");
