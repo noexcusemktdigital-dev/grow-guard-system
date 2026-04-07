@@ -1,44 +1,36 @@
 
 
-## Diagnóstico
+## Problema
 
-A usuária `noexcuse.criacao3@gmail.com` (Larissa Polli, ID: `215bc2d9-91a7-4766-a642-79184746b44e`) **autenticou com sucesso** (status 200 nos logs), mas:
-
-- Não tem registro em `user_roles` (nenhum papel atribuído)
-- Não tem registro em `organization_memberships` (não está vinculada a nenhuma organização)
-
-Resultado: após login, o `AuthContext` não encontra role nem org, e o `ProtectedRoute` expira o timeout de 6 segundos e mostra tela de erro ou redireciona para lugar errado.
-
-A organização da matriz é: **NoExcuse Franqueadora** (`4206c8f4-dc9b-414d-9535-0c6d5f2d80b4`).
+A `SaasLanding.tsx` (rota `/`) redireciona usuários logados hardcoded para `/cliente/inicio`. Larissa é admin da **franqueadora**, então deveria ir para `/franqueadora/inicio`. Qualquer usuário franqueador que visite a landing logado é mandado pro portal errado.
 
 ## Solução
 
-Executar uma migration para inserir:
+Usar a mesma lógica de `getRoleRedirect` que já existe em `ProtectedRoute.tsx` para decidir o destino baseado no role do usuário:
 
-1. **Membership**: vincular Larissa à organização `NoExcuse Franqueadora`
-2. **Role**: atribuir o papel `admin` (acesso à matriz, sem ser super_admin)
+- `super_admin` / `admin` → `/franqueadora/inicio`
+- `franqueado` → `/acessofranquia`  
+- `cliente_admin` / `cliente_user` → `/cliente/inicio`
 
-```sql
-INSERT INTO organization_memberships (user_id, organization_id)
-VALUES ('215bc2d9-91a7-4766-a642-79184746b44e', '4206c8f4-dc9b-414d-9535-0c6d5f2d80b4')
-ON CONFLICT DO NOTHING;
+### Alteração em `src/pages/SaasLanding.tsx`
 
-INSERT INTO user_roles (user_id, role)
-VALUES ('215bc2d9-91a7-4766-a642-79184746b44e', 'admin')
-ON CONFLICT (user_id, role) DO NOTHING;
+1. Importar `role` do `useAuth()` (já usado no componente)
+2. Substituir o redirect hardcoded:
+
+```tsx
+// De:
+if (user) return <Navigate to="/cliente/inicio" replace />;
+
+// Para:
+if (user) {
+  const dest = role === "super_admin" || role === "admin"
+    ? "/franqueadora/inicio"
+    : role === "franqueado"
+    ? "/acessofranquia"
+    : "/cliente/inicio";
+  return <Navigate to={dest} replace />;
+}
 ```
 
-Isso fará o login redirecionar corretamente para `/franqueadora/inicio`.
-
-## Correção secundária (código)
-
-A rota `/redirect` referenciada em `SaasLanding.tsx` na linha 126 não existe em `App.tsx`, causando 404. Trocar para redirecionar com base no role:
-- Alterar `<Navigate to="/redirect" replace />` para `<Navigate to="/cliente/inicio" replace />` (pois a SaasLanding é do portal SaaS).
-
-## Arquivos alterados
-
-| Arquivo | Alteração |
-|---------|-----------|
-| Migration SQL | Inserir membership + role para Larissa |
-| `src/pages/SaasLanding.tsx` | Corrigir redirect de `/redirect` para `/cliente/inicio` |
+Apenas 1 arquivo alterado, correção pontual.
 
