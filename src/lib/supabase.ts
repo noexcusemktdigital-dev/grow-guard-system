@@ -9,7 +9,7 @@ function getPortalStorageKey(): string {
 
   // For /reset-password, respect the ?portal= param so the recovery session
   // is stored under the same key the target portal will read.
-  if (path.startsWith("/reset-password") || path.startsWith("/welcome")) {
+  if (path.startsWith("/reset-password") || path.startsWith("/welcome") || path.startsWith("/apresentacao")) {
     const portal = new URLSearchParams(window.location.search).get("portal");
     return portal === "franchise" ? "noe-franchise-auth" : "noe-saas-auth";
   }
