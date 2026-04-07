@@ -90,7 +90,7 @@ const ScoreRing = ({ score }: { score: number }) => {
 type Phase = "form" | "loading" | "result";
 
 const SaasLanding = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [phase, setPhase] = useState<Phase>("form");
   const [segment, setSegment] = useState("");
   const [region, setRegion] = useState("");
@@ -123,7 +123,14 @@ const SaasLanding = () => {
     setPhase("loading");
   }, [segment, region]);
 
-  if (user) return <Navigate to="/cliente/inicio" replace />;
+  if (user) {
+    const dest = role === "super_admin" || role === "admin"
+      ? "/franqueadora/inicio"
+      : role === "franqueado"
+      ? "/franqueado/inicio"
+      : "/cliente/inicio";
+    return <Navigate to={dest} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
