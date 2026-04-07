@@ -123,7 +123,7 @@ const SaasLanding = () => {
     setPhase("loading");
   }, [segment, region]);
 
-  if (user) return <Navigate to="/redirect" replace />;
+  if (user) return <Navigate to="/cliente/inicio" replace />;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
