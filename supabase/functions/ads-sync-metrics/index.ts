@@ -2,6 +2,59 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 
+/** Monitora o cabeçalho X-Business-Use-Case-Usage do Meta e loga alertas */
+function checkMetaRateLimit(headers: Headers, accountId: string): void {
+  const usage = headers.get("x-business-use-case-usage");
+  if (!usage) return;
+  try {
+    const parsed: Record<string, Array<{type: string; call_count: number; total_cputime: number; total_time: number}>> = JSON.parse(usage);
+    for (const [acct, entries] of Object.entries(parsed)) {
+      for (const entry of entries) {
+        const max = Math.max(entry.call_count, entry.total_cputime, entry.total_time);
+        if (max > 85) {
+          console.warn(`[Meta RateLimit] ALERTA account ${acct} type=${entry.type} uso=${max}% — backoff recomendado`);
+        } else if (max > 60) {
+          console.log(`[Meta RateLimit] account ${acct} type=${entry.type} uso=${max}%`);
+        }
+      }
+    }
+  } catch {
+    // non-fatal
+  }
+}
+
+/** Fetch com backoff exponencial para rate limits do Meta (80000/80004) */
+async function fetchWithBackoff(url: string, options?: RequestInit, maxRetries = 3): Promise<Response> {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    const res = await fetch(url, options);
+    if (res.status === 429 || res.status === 80000 || res.status === 80004) {
+      const waitMs = Math.min(2000 * Math.pow(2, attempt), 30000);
+      console.warn(`[Meta] Rate limit hit (${res.status}), aguardando ${waitMs}ms antes de retry ${attempt + 1}/${maxRetries}`);
+      await new Promise(r => setTimeout(r, waitMs));
+      attempt++;
+      continue;
+    }
+    // Verifica JSON de erro para códigos 80000/80004 dentro de 200
+    if (res.ok && attempt < maxRetries) {
+      const clone = res.clone();
+      try {
+        const j = await clone.json();
+        const errCode = j?.error?.code;
+        if (errCode === 80000 || errCode === 80004 || errCode === 17 || errCode === 4) {
+          const waitMs = Math.min(2000 * Math.pow(2, attempt), 30000);
+          console.warn(`[Meta] Rate limit error code ${errCode}, aguardando ${waitMs}ms`);
+          await new Promise(r => setTimeout(r, waitMs));
+          attempt++;
+          continue;
+        }
+      } catch { /* non-json */ }
+    }
+    return res;
+  }
+  throw new Error(`[Meta] Rate limit excedido após ${maxRetries} tentativas`);
+}
+
 async function refreshGoogleToken(refreshToken: string): Promise<{ access_token: string; expires_in: number } | null> {
   const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID")!;
   const clientSecret = Deno.env.get("GOOGLE_ADS_CLIENT_SECRET")!;
@@ -150,7 +203,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
 
   console.log(`[Meta] Syncing account act_${accountId}, period ${since} to ${until}`);
 
-  const res = await fetch(insightsUrl);
+  const res = await fetchWithBackoff(insightsUrl);
+  checkMetaRateLimit(res.headers, accountId);
   const bodyText = await res.text();
   console.log(`[Meta] API response status: ${res.status}, body length: ${bodyText.length}, preview: ${bodyText.substring(0, 500)}`);
 
@@ -195,7 +249,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   let nextUrl = data.paging?.next;
   while (nextUrl) {
     console.log(`[Meta] Fetching next page...`);
-    const nextRes = await fetch(nextUrl);
+    const nextRes = await fetchWithBackoff(nextUrl);
+    checkMetaRateLimit(nextRes.headers, accountId);
     if (!nextRes.ok) break;
     const nextData = await nextRes.json();
     for (const row of nextData.data || []) {
