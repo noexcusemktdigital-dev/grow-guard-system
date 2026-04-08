@@ -621,6 +621,67 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_execution_logs: {
+        Row: {
+          action_type: string | null
+          automation_id: string | null
+          created_at: string
+          error_message: string | null
+          event_id: string | null
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          organization_id: string
+          status: string
+        }
+        Insert: {
+          action_type?: string | null
+          automation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id: string
+          status?: string
+        }
+        Update: {
+          action_type?: string | null
+          automation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_execution_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "crm_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_execution_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_execution_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calculator_settings: {
         Row: {
           id: string

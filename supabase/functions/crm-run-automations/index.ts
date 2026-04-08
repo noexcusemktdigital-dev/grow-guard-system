@@ -14,6 +14,10 @@ Deno.serve(async (req) => {
     const MAX_RETRIES = 3;
     const RETRY_DELAY_MS = 5 * 60 * 1000; // 5min between retries
 
+    // ── Detect lead_stuck & no_contact_sla (periodic scan) ──
+    await detectStuckLeads(admin);
+    await detectNoContactSla(admin);
+
     // Fetch unprocessed queue events — include retryable failed events (API-005)
     const { data: events, error: evErr } = await admin
       .from("crm_automation_queue")
@@ -536,5 +540,118 @@ async function triggerAiReply(
     });
   } catch (e) {
     console.error("AI reply trigger error:", e);
+  }
+}
+
+/**
+ * Detect leads stuck in a stage for N days and enqueue `lead_stuck` events.
+ * Only enqueues once per lead per day to avoid duplicates.
+ */
+async function detectStuckLeads(admin: ReturnType<typeof createClient>) {
+  // Find active automations that use lead_stuck trigger
+  const { data: automations } = await admin
+    .from("crm_automations")
+    .select("organization_id, trigger_config")
+    .eq("trigger_type", "lead_stuck")
+    .eq("is_active", true);
+
+  if (!automations || automations.length === 0) return;
+
+  for (const auto of automations) {
+    const days = (auto.trigger_config as any)?.days || 3;
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+
+    // Find leads that haven't been updated since cutoff, not won/lost
+    const { data: stuckLeads } = await admin
+      .from("crm_leads")
+      .select("id, stage, funnel_id")
+      .eq("organization_id", auto.organization_id)
+      .is("won_at", null)
+      .is("lost_at", null)
+      .lte("updated_at", cutoff)
+      .limit(20);
+
+    if (!stuckLeads || stuckLeads.length === 0) continue;
+
+    for (const lead of stuckLeads) {
+      // Check if already enqueued today
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: existing } = await admin
+        .from("crm_automation_queue")
+        .select("id")
+        .eq("lead_id", lead.id)
+        .eq("trigger_type", "lead_stuck")
+        .gte("created_at", today)
+        .limit(1);
+
+      if (existing && existing.length > 0) continue;
+
+      await admin.from("crm_automation_queue").insert({
+        organization_id: auto.organization_id,
+        lead_id: lead.id,
+        trigger_type: "lead_stuck",
+        trigger_data: { stage: lead.stage, funnel_id: lead.funnel_id, stuck_days: days },
+      });
+    }
+  }
+}
+
+/**
+ * Detect leads without any activity (SLA breach) and enqueue `no_contact_sla` events.
+ */
+async function detectNoContactSla(admin: ReturnType<typeof createClient>) {
+  const { data: automations } = await admin
+    .from("crm_automations")
+    .select("organization_id, trigger_config")
+    .eq("trigger_type", "no_contact_sla")
+    .eq("is_active", true);
+
+  if (!automations || automations.length === 0) return;
+
+  for (const auto of automations) {
+    const hours = (auto.trigger_config as any)?.hours || 24;
+    const cutoff = new Date(Date.now() - hours * 3600000).toISOString();
+
+    // Leads created before cutoff with no activities
+    const { data: leads } = await admin
+      .from("crm_leads")
+      .select("id, stage, funnel_id")
+      .eq("organization_id", auto.organization_id)
+      .is("won_at", null)
+      .is("lost_at", null)
+      .lte("created_at", cutoff)
+      .limit(20);
+
+    if (!leads || leads.length === 0) continue;
+
+    for (const lead of leads) {
+      // Check if lead has any activity
+      const { data: activities } = await admin
+        .from("crm_activities")
+        .select("id")
+        .eq("lead_id", lead.id)
+        .limit(1);
+
+      if (activities && activities.length > 0) continue;
+
+      // Check if already enqueued today
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: existing } = await admin
+        .from("crm_automation_queue")
+        .select("id")
+        .eq("lead_id", lead.id)
+        .eq("trigger_type", "no_contact_sla")
+        .gte("created_at", today)
+        .limit(1);
+
+      if (existing && existing.length > 0) continue;
+
+      await admin.from("crm_automation_queue").insert({
+        organization_id: auto.organization_id,
+        lead_id: lead.id,
+        trigger_type: "no_contact_sla",
+        trigger_data: { stage: lead.stage, funnel_id: lead.funnel_id, sla_hours: hours },
+      });
+    }
   }
 }
