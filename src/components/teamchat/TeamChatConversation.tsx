@@ -203,7 +203,7 @@ export function TeamChatConversation({
         </a>
       );
     }
-    return msg.content ? <p className="whitespace-pre-wrap break-words">{msg.content}</p> : null;
+    return msg.content ? <p className="whitespace-pre-wrap break-words">{renderWithMentions(msg.content)}</p> : null;
   };
 
   return (
