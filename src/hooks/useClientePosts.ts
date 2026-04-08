@@ -220,6 +220,8 @@ export function useGenerateBriefing() {
       return resp.data as {
         headline: string;
         subheadline: string;
+        headlines?: string[];
+        subheadlines?: string[];
         cta: string;
         cena: string;
         elementos_visuais: string;

@@ -71,6 +71,8 @@ export interface ArtGeneratePayload {
 export interface ArtBriefingResult {
   headline: string;
   subheadline: string;
+  headlines?: string[];
+  subheadlines?: string[];
   cta: string;
   cena: string;
   elementos_visuais: string;
@@ -89,6 +91,8 @@ export interface ArtTextItem {
   approvedSub: boolean;
   approvedSupport: boolean;
   approvedCta: boolean;
+  headlineOptions?: string[];
+  subheadlineOptions?: string[];
 }
 
 const TOTAL_STEPS = 14;
