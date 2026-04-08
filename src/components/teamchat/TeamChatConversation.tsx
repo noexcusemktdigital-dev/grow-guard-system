@@ -113,6 +113,37 @@ export function TeamChatConversation({
       onTyping();
       typingTimeoutRef.current = setTimeout(() => {}, 3000);
     }
+
+    // Detect @mention
+    const cursorPos = textareaRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      setMentionActive(true);
+      setMentionQuery(atMatch[1]);
+      setMentionStart(cursorPos - atMatch[0].length);
+      setMentionPos({ top: 8, left: 60 });
+    } else {
+      setMentionActive(false);
+    }
+  };
+
+  const filteredMentionMembers = members.filter((m) =>
+    m.user_id !== currentUserId && m.full_name.toLowerCase().includes(mentionQuery.toLowerCase())
+  ).slice(0, 6);
+
+  const handleMentionSelect = (member: TeamMember) => {
+    const before = text.slice(0, mentionStart);
+    const after = text.slice(textareaRef.current?.selectionStart ?? text.length);
+    const newText = `${before}@[${member.full_name}] ${after}`;
+    setText(newText);
+    setMentionActive(false);
+    setMentionQuery("");
+    setTimeout(() => {
+      const newPos = before.length + `@[${member.full_name}] `.length;
+      textareaRef.current?.setSelectionRange(newPos, newPos);
+      textareaRef.current?.focus();
+    }, 0);
   };
 
   const handleEmojiSelect = (emoji: string) => {
