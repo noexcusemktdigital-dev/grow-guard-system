@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Hash, User, MessageCircle, Users, Briefcase } from "lucide-react";
+import { Hash, MessageCircle, Users, Briefcase } from "lucide-react";
 import { useTeamChat, type TeamChannel } from "@/hooks/useTeamChat";
 import { TeamChatConversation } from "@/components/teamchat/TeamChatConversation";
 import { CreateGroupDialog } from "@/components/teamchat/CreateGroupDialog";
@@ -16,16 +16,20 @@ export default function FranqueadoraChat() {
     members,
     channelMemberships,
     unreadCounts,
+    typingUsers,
     ensureGeneralChannel,
     createCustomGroup,
     getOrCreateDM,
     useChannelMessages,
+    useChannelReactions,
     sendMessage,
+    toggleReaction,
     subscribeToChannel,
     getDMPartnerName,
     getChannelMembers,
     markAsRead,
     uploadFile,
+    broadcastTyping,
     user,
   } = useTeamChat();
 
@@ -55,8 +59,11 @@ export default function FranqueadoraChat() {
   }, [selectedChannelId, subscribeToChannel, markAsRead]);
 
   const messagesQuery = useChannelMessages(selectedChannelId);
+  const reactionsQuery = useChannelReactions(selectedChannelId);
   const selectedChannel = channels.find((c) => c.id === selectedChannelId);
   const selectedMembers = selectedChannelId ? getChannelMembers(selectedChannelId) : [];
+  const selectedMemberships = channelMemberships.filter((m) => m.channel_id === selectedChannelId);
+  const currentTypingUsers = selectedChannelId ? (typingUsers[selectedChannelId] || []) : [];
 
   const handleStartDM = async (otherUserId: string) => {
     if (otherUserId === user?.id) return;
@@ -68,20 +75,30 @@ export default function FranqueadoraChat() {
     }
   };
 
-  const handleSend = (content: string) => {
+  const handleSend = (content: string, replyToId?: string) => {
     if (!selectedChannelId) return;
-    sendMessage.mutate({ channelId: selectedChannelId, content });
+    sendMessage.mutate({ channelId: selectedChannelId, content, replyToId });
   };
 
-  const handleSendFile = async (file: File) => {
+  const handleSendFile = async (file: File, caption?: string) => {
     if (!selectedChannelId) return;
     try {
       const { url, name } = await uploadFile(file, selectedChannelId);
       const type = file.type.startsWith("image/") ? "image" : "file";
-      sendMessage.mutate({ channelId: selectedChannelId, type, fileUrl: url, fileName: name });
+      sendMessage.mutate({ channelId: selectedChannelId, type, fileUrl: url, fileName: name, content: caption });
     } catch {
       toast.error("Erro ao enviar arquivo");
     }
+  };
+
+  const handleReact = (messageId: string, emoji: string) => {
+    if (!selectedChannelId) return;
+    toggleReaction.mutate({ messageId, emoji, channelId: selectedChannelId });
+  };
+
+  const handleTyping = () => {
+    if (!selectedChannelId) return;
+    broadcastTyping(selectedChannelId);
   };
 
   const handleCreateGroup = async (name: string, description: string, memberIds: string[]) => {
@@ -140,7 +157,6 @@ export default function FranqueadoraChat() {
 
         <ScrollArea className="flex-1">
           <div className="p-2">
-            {/* Geral */}
             {geralChannel && (
               <>
                 {renderChannelButton(geralChannel, "# Geral", <Hash className="h-3.5 w-3.5 shrink-0" />)}
@@ -148,7 +164,6 @@ export default function FranqueadoraChat() {
               </>
             )}
 
-            {/* Team channels */}
             {teamChannels.length > 0 && (
               <>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1 flex items-center gap-1">
@@ -161,7 +176,6 @@ export default function FranqueadoraChat() {
               </>
             )}
 
-            {/* Custom groups */}
             <div className="flex items-center justify-between px-2 py-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" /> Grupos
@@ -181,7 +195,6 @@ export default function FranqueadoraChat() {
 
             <Separator className="my-2" />
 
-            {/* Members (clicking opens/creates DM) */}
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-2 py-1">
               Membros
             </p>
@@ -230,6 +243,8 @@ export default function FranqueadoraChat() {
             currentUserId={user?.id || ""}
             onSend={handleSend}
             onSendFile={handleSendFile}
+            onReact={handleReact}
+            onTyping={handleTyping}
             channelName={
               selectedChannel.type === "group"
                 ? `# ${selectedChannel.name || "Canal"}`
@@ -237,6 +252,10 @@ export default function FranqueadoraChat() {
             }
             channelDescription={selectedChannel.description}
             memberCount={selectedChannel.type !== "direct" ? selectedMembers.length : undefined}
+            reactions={reactionsQuery.data || []}
+            channelMemberships={selectedMemberships}
+            members={members}
+            typingUsers={currentTypingUsers}
           />
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
