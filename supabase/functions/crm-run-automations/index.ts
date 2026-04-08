@@ -14,6 +14,10 @@ Deno.serve(async (req) => {
     const MAX_RETRIES = 3;
     const RETRY_DELAY_MS = 5 * 60 * 1000; // 5min between retries
 
+    // ── Detect lead_stuck & no_contact_sla (periodic scan) ──
+    await detectStuckLeads(admin);
+    await detectNoContactSla(admin);
+
     // Fetch unprocessed queue events — include retryable failed events (API-005)
     const { data: events, error: evErr } = await admin
       .from("crm_automation_queue")
