@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 const TermosDeUso = () => (
   <div className="min-h-screen bg-background text-foreground">
     <div className="max-w-3xl mx-auto px-6 py-12">
-      <Link to="/app" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors">
+      <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 

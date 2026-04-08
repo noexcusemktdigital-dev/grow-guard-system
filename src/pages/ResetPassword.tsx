@@ -96,10 +96,10 @@ const ResetPassword = () => {
 
   const getRedirectPath = () => {
     if (portal === "franchise") return "/acessofranquia";
-    if (portal === "saas") return "/app";
+    if (portal === "saas") return "/";
     const storageKey = localStorage.getItem("noe-franchise-auth");
     if (storageKey) return "/acessofranquia";
-    return "/app";
+    return "/";
   };
 
   const handleReset = async (e: React.FormEvent) => {
@@ -164,7 +164,7 @@ const ResetPassword = () => {
             <Button
               variant="outline"
               className="border-white/10 text-white hover:bg-white/10"
-              onClick={() => navigate("/app")}
+              onClick={() => navigate("/")}
             >
               Voltar ao login
             </Button>

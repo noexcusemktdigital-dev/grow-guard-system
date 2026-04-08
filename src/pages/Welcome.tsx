@@ -113,8 +113,8 @@ const Welcome = () => {
 
   const getRedirectPath = () => {
     if (portal === "franchise") return "/acessofranquia";
-    if (portal === "saas") return "/app";
-    return "/app";
+    if (portal === "saas") return "/";
+    return "/";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,7 +198,7 @@ const Welcome = () => {
             <Button
               variant="outline"
               className="border-white/10 text-white hover:bg-white/10"
-              onClick={() => navigate("/app")}
+              onClick={() => navigate("/")}
             >
               Ir para o login
             </Button>

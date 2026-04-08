@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const path = window.location.pathname;
-      const isSaasPortal = path.startsWith("/cliente") || path.startsWith("/app") || path === "/" || path.startsWith("/landing");
+      const isSaasPortal = path.startsWith("/cliente") || path === "/" || path.startsWith("/crescimento");
 
       // Fast timeouts (6s) with max 2 retries
       const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
@@ -306,7 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async (redirectTo?: string) => {
     const target = redirectTo || (
-      role === "cliente_admin" || role === "cliente_user" ? "/app" : "/acessofranquia"
+      role === "cliente_admin" || role === "cliente_user" ? "/" : "/acessofranquia"
     );
     await supabase.auth.signOut({ scope: 'local' });
     setUser(null);
