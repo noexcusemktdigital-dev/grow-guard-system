@@ -378,6 +378,10 @@ export function CrmAutomations() {
             isAiAction={isAiAction}
           />
         </TabsContent>
+
+        <TabsContent value="logs">
+          <AutomationLogsTab automations={automations || []} />
+        </TabsContent>
       </Tabs>
 
       {/* Create/Edit Dialog */}
