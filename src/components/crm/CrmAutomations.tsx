@@ -344,6 +344,9 @@ export function CrmAutomations() {
           <TabsTrigger value="ai" className="flex-1 gap-1.5 text-xs">
             <Bot className="w-3.5 h-3.5" /> De IA
           </TabsTrigger>
+          <TabsTrigger value="logs" className="flex-1 gap-1.5 text-xs">
+            <ScrollText className="w-3.5 h-3.5" /> Logs
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="team">
