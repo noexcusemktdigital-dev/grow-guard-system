@@ -730,3 +730,93 @@ function AutomationTabContent({
     </div>
   );
 }
+
+function AutomationLogsTab({ automations }: { automations: any[] }) {
+  const [statusFilter, setStatusFilter] = useState("");
+  const [automationFilter, setAutomationFilter] = useState("");
+  const { data: logs, isLoading } = useAutomationLogs({
+    status: statusFilter || undefined,
+    automationId: automationFilter || undefined,
+  });
+
+  const statusConfig: Record<string, { icon: React.ReactNode; label: string; className: string }> = {
+    success: { icon: <CheckCircle className="w-3 h-3" />, label: "Sucesso", className: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+    error: { icon: <XCircle className="w-3 h-3" />, label: "Erro", className: "bg-destructive/10 text-destructive border-destructive/20" },
+    skipped: { icon: <SkipForward className="w-3 h-3" />, label: "Ignorado", className: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  };
+
+  if (isLoading) return <Skeleton className="h-32 mt-2" />;
+
+  return (
+    <div className="space-y-3 mt-2">
+      <div className="flex gap-2">
+        <Select value={statusFilter} onValueChange={v => setStatusFilter(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs">Todos</SelectItem>
+            <SelectItem value="success" className="text-xs">Sucesso</SelectItem>
+            <SelectItem value="error" className="text-xs">Erro</SelectItem>
+            <SelectItem value="skipped" className="text-xs">Ignorado</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={automationFilter} onValueChange={v => setAutomationFilter(v === "all" ? "" : v)}>
+          <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="Automação" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs">Todas</SelectItem>
+            {automations.map(a => (
+              <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {!logs || logs.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center text-sm text-muted-foreground">
+            <ScrollText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            Nenhum log de execução encontrado
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+          {logs.map(log => {
+            const sc = statusConfig[log.status] || statusConfig.error;
+            return (
+              <Card key={log.id} className="border-border/40">
+                <CardContent className="p-3 flex items-start gap-3">
+                  <div className="mt-0.5">{sc.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${sc.className}`}>
+                        {sc.label}
+                      </Badge>
+                      {log.automation_name && (
+                        <span className="text-xs font-medium truncate">{log.automation_name}</span>
+                      )}
+                      {log.action_type && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                          {ACTIONS.find(a => a.value === log.action_type)?.label || log.action_type}
+                        </Badge>
+                      )}
+                    </div>
+                    {log.lead_name && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Lead: {log.lead_name}</p>
+                    )}
+                    {log.error_message && (
+                      <p className="text-[11px] text-destructive mt-0.5 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 shrink-0" /> {log.error_message}
+                      </p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                      {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
