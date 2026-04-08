@@ -451,9 +451,73 @@ Development tier: **500 calls/app/dia, 100 calls/membro/dia**. Limite exato não
 3. Usar URN `organization` (não `company`) — `company` deprecado desde Jan/2024
 4. Após `initializeUpload` de imagem: aguardar 1-2s antes de criar o post (imagem pode não estar `AVAILABLE` ainda)
 5. `feedDistribution: "NONE"` cria dark post (não aparece na Company Page) — usar `MAIN_FEED` para orgânico
-6. BATCH_GET desabilitado no tier Development
+6. BATCH_GET desabilitado no tier Development — requer Standard tier para batch operations
 7. Violação de política de conteúdo retorna `422 UNPROCESSABLE_ENTITY` sem motivo detalhado
-8. Autorization code expira em **30 minutos** — trocar antes de redirecionar o usuário de volta
+8. Authorization code expira em **30 minutos** — trocar antes de redirecionar o usuário de volta
+9. **`refresh_token_expires_in` inconsistente nas docs** — o campo retorna `525600` que pode ser segundos (~6 dias) ou minutos (365 dias). Comportamento real: access_token = 60 dias, refresh_token = 365 dias. **Sempre salvar o timestamp absoluto** calculado como `now() + expires_in` — nunca confiar no valor bruto
+10. Posts API retorna URN em dois formatos possíveis: `urn:li:share:{id}` OU `urn:li:ugcPost:{id}` — tratar ambos
+11. `r_member_social` (ler posts do membro) é permissão restrita — requer aprovação separada além da Community Management API
+12. Limite Development tier: **500 calls/app/dia, 100 calls/membro/dia** — suficiente para ~250 posts/dia
+
+#### Exemplos completos Deno/Edge Functions
+
+**Publicar imagem na Company Page (Deno):**
+```typescript
+const LINKEDIN_BASE = "https://api.linkedin.com/rest";
+const LINKEDIN_VERSION = "202603";
+
+// Etapa 1: upload da imagem
+async function uploadImage(accessToken: string, orgId: string, imageBuffer: Uint8Array, mimeType: string) {
+  const init = await fetch(`${LINKEDIN_BASE}/images?action=initializeUpload`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+      "Linkedin-Version": LINKEDIN_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ initializeUploadRequest: { owner: `urn:li:organization:${orgId}` } }),
+  });
+  const { value } = await init.json();
+
+  // PUT binário — SEM header Authorization
+  await fetch(value.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": mimeType },
+    body: imageBuffer,
+  });
+
+  await new Promise(r => setTimeout(r, 1500)); // aguardar AVAILABLE
+  return value.image; // ex: "urn:li:image:C4E10AQFo..."
+}
+
+// Etapa 2: criar post
+async function publishPost(accessToken: string, orgId: string, caption: string, imageUrn?: string) {
+  const body: Record<string, unknown> = {
+    author: `urn:li:organization:${orgId}`,
+    commentary: caption,
+    visibility: "PUBLIC",
+    distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+    lifecycleState: "PUBLISHED",
+    isReshareDisabledByAuthor: false,
+  };
+  if (imageUrn) body.content = { media: { altText: "imagem", id: imageUrn } };
+
+  const res = await fetch(`${LINKEDIN_BASE}/posts`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "X-Restli-Protocol-Version": "2.0.0",
+      "Linkedin-Version": LINKEDIN_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`LinkedIn ${res.status}: ${await res.text()}`);
+  return res.headers.get("x-restli-id"); // URN do post — no HEADER, não no body
+}
+```
 
 #### Exemplo de chamada (Deno Edge Function)
 
