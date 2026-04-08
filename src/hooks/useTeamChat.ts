@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useEffect, useCallback, useRef, useMemo } from "react";
+import { useEffect, useCallback, useRef, useMemo, useState } from "react";
 
 export interface TeamChannel {
   id: string;
@@ -25,6 +25,7 @@ export interface TeamMessage {
   type: string;
   file_url: string | null;
   file_name: string | null;
+  reply_to_id: string | null;
   created_at: string;
   sender_name?: string;
   sender_avatar?: string;
@@ -43,17 +44,25 @@ export interface ChannelMembership {
   role: string;
 }
 
+export interface TeamReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+}
+
 export function useTeamChat() {
   const { user } = useAuth();
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
   const channelSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Record<string, string[]>>({});
 
   // Fetch channels user is a member of
   const channelsQuery = useQuery({
     queryKey: ["team-chat-channels", orgId],
     queryFn: async () => {
-      // Get channels the user is member of
       const { data: memberOf } = await supabase
         .from("team_chat_members")
         .select("channel_id")
@@ -62,7 +71,6 @@ export function useTeamChat() {
       const channelIds = (memberOf || []).map((m) => m.channel_id);
 
       if (channelIds.length === 0) {
-        // Also get org-wide channels
         const { data, error } = await supabase
           .from("team_chat_channels")
           .select("*")
@@ -105,7 +113,6 @@ export function useTeamChat() {
   const channelMembersQuery = useQuery({
     queryKey: ["team-chat-all-members", orgId],
     queryFn: async () => {
-      // Only fetch memberships for channels that belong to this org
       const channels = channelsQuery.data || [];
       if (channels.length === 0) return [] as ChannelMembership[];
       const channelIds = channels.map((c) => c.id);
@@ -172,10 +179,8 @@ export function useTeamChat() {
     mutationFn: async () => {
       if (!orgId || !user) return null;
 
-      // Sync team-based channels
       await supabase.rpc("sync_team_chat_channels", { _org_id: orgId });
 
-      // Ensure #Geral exists
       const { data: existing } = await supabase
         .from("team_chat_channels")
         .select("id")
@@ -197,7 +202,6 @@ export function useTeamChat() {
         channelId = created.id;
       }
 
-      // Add all org members to Geral
       const members = membersQuery.data || [];
       if (members.length > 0) {
         await supabase.from("team_chat_members").upsert(
@@ -229,7 +233,6 @@ export function useTeamChat() {
         .single();
       if (error) throw error;
 
-      // Add creator as admin + selected members
       const allMembers = [
         { channel_id: ch.id, user_id: user.id, role: "admin" },
         ...memberIds.filter((id) => id !== user.id).map((id) => ({
@@ -315,6 +318,7 @@ export function useTeamChat() {
           const sender = members.find((m) => m.user_id === msg.sender_id);
           return {
             ...msg,
+            reply_to_id: msg.reply_to_id || null,
             sender_name: sender?.full_name || "Usuário",
             sender_avatar: sender?.avatar_url || null,
           };
@@ -324,14 +328,39 @@ export function useTeamChat() {
     });
   };
 
+  // Fetch reactions for a channel's messages
+  const useChannelReactions = (channelId: string | null) => {
+    return useQuery({
+      queryKey: ["team-chat-reactions", channelId],
+      queryFn: async () => {
+        // Get message ids for this channel
+        const { data: msgs } = await supabase
+          .from("team_chat_messages")
+          .select("id")
+          .eq("channel_id", channelId!);
+        const msgIds = (msgs || []).map((m) => m.id);
+        if (msgIds.length === 0) return [] as TeamReaction[];
+
+        const { data, error } = await supabase
+          .from("team_chat_reactions")
+          .select("*")
+          .in("message_id", msgIds);
+        if (error) throw error;
+        return (data || []) as TeamReaction[];
+      },
+      enabled: !!channelId,
+    });
+  };
+
   // Send message
   const sendMessage = useMutation({
-    mutationFn: async ({ channelId, content, type = "text", fileUrl, fileName }: {
+    mutationFn: async ({ channelId, content, type = "text", fileUrl, fileName, replyToId }: {
       channelId: string;
       content?: string;
       type?: string;
       fileUrl?: string;
       fileName?: string;
+      replyToId?: string;
     }) => {
       const { error } = await supabase
         .from("team_chat_messages")
@@ -342,6 +371,7 @@ export function useTeamChat() {
           type,
           file_url: fileUrl || null,
           file_name: fileName || null,
+          reply_to_id: replyToId || null,
         });
       if (error) {
         logger.error("[TeamChat] sendMessage error:", error);
@@ -351,6 +381,34 @@ export function useTeamChat() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-chat-messages", vars.channelId] });
       qc.invalidateQueries({ queryKey: ["team-chat-last-messages"] });
+    },
+  });
+
+  // Toggle reaction
+  const toggleReaction = useMutation({
+    mutationFn: async ({ messageId, emoji, channelId }: { messageId: string; emoji: string; channelId: string }) => {
+      // Check if reaction exists
+      const { data: existing } = await supabase
+        .from("team_chat_reactions")
+        .select("id")
+        .eq("message_id", messageId)
+        .eq("user_id", user?.id ?? "")
+        .eq("emoji", emoji)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("team_chat_reactions").delete().eq("id", existing.id);
+      } else {
+        await supabase.from("team_chat_reactions").insert({
+          message_id: messageId,
+          user_id: user?.id ?? "",
+          emoji,
+        });
+      }
+      return channelId;
+    },
+    onSuccess: (channelId) => {
+      qc.invalidateQueries({ queryKey: ["team-chat-reactions", channelId] });
     },
   });
 
@@ -364,6 +422,7 @@ export function useTeamChat() {
         .eq("channel_id", channelId)
         .eq("user_id", user.id);
       qc.invalidateQueries({ queryKey: ["team-chat-last-messages"] });
+      qc.invalidateQueries({ queryKey: ["team-chat-all-members"] });
     },
     [user, qc]
   );
@@ -381,7 +440,21 @@ export function useTeamChat() {
     [orgId]
   );
 
-  // Realtime subscription
+  // Broadcast typing indicator
+  const broadcastTyping = useCallback(
+    (channelId: string) => {
+      if (!user || !channelSubRef.current) return;
+      const memberName = membersQuery.data?.find((m) => m.user_id === user.id)?.full_name || "Alguém";
+      channelSubRef.current.send({
+        type: "broadcast",
+        event: "typing",
+        payload: { userId: user.id, name: memberName },
+      });
+    },
+    [user, membersQuery.data]
+  );
+
+  // Realtime subscription with typing + reactions
   const subscribeToChannel = useCallback(
     (channelId: string | null) => {
       if (channelSubRef.current) {
@@ -400,11 +473,36 @@ export function useTeamChat() {
             qc.invalidateQueries({ queryKey: ["team-chat-last-messages"] });
           }
         )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "team_chat_reactions" },
+          () => {
+            qc.invalidateQueries({ queryKey: ["team-chat-reactions", channelId] });
+          }
+        )
+        .on("broadcast", { event: "typing" }, (payload) => {
+          const data = payload.payload as { userId: string; name: string };
+          if (data.userId === user?.id) return;
+          setTypingUsers((prev) => {
+            const current = prev[channelId] || [];
+            if (!current.includes(data.name)) {
+              return { ...prev, [channelId]: [...current, data.name] };
+            }
+            return prev;
+          });
+          // Clear after 3s
+          setTimeout(() => {
+            setTypingUsers((prev) => {
+              const current = prev[channelId] || [];
+              return { ...prev, [channelId]: current.filter((n) => n !== data.name) };
+            });
+          }, 3000);
+        })
         .subscribe();
 
       channelSubRef.current = sub;
     },
-    [qc]
+    [qc, user]
   );
 
   useEffect(() => {
@@ -442,16 +540,20 @@ export function useTeamChat() {
     members: membersQuery.data || [],
     channelMemberships: channelMembersQuery.data || [],
     unreadCounts,
+    typingUsers,
     ensureGeneralChannel,
     createCustomGroup,
     getOrCreateDM,
     useChannelMessages,
+    useChannelReactions,
     sendMessage,
+    toggleReaction,
     subscribeToChannel,
     getDMPartnerName,
     getChannelMembers,
     markAsRead,
     uploadFile,
+    broadcastTyping,
     user,
   };
 }
