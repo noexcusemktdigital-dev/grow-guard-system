@@ -58,6 +58,7 @@ const vendasSection: SidebarItem[] = [
 const marketingSection: SidebarItem[] = [
   { label: "Roteiros", icon: Video, path: "/cliente/conteudos" },
   { label: "Postagem", icon: Image, path: "/cliente/redes-sociais" },
+  { label: "Contas Sociais", icon: Share2, path: "/cliente/contas-sociais" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
   { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", adminOnly: true },
 ];

@@ -99,6 +99,7 @@ const ClienteAgenda = lazy(() => import("./pages/cliente/ClienteAgenda"));
 const ClienteMarketingHub = lazy(() => import("./pages/cliente/ClienteMarketingHub"));
 const ClienteComunicados = lazy(() => import("./pages/cliente/ClienteComunicados"));
 const ClienteFaq = lazy(() => import("./pages/cliente/ClienteFaq"));
+const ContasSociais = lazy(() => import("./pages/cliente/ContasSociais"));
 
 // PERF-004: staleTime global 2min é agressivo para dados transacionais.
 // Queries financeiras e de créditos usam staleTime: 0 via queryKey prefix.
@@ -260,6 +261,7 @@ function App() {
                   <Route path="marketing-hub" element={<ClienteMarketingHub />} />
                   <Route path="comunicados" element={<ClienteComunicados />} />
                   <Route path="faq" element={<ClienteFaq />} />
+                  <Route path="contas-sociais" element={<PageBoundary><ContasSociais /></PageBoundary>} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
