@@ -379,7 +379,16 @@ export function TeamChatConversation({
       )}
 
       {/* Input */}
-      <div className="border-t px-4 py-3">
+      <div className="border-t px-4 py-3 relative">
+        {/* Mention picker */}
+        <TeamChatMentionPicker
+          members={members.filter((m) => m.user_id !== currentUserId)}
+          query={mentionQuery}
+          onSelect={handleMentionSelect}
+          position={mentionPos}
+          visible={mentionActive && filteredMentionMembers.length > 0}
+        />
+
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -423,12 +432,34 @@ export function TeamChatConversation({
             value={text}
             onChange={(e) => handleTextChange(e.target.value)}
             onKeyDown={(e) => {
+              if (mentionActive && filteredMentionMembers.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMentionIndex((i) => Math.min(i + 1, filteredMentionMembers.length - 1));
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMentionIndex((i) => Math.max(i - 1, 0));
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  handleMentionSelect(filteredMentionMembers[mentionIndex]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMentionActive(false);
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
               }
             }}
-            placeholder={pendingFile ? "Adicione uma legenda..." : "Digite sua mensagem..."}
+            placeholder={pendingFile ? "Adicione uma legenda..." : "Digite sua mensagem... Use @ para mencionar"}
             className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[40px] max-h-[120px]"
             rows={1}
             autoFocus
