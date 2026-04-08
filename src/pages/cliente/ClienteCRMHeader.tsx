@@ -35,6 +35,7 @@ export function ClienteCRMHeader({
   setNewLeadOpen,
   setCsvImportOpen,
   setTutorialOpen,
+  configRoute = "/cliente/crm/config",
 }: ClienteCRMHeaderProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -110,7 +111,7 @@ export function ClienteCRMHeader({
             </>
           )}
 
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => navigate("/cliente/crm/config")}>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => navigate(configRoute)}>
             <Settings2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline text-xs">Configurações</span>
           </Button>
