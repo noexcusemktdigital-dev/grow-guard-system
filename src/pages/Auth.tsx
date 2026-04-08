@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
@@ -246,6 +246,11 @@ const Auth = () => {
           <p className="text-center text-xs text-white/30 mt-8">
             Acesso somente por convite do administrador
           </p>
+          <div className="flex items-center justify-center gap-3 mt-4 text-xs text-white/25">
+            <Link to="/privacidade" className="hover:text-white/50 transition-colors">Política de Privacidade</Link>
+            <span>•</span>
+            <Link to="/termos" className="hover:text-white/50 transition-colors">Termos de Uso</Link>
+          </div>
         </div>
       </div>
     </div>

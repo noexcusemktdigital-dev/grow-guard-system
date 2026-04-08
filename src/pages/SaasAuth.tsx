@@ -443,6 +443,12 @@ const SaasAuth = () => {
               </TabsContent>
             </Tabs>
           )}
+
+          <div className="flex items-center justify-center gap-3 mt-6 text-xs text-white/25">
+            <Link to="/privacidade" className="hover:text-white/50 transition-colors">Política de Privacidade</Link>
+            <span>•</span>
+            <Link to="/termos" className="hover:text-white/50 transition-colors">Termos de Uso</Link>
+          </div>
         </div>
       </div>
     </div>
