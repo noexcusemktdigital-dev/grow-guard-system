@@ -313,6 +313,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
         setCsvImportOpen={setCsvImportOpen}
         setTutorialOpen={setTutorialOpen}
         tutorialOpen={tutorialOpen}
+        configRoute={configRoute}
       />
 
       {/* ===== CONTACTS TAB ===== */}
@@ -334,7 +335,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
                 <p className="text-sm text-muted-foreground mb-6 max-w-md">
                   Antes de adicionar leads, crie pelo menos um funil com as etapas do seu processo comercial.
                 </p>
-                <Button onClick={() => navigate("/cliente/crm/config")} className="gap-2">
+                <Button onClick={() => navigate(configRoute || "/cliente/crm/config")} className="gap-2">
                   <Settings2 className="w-4 h-4" /> Criar Funil
                 </Button>
               </CardContent>
@@ -342,12 +343,14 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
           ) : (
           <>
           {/* Lead Quota Banner */}
-          <UsageQuotaBanner
-            used={activeLeadCount}
-            limit={maxLeads}
-            label="leads"
-            planName={planName}
-          />
+          {!hideQuota && (
+            <UsageQuotaBanner
+              used={activeLeadCount}
+              limit={maxLeads}
+              label="leads"
+              planName={planName}
+            />
+          )}
 
           {/* Pipeline Summary */}
           {allLeads.length > 0 && (
