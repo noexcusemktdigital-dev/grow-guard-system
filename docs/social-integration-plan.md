@@ -234,14 +234,56 @@ Campos Instagram: `comments`, `messages`, `story_insights`, `mentions`, `live_co
 #### Gotchas Meta (não óbvios)
 
 1. Instagram aceita **JPEG apenas** — PNG retorna erro
-2. Vídeos precisam de URL pública acessível (não binary POST direto)
+2. Vídeos precisam de URL pública acessível (não binary POST direto). Para vídeos grandes usar resumable upload: `POST https://rupload.facebook.com/ig-api-upload/v25.0/{container-id}`
 3. TTL do container é 24h — crash do worker = recriar do zero
 4. `media_type` é opcional para imagens, obrigatório para VIDEO/REELS/STORIES/CAROUSEL
-5. Short-lived tokens expiram em **1 hora**, não 24h
-6. Long-lived tokens **não renovam automaticamente** — fazer cron a cada 7 dias
-7. `special_ad_categories: []` é obrigatório em campanhas mesmo sem categoria especial
-8. Page tokens derivados de User tokens **expiram com o User token** — usar System User
-9. Parâmetro `metadata` deprecado na v25.0, descontinuado em 19/05/2026
+5. Para Reels publicados: `media_type` retorna `VIDEO`. Verificar `media_product_type` para confirmar que é Reel
+6. Short-lived tokens expiram em **1 hora**, não 24h
+7. Long-lived tokens **não renovam automaticamente** — fazer cron a cada 7 dias
+8. `special_ad_categories: []` é obrigatório em campanhas mesmo sem categoria especial — campo ausente = erro
+9. Page tokens derivados de User tokens **expiram com o User token** — usar System User
+10. Parâmetro `metadata` deprecado na v25.0, descontinuado em 19/05/2026
+11. **Rate limit de publicação Instagram: 100 posts/24h** (não por hora) — container tem limite SEPARADO de 400/dia
+12. **Standard Access = desenvolvimento apenas** — para gerenciar ads de clientes em produção é obrigatório Advanced Access (app review)
+13. Sem `pages_show_list` não funciona o Facebook Login path mesmo com scopes Instagram corretos
+14. **`estimated_time_to_regain_access`** no header `X-Business-Use-Case-Usage` informa exatamente quanto tempo aguardar — usar no lugar de exponential backoff cego
+15. Carrossel: cada item criado separadamente com `is_carousel_item=true`, todos cortados para o aspect ratio do primeiro item (padrão 1:1)
+
+#### Webhook validation completo (Deno)
+
+```typescript
+// Verificação hub.challenge
+if (req.method === "GET") {
+  const url = new URL(req.url);
+  if (url.searchParams.get("hub.verify_token") === Deno.env.get("META_VERIFY_TOKEN")) {
+    return new Response(url.searchParams.get("hub.challenge"), { status: 200 });
+  }
+  return new Response("Forbidden", { status: 403 });
+}
+
+// Validar assinatura do payload
+const body = await req.text();
+const sig = req.headers.get("x-hub-signature-256")?.replace("sha256=", "");
+const key = await crypto.subtle.importKey(
+  "raw", new TextEncoder().encode(Deno.env.get("META_APP_SECRET")),
+  { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+);
+const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, "0")).join("");
+if (sig !== expected) return new Response("Invalid signature", { status: 401 });
+```
+
+#### Instagram Business vs Creator Account
+
+| Feature | Business | Creator |
+|---|---|---|
+| Content Publishing API | ✅ Sim | ✅ Sim |
+| Insights API | ✅ Sim | ✅ Sim |
+| Comment Management API | ✅ Completo | ⚠️ Limitado |
+| Hashtag Search API | ✅ Sim | ❌ Não |
+| Shopping features | ✅ Sim | ⚠️ Limitado |
+
+Para gestão de redes sociais: **usar Business Account** — Creator tem suporte parcial em vários endpoints.
 
 #### Exemplo de chamada (Deno Edge Function)
 
