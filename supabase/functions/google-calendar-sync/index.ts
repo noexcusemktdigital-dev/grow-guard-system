@@ -18,7 +18,6 @@ async function refreshAccessToken(refreshToken: string, clientId: string, client
 }
 
 serve(async (req) => {
-  // jsonRes must be inside handler so req is in scope
   const jsonRes = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
@@ -32,6 +31,8 @@ serve(async (req) => {
     if (!authHeader) return jsonRes({ error: "Unauthorized" }, 401);
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
+    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
     const supabase = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -41,11 +42,13 @@ serve(async (req) => {
     if (userError || !user) return jsonRes({ error: "Unauthorized" }, 401);
     const userId = user.id;
 
+    const { action, event, portal } = await req.json();
+
     const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "saas" });
+    const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portal || "saas" });
     if (!orgId) return jsonRes({ error: "Organização não encontrada" }, 400);
 
-    // Get stored tokens + credentials from DB
+    // Get stored tokens
     const { data: tokenRow } = await serviceClient
       .from("google_calendar_tokens")
       .select("*")
@@ -53,14 +56,11 @@ serve(async (req) => {
       .single();
 
     if (!tokenRow) return jsonRes({ error: "Google Calendar não conectado" }, 400);
-    if (!tokenRow.client_id || !tokenRow.client_secret) {
-      return jsonRes({ error: "Credenciais do Google não configuradas" }, 400);
-    }
 
     // Refresh token if expired
     let accessToken = tokenRow.access_token;
     if (!accessToken || new Date(tokenRow.expires_at) <= new Date()) {
-      const refreshed = await refreshAccessToken(tokenRow.refresh_token, tokenRow.client_id, tokenRow.client_secret);
+      const refreshed = await refreshAccessToken(tokenRow.refresh_token, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
       if (!refreshed) {
         return jsonRes({ error: "Falha ao renovar token do Google. Reconecte sua conta." }, 401);
       }
@@ -71,7 +71,6 @@ serve(async (req) => {
         .eq("id", tokenRow.id);
     }
 
-    const { action, event } = await req.json();
     const calendarId = tokenRow.google_calendar_id || "primary";
 
     // PULL

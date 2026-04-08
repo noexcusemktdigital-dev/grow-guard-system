@@ -177,9 +177,9 @@ export default function Agenda() {
 
   // Google Calendar
   const { data: googleConnection, isLoading: loadingConnection } = useGoogleCalendarConnection();
-  const connectGoogle = useGoogleCalendarConnect();
+  const connectGoogle = useGoogleCalendarConnect("franchise");
   const disconnectGoogle = useGoogleCalendarDisconnect();
-  const syncGoogle = useGoogleCalendarSync();
+  const syncGoogle = useGoogleCalendarSync("franchise");
   const [syncing, setSyncing] = useState(false);
   const isGoogleConnected = googleConnection && !!((googleConnection as Record<string, unknown>).access_token);
 
