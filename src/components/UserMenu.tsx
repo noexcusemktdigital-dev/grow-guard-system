@@ -35,7 +35,7 @@ export function UserMenu() {
     .slice(0, 2);
 
   const handleLogout = async () => {
-    const target = (role === "cliente_admin" || role === "cliente_user") ? "/app" : "/acessofranquia";
+    const target = (role === "cliente_admin" || role === "cliente_user") ? "/" : "/acessofranquia";
     await signOut(target);
   };
 

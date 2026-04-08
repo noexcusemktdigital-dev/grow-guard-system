@@ -26,7 +26,7 @@ export async function validatePortalAccess(
   const hasAllowedRole = roles.some((r) => allowedRoles.includes(r));
 
   if (!hasAllowedRole) {
-    const redirect = portal === "saas" ? "/acessofranquia" : "/app";
+    const redirect = portal === "saas" ? "/acessofranquia" : "/";
     const message =
       portal === "saas"
         ? "Esta conta pertence ao portal da franquia. Acesse /acessofranquia"

@@ -18,7 +18,7 @@ function getRoleRedirect(role: AppRole | null): string {
 }
 
 function getLoginPath(pathname: string): string {
-  if (pathname.startsWith("/cliente")) return "/app";
+  if (pathname.startsWith("/cliente")) return "/";
   return "/acessofranquia";
 }
 

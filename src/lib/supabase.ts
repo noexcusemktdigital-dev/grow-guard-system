@@ -16,9 +16,8 @@ function getPortalStorageKey(): string {
 
   const isSaas =
     path.startsWith("/cliente") ||
-    path.startsWith("/app") ||
     path === "/" ||
-    path.startsWith("/landing") ||
+    path.startsWith("/crescimento") ||
     path.startsWith("/termos") ||
     path.startsWith("/privacidade");
   return isSaas ? "noe-saas-auth" : "noe-franchise-auth";
