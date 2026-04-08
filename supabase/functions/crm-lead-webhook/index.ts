@@ -14,23 +14,36 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // SEC-NOE-003: autenticação obrigatória via Authorization: Bearer {secret}
-    const webhookSecret = Deno.env.get("CRM_LEAD_WEBHOOK_SECRET");
-    if (!webhookSecret) {
-      console.error("CRM_LEAD_WEBHOOK_SECRET not configured — rejecting all requests");
-      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+    // SEC-FIX SEC-NOE-003: HMAC-SHA256 signature validation — replaces plain Bearer string comparison.
+    // Callers must send: x-webhook-signature: sha256=<HMAC-SHA256(body, CRM_WEBHOOK_SECRET)>
+    // or x-hub-signature-256 (GitHub-compatible header). Simple Bearer tokens are rejected.
+    const secret = Deno.env.get("CRM_WEBHOOK_SECRET");
+    if (!secret) {
+      console.error("CRM_WEBHOOK_SECRET not configured — rejecting all requests");
+      return new Response(JSON.stringify({ error: "Not configured" }), {
         status: 500,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
-    const authHeader = req.headers.get("Authorization");
-    const providedSecret = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : req.headers.get("X-Webhook-Secret");
+    const rawBody = await req.text();
+    const sig = req.headers.get("x-webhook-signature") ?? req.headers.get("x-hub-signature-256") ?? "";
 
-    if (!providedSecret || providedSecret !== webhookSecret) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+    const expected = "sha256=" + Array.from(new Uint8Array(mac))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    if (sig !== expected) {
+      console.warn("[crm-lead-webhook] Invalid or missing HMAC signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
@@ -47,7 +60,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    const body = JSON.parse(rawBody);
     const { name, email, phone, company, source, value, tags, custom_fields } = body;
 
     if (!name) {

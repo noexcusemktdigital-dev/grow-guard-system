@@ -123,16 +123,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastFetchedUserRef.current = currentUser.id;
         try { localStorage.setItem("noe-cached-role", topRole); } catch {}
       } else {
-        // Check if this was a timeout (null result) vs genuine "no roles"
+        // SEC-FIX CODE-003: Never grant a role on DB timeout — fail secure instead.
+        // Previous code fell back to "cliente_user" or "franqueado", allowing privilege escalation
+        // for any user whose role fetch timed out (slow DB, new signup, error state, attacker).
         if (roleResult === null) {
-          const cached = localStorage.getItem("noe-cached-role") as AppRole | null;
-          if (cached) {
-            setRole(cached);
-          } else {
-            const fallback: AppRole = isSaasPortal ? "cliente_user" : "franqueado";
-            setRole(fallback);
-          }
-          lastFetchedUserRef.current = currentUser.id;
+          logger.error("[Auth] Role fetch timed out — signing out to prevent privilege escalation (SEC-FIX CODE-003)");
+          // Force sign-out: do not assign any role, session is untrusted
+          await supabase.auth.signOut();
           return;
         }
 
