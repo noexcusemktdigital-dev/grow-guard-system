@@ -186,3 +186,18 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = false
   [functions.revoke-support-access]
     verify_jwt = false
+
+  # --- Social media OAuth functions (Phase 2) ---
+  # OAuth redirects and callbacks cannot carry JWT — they come from external providers
+  [functions.social-oauth-meta]
+    # Initiates Meta (Facebook/Instagram) OAuth flow — browser redirect, no JWT
+    verify_jwt = false
+  [functions.social-oauth-linkedin]
+    # Initiates LinkedIn OAuth flow — browser redirect, no JWT
+    verify_jwt = false
+  [functions.social-oauth-callback]
+    # Universal OAuth callback — called by Meta/LinkedIn, no JWT possible
+    verify_jwt = false
+  [functions.social-token-refresh]
+    # Cron job for token refresh — called by pg_cron, no user JWT
+    verify_jwt = false
