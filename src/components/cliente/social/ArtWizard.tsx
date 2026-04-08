@@ -71,6 +71,8 @@ export interface ArtGeneratePayload {
 export interface ArtBriefingResult {
   headline: string;
   subheadline: string;
+  headlines?: string[];
+  subheadlines?: string[];
   cta: string;
   cena: string;
   elementos_visuais: string;
@@ -89,6 +91,8 @@ export interface ArtTextItem {
   approvedSub: boolean;
   approvedSupport: boolean;
   approvedCta: boolean;
+  headlineOptions?: string[];
+  subheadlineOptions?: string[];
 }
 
 const TOTAL_STEPS = 14;
@@ -190,15 +194,19 @@ export function ArtWizard({
       : `${briefingText}\nObjetivo: ${objective}${mandatoryPhrase ? `\nFrase obrigatória: ${mandatoryPhrase}` : ""}\nQuantidade de peças: ${totalPieces}`;
     const result = await onFillWithAI(enrichedBriefing, contentData);
     if (result) {
+      const headlineOpts = result.headlines && result.headlines.length > 0 ? result.headlines : [result.headline || ""];
+      const subheadlineOpts = result.subheadlines && result.subheadlines.length > 0 ? result.subheadlines : [result.subheadline || ""];
       const baseTexts: ArtTextItem[] = Array.from({ length: totalPieces }, (_, i) => ({
-        headline: i === 0 && mandatoryPhrase ? mandatoryPhrase : (result.headline || ""),
-        subheadline: result.subheadline || "",
+        headline: i === 0 && mandatoryPhrase ? mandatoryPhrase : (headlineOpts[0] || ""),
+        subheadline: subheadlineOpts[0] || "",
         supportingText: result.supporting_text || "",
         cta: result.cta || "",
         approvedHeadline: false,
         approvedSub: false,
         approvedSupport: false,
         approvedCta: false,
+        headlineOptions: i === 0 && mandatoryPhrase ? undefined : headlineOpts,
+        subheadlineOptions: subheadlineOpts,
       }));
       setArtTexts(baseTexts);
       setCena(result.cena || "");

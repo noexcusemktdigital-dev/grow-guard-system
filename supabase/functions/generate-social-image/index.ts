@@ -20,7 +20,6 @@ async function urlToBase64(url: string): Promise<string | null> {
       console.log(`🔄 SVG detected, converting to PNG via AI: ${url}`);
       try {
         const svgText = new TextDecoder().decode(new Uint8Array(await res.clone().arrayBuffer()));
-        // Use a simple base64 of the SVG for the AI to render
         const svgB64 = `data:image/svg+xml;base64,${btoa(svgText)}`;
         const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
         if (!LOVABLE_API_KEY) {
@@ -56,7 +55,6 @@ async function urlToBase64(url: string): Promise<string | null> {
             return pngUrl;
           }
         }
-        // Fallback: use raw SVG as base64 directly
         console.warn("SVG→PNG conversion failed, using raw SVG base64 as fallback");
         const svgTextFallback = new TextDecoder().decode(new Uint8Array(await res.arrayBuffer()));
         return `data:image/svg+xml;base64,${btoa(svgTextFallback)}`;
@@ -66,13 +64,11 @@ async function urlToBase64(url: string): Promise<string | null> {
       }
     }
 
-    // Normalize content-type to a supported raster format
     if (!contentType.startsWith("image/")) {
       contentType = "image/png";
     }
 
     const buffer = new Uint8Array(await res.arrayBuffer());
-    // Chunked base64 encoding to avoid stack overflow on large images
     let binary = "";
     const chunkSize = 8192;
     for (let i = 0; i < buffer.length; i += chunkSize) {
@@ -83,6 +79,97 @@ async function urlToBase64(url: string): Promise<string | null> {
   } catch (err) {
     console.warn(`Error fetching reference image: ${url}`, err);
     return null;
+  }
+}
+
+// --- Classify restrictions into visual, copy, global ---
+
+interface ClassifiedRestrictions {
+  restrictions_visual: string[];
+  restrictions_copy: string[];
+  restrictions_global: string[];
+}
+
+async function classifyRestrictions(apiKey: string, restrictions: string): Promise<ClassifiedRestrictions> {
+  const defaultResult: ClassifiedRestrictions = {
+    restrictions_visual: [],
+    restrictions_copy: [],
+    restrictions_global: [],
+  };
+  if (!restrictions || restrictions.trim().length === 0) return defaultResult;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `You classify user restrictions for a social media art generator into 3 categories:
+- visual: restrictions about imagery, colors, photos, design elements (e.g. "no red", "no people", "no busy backgrounds")
+- copy: restrictions about text, tone, language (e.g. "no aggressive language", "no promises", "no slang")
+- global: restrictions about overall feel that apply to both text and image (e.g. "don't look childish", "not too corporate", "no clutter")
+
+Classify each restriction into the most appropriate category. A single restriction can appear in multiple categories if it applies to both.`,
+          },
+          { role: "user", content: restrictions },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "classify_restrictions",
+              description: "Classify user restrictions into visual, copy, and global categories.",
+              parameters: {
+                type: "object",
+                properties: {
+                  restrictions_visual: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Visual/image restrictions",
+                  },
+                  restrictions_copy: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Text/copy restrictions",
+                  },
+                  restrictions_global: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Global feel restrictions that apply to both text and image",
+                  },
+                },
+                required: ["restrictions_visual", "restrictions_copy", "restrictions_global"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "classify_restrictions" } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("Restriction classification failed:", response.status);
+      return defaultResult;
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (toolCall?.function?.arguments) {
+      const parsed = JSON.parse(toolCall.function.arguments);
+      console.log("✅ Restrictions classified:", JSON.stringify(parsed));
+      return parsed as ClassifiedRestrictions;
+    }
+    return defaultResult;
+  } catch (err) {
+    console.warn("Restriction classification error:", err);
+    return defaultResult;
   }
 }
 
@@ -210,12 +297,28 @@ async function analyzeAndOptimizePrompt(
     logo_url?: string;
     primary_ref_index?: number;
     objective?: string;
+    classifiedRestrictions?: ClassifiedRestrictions;
   },
   referenceBase64s?: { type: string; image_url: { url: string } }[],
 ): Promise<StructuredPromptResult | null> {
   const { userPrompt, format, nivel, estilo, identidade_visual, persona } = context;
 
   const hasRefs = referenceBase64s && referenceBase64s.length > 0;
+
+  // Build restriction blocks for the CoT system prompt
+  let restrictionBlocks = "";
+  if (context.classifiedRestrictions) {
+    const cr = context.classifiedRestrictions;
+    if (cr.restrictions_copy.length > 0) {
+      restrictionBlocks += `\n\nCOPY RESTRICTIONS (text/tone must avoid):\n${cr.restrictions_copy.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_visual.length > 0) {
+      restrictionBlocks += `\n\nVISUAL RESTRICTIONS (imagery/design must avoid):\n${cr.restrictions_visual.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_global.length > 0) {
+      restrictionBlocks += `\n\nGLOBAL RESTRICTIONS (applies to both text and visuals):\n${cr.restrictions_global.map(r => `- ${r}`).join("\n")}`;
+    }
+  }
 
   const systemPrompt = `You are an elite visual prompt engineer for AI image generation models. Your ONLY job is to produce a structured visual prompt in FLUENT ENGLISH that will generate a professional social media marketing image.
 
@@ -231,7 +334,24 @@ ${hasRefs ? `6. You have been given BRAND REFERENCE IMAGES. Analyze them careful
 ${context.logo_url ? `9. A BRAND LOGO image has been provided separately. DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo placement space COMPLETELY EMPTY — the real logo will be composited in post-production.` : ""}
 ${context.layout_type ? `10. LAYOUT TYPE SELECTED: "${context.layout_type}". You MUST follow the specific layout composition rules for this type. The layout determines WHERE elements go — follow it precisely.` : ""}
 
+HIERARCHY RULES (MANDATORY):
+- Headline must be the DOMINANT element — largest, boldest, most visible
+- Subheadline is SECONDARY — smaller weight, supporting the headline
+- Logo is TERTIARY — small, subtle, corner placement
+- Ensure clear visual hierarchy between all text elements
+
+READABILITY RULES (MANDATORY):
+- Ensure HIGH READABILITY: strong contrast between text and background
+- Avoid busy backgrounds directly behind text areas
+- Text areas must have clean, uncluttered backing
+
+LAYOUT INTEGRITY (MANDATORY):
+- Do NOT improvise layout — follow the defined grid precisely
+- Do NOT reposition elements outside the defined grid zones
+- Strictly follow visual identity extracted from references
+
 ${context.layout_type ? getLayoutRulesForPrompt(context.layout_type) : ""}
+${restrictionBlocks}
 
 The art_style determines the visual approach:
 - Styles starting with "grafica_" → FLAT GRAPHIC DESIGN (vector shapes, color blocks, geometric patterns, NO photographs)
@@ -316,7 +436,6 @@ ${hasRefs ? "\nREFERENCE IMAGES: I have attached brand reference images. Analyze
 Analyze everything above and produce the structured visual prompt sections. Remember: ALL in English, be SPECIFIC, describe text placement precisely.`;
 
   try {
-    // Build multimodal content if we have reference images
     let messageContent: string | { type: string; text?: string; image_url?: { url: string } }[];
     if (hasRefs) {
       messageContent = [
@@ -468,7 +587,7 @@ async function getFeedbackHistory(supabase: ReturnType<typeof createClient>, org
   }
 }
 
-// --- Build final image prompt from structured CoT result (ChatGPT-quality structure) ---
+// --- Build final image prompt from structured CoT result ---
 
 function buildFinalPrompt(
   optimized: StructuredPromptResult,
@@ -476,8 +595,8 @@ function buildFinalPrompt(
   artStyleInstructions: string,
   formatDescription: string,
   hasRefs: boolean,
+  classifiedRestrictions?: ClassifiedRestrictions,
 ): string {
-  // Build reference style replication block
   let referenceBlock = "";
   if (hasRefs && optimized.reference_style_replication) {
     const elements = optimized.reference_style_replication.split(",").map((e: string) => e.trim()).filter(Boolean);
@@ -493,7 +612,6 @@ Create a NEW scene that follows the same brand design language.
 `;
   }
 
-  // Build text hierarchy block
   const th = optimized.text_hierarchy;
   let textBlock = "Text in Portuguese:";
   if (th?.headline) textBlock += `\n\nHeadline:\n${th.headline}`;
@@ -502,6 +620,24 @@ Create a NEW scene that follows the same brand design language.
   if (th?.bullet_points) textBlock += `\n\nBullet points:\n${th.bullet_points}`;
   if (th?.cta) textBlock += `\n\nCTA:\n${th.cta}`;
   if (th?.brand) textBlock += `\n\nBrand:\n${th.brand}`;
+
+  // Build classified restriction blocks
+  let restrictionBlock = "";
+  if (classifiedRestrictions) {
+    const cr = classifiedRestrictions;
+    if (cr.restrictions_visual.length > 0) {
+      restrictionBlock += `\n\nVISUAL RESTRICTIONS — DO NOT INCLUDE:\n${cr.restrictions_visual.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_copy.length > 0) {
+      restrictionBlock += `\n\nCOPY RESTRICTIONS — TONE MUST AVOID:\n${cr.restrictions_copy.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_global.length > 0) {
+      restrictionBlock += `\n\nGLOBAL RESTRICTIONS — AVOID IN BOTH TEXT AND VISUALS:\n${cr.restrictions_global.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_visual.length > 0 || cr.restrictions_copy.length > 0 || cr.restrictions_global.length > 0) {
+      restrictionBlock += `\n\nSTRICTLY AVOID all user-defined restrictions in both text and visuals. These are NON-NEGOTIABLE constraints.`;
+    }
+  }
 
   return `${referenceBlock}Scene:
 ${optimized.scene}
@@ -531,13 +667,16 @@ ${optimized.style_closing}
 
 IMPORTANT RENDERING RULES:
 - Text must be sharp, legible, and properly spelled
-- Maintain strong visual hierarchy between headline, highlight, subtext, and CTA
-- All text must have sufficient contrast against its background
+- Maintain strong visual hierarchy: Headline DOMINANT, Subheadline SECONDARY, Logo TERTIARY
+- All text must have sufficient contrast against its background — avoid busy backgrounds behind text
 - Typography should feel intentional and designed, not auto-generated
 - The overall composition must be balanced and publication-ready
 - MANDATORY COLOR RULE: Use ONLY the colors listed in the color_palette section. Do NOT substitute or invent different colors. If the palette says yellow, use yellow — NEVER red or any other hue.
 - DO NOT render any logo, logotype, brand mark, or brand name text in the image. Leave the logo space COMPLETELY EMPTY — it will be composited in post-production.
-- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above (headline, highlight headline, supporting text, bullet points, CTA, brand). Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.`;
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above (headline, highlight headline, supporting text, bullet points, CTA, brand). Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.
+- Do NOT improvise layout — follow the defined grid precisely
+- Do NOT reposition elements outside the defined grid zones
+- Strictly follow visual identity extracted from references${restrictionBlock}`;
 }
 
 // --- Build fallback prompt when CoT fails ---
@@ -560,6 +699,7 @@ function buildFallbackPrompt(
   identidade_visual: Record<string, unknown>,
   manual_colors?: string,
   manual_style?: string,
+  classifiedRestrictions?: ClassifiedRestrictions,
 ): string {
   const scene = context.cena || context.prompt || "A professional, visually striking social media marketing post";
 
@@ -589,6 +729,24 @@ function buildFallbackPrompt(
     styleInfo = `\nBrand style: ${manual_style}`;
   }
 
+  // Build classified restriction blocks
+  let restrictionBlock = "";
+  if (classifiedRestrictions) {
+    const cr = classifiedRestrictions;
+    if (cr.restrictions_visual.length > 0) {
+      restrictionBlock += `\n\nVISUAL RESTRICTIONS — DO NOT INCLUDE:\n${cr.restrictions_visual.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_copy.length > 0) {
+      restrictionBlock += `\n\nCOPY RESTRICTIONS — TONE MUST AVOID:\n${cr.restrictions_copy.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_global.length > 0) {
+      restrictionBlock += `\n\nGLOBAL RESTRICTIONS — AVOID IN BOTH TEXT AND VISUALS:\n${cr.restrictions_global.map(r => `- ${r}`).join("\n")}`;
+    }
+    if (cr.restrictions_visual.length > 0 || cr.restrictions_copy.length > 0 || cr.restrictions_global.length > 0) {
+      restrictionBlock += `\n\nSTRICTLY AVOID all user-defined restrictions in both text and visuals.`;
+    }
+  }
+
   return `Scene:
 ${scene}
 ${context.elementos_visuais ? `\nVisual elements to include: ${context.elementos_visuais}` : ""}
@@ -603,11 +761,13 @@ ${styleInfo}
 ${textBlock}
 
 COMPOSITION RULES:
-- Clear visual hierarchy with a single dominant focal point
+- Clear visual hierarchy: Headline DOMINANT, Subheadline SECONDARY, Logo TERTIARY
 - Professional color theory: complementary or analogous color relationships
 - Must be legible and impactful at small mobile screen sizes
 - Clean, balanced layout that feels intentionally designed
-- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.
+- Strong contrast between text and background — no busy backgrounds behind text
+- Do NOT improvise layout or reposition elements outside defined grid
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.${restrictionBlock}
 
 Generate this image now.`;
 }
@@ -741,6 +901,13 @@ Output ONLY the extracted logo image.`,
       feedbackContext = await getFeedbackHistory(supabase, organization_id);
     }
 
+    // ─── Classify restrictions (Phase 1: Smart Restrictions) ───
+    let classifiedRestrictions: ClassifiedRestrictions | undefined;
+    if (restrictions && restrictions.trim().length > 0) {
+      console.log("🔍 Classifying user restrictions...");
+      classifiedRestrictions = await classifyRestrictions(LOVABLE_API_KEY, restrictions);
+    }
+
     // Build enriched prompt for CoT (in English labels)
     let enrichedPrompt = prompt || "";
     if (topic) enrichedPrompt += `\nTopic/Subject: ${topic}`;
@@ -776,8 +943,8 @@ Output ONLY the extracted logo image.`,
       console.log(`✅ ${base64Refs.length} reference images converted`);
     }
 
-    // Chain-of-Thought optimization (NOW receives reference images!)
-    console.log(`🧠 Starting chain-of-thought for ${format} image (refs for CoT: ${base64Refs.length})...`);
+    // Chain-of-Thought optimization (NOW receives reference images + classified restrictions!)
+    console.log(`🧠 Starting chain-of-thought for ${format} image (refs for CoT: ${base64Refs.length}, restrictions classified: ${!!classifiedRestrictions})...`);
 
     const optimized = await analyzeAndOptimizePrompt(LOVABLE_API_KEY, {
       userPrompt: enrichedPrompt,
@@ -801,6 +968,7 @@ Output ONLY the extracted logo image.`,
       logo_url,
       primary_ref_index,
       objective,
+      classifiedRestrictions,
     }, base64Refs.length > 0 ? base64Refs : undefined);
 
     // Quality, style and layout instructions
@@ -824,20 +992,17 @@ Output ONLY the extracted logo image.`,
 
     // Print mode instructions
     const isPrint = output_mode === "print";
-    if (isPrint) {
-      fullPrompt = fullPrompt || "";
-    }
 
     // Build final prompt
     let fullPrompt: string;
 
     if (optimized) {
-      fullPrompt = buildFinalPrompt(optimized, qualityInstructions, artStyleInstructions, formatDescription, hasRefs);
+      fullPrompt = buildFinalPrompt(optimized, qualityInstructions, artStyleInstructions, formatDescription, hasRefs, classifiedRestrictions);
     } else {
       fullPrompt = buildFallbackPrompt(
         { prompt, cena, headline, subheadline, cta, brand_name, elementos_visuais, supporting_text, bullet_points },
         qualityInstructions, artStyleInstructions, formatDescription,
-        identidade_visual, manual_colors, manual_style,
+        identidade_visual, manual_colors, manual_style, classifiedRestrictions,
       );
     }
 
@@ -849,11 +1014,6 @@ Output ONLY the extracted logo image.`,
     // Append layout instructions to prompt if not already in CoT
     if (layoutInstructions && !optimized) {
       fullPrompt += `\n\n${layoutInstructions}`;
-    }
-
-    // Inject negative constraints / restrictions
-    if (restrictions) {
-      fullPrompt += `\n\nNEGATIVE CONSTRAINTS — STRICTLY AVOID:\n${restrictions}`;
     }
 
     // Inject objective-based style direction
@@ -890,7 +1050,7 @@ Output ONLY the extracted logo image.`,
 MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic elements. Do NOT generate, add, or include ANY additional photographs, people, objects, or illustrated elements beyond the provided photos.`;
     }
 
-    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, photos: ${photoBase64s.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"})...`);
+    console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, photos: ${photoBase64s.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"}, restrictions: ${classifiedRestrictions ? "CLASSIFIED" : "none"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
     // Stage 2: Generate image (with photo images if provided)

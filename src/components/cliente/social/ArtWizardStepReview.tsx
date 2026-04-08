@@ -34,6 +34,53 @@ export interface StepReviewProps {
   setArtTexts: (v: ArtTextItem[]) => void;
 }
 
+function OptionSelector({
+  label,
+  options,
+  currentValue,
+  onSelect,
+}: {
+  label: string;
+  options: string[];
+  currentValue: string;
+  onSelect: (value: string) => void;
+}) {
+  if (!options || options.length <= 1) return null;
+
+  return (
+    <div className="mt-1.5 space-y-1">
+      <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">
+        Opções de {label}:
+      </p>
+      <div className="flex flex-col gap-1">
+        {options.map((opt, idx) => {
+          const isSelected = opt === currentValue;
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => onSelect(opt)}
+              className={`text-left text-[11px] px-2.5 py-1.5 rounded-md border transition-all ${
+                isSelected
+                  ? "border-primary bg-primary/10 text-primary font-medium"
+                  : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:border-border"
+              }`}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                {isSelected && <Check className="w-3 h-3 shrink-0" />}
+                <span className="text-[9px] text-muted-foreground/60 shrink-0">
+                  {idx === 0 ? "💥" : idx === 1 ? "❓" : "💎"}
+                </span>
+                {opt}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ArtWizardStepReview({
   artTexts, updateArtText, editingPieceIndex, setEditingPieceIndex,
   totalPieces, creditCost, isFillingAI, briefingFilled, allTextsApproved,
@@ -57,7 +104,7 @@ export function ArtWizardStepReview({
       <div>
         <h3 className="text-base font-semibold mb-1">✅ Revisão final</h3>
         <p className="text-sm text-muted-foreground">
-          {isFillingAI ? "A nossa IA está gerando os textos..." : isManual ? "Escreva e aprove os textos de cada peça." : "Revise e aprove os textos gerados pela IA."}
+          {isFillingAI ? "A nossa IA está gerando os textos..." : isManual ? "Escreva e aprove os textos de cada peça." : "Revise e aprove os textos gerados pela IA. Escolha entre as opções sugeridas."}
         </p>
       </div>
 
@@ -85,6 +132,8 @@ export function ArtWizardStepReview({
           {artTexts.map((art, i) => {
             const isEditing = isManual || editingPieceIndex === i;
             const pieceApproved = art.approvedHeadline && art.approvedSub && art.approvedSupport && art.approvedCta;
+            const hasHeadlineOptions = art.headlineOptions && art.headlineOptions.length > 1;
+            const hasSubheadlineOptions = art.subheadlineOptions && art.subheadlineOptions.length > 1;
 
             return (
               <Card key={i} className={pieceApproved ? "border-primary/40 bg-primary/5" : ""}>
@@ -110,6 +159,14 @@ export function ArtWizardStepReview({
                       ) : (
                         <p className="text-xs font-semibold">{art.headline || "—"}</p>
                       )}
+                      {!isManual && hasHeadlineOptions && (
+                        <OptionSelector
+                          label="headline"
+                          options={art.headlineOptions!}
+                          currentValue={art.headline}
+                          onSelect={(val) => updateArtText(i, "headline", val)}
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -121,6 +178,14 @@ export function ArtWizardStepReview({
                         <Input value={art.subheadline} onChange={(e) => updateArtText(i, "subheadline", e.target.value)} className="mt-0.5 h-8 text-xs" />
                       ) : (
                         <p className="text-xs">{art.subheadline || "—"}</p>
+                      )}
+                      {!isManual && hasSubheadlineOptions && (
+                        <OptionSelector
+                          label="subtítulo"
+                          options={art.subheadlineOptions!}
+                          currentValue={art.subheadline}
+                          onSelect={(val) => updateArtText(i, "subheadline", val)}
+                        />
                       )}
                     </div>
                   </div>
