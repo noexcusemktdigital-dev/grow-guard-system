@@ -75,8 +75,8 @@ Deno.serve(async (req) => {
       invalid_access_token: "Chave de API revogada ou inválida",
       not_allowed_ip: "IP não autorizado na conta Asaas",
     };
-    if (!res.ok && parsed?.errors?.length > 0) {
-      errorCode = parsed.errors[0]?.code || null;
+    if (!res.ok && (parsed?.errors?.length ?? 0) > 0) {
+      errorCode = parsed!.errors![0]?.code || null;
       errorHint = errorCode ? (ERROR_MAP[errorCode] || null) : null;
     }
 

@@ -630,7 +630,8 @@ function valueToCreditAmount(value: number): number {
   return Math.round(value * 100);
 }
 
-async function getOrCreateWallet(adminClient: ReturnType<typeof createClient>, orgId: string) {
+// deno-lint-ignore no-explicit-any
+async function getOrCreateWallet(adminClient: any, orgId: string) {
   let { data: wallet } = await adminClient
     .from("credit_wallets")
     .select("id, balance")
@@ -650,8 +651,9 @@ async function getOrCreateWallet(adminClient: ReturnType<typeof createClient>, o
 }
 
 /** Notify all members of an organization */
+// deno-lint-ignore no-explicit-any
 async function notifyOrgMembers(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   orgId: string,
   notification: { title: string; message: string; type: string }
 ) {
@@ -674,8 +676,9 @@ async function notifyOrgMembers(
 }
 
 /** Update payment status based on externalReference routing */
+// deno-lint-ignore no-explicit-any
 async function updatePaymentStatus(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   externalRef: string,
   refParts: string[],
   asaasPaymentId: string,

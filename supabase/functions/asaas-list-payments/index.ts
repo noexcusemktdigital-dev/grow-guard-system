@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
         invoiceUrl: p.invoiceUrl, bankSlipUrl: p.bankSlipUrl,
         pixQrCode: p.pixQrCodeUrl,
         externalReference: p.externalReference || null,
-        orgName: customerNameMap[p.customer] || "",
+        orgName: customerNameMap[p.customer as string] || "",
         orgId: null, customerAsaasId: p.customer,
       }));
 
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       })
     );
 
-    allPayments.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""));
+    allPayments.sort((a, b) => ((b.dueDate as string) || "").localeCompare((a.dueDate as string) || ""));
 
     return new Response(JSON.stringify({ payments: allPayments }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

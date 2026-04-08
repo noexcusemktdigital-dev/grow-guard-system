@@ -664,7 +664,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
                 type: "note",
                 title: `IA agendou reunião: ${meetingTitle}`,
                 description: `${startAt} — ${assigneeName || "sem responsável definido"}. Agente: ${agent.name}`,
-              }).then(() => {}).catch(() => {}) as unknown as Promise<void>;
+              });
             }
           }
         }
