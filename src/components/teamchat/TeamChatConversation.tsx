@@ -191,7 +191,7 @@ export function TeamChatConversation({
       return (
         <div>
           <img src={msg.file_url} alt={msg.file_name || "Imagem"} className="max-w-[280px] max-h-[200px] rounded-md object-cover cursor-pointer" loading="lazy" />
-          {msg.content && <p className="mt-1 text-sm">{msg.content}</p>}
+          {msg.content && <p className="mt-1 text-sm">{renderWithMentions(msg.content)}</p>}
         </div>
       );
     }
