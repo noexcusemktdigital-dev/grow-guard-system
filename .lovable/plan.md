@@ -1,57 +1,48 @@
 
 
-# Conexão Automática do Google Agenda — Plano
+# Corrigir redirect_uri_mismatch — Google Calendar OAuth
 
-## Situação Atual
-- O fluxo atual exige que cada cliente crie seu próprio projeto no Google Cloud Console, gere Client ID/Secret e cole no wizard de 8 passos
-- Isso é inviável para clientes finais
+## Problema
+O frontend envia `redirect_uri = window.location.origin + pathname` (ex: `https://grow-guard-system.lovable.app/cliente/agenda`). Essa URL precisa estar cadastrada no Google Cloud Console, mas muda conforme a página e o domínio (preview vs published).
 
-## O Que Muda
-Um único par de credenciais OAuth (da plataforma) será usado para todos os clientes. O cliente clica em **"Conectar Google Agenda"** → é redirecionado ao Google → autoriza → volta conectado. Zero configuração manual.
+## Solução
+Usar a **edge function como callback fixo**. O Google redireciona para a edge function (GET), ela troca o code por tokens e depois redireciona o usuário de volta para o frontend.
 
-## Pré-requisito: Adicionar Secrets
-Os secrets `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` (para Calendar) **ainda não existem** no projeto. Vou solicitar que você os adicione antes de implementar.
+```text
+Frontend → Google OAuth (redirect_uri = edge function URL)
+Google → Edge Function GET ?code=...&state=...
+Edge Function troca code → salva tokens → redireciona para frontend
+```
 
 ## Alterações
 
 ### 1. Edge Function `google-calendar-oauth`
-- **`get_auth_url`**: em vez de ler `client_id` do banco, lê do secret `GOOGLE_CLIENT_ID`
-- **`exchange_code`**: em vez de ler `client_id`/`client_secret` do banco, lê dos secrets `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`
-- **Remover** a action `save_credentials` (não é mais necessária)
-- O `redirect_uri` será fixo: `{origin}/cliente/agenda` (ou a URL da página)
-- Ao criar o registro em `google_calendar_tokens`, não salva mais `client_id`/`client_secret` (campos ficam vazios ou são removidos)
+- A `redirect_uri` será **fixa**: `{SUPABASE_URL}/functions/v1/google-calendar-oauth`
+- No `get_auth_url`: o `state` carregará `userId + origin` (base64) para saber para onde redirecionar depois
+- Adicionar handler **GET** que:
+  1. Recebe `?code=...&state=...`
+  2. Troca o code por tokens (usando a mesma redirect_uri fixa)
+  3. Salva tokens no banco
+  4. Redireciona (302) o usuário para `{origin}/cliente/agenda?google_connected=true`
 
-### 2. Hook `useGoogleCalendar.ts`
-- **Remover** `useGoogleCalendarSaveCredentials` (não é mais necessário)
-- **`useGoogleCalendarConnect`**: chama `get_auth_url` diretamente sem precisar salvar credenciais antes
+### 2. Frontend (`GoogleConnectButton.tsx`)
+- Não enviar mais `redirect_uri` — a edge function usa a fixa
+- O hook `useGoogleCalendarConnect` passa apenas `action: "get_auth_url"` + `origin` (para o redirect de volta)
 
-### 3. Componente `GoogleSetupWizard.tsx`
-- **Substituir** o wizard de 8 passos por um simples dialog de confirmação ou eliminá-lo completamente
-- O botão "Conectar Google Agenda" chama diretamente `get_auth_url` → redireciona ao Google
+### 3. Hook (`useGoogleCalendar.ts`)
+- `useGoogleCalendarConnect`: enviar `origin` em vez de `redirect_uri`
+- Remover `redirect_uri` do `exchange_code` (não é mais chamado pelo frontend — a edge function faz tudo no callback GET)
+- Manter `useGoogleCalendarExchangeCode` mas simplificado (ou remover, já que o GET handler faz a troca)
 
-### 4. Páginas `ClienteAgenda.tsx` e `Agenda.tsx`
-- Atualizar o botão "Conectar Google Agenda" para chamar diretamente a conexão (sem abrir wizard)
-- Manter o fluxo de callback (`?code=...`) como está
+### 4. Páginas (`ClienteAgenda.tsx`, `Agenda.tsx`)
+- Em vez de detectar `?code=` e chamar `exchange_code`, detectar `?google_connected=true` e mostrar toast de sucesso + invalidar query
 
-### 5. Tabela `google_calendar_tokens`
-- Colunas `client_id` e `client_secret` podem ser mantidas (compatibilidade) mas não serão mais populadas para novos usuários
+### 5. Google Cloud Console (ação do usuário)
+- Cadastrar **uma única** URI autorizada: `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/google-calendar-oauth`
 
-## Fluxo Final do Cliente
+## Configuração necessária no `config.toml`
+- A edge function precisa de `verify_jwt = false` para aceitar o GET do Google (sem Authorization header)
 
-```text
-Clica "Conectar Google Agenda"
-  → Edge function gera URL OAuth com CLIENT_ID da plataforma
-  → Google mostra tela de consentimento
-  → Usuário autoriza
-  → Redireciona de volta com ?code=...
-  → Edge function troca code por tokens usando CLIENT_ID + CLIENT_SECRET da plataforma
-  → Salva tokens no banco
-  → Agenda sincronizada ✓
-```
-
-## Ordem de Execução
-1. Adicionar secrets `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`
-2. Atualizar edge function
-3. Simplificar hook e componentes
-4. Testar fluxo completo
+## Resumo
+Uma única URI fixa resolve o mismatch para qualquer domínio (preview, published, custom domain). O fluxo fica mais robusto e o usuário só precisa cadastrar uma URL no Google Cloud Console.
 
