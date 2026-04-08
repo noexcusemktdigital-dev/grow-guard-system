@@ -17,9 +17,13 @@ serve(async (req) => {
       const code = url.searchParams.get("code");
       const stateRaw = url.searchParams.get("state");
       const error = url.searchParams.get("error");
+      const stateForError = url.searchParams.get("state");
+      const errorBase = (() => {
+        try { return JSON.parse(atob(stateForError || "")).origin || "https://sistema.noexcusedigital.com.br"; } catch { return "https://sistema.noexcusedigital.com.br"; }
+      })();
 
       if (error) {
-        const redirectUrl = `https://grow-guard-system.lovable.app/cliente/trafego-pago?ads_error=${encodeURIComponent(error)}`;
+        const redirectUrl = `${errorBase}/cliente/trafego-pago?ads_error=${encodeURIComponent(error)}`;
         return new Response(null, { status: 302, headers: { Location: redirectUrl } });
       }
 
@@ -287,7 +291,7 @@ serve(async (req) => {
       console.error("ads-oauth-callback GET error:", err);
       return new Response(null, {
         status: 302,
-        headers: { Location: "https://grow-guard-system.lovable.app/cliente/trafego-pago?ads_error=unknown" },
+        headers: { Location: "https://sistema.noexcusedigital.com.br/cliente/trafego-pago?ads_error=unknown" },
       });
     }
   }

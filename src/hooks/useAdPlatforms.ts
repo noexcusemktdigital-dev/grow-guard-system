@@ -204,6 +204,7 @@ export async function getOAuthUrl(platform: "google_ads" | "meta_ads", organizat
   if (platform === "google_ads") {
     return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.google_client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent("https://www.googleapis.com/auth/adwords")}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
   } else {
-    return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${config.meta_app_id}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=ads_read&response_type=code&state=${encodeURIComponent(state)}`;
+    const metaScopes = "ads_read,ads_management,leads_retrieval,pages_read_engagement";
+    return `https://www.facebook.com/v19.0/dialog/oauth?client_id=${config.meta_app_id}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(metaScopes)}&response_type=code&state=${encodeURIComponent(state)}`;
   }
 }

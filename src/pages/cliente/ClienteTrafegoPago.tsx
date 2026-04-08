@@ -1,11 +1,13 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   DollarSign, Sparkles, Target,
   Loader2, History, Folder,
-  ArrowLeft, ArrowRight, ChevronRight,
+  ArrowLeft, ArrowRight, ChevronRight, BarChart2,
 } from "lucide-react";
+import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
+import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
+import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +70,14 @@ export default function ClienteTrafegoPago() {
       setPendingRedirect(false);
     }
   }, [pendingRedirect, campaigns]);
+
+  // Auto-switch to "anuncios" tab when returning from OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("ads_connected") || params.get("ads_pick_account") || params.get("ads_error")) {
+      setActiveTab("anuncios");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [wizardData, setWizardData] = useState<TrafficWizardData>({
     objetivo: "",
@@ -201,6 +211,7 @@ export default function ClienteTrafegoPago() {
         <TabsList>
           <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
           <TabsTrigger value="campanhas" className="text-xs gap-1.5"><Folder className="w-3.5 h-3.5" /> Campanhas</TabsTrigger>
+          <TabsTrigger value="anuncios" className="text-xs gap-1.5"><BarChart2 className="w-3.5 h-3.5" /> Anúncios</TabsTrigger>
           <TabsTrigger value="historico" className="text-xs gap-1.5"><History className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
@@ -511,6 +522,13 @@ export default function ClienteTrafegoPago() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* ═══ ANÚNCIOS (META ADS + GOOGLE ADS) ═══ */}
+        <TabsContent value="anuncios" className="space-y-6 mt-4">
+          <AdConnectionCards />
+          <AdMetricsDashboard period={30} />
+          <AdAIAnalysis />
         </TabsContent>
 
         {/* ═══ HISTÓRICO ═══ */}
