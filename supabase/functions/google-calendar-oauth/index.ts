@@ -24,51 +24,41 @@ async function getAuthUser(req: Request, supabaseUrl: string) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
-  try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
-    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
+  const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  const FIXED_REDIRECT_URI = `${SUPABASE_URL}/functions/v1/google-calendar-oauth`;
 
-    const { action, code, redirect_uri, portal } = await req.json();
+  // ── GET handler: Google OAuth callback ──
+  if (req.method === "GET") {
+    try {
+      const url = new URL(req.url);
+      const code = url.searchParams.get("code");
+      const stateRaw = url.searchParams.get("state");
+      const errorParam = url.searchParams.get("error");
 
-    // ── Generate OAuth URL (uses platform credentials) ──
-    if (action === "get_auth_url") {
-      if (!GOOGLE_CLIENT_ID) {
-        return jsonRes(req, { error: "Credenciais do Google Calendar não configuradas na plataforma." }, 500);
+      if (errorParam) {
+        const fallback = "https://sistema.noexcusedigital.com.br/cliente/agenda";
+        return Response.redirect(`${fallback}?google_error=${encodeURIComponent(errorParam)}`, 302);
       }
 
-      const userId = await getAuthUser(req, SUPABASE_URL);
-      if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
+      if (!code || !stateRaw) {
+        return new Response("Missing code or state", { status: 400 });
+      }
 
-      const callbackUri = redirect_uri || `${SUPABASE_URL}/functions/v1/google-calendar-oauth`;
-      const params = new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        redirect_uri: callbackUri,
-        response_type: "code",
-        scope: "https://www.googleapis.com/auth/calendar",
-        access_type: "offline",
-        prompt: "consent",
-      });
+      // Decode state: { userId, origin, path, portal }
+      let state: { userId: string; origin: string; path?: string; portal?: string };
+      try {
+        state = JSON.parse(atob(stateRaw));
+      } catch {
+        return new Response("Invalid state parameter", { status: 400 });
+      }
 
-      return jsonRes(req, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
-    }
-
-    // ── Exchange code for tokens (uses platform credentials) ──
-    if (action === "exchange_code") {
       if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-        return jsonRes(req, { error: "Credenciais do Google Calendar não configuradas na plataforma." }, 500);
+        return Response.redirect(`${state.origin}${state.path || "/cliente/agenda"}?google_error=missing_credentials`, 302);
       }
 
-      const userId = await getAuthUser(req, SUPABASE_URL);
-      if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
-
-      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      
-      // Get org_id for the user
-      const portalCtx = portal || "saas";
-      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portalCtx });
-      if (!orgId) return jsonRes(req, { error: "Organização não encontrada" }, 400);
-
+      // Exchange code for tokens
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -76,7 +66,7 @@ serve(async (req) => {
           code,
           client_id: GOOGLE_CLIENT_ID,
           client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri: redirect_uri || `${SUPABASE_URL}/functions/v1/google-calendar-oauth`,
+          redirect_uri: FIXED_REDIRECT_URI,
           grant_type: "authorization_code",
         }),
       });
@@ -84,19 +74,29 @@ serve(async (req) => {
       if (!tokenRes.ok) {
         const errText = await tokenRes.text();
         console.error("Google token exchange error:", errText);
-        return jsonRes(req, { error: "Falha ao trocar código por token" }, 400);
+        return Response.redirect(`${state.origin}${state.path || "/cliente/agenda"}?google_error=token_exchange_failed`, 302);
       }
 
       const tokenData = await tokenRes.json();
       const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
 
-      // Upsert token record (no client_id/client_secret stored)
+      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+      // Get org_id for the user
+      const portalCtx = state.portal || "saas";
+      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: state.userId, _portal: portalCtx });
+
+      if (!orgId) {
+        return Response.redirect(`${state.origin}${state.path || "/cliente/agenda"}?google_error=org_not_found`, 302);
+      }
+
+      // Upsert token record
       const { error: upsertErr } = await serviceClient
         .from("google_calendar_tokens")
         .upsert(
           {
             organization_id: orgId,
-            user_id: userId,
+            user_id: state.userId,
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token || "",
             expires_at: expiresAt,
@@ -107,11 +107,10 @@ serve(async (req) => {
         );
 
       if (upsertErr) {
-        // Fallback: delete and insert
-        await serviceClient.from("google_calendar_tokens").delete().eq("user_id", userId);
+        await serviceClient.from("google_calendar_tokens").delete().eq("user_id", state.userId);
         await serviceClient.from("google_calendar_tokens").insert({
           organization_id: orgId,
-          user_id: userId,
+          user_id: state.userId,
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token || "",
           expires_at: expiresAt,
@@ -119,7 +118,51 @@ serve(async (req) => {
         });
       }
 
-      return jsonRes(req, { success: true });
+      // Redirect back to frontend
+      const redirectPath = state.path || "/cliente/agenda";
+      return Response.redirect(`${state.origin}${redirectPath}?google_connected=true`, 302);
+    } catch (e) {
+      console.error("google-calendar-oauth GET error:", e);
+      return new Response("Internal error", { status: 500 });
+    }
+  }
+
+  // ── POST handlers ──
+  try {
+    const { action, portal } = await req.json();
+
+    // ── Generate OAuth URL ──
+    if (action === "get_auth_url") {
+      if (!GOOGLE_CLIENT_ID) {
+        return jsonRes(req, { error: "Credenciais do Google Calendar não configuradas na plataforma." }, 500);
+      }
+
+      const userId = await getAuthUser(req, SUPABASE_URL);
+      if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
+
+      // Get origin and path from request headers
+      const origin = req.headers.get("Origin") || req.headers.get("Referer")?.replace(/\/[^/]*$/, "") || "";
+      const referer = req.headers.get("Referer") || "";
+      let path = "/cliente/agenda";
+      try {
+        const refUrl = new URL(referer);
+        path = refUrl.pathname;
+      } catch { /* keep default */ }
+
+      // Encode state with userId + origin + path
+      const statePayload = btoa(JSON.stringify({ userId, origin, path, portal: portal || "saas" }));
+
+      const params = new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        redirect_uri: FIXED_REDIRECT_URI,
+        response_type: "code",
+        scope: "https://www.googleapis.com/auth/calendar",
+        access_type: "offline",
+        prompt: "consent",
+        state: statePayload,
+      });
+
+      return jsonRes(req, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
     }
 
     // ── Disconnect ──

@@ -15,8 +15,7 @@ export default function GoogleConnectButton({ disabled }: GoogleConnectButtonPro
   async function handleConnect() {
     setConnecting(true);
     try {
-      const redirectUri = `${window.location.origin}${window.location.pathname}`;
-      const url = await connectGoogle.mutateAsync(redirectUri);
+      const url = await connectGoogle.mutateAsync();
       window.location.href = url;
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Erro ao conectar Google Agenda");

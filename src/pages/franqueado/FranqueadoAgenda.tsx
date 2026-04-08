@@ -22,7 +22,6 @@ import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/ho
 import {
   useGoogleCalendarConnection,
   useGoogleCalendarConnect,
-  useGoogleCalendarExchangeCode,
   useGoogleCalendarDisconnect,
   useGoogleCalendarSync,
 } from "@/hooks/useGoogleCalendar";
@@ -184,20 +183,20 @@ export default function FranqueadoAgenda() {
   // Google Calendar
   const { data: googleConnection, isLoading: loadingConnection } = useGoogleCalendarConnection();
   const connectGoogle = useGoogleCalendarConnect();
-  const exchangeCode = useGoogleCalendarExchangeCode();
   const disconnectGoogle = useGoogleCalendarDisconnect();
   const syncGoogle = useGoogleCalendarSync();
   const [syncing, setSyncing] = useState(false);
   const isGoogleConnected = googleConnection && !!((googleConnection as Record<string, unknown>).access_token);
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    if (code) {
-      const redirectUri = `${window.location.origin}/franqueado/agenda`;
-      exchangeCode.mutate({ code, redirectUri }, {
-        onSuccess: () => { setSearchParams({}); handleGooglePull(); },
-        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Erro ao conectar Google"),
-      });
+    if (searchParams.get("google_connected") === "true") {
+      toast.success("Google Agenda conectado com sucesso!");
+      setSearchParams({});
+      handleGooglePull();
+    }
+    if (searchParams.get("google_error")) {
+      toast.error("Erro ao conectar Google Agenda: " + searchParams.get("google_error"));
+      setSearchParams({});
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
