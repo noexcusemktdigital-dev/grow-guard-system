@@ -182,9 +182,9 @@ export default function FranqueadoAgenda() {
 
   // Google Calendar
   const { data: googleConnection, isLoading: loadingConnection } = useGoogleCalendarConnection();
-  const connectGoogle = useGoogleCalendarConnect();
+  const connectGoogle = useGoogleCalendarConnect("franchise");
   const disconnectGoogle = useGoogleCalendarDisconnect();
-  const syncGoogle = useGoogleCalendarSync();
+  const syncGoogle = useGoogleCalendarSync("franchise");
   const [syncing, setSyncing] = useState(false);
   const isGoogleConnected = googleConnection && !!((googleConnection as Record<string, unknown>).access_token);
 
@@ -337,7 +337,7 @@ export default function FranqueadoAgenda() {
               </Button>
             </>
           ) : (
-            <GoogleConnectButton disabled={loadingConnection} />
+            <GoogleConnectButton disabled={loadingConnection} portal="franchise" />
           )}
           <Button size="sm" onClick={() => openNewEvent()}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
         </div>

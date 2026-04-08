@@ -6,10 +6,11 @@ import { toast } from "sonner";
 
 interface GoogleConnectButtonProps {
   disabled?: boolean;
+  portal?: string;
 }
 
-export default function GoogleConnectButton({ disabled }: GoogleConnectButtonProps) {
-  const connectGoogle = useGoogleCalendarConnect();
+export default function GoogleConnectButton({ disabled, portal }: GoogleConnectButtonProps) {
+  const connectGoogle = useGoogleCalendarConnect(portal);
   const [connecting, setConnecting] = useState(false);
 
   async function handleConnect() {
