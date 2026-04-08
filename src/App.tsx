@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleAccessGuard } from "./components/RoleAccessGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -111,6 +112,17 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * AdminOnlyRoute — redireciona cliente_user para /cliente/inicio antes de montar o componente.
+ * Defesa em profundidade: o FeatureGateOverlay bloqueia visualmente, mas o componente ainda
+ * era montado e as queries eram executadas. Este wrapper impede a montagem completa.
+ */
+function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { role } = useAuth();
+  if (role === "cliente_user") return <Navigate to="/cliente/inicio" replace />;
+  return <>{children}</>;
+}
 
 function PageLoader() {
   return (
@@ -233,15 +245,15 @@ function App() {
                   <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
                   <Route path="agentes-ia" element={<PageBoundary><ClienteAgentesIA /></PageBoundary>} />
                   <Route path="scripts" element={<PageBoundary><ClienteScripts /></PageBoundary>} />
-                  <Route path="disparos" element={<PageBoundary><ClienteDisparos /></PageBoundary>} />
-                  <Route path="dashboard" element={<PageBoundary><ClienteDashboard /></PageBoundary>} />
+                  <Route path="disparos" element={<AdminOnlyRoute><PageBoundary><ClienteDisparos /></PageBoundary></AdminOnlyRoute>} />
+                  <Route path="dashboard" element={<AdminOnlyRoute><PageBoundary><ClienteDashboard /></PageBoundary></AdminOnlyRoute>} />
                   <Route path="plano-marketing" element={<Navigate to="/cliente/gps-negocio" replace />} />
                   <Route path="conteudos" element={<PageBoundary><ClienteConteudos /></PageBoundary>} />
                   <Route path="redes-sociais" element={<PageBoundary><ClienteRedesSociais /></PageBoundary>} />
                   <Route path="sites" element={<PageBoundary><ClienteSites /></PageBoundary>} />
-                  <Route path="trafego-pago" element={<PageBoundary><ClienteTrafegoPago /></PageBoundary>} />
-                  <Route path="integracoes" element={<PageBoundary><ClienteIntegracoes /></PageBoundary>} />
-                  <Route path="plano-creditos" element={<PageBoundary><ClientePlanoCreditos /></PageBoundary>} />
+                  <Route path="trafego-pago" element={<AdminOnlyRoute><PageBoundary><ClienteTrafegoPago /></PageBoundary></AdminOnlyRoute>} />
+                  <Route path="integracoes" element={<AdminOnlyRoute><PageBoundary><ClienteIntegracoes /></PageBoundary></AdminOnlyRoute>} />
+                  <Route path="plano-creditos" element={<AdminOnlyRoute><PageBoundary><ClientePlanoCreditos /></PageBoundary></AdminOnlyRoute>} />
                   <Route path="configuracoes" element={<ClienteConfiguracoes />} />
                   <Route path="avaliacoes" element={<ClienteAvaliacoes />} />
                   <Route path="suporte" element={<ClienteSuporte />} />
