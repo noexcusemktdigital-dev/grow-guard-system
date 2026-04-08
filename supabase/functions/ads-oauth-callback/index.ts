@@ -40,7 +40,18 @@ serve(async (req) => {
 
       const { platform, organization_id, origin } = state;
       const redirectUri = `${supabaseUrl}/functions/v1/ads-oauth-callback`;
-      const appRedirectBase = origin || "https://grow-guard-system.lovable.app";
+
+      // SEC-003: Allowlist to prevent open redirect via attacker-controlled state
+      const ALLOWED_ORIGINS = [
+        "https://grow-guard-system.lovable.app",
+        "https://app.noexcuse.com.br",
+        "https://sistema.noexcusedigital.com.br",
+        "http://localhost:5173",
+        "http://localhost:3000",
+      ];
+      const appRedirectBase = ALLOWED_ORIGINS.includes(origin)
+        ? origin
+        : "https://grow-guard-system.lovable.app";
 
       let accessToken: string;
       let refreshToken: string | null = null;
@@ -175,7 +186,7 @@ serve(async (req) => {
             `https://graph.facebook.com/v19.0/me/adaccounts?fields=name,account_id,account_status&access_token=${accessToken}&limit=100`
           );
           const meData = await meRes.json();
-          console.log("Meta personal ad accounts:", JSON.stringify(meData).substring(0, 500));
+          console.log(`[Meta] Found ${meData.data?.length ?? 0} personal ad accounts`);
           if (meData.data?.length > 0) {
             for (const acc of meData.data) {
               if (!seenIds.has(acc.account_id)) {
@@ -194,7 +205,7 @@ serve(async (req) => {
             `https://graph.facebook.com/v19.0/me/businesses?fields=id,name&access_token=${accessToken}&limit=50`
           );
           const bizData = await bizRes.json();
-          console.log("Meta businesses:", JSON.stringify(bizData).substring(0, 500));
+          console.log(`[Meta] Found ${bizData.data?.length ?? 0} business managers`);
           if (bizData.data?.length > 0) {
             for (const biz of bizData.data) {
               try {
@@ -202,7 +213,7 @@ serve(async (req) => {
                   `https://graph.facebook.com/v19.0/${biz.id}/owned_ad_accounts?fields=name,account_id,account_status&access_token=${accessToken}&limit=100`
                 );
                 const bmAccData = await bmAccRes.json();
-                console.log(`BM ${biz.name} (${biz.id}) ad accounts:`, JSON.stringify(bmAccData).substring(0, 500));
+                console.log(`[Meta] BM ${biz.id} has ${bmAccData.data?.length ?? 0} ad accounts`);
                 if (bmAccData.data?.length > 0) {
                   for (const acc of bmAccData.data) {
                     if (!seenIds.has(acc.account_id)) {

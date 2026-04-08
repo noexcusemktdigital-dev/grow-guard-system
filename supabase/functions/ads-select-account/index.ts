@@ -9,7 +9,28 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Authenticate the calling user (SEC-001: prevents cross-org IDOR)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
+    // Use service role for subsequent DB operations
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const { connection_id, account_id, account_name } = await req.json();
@@ -20,16 +41,30 @@ serve(async (req) => {
       });
     }
 
-    // Verify the connection exists and is pending
+    // Verify the connection exists and fetch its organization_id
     const { data: conn, error: connError } = await supabase
       .from("ad_platform_connections")
-      .select("id, status, platform")
+      .select("id, status, platform, organization_id")
       .eq("id", connection_id)
       .single();
 
     if (connError || !conn) {
       return new Response(JSON.stringify({ error: "Connection not found" }), {
         status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify calling user belongs to the connection's organization (IDOR protection)
+    const { data: membership } = await supabase
+      .from("organization_memberships")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("organization_id", conn.organization_id)
+      .single();
+
+    if (!membership) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 

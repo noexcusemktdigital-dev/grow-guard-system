@@ -49,7 +49,7 @@ export function useAdConnections() {
         .from("ad_platform_connections")
         .select("id, organization_id, platform, account_id, account_name, status, last_synced_at, created_at")
         .eq("organization_id", orgId!)
-        .not("status", "eq", "disconnected");
+        .in("status", ["active", "expired"]);
       if (error) throw error;
       return (data || []) as AdConnection[];
     },

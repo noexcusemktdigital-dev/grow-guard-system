@@ -311,8 +311,9 @@ serve(async (req) => {
       });
     }
 
-    if (connection.status !== "active") {
-      return new Response(JSON.stringify({ error: "Connection is not active", status: connection.status }), {
+    // BUG-001: reject pending connections and fake __pending__ account_id
+    if (!["active", "expired"].includes(connection.status) || connection.account_id === "__pending__") {
+      return new Response(JSON.stringify({ error: "Connection is not ready for sync", status: connection.status }), {
         status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
@@ -321,6 +322,16 @@ serve(async (req) => {
     if (connection.platform === "google_ads") {
       metrics = await syncGoogleAds(connection, supabase);
     } else if (connection.platform === "meta_ads") {
+      // BUG-001: Check Meta token expiration (mirrors Google Ads logic)
+      if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
+        await supabase.from("ad_platform_connections")
+          .update({ status: "expired" })
+          .eq("id", connection.id);
+        console.log(`[Meta] Token expired for connection ${connection.id}, marked expired`);
+        return new Response(JSON.stringify({ error: "Meta token expired", status: "expired" }), {
+          status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
       metrics = await syncMetaAds(connection, supabase);
     } else {
       return new Response(JSON.stringify({ error: "Unknown platform" }), {
