@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BENEFITS = [
   "CRM completo para nunca perder uma venda",
