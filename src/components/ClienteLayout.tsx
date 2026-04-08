@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Outlet, useLocation, Navigate } from "react-router-dom";
+import { Outlet, useLocation, Navigate, Link } from "react-router-dom";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { ClienteSidebar, ClienteSidebarContent } from "./ClienteSidebar";
 import { FeatureGateProvider } from "@/contexts/FeatureGateContext";
@@ -71,6 +71,13 @@ export function ClienteLayout() {
           >
             {tourDone && !isChatRoute && <ActionAlertsBanner />}
             <Outlet />
+            {!isChatRoute && (
+              <footer className="mt-auto pt-6 pb-2 flex items-center justify-center gap-3 text-[11px] text-muted-foreground/40 shrink-0">
+                <Link to="/privacidade" className="hover:text-muted-foreground transition-colors">Política de Privacidade</Link>
+                <span>•</span>
+                <Link to="/termos" className="hover:text-muted-foreground transition-colors">Termos de Uso</Link>
+              </footer>
+            )}
           </div>
           <FeatureGateOverlay />
         </main>
