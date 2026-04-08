@@ -29,7 +29,7 @@ function getLoginPath(pathname: string): string {
  */
 function detectPortalMismatch(): boolean {
   const path = window.location.pathname;
-  const isSaasRoute = path.startsWith("/cliente") || path.startsWith("/app");
+  const isSaasRoute = path.startsWith("/cliente") || path === "/";
   const isFranchiseRoute = path.startsWith("/franqueadora") || path.startsWith("/franqueado") || path.startsWith("/acessofranquia");
 
   // Only check when we can clearly identify the portal from the route

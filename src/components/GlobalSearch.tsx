@@ -99,8 +99,16 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { canAccessRoute, isReadOnly } = useRoleAccess();
 
-  const { pages, actions } = useMemo(() => getPortalData(location.pathname), [location.pathname]);
+  const { pages, actions } = useMemo(() => {
+    const data = getPortalData(location.pathname);
+    // Filter out routes the current user cannot access
+    return {
+      pages: data.pages.filter((p) => canAccessRoute(p.path)),
+      actions: data.actions.filter((a) => canAccessRoute(a.path)),
+    };
+  }, [location.pathname, canAccessRoute]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

@@ -11,8 +11,7 @@ const ADMIN_ONLY_ROUTES = [
 
 /** Routes that cliente_user can view but not edit */
 const READ_ONLY_ROUTES_FOR_USER = [
-  "/cliente/plano-vendas",
-  "/cliente/plano-marketing",
+  "/cliente/gps-negocio",
 ];
 
 export type RouteAccess = "full" | "read_only" | "blocked";
