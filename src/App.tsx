@@ -144,15 +144,16 @@ function App() {
             <Routes>
               {/* Auth routes */}
               <Route path="/acessofranquia" element={<Auth />} />
-              <Route path="/app" element={<SaasAuth />} />
-              <Route path="/landing" element={<Navigate to="/" replace />} />
+              <Route path="/app" element={<Navigate to="/" replace />} />
+              <Route path="/landing" element={<Navigate to="/crescimento" replace />} />
               <Route path="/termos" element={<TermosDeUso />} />
               <Route path="/privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/apresentacao/:id" element={<PageBoundary><ApresentacaoPage /></PageBoundary>} />
 
-              <Route path="/" element={<SaasLanding />} />
+              <Route path="/" element={<SaasAuth />} />
+              <Route path="/crescimento" element={<SaasLanding />} />
 
               {/* Protected app shell */}
               <Route path="/franqueadora/*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Index /></ProtectedRoute>}>
