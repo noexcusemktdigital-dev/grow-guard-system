@@ -26,75 +26,23 @@ serve(async (req) => {
 
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const { action, code, redirect_uri, client_id, client_secret, portal } = await req.json();
+    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
+    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
 
-    // ── Save credentials (step before OAuth) ──
-    if (action === "save_credentials") {
-      if (!client_id || !client_secret) {
-        return jsonRes(req, { error: "Client ID e Client Secret são obrigatórios" }, 400);
-      }
+    const { action, code, redirect_uri, portal } = await req.json();
 
-      const userId = await getAuthUser(req, SUPABASE_URL);
-      if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
-
-      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const portalCtx = portal || "saas";
-      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portalCtx });
-      if (!orgId) return jsonRes(req, { error: "Organização não encontrada" }, 400);
-
-      const { error: upsertErr } = await serviceClient
-        .from("google_calendar_tokens")
-        .upsert(
-          {
-            organization_id: orgId,
-            user_id: userId,
-            client_id,
-            client_secret,
-            access_token: "",
-            refresh_token: "",
-            expires_at: new Date().toISOString(),
-            google_calendar_id: "primary",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        );
-
-      if (upsertErr) {
-        await serviceClient.from("google_calendar_tokens").delete().eq("user_id", userId);
-        await serviceClient.from("google_calendar_tokens").insert({
-          organization_id: orgId,
-          user_id: userId,
-          client_id,
-          client_secret,
-          access_token: "",
-          refresh_token: "",
-          expires_at: new Date().toISOString(),
-          google_calendar_id: "primary",
-        });
-      }
-
-      return jsonRes(req, { success: true });
-    }
-
-    // ── Generate OAuth URL (reads client_id from DB) ──
+    // ── Generate OAuth URL (uses platform credentials) ──
     if (action === "get_auth_url") {
+      if (!GOOGLE_CLIENT_ID) {
+        return jsonRes(req, { error: "Credenciais do Google Calendar não configuradas na plataforma." }, 500);
+      }
+
       const userId = await getAuthUser(req, SUPABASE_URL);
       if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
-
-      const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: tokenRow } = await serviceClient
-        .from("google_calendar_tokens")
-        .select("client_id")
-        .eq("user_id", userId)
-        .single();
-
-      if (!tokenRow?.client_id) {
-        return jsonRes(req, { error: "Credenciais do Google não configuradas. Salve seu Client ID primeiro." }, 400);
-      }
 
       const callbackUri = redirect_uri || `${SUPABASE_URL}/functions/v1/google-calendar-oauth`;
       const params = new URLSearchParams({
-        client_id: tokenRow.client_id,
+        client_id: GOOGLE_CLIENT_ID,
         redirect_uri: callbackUri,
         response_type: "code",
         scope: "https://www.googleapis.com/auth/calendar",
@@ -105,29 +53,29 @@ serve(async (req) => {
       return jsonRes(req, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
     }
 
-    // ── Exchange code for tokens (reads creds from DB) ──
+    // ── Exchange code for tokens (uses platform credentials) ──
     if (action === "exchange_code") {
+      if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        return jsonRes(req, { error: "Credenciais do Google Calendar não configuradas na plataforma." }, 500);
+      }
+
       const userId = await getAuthUser(req, SUPABASE_URL);
       if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
 
       const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: tokenRow } = await serviceClient
-        .from("google_calendar_tokens")
-        .select("id, client_id, client_secret, organization_id")
-        .eq("user_id", userId)
-        .single();
-
-      if (!tokenRow?.client_id || !tokenRow?.client_secret) {
-        return jsonRes(req, { error: "Credenciais do Google não encontradas" }, 400);
-      }
+      
+      // Get org_id for the user
+      const portalCtx = portal || "saas";
+      const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portalCtx });
+      if (!orgId) return jsonRes(req, { error: "Organização não encontrada" }, 400);
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           code,
-          client_id: tokenRow.client_id,
-          client_secret: tokenRow.client_secret,
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
           redirect_uri: redirect_uri || `${SUPABASE_URL}/functions/v1/google-calendar-oauth`,
           grant_type: "authorization_code",
         }),
@@ -142,12 +90,34 @@ serve(async (req) => {
       const tokenData = await tokenRes.json();
       const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
 
-      await serviceClient.from("google_calendar_tokens").update({
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token || "",
-        expires_at: expiresAt,
-        updated_at: new Date().toISOString(),
-      }).eq("id", tokenRow.id);
+      // Upsert token record (no client_id/client_secret stored)
+      const { error: upsertErr } = await serviceClient
+        .from("google_calendar_tokens")
+        .upsert(
+          {
+            organization_id: orgId,
+            user_id: userId,
+            access_token: tokenData.access_token,
+            refresh_token: tokenData.refresh_token || "",
+            expires_at: expiresAt,
+            google_calendar_id: "primary",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (upsertErr) {
+        // Fallback: delete and insert
+        await serviceClient.from("google_calendar_tokens").delete().eq("user_id", userId);
+        await serviceClient.from("google_calendar_tokens").insert({
+          organization_id: orgId,
+          user_id: userId,
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token || "",
+          expires_at: expiresAt,
+          google_calendar_id: "primary",
+        });
+      }
 
       return jsonRes(req, { success: true });
     }

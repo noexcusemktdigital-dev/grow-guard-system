@@ -16,7 +16,7 @@ import {
   Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Trash2, Edit2,
   RefreshCw, Unlink, CheckCircle2, Building2,
 } from "lucide-react";
-import GoogleSetupWizard from "@/components/agenda/GoogleSetupWizard";
+import GoogleConnectButton from "@/components/agenda/GoogleConnectButton";
 import { useCalendarEvents, useCalendars, useCalendarEventMutations } from "@/hooks/useCalendar";
 import {
   useGoogleCalendarConnection,
@@ -24,7 +24,6 @@ import {
   useGoogleCalendarExchangeCode,
   useGoogleCalendarDisconnect,
   useGoogleCalendarSync,
-  useGoogleCalendarSaveCredentials,
 } from "@/hooks/useGoogleCalendar";
 import { useUnits } from "@/hooks/useUnits";
 import {
@@ -184,9 +183,7 @@ export default function Agenda() {
   const disconnectGoogle = useGoogleCalendarDisconnect();
   const syncGoogle = useGoogleCalendarSync();
   const [syncing, setSyncing] = useState(false);
-  const [wizardOpen, setWizardOpen] = useState(false);
-
-  const isGoogleConnected = googleConnection && !!((googleConnection as Record<string, unknown>).access_token) && !((googleConnection as Record<string, unknown>).pending_oauth);
+  const isGoogleConnected = googleConnection && !!((googleConnection as Record<string, unknown>).access_token);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -349,9 +346,7 @@ export default function Agenda() {
               </Button>
             </>
           ) : (
-            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setWizardOpen(true)} disabled={loadingConnection}>
-              <Calendar className="w-3.5 h-3.5" /> Conectar Google Agenda
-            </Button>
+            <GoogleConnectButton disabled={loadingConnection} />
           )}
           <Button size="sm" onClick={() => openNewEvent()}>
             <Plus className="w-4 h-4 mr-1" /> Novo Evento
@@ -461,8 +456,6 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Google Setup Wizard */}
-      <GoogleSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {/* Event Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
