@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleAccessGuard } from "./components/RoleAccessGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
@@ -218,7 +219,7 @@ function App() {
               <Route path="/cliente/onboarding" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><ClienteOnboardingCompany /></ProtectedRoute>} />
 
               <Route path="/cliente/*" element={<ProtectedRoute allowedRoles={["cliente_admin", "cliente_user"]}><Index /></ProtectedRoute>}>
-                <Route path="*" element={<ErrorBoundary><ClienteLayout /></ErrorBoundary>}>
+                <Route path="*" element={<ErrorBoundary><RoleAccessGuard><ClienteLayout /></RoleAccessGuard></ErrorBoundary>}>
                   <Route index element={<Navigate to="/cliente/inicio" replace />} />
                   <Route path="inicio" element={<ClienteInicio />} />
                   <Route path="checklist" element={<ClienteChecklist />} />

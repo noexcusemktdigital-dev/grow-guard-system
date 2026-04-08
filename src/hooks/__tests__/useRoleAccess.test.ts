@@ -83,8 +83,7 @@ describe("useRoleAccess", () => {
     it("returns read_only for non-admin on read-only routes", () => {
       mockAuthValue.role = "cliente_user";
       const { result } = renderHook(() => useRoleAccess());
-      expect(result.current.getRouteAccess("/cliente/plano-vendas")).toBe("read_only");
-      expect(result.current.getRouteAccess("/cliente/plano-marketing")).toBe("read_only");
+      expect(result.current.getRouteAccess("/cliente/gps-negocio")).toBe("read_only");
     });
 
     it("returns full for non-admin on unrestricted routes", () => {
@@ -110,7 +109,7 @@ describe("useRoleAccess", () => {
     it("returns true for non-admin on read-only routes (accessible but read only)", () => {
       mockAuthValue.role = "cliente_user";
       const { result } = renderHook(() => useRoleAccess());
-      expect(result.current.canAccessRoute("/cliente/plano-vendas")).toBe(true);
+      expect(result.current.canAccessRoute("/cliente/gps-negocio")).toBe(true);
     });
   });
 
@@ -164,13 +163,13 @@ describe("useRoleAccess", () => {
     it("returns true for non-admin on read-only routes", () => {
       mockAuthValue.role = "cliente_user";
       const { result } = renderHook(() => useRoleAccess());
-      expect(result.current.isReadOnly("/cliente/plano-vendas")).toBe(true);
+      expect(result.current.isReadOnly("/cliente/gps-negocio")).toBe(true);
     });
 
     it("returns false for admin on read-only routes", () => {
       mockAuthValue.role = "admin";
       const { result } = renderHook(() => useRoleAccess());
-      expect(result.current.isReadOnly("/cliente/plano-vendas")).toBe(false);
+      expect(result.current.isReadOnly("/cliente/gps-negocio")).toBe(false);
     });
 
     it("returns false for non-admin on non-read-only routes", () => {

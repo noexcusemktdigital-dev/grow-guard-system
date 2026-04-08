@@ -30,7 +30,7 @@ export async function validatePortalAccess(
     const message =
       portal === "saas"
         ? "Esta conta pertence ao portal da franquia. Acesse /acessofranquia"
-        : "Esta conta pertence ao portal SaaS. Acesse /app";
+        : "Esta conta pertence ao portal SaaS. Acesse a página inicial";
     return { allowed: false, message, redirect };
   }
 
