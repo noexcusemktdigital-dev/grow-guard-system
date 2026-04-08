@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
+import { useAuth } from "@/contexts/AuthContext";
 
 const BENEFITS = [
   "CRM completo para nunca perder uma venda",
@@ -45,6 +46,14 @@ const SaasAuth = () => {
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get("ref") || "";
   const [referralInfo, setReferralInfo] = useState<{ org_name: string; discount: number } | null>(null);
+  const { user: authUser, loading: authLoading } = useAuth();
+
+  // Redirect if already authenticated (handles Google OAuth callback)
+  useEffect(() => {
+    if (!authLoading && authUser) {
+      navigate("/cliente/inicio", { replace: true });
+    }
+  }, [authUser, authLoading, navigate]);
 
   // Guard: if JS module was loaded from a franchise path (/acessofranquia, /franqueado, /franqueadora),
   // the storageKey is "noe-franchise-auth" but this page needs "noe-saas-auth".
