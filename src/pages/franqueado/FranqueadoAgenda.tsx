@@ -337,7 +337,7 @@ export default function FranqueadoAgenda() {
               </Button>
             </>
           ) : (
-            <GoogleConnectButton disabled={loadingConnection} />
+            <GoogleConnectButton disabled={loadingConnection} portal="franchise" />
           )}
           <Button size="sm" onClick={() => openNewEvent()}><Plus className="w-4 h-4 mr-1" /> Novo Evento</Button>
         </div>
