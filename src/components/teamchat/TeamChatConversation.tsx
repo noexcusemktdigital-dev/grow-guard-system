@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { TeamChatReactions } from "./TeamChatReactions";
 import { TeamChatEmojiPicker } from "./TeamChatEmojiPicker";
+import { TeamChatMentionPicker, renderWithMentions } from "./TeamChatMentionPicker";
 
 interface Props {
   messages: TeamMessage[];
@@ -50,6 +51,13 @@ export function TeamChatConversation({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mention state
+  const [mentionActive, setMentionActive] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStart, setMentionStart] = useState<number>(0);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [mentionPos, setMentionPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,6 +113,37 @@ export function TeamChatConversation({
       onTyping();
       typingTimeoutRef.current = setTimeout(() => {}, 3000);
     }
+
+    // Detect @mention
+    const cursorPos = textareaRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      setMentionActive(true);
+      setMentionQuery(atMatch[1]);
+      setMentionStart(cursorPos - atMatch[0].length);
+      setMentionPos({ top: 8, left: 60 });
+    } else {
+      setMentionActive(false);
+    }
+  };
+
+  const filteredMentionMembers = members.filter((m) =>
+    m.user_id !== currentUserId && m.full_name.toLowerCase().includes(mentionQuery.toLowerCase())
+  ).slice(0, 6);
+
+  const handleMentionSelect = (member: TeamMember) => {
+    const before = text.slice(0, mentionStart);
+    const after = text.slice(textareaRef.current?.selectionStart ?? text.length);
+    const newText = `${before}@[${member.full_name}] ${after}`;
+    setText(newText);
+    setMentionActive(false);
+    setMentionQuery("");
+    setTimeout(() => {
+      const newPos = before.length + `@[${member.full_name}] `.length;
+      textareaRef.current?.setSelectionRange(newPos, newPos);
+      textareaRef.current?.focus();
+    }, 0);
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -152,7 +191,7 @@ export function TeamChatConversation({
       return (
         <div>
           <img src={msg.file_url} alt={msg.file_name || "Imagem"} className="max-w-[280px] max-h-[200px] rounded-md object-cover cursor-pointer" loading="lazy" />
-          {msg.content && <p className="mt-1 text-sm">{msg.content}</p>}
+          {msg.content && <p className="mt-1 text-sm">{renderWithMentions(msg.content)}</p>}
         </div>
       );
     }
@@ -164,7 +203,7 @@ export function TeamChatConversation({
         </a>
       );
     }
-    return msg.content ? <p className="whitespace-pre-wrap break-words">{msg.content}</p> : null;
+    return msg.content ? <p className="whitespace-pre-wrap break-words">{renderWithMentions(msg.content)}</p> : null;
   };
 
   return (
@@ -340,7 +379,16 @@ export function TeamChatConversation({
       )}
 
       {/* Input */}
-      <div className="border-t px-4 py-3">
+      <div className="border-t px-4 py-3 relative">
+        {/* Mention picker */}
+        <TeamChatMentionPicker
+          members={members.filter((m) => m.user_id !== currentUserId)}
+          query={mentionQuery}
+          onSelect={handleMentionSelect}
+          position={mentionPos}
+          visible={mentionActive && filteredMentionMembers.length > 0}
+        />
+
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -384,12 +432,34 @@ export function TeamChatConversation({
             value={text}
             onChange={(e) => handleTextChange(e.target.value)}
             onKeyDown={(e) => {
+              if (mentionActive && filteredMentionMembers.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMentionIndex((i) => Math.min(i + 1, filteredMentionMembers.length - 1));
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMentionIndex((i) => Math.max(i - 1, 0));
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  handleMentionSelect(filteredMentionMembers[mentionIndex]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMentionActive(false);
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
               }
             }}
-            placeholder={pendingFile ? "Adicione uma legenda..." : "Digite sua mensagem..."}
+            placeholder={pendingFile ? "Adicione uma legenda..." : "Digite sua mensagem... Use @ para mencionar"}
             className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[40px] max-h-[120px]"
             rows={1}
             autoFocus
