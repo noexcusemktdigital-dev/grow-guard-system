@@ -1,202 +1,39 @@
 
 
-# Análise Completa: Acessos, Direcionamentos e URLs
+# Correção e Melhoria: Automações e API do CRM
 
-## Arquitetura de Portais
+## Problema Principal
+A edge function `crm-run-automations` tenta inserir em `automation_execution_logs`, mas essa tabela **não existe**. Os logs de execução (sucesso, erro, skip) são perdidos silenciosamente. As automações executam, mas sem rastreabilidade.
 
-O sistema opera com **2 portais independentes**, cada um com sua própria sessão de autenticação (storageKey separada no localStorage):
+## Plano
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    PORTAL SaaS (Clientes)                   │
-│  storageKey: "noe-saas-auth"                                │
-│  Login: /                                                   │
-│  Landing: /crescimento                                      │
-│  Roles: cliente_admin, cliente_user                         │
-│  Rotas: /cliente/*                                          │
-├─────────────────────────────────────────────────────────────┤
-│                 PORTAL Franquia (Rede)                       │
-│  storageKey: "noe-franchise-auth"                           │
-│  Login: /acessofranquia                                     │
-│  Roles: super_admin, admin, franqueado                      │
-│  Rotas: /franqueadora/*, /franqueado/*                      │
-└─────────────────────────────────────────────────────────────┘
-```
+### 1. Criar tabela `automation_execution_logs`
+Migração SQL para criar a tabela com:
+- `id`, `organization_id`, `automation_id`, `event_id`, `lead_id`
+- `action_type`, `status` (success/error/skipped), `error_message`
+- `metadata` (jsonb), `created_at`
+- RLS policy para membros da organização
+- Índice em `(organization_id, created_at)`
 
----
+### 2. Adicionar aba de "Logs de Execução" no painel de Automações
+Dentro do componente `CrmAutomations.tsx`, adicionar uma seção/tab que lista os últimos logs de execução das automações com:
+- Status (sucesso/erro/skip) com badge colorido
+- Nome da automação, nome do lead, data
+- Filtro por status e automação
+- Permite diagnosticar problemas rapidamente
 
-## Mapa Completo de URLs
+### 3. Gatilhos `lead_stuck` e `no_contact_sla` (verificação)
+Esses dois triggers dependem de um processo periódico que detecte leads parados. Verificar se o cron job faz essa detecção ou se esses gatilhos nunca disparam (as 2 automações com `lead_stuck` têm `execution_count: 0`).
 
-### Rotas Públicas (sem autenticação)
-| URL | Página | Observação |
-|-----|--------|------------|
-| `/` | Login SaaS (SaasAuth) | Página principal |
-| `/crescimento` | Landing Page (SaasLanding) | Página de vendas |
-| `/acessofranquia` | Login Franquia (Auth) | Sem signup |
-| `/termos` | Termos de Uso | Pública |
-| `/privacidade` | Política de Privacidade | Pública |
-| `/reset-password` | Redefinir Senha | Usa `?portal=` param |
-| `/welcome` | Boas-vindas | Usa `?portal=` param |
-| `/apresentacao/:id` | Apresentação comercial | Pública |
-| `/app` | **Redirect → `/`** | Compatibilidade |
-| `/landing` | **Redirect → `/crescimento`** | Compatibilidade |
+### Detalhes Técnicos
+- Tabela: `automation_execution_logs` com FK para `crm_automations`, `crm_automation_queue`, `crm_leads`
+- RLS: `SELECT` para membros autenticados da org via `is_member_of_org`
+- `INSERT` liberado para service_role (edge function usa service key)
+- Componente de logs: query via hook novo `useAutomationLogs`
 
-### Rotas Protegidas — Franqueadora (super_admin, admin)
-| URL | Página |
-|-----|--------|
-| `/franqueadora/inicio` | Dashboard |
-| `/franqueadora/crm` | CRM de Expansão |
-| `/franqueadora/crm/config` | Config CRM Expansão |
-| `/franqueadora/crm-vendas` | CRM de Vendas (clientes) |
-| `/franqueadora/crm-vendas/config` | Config CRM Vendas |
-| `/franqueadora/financeiro` | Financeiro |
-| `/franqueadora/contratos` | Contratos |
-| `/franqueadora/marketing` | Marketing |
-| `/franqueadora/treinamentos` | Academy |
-| `/franqueadora/metas` | Metas & Ranking |
-| `/franqueadora/unidades` | Unidades |
-| `/franqueadora/onboarding` | Onboarding |
-| `/franqueadora/atendimento` | Atendimento |
-| `/franqueadora/comunicados` | Comunicados |
-| `/franqueadora/agenda` | Agenda |
-| `/franqueadora/matriz` | Matriz (Empresa + Equipe + Chat) |
-| `/franqueadora/logs` | SaaS Dashboard / Logs |
-| `/franqueadora/propostas` | Propostas |
-| `/franqueadora/prospeccao` | Prospecção IA |
-| `/franqueadora/estrategia` | Estratégia |
-| `/franqueadora/acompanhamento` | Acompanhamento |
-| `/franqueadora/perfil` | Perfil |
-| `/franqueadora/playbooks` | Playbooks |
-| `/franqueadora/candidatos` | Candidatos |
-| `/franqueadora/chat` | Chat interno |
-| `/franqueadora/notificacoes` | Notificações |
-
-### Rotas Protegidas — Franqueado (franqueado)
-| URL | Página |
-|-----|--------|
-| `/franqueado/inicio` | Dashboard |
-| `/franqueado/agenda` | Agenda |
-| `/franqueado/comunicados` | Comunicados |
-| `/franqueado/suporte` | Suporte |
-| `/franqueado/prospeccao` | Prospecção IA |
-| `/franqueado/estrategia` | Estratégia |
-| `/franqueado/propostas` | Propostas |
-| `/franqueado/acompanhamento` | Acompanhamento |
-| `/franqueado/crm` | CRM |
-| `/franqueado/crm/config` | Config CRM |
-| `/franqueado/materiais` | Materiais |
-| `/franqueado/academy` | Academy |
-| `/franqueado/financeiro` | Financeiro |
-| `/franqueado/contratos` | Contratos |
-| `/franqueado/diagnostico` | Diagnóstico |
-| `/franqueado/unidade` | Minha Unidade |
-| `/franqueado/metas` | Metas & Ranking |
-| `/franqueado/perfil` | Perfil |
-| `/franqueado/configuracoes` | Configurações |
-| `/franqueado/notificacoes` | Notificações |
-
-### Rotas Protegidas — Cliente SaaS (cliente_admin, cliente_user)
-| URL | Página | Restrição cliente_user |
-|-----|--------|------------------------|
-| `/cliente/onboarding` | Onboarding (tela cheia) | — |
-| `/cliente/inicio` | Dashboard | — |
-| `/cliente/checklist` | Tarefas | — |
-| `/cliente/agenda` | Agenda + Google Calendar | — |
-| `/cliente/notificacoes` | Notificações | — |
-| `/cliente/gamificacao` | Gamificação | — |
-| `/cliente/plano-vendas` | **Redirect → gps-negocio** | — |
-| `/cliente/gps-negocio` | GPS do Negócio | — |
-| `/cliente/chat` | WhatsApp | — |
-| `/cliente/crm` | CRM de Vendas | — |
-| `/cliente/crm/config` | Config CRM | — |
-| `/cliente/agentes-ia` | Agentes IA | — |
-| `/cliente/scripts` | Scripts | — |
-| `/cliente/disparos` | Disparos | **BLOQUEADO** |
-| `/cliente/dashboard` | Relatórios | **BLOQUEADO** |
-| `/cliente/plano-marketing` | **Redirect → gps-negocio** | — |
-| `/cliente/conteudos` | Conteúdos | — |
-| `/cliente/redes-sociais` | Redes Sociais | — |
-| `/cliente/sites` | Sites | — |
-| `/cliente/trafego-pago` | Tráfego Pago | **BLOQUEADO** |
-| `/cliente/integracoes` | Integrações | **BLOQUEADO** |
-| `/cliente/plano-creditos` | Plano & Créditos | **BLOQUEADO** |
-| `/cliente/configuracoes` | Configurações | — |
-| `/cliente/avaliacoes` | Avaliações | — |
-| `/cliente/suporte` | Suporte | — |
-| `/cliente/marketing-hub` | Marketing Hub | — |
-| `/cliente/comunicados` | Comunicados | — |
-| `/cliente/faq` | FAQ | — |
-
----
-
-## Fluxo de Redirecionamento Pós-Login
-
-```text
-Login SaaS (/)
-  → validatePortalAccess("saas")
-    → Bloqueado? → signOut + redireciona /acessofranquia
-    → Permitido? → navigate("/cliente/inicio")
-
-Login Franquia (/acessofranquia)
-  → validatePortalAccess("franchise")
-    → Bloqueado? → signOut + redireciona /
-    → Permitido?
-      → super_admin/admin → navigate("/franqueadora/inicio")
-      → franqueado → navigate("/franqueado/inicio")
-```
-
-### Redirecionamento por Role (ProtectedRoute)
-Quando um usuário tenta acessar rota não permitida:
-- `super_admin` / `admin` → `/franqueadora/inicio`
-- `franqueado` → `/franqueado/inicio`
-- `cliente_admin` / `cliente_user` → `/cliente/inicio`
-- Sem role → `/acessofranquia`
-
-### Redirecionamento de Logout
-- `cliente_admin` / `cliente_user` → `/`
-- Demais roles → `/acessofranquia`
-
----
-
-## Problemas Identificados
-
-### 1. Mensagem desatualizada no portalRoleGuard
-**Arquivo:** `src/lib/portalRoleGuard.ts` (linha 33)
-**Problema:** A mensagem diz "Acesse /app" mas `/app` agora é redirect para `/`.
-**Correção:** Trocar para "Acesse /" ou "Acesse a página inicial".
-
-### 2. `/app` referência obsoleta no detectPortalMismatch
-**Arquivo:** `src/components/ProtectedRoute.tsx` (linha 32)
-**Problema:** `path.startsWith("/app")` — essa rota é um redirect, nunca chega no ProtectedRoute. Código morto, mas sem impacto funcional.
-**Correção:** Remover `/app` da checagem.
-
-### 3. Restrições de cliente_user não aplicadas via rota
-**Problema:** `useRoleAccess` define rotas bloqueadas para `cliente_user`, mas o `ProtectedRoute` apenas valida role no nível do portal (ex: `["cliente_admin", "cliente_user"]`). A restrição granular de `useRoleAccess` é aplicada manualmente em cada componente — não há guard centralizado.
-**Risco:** Se algum componente esquecer de checar, `cliente_user` acessa tela bloqueada.
-**Sugestão:** Adicionar um `<RoleAccessGuard>` wrapper que lê `useRoleAccess().getRouteAccess(path)` e bloqueia/redireciona automaticamente.
-
-### 4. GlobalSearch lista rotas que cliente_user não pode acessar
-**Problema:** O `GlobalSearch` mostra todas as páginas do portal cliente (Disparos, Dashboard, Tráfego Pago, etc.) sem filtrar por role. Um `cliente_user` vê e pode navegar para rotas bloqueadas.
-**Correção:** Filtrar `clientePages` com base no `useRoleAccess().canAccessRoute()`.
-
-### 5. Rotas read_only desatualizadas no useRoleAccess
-**Problema:** `/cliente/plano-vendas` e `/cliente/plano-marketing` estão na lista de READ_ONLY, mas ambas são redirects para `/cliente/gps-negocio`. Essas entradas são código morto.
-**Correção:** Substituir por `/cliente/gps-negocio` se a intenção é que GPS do Negócio seja read-only para `cliente_user`.
-
-### 6. storageKey para `/` é "noe-saas-auth" — correto
-Validado: `/` (login SaaS) usa `noe-saas-auth`. A lógica em `supabase.ts` trata `path === "/"` como SaaS. Sem problema.
-
----
-
-## Resumo das Correções Necessárias
-
-| # | Arquivo | Correção | Impacto |
-|---|---------|----------|---------|
-| 1 | `portalRoleGuard.ts` | Mensagem "Acesse /app" → "Acesse /" | Texto |
-| 2 | `ProtectedRoute.tsx` | Remover `/app` de detectPortalMismatch | Limpeza |
-| 3 | Novo `RoleAccessGuard` | Guard centralizado para rotas bloqueadas de `cliente_user` | Segurança |
-| 4 | `GlobalSearch.tsx` | Filtrar rotas por role | UX/Segurança |
-| 5 | `useRoleAccess.ts` | Atualizar rotas obsoletas (plano-vendas/marketing → gps-negocio) | Limpeza |
-
-Posso implementar todas essas correções. Deseja prosseguir?
+### Arquivos Modificados
+1. **Migração SQL** -- criar `automation_execution_logs`
+2. **`src/hooks/useAutomationLogs.ts`** -- novo hook para buscar logs
+3. **`src/components/crm/CrmAutomations.tsx`** -- adicionar aba de logs
+4. **`supabase/functions/crm-run-automations/index.ts`** -- adicionar detecção de `lead_stuck` / `no_contact_sla` (se ausente)
 
