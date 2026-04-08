@@ -43,7 +43,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   useEnsureDefaultFunnel();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
-  const { activeLeadCount, maxLeads, atLimit, planName } = useLeadQuota();
+  const { activeLeadCount, maxLeads, atLimit: quotaAtLimit, planName } = useLeadQuota();
+  const atLimit = hideQuota ? false : quotaAtLimit;
 
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
 
