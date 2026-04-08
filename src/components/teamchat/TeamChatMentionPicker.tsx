@@ -88,7 +88,7 @@ export function renderWithMentions(text: string) {
       parts.push(text.slice(lastIndex, match.index));
     }
     parts.push(
-      <span key={match.index} className="font-semibold text-primary">
+      <span key={match.index} className="font-semibold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-0.5 rounded">
         @{match[1]}
       </span>
     );
