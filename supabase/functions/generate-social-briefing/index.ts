@@ -66,8 +66,8 @@ serve(async (req) => {
 Seu trabalho: Analisar o briefing do usuário (que pode ser um texto livre descrevendo a postagem desejada, OU um conteúdo já gerado pela ferramenta de conteúdos) e extrair os campos estruturados necessários para gerar uma arte de alta qualidade para redes sociais.
 
 REGRAS:
-1. A headline deve ser CURTA e IMPACTANTE (máx 6 palavras). Frases partidas funcionam bem (ex: "Investir não é sorte" / "É estratégia").
-2. A subheadline complementa a headline em 2-4 palavras.
+1. Gere EXATAMENTE 3 opções de headline (curtas e impactantes, máx 6 palavras cada). Frases partidas funcionam bem (ex: "Investir não é sorte" / "É estratégia").
+2. Gere EXATAMENTE 2 opções de subheadline (2-4 palavras cada).
 3. O CTA deve ser uma chamada para ação curta e direta.
 4. A descrição da cena deve ser VISUAL e ESPECÍFICA — descreva personagens, ambiente, iluminação, ação.
 5. Os elementos visuais são objetos concretos que devem aparecer na imagem.
@@ -75,7 +75,14 @@ REGRAS:
 7. Bullet points são 2-4 palavras-chave separadas por vírgula.
 8. Sugira o formato mais adequado (square=1:1, portrait=4:5, story=9:16) e o tipo de postagem.
 
-IMPORTANTE: Pense como um designer que vai passar esse briefing para geração de imagem com IA. Cada campo deve contribuir para uma composição visual rica e profissional.`;
+IMPORTANTE: Pense como um designer que vai passar esse briefing para geração de imagem com IA. Cada campo deve contribuir para uma composição visual rica e profissional.
+
+As 3 headlines devem ter abordagens DIFERENTES:
+- Opção 1: Direta e impactante
+- Opção 2: Provocativa / pergunta
+- Opção 3: Emocional / aspiracional
+
+As 2 subheadlines devem complementar as headlines de formas diferentes.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -94,12 +101,23 @@ IMPORTANTE: Pense como um designer que vai passar esse briefing para geração d
             type: "function",
             function: {
               name: "extract_briefing_fields",
-              description: "Extract structured fields from the briefing for social media art generation.",
+              description: "Extract structured fields from the briefing for social media art generation, with multiple headline and subheadline options.",
               parameters: {
                 type: "object",
                 properties: {
-                  headline: { type: "string", description: "Short impactful headline for the art (max 6 words)." },
-                  subheadline: { type: "string", description: "Complementary subheadline (2-4 words)." },
+                  headlines: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Exactly 3 headline options: [direct/impactful, provocative/question, emotional/aspirational]. Max 6 words each.",
+                  },
+                  subheadlines: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Exactly 2 subheadline options (2-4 words each).",
+                  },
+                  // Keep legacy fields for backward compat
+                  headline: { type: "string", description: "Best headline option (same as headlines[0])." },
+                  subheadline: { type: "string", description: "Best subheadline option (same as subheadlines[0])." },
                   cta: { type: "string", description: "Call to action text." },
                   cena: { type: "string", description: "Detailed visual scene description (100-200 words)." },
                   elementos_visuais: { type: "string", description: "Comma-separated concrete visual elements to include." },
@@ -108,7 +126,7 @@ IMPORTANTE: Pense como um designer que vai passar esse briefing para geração d
                   suggested_format: { type: "string", enum: ["feed", "portrait", "story"], description: "Best format for this post." },
                   suggested_tipo: { type: "string", enum: ["post_unico", "capa_carrossel", "slide_carrossel", "story"], description: "Best post type." },
                 },
-                required: ["headline", "subheadline", "cta", "cena", "elementos_visuais", "supporting_text", "bullet_points", "suggested_format", "suggested_tipo"],
+                required: ["headlines", "subheadlines", "headline", "subheadline", "cta", "cena", "elementos_visuais", "supporting_text", "bullet_points", "suggested_format", "suggested_tipo"],
                 additionalProperties: false,
               },
             },
@@ -146,7 +164,23 @@ IMPORTANTE: Pense como um designer que vai passar esse briefing para geração d
     }
 
     const result = JSON.parse(toolCall.function.arguments);
-    console.log("✅ Briefing structured:", JSON.stringify(result).slice(0, 200));
+    
+    // Ensure backward compatibility: if headlines array exists but headline doesn't, set it
+    if (result.headlines && result.headlines.length > 0 && !result.headline) {
+      result.headline = result.headlines[0];
+    }
+    if (result.subheadlines && result.subheadlines.length > 0 && !result.subheadline) {
+      result.subheadline = result.subheadlines[0];
+    }
+    // Ensure arrays exist even if model didn't return them
+    if (!result.headlines) {
+      result.headlines = [result.headline || ""];
+    }
+    if (!result.subheadlines) {
+      result.subheadlines = [result.subheadline || ""];
+    }
+
+    console.log("✅ Briefing structured:", JSON.stringify(result).slice(0, 300));
 
     return new Response(JSON.stringify(result), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
