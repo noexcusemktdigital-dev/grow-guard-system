@@ -5636,6 +5636,7 @@ export type Database = {
           file_name: string | null
           file_url: string | null
           id: string
+          reply_to_id: string | null
           sender_id: string
           type: string
         }
@@ -5646,6 +5647,7 @@ export type Database = {
           file_name?: string | null
           file_url?: string | null
           id?: string
+          reply_to_id?: string | null
           sender_id: string
           type?: string
         }
@@ -5656,6 +5658,7 @@ export type Database = {
           file_name?: string | null
           file_url?: string | null
           id?: string
+          reply_to_id?: string | null
           sender_id?: string
           type?: string
         }
@@ -5665,6 +5668,45 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "team_chat_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "team_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_chat_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_chat_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_chat_messages"
             referencedColumns: ["id"]
           },
         ]
