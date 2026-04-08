@@ -549,7 +549,7 @@ export default function ClienteTrafegoPago() {
                         Estratégia de {format(new Date(h.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {((h.platforms as Record<string, unknown>[]) || []).map((p: Record<string, unknown>) => p.platform).join(", ")}
+                        {((h.platforms as unknown as Record<string, unknown>[]) || []).map((p: Record<string, unknown>) => p.platform).join(", ")}
                       </p>
                     </div>
                     <Badge variant={h.status === "approved" ? "default" : "secondary"} className="text-[10px]">
