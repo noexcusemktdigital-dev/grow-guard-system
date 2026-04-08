@@ -24,32 +24,13 @@ export function useGoogleCalendarConnection() {
 
 export function useGoogleCalendarConnect() {
   return useMutation({
-    mutationFn: async (redirectUri: string) => {
+    mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
-        body: { action: "get_auth_url", redirect_uri: redirectUri },
+        body: { action: "get_auth_url" },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data.url as string;
-    },
-  });
-}
-
-export function useGoogleCalendarExchangeCode() {
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ code, redirectUri }: { code: string; redirectUri: string }) => {
-      const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
-        body: { action: "exchange_code", code, redirect_uri: redirectUri },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["google-calendar-connection"] });
-      toast.success("Google Agenda conectado com sucesso!");
     },
   });
 }
