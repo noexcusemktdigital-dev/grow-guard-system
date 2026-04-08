@@ -1,29 +1,57 @@
 
 
-# Corrigir Erros de Build nas Edge Functions
+# Conexão Automática do Google Agenda — Plano
 
-Existem erros de tipagem TypeScript em 4 edge functions que precisam ser corrigidos.
+## Situação Atual
+- O fluxo atual exige que cada cliente crie seu próprio projeto no Google Cloud Console, gere Client ID/Secret e cole no wizard de 8 passos
+- Isso é inviável para clientes finais
 
-## Arquivos e Correções
+## O Que Muda
+Um único par de credenciais OAuth (da plataforma) será usado para todos os clientes. O cliente clica em **"Conectar Google Agenda"** → é redirecionado ao Google → autoriza → volta conectado. Zero configuração manual.
 
-### 1. `supabase/functions/ai-agent-reply/index.ts` (linha 667)
-- **Erro:** `.catch()` não existe em `PromiseLike<void>`
-- **Fix:** Remover `.then(() => {}).catch(() => {}) as unknown as Promise<void>` — o insert do Supabase já retorna uma promise válida, basta usar sem encadear
+## Pré-requisito: Adicionar Secrets
+Os secrets `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` (para Calendar) **ainda não existem** no projeto. Vou solicitar que você os adicione antes de implementar.
 
-### 2. `supabase/functions/asaas-list-payments/index.ts` (linhas 93, 162)
-- **Erro 1 (L93):** `p.customer` é `unknown`, não pode ser usado como índice
-- **Fix:** Cast para string: `customerNameMap[p.customer as string]`
-- **Erro 2 (L162):** `.localeCompare` não existe em `{}`
-- **Fix:** Cast os valores: `((b.dueDate as string) || "").localeCompare((a.dueDate as string) || "")`
+## Alterações
 
-### 3. `supabase/functions/asaas-test-connection/index.ts` (linhas 78-79)
-- **Erro:** `parsed?.errors?.length` possivelmente undefined
-- **Fix:** Adicionar nullish check: `(parsed?.errors?.length ?? 0) > 0` e `parsed!.errors![0]?.code`
+### 1. Edge Function `google-calendar-oauth`
+- **`get_auth_url`**: em vez de ler `client_id` do banco, lê do secret `GOOGLE_CLIENT_ID`
+- **`exchange_code`**: em vez de ler `client_id`/`client_secret` do banco, lê dos secrets `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`
+- **Remover** a action `save_credentials` (não é mais necessária)
+- O `redirect_uri` será fixo: `{origin}/cliente/agenda` (ou a URL da página)
+- Ao criar o registro em `google_calendar_tokens`, não salva mais `client_id`/`client_secret` (campos ficam vazios ou são removidos)
 
-### 4. `supabase/functions/asaas-webhook/index.ts` (múltiplas linhas)
-- **Erro:** `SupabaseClient<any>` incompatível com tipagem das funções auxiliares
-- **Fix:** Tipar `getOrCreateWallet` e `notifyOrgMembers` com `adminClient: any` em vez de `ReturnType<typeof createClient>`, eliminando o conflito de generics. Mesma abordagem para `updatePaymentStatus`.
+### 2. Hook `useGoogleCalendar.ts`
+- **Remover** `useGoogleCalendarSaveCredentials` (não é mais necessário)
+- **`useGoogleCalendarConnect`**: chama `get_auth_url` diretamente sem precisar salvar credenciais antes
 
-## Resumo
-São todas correções de tipagem — nenhuma lógica muda, apenas casts e ajustes de tipos para satisfazer o compilador Deno/TypeScript.
+### 3. Componente `GoogleSetupWizard.tsx`
+- **Substituir** o wizard de 8 passos por um simples dialog de confirmação ou eliminá-lo completamente
+- O botão "Conectar Google Agenda" chama diretamente `get_auth_url` → redireciona ao Google
+
+### 4. Páginas `ClienteAgenda.tsx` e `Agenda.tsx`
+- Atualizar o botão "Conectar Google Agenda" para chamar diretamente a conexão (sem abrir wizard)
+- Manter o fluxo de callback (`?code=...`) como está
+
+### 5. Tabela `google_calendar_tokens`
+- Colunas `client_id` e `client_secret` podem ser mantidas (compatibilidade) mas não serão mais populadas para novos usuários
+
+## Fluxo Final do Cliente
+
+```text
+Clica "Conectar Google Agenda"
+  → Edge function gera URL OAuth com CLIENT_ID da plataforma
+  → Google mostra tela de consentimento
+  → Usuário autoriza
+  → Redireciona de volta com ?code=...
+  → Edge function troca code por tokens usando CLIENT_ID + CLIENT_SECRET da plataforma
+  → Salva tokens no banco
+  → Agenda sincronizada ✓
+```
+
+## Ordem de Execução
+1. Adicionar secrets `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`
+2. Atualizar edge function
+3. Simplificar hook e componentes
+4. Testar fluxo completo
 
