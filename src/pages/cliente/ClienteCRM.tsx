@@ -31,7 +31,12 @@ import { ClienteCRMLeadsView } from "./ClienteCRMLeadsView";
 import { ClienteCRMHeader } from "./ClienteCRMHeader";
 
 // ===== Main Component =====
-export default function ClienteCRM() {
+export interface ClienteCRMProps {
+  hideQuota?: boolean;
+  configRoute?: string;
+}
+
+export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCRMProps = {}) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();

@@ -21,6 +21,7 @@ interface ClienteCRMHeaderProps {
   setCsvImportOpen: (v: boolean) => void;
   setTutorialOpen: (v: boolean) => void;
   tutorialOpen: boolean;
+  configRoute?: string;
 }
 
 export function ClienteCRMHeader({
