@@ -547,10 +547,10 @@ const SaasLanding = () => {
             {/* Footer */}
             <footer className="py-8 text-center border-t border-white/[0.05]">
               <img src={logoDark} alt="NoExcuse" className="h-6 mx-auto mb-3 opacity-30" />
-              <div className="flex items-center justify-center gap-3 mb-2 text-xs text-white/25">
-                <Link to="/privacidade" className="hover:text-white/50 transition-colors">Política de Privacidade</Link>
+              <div className="flex items-center justify-center gap-3 mb-2 text-xs text-white/50">
+                <Link to="/privacidade" className="underline hover:text-white/80 transition-colors">Política de Privacidade</Link>
                 <span>•</span>
-                <Link to="/termos" className="hover:text-white/50 transition-colors">Termos de Uso</Link>
+                <Link to="/termos" className="underline hover:text-white/80 transition-colors">Termos de Uso</Link>
               </div>
               <p className="text-xs text-white/15">© {new Date().getFullYear()} NoExcuse. Todos os direitos reservados.</p>
             </footer>
