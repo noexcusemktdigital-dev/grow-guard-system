@@ -128,8 +128,12 @@ export function TeamChatConversation({
     }
   };
 
+  // Filter to only show members that belong to this channel
+  const channelMemberIds = new Set(channelMemberships.map((cm) => cm.user_id));
   const filteredMentionMembers = members.filter((m) =>
-    m.user_id !== currentUserId && m.full_name.toLowerCase().includes(mentionQuery.toLowerCase())
+    m.user_id !== currentUserId &&
+    channelMemberIds.has(m.user_id) &&
+    m.full_name.toLowerCase().includes(mentionQuery.toLowerCase())
   ).slice(0, 6);
 
   const handleMentionSelect = (member: TeamMember) => {
