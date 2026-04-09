@@ -179,6 +179,9 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = false
 
   # --- Ads platform functions (require authenticated user session) ---
+  [functions.meta-ads-insights]
+    # Busca métricas Meta Ads via Graph API — valida JWT manualmente
+    verify_jwt = false
   [functions.ads-oauth-start]
     # Inicia fluxo OAuth Meta Ads — valida JWT manualmente, gera state seguro
     verify_jwt = false
