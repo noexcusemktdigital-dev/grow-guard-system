@@ -43,9 +43,9 @@ describe("useUserOrgId", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthValue.user = null;
-    // Default path is "/" which maps to "franchise"
+    // Default path for tests that don't set it explicitly
     Object.defineProperty(window, "location", {
-      value: { pathname: "/" },
+      value: { pathname: "/franqueadora/inicio" },
       writable: true,
     });
   });
@@ -58,6 +58,11 @@ describe("useUserOrgId", () => {
   });
 
   it("fetches org id with franchise portal context", async () => {
+    // /franqueadora paths are franchise portal (not saas)
+    Object.defineProperty(window, "location", {
+      value: { pathname: "/franqueadora/inicio" },
+      writable: true,
+    });
     mockAuthValue.user = { id: "u1" };
     mockRpc.mockResolvedValue({ data: "org-123", error: null });
 
