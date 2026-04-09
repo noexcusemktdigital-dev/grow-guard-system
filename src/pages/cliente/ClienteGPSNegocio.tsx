@@ -216,26 +216,8 @@ export default function ClienteGPSNegocio() {
   };
 
 
-  const handleRetryGeneration = () => {
-    if (!salesPlan?.answers) return;
-    setRafaelAnswers(salesPlan.answers);
-    // Use empty sofiaAnswers — everything is already merged in salesPlan.answers
-    runGeneration(salesPlan.answers);
-  };
-
-  const handleSofiaComplete = async (sofiaAnswers: Record<string, any>) => {
-    if (!orgId) return;
-
-    // Merge all answers — use salesPlan.answers as base fallback for retry scenarios
-    const baseAnswers = Object.keys(rafaelAnswers).length > 0 ? rafaelAnswers : (salesPlan?.answers || {});
-    const allAnswers = { ...baseAnswers, ...sofiaAnswers };
-
-    // Persist merged answers immediately before generation
-    saveSalesPlan.mutate({ answers: allAnswers, score: 0 });
-
-    runGeneration(allAnswers);
-  };
-
+  // CODE-002 fix: runGeneration declared first — handleSofiaComplete and
+  // handleRetryGeneration both call it, so it must not be a forward reference.
   const runGeneration = async (allAnswers: Record<string, any>) => {
     if (!orgId) return;
     setGeneratingStep("marketing-core");
@@ -246,24 +228,24 @@ export default function ClienteGPSNegocio() {
 
       // 2. Generate strategy via AI — three sequential calls
       // Call 1: Marketing Core
-      const coreResult = await generateStrategy.mutateAsync({ 
-        answers: allAnswers, 
+      const coreResult = await generateStrategy.mutateAsync({
+        answers: allAnswers,
         organization_id: orgId,
         section: "marketing-core",
       });
 
       // Call 2: Marketing Growth
       setGeneratingStep("marketing-growth");
-      const growthResult = await generateStrategy.mutateAsync({ 
-        answers: allAnswers, 
+      const growthResult = await generateStrategy.mutateAsync({
+        answers: allAnswers,
         organization_id: orgId,
         section: "marketing-growth",
       });
 
       // Call 3: Comercial
       setGeneratingStep("comercial");
-      const comercialResult = await generateStrategy.mutateAsync({ 
-        answers: allAnswers, 
+      const comercialResult = await generateStrategy.mutateAsync({
+        answers: allAnswers,
         organization_id: orgId,
         section: "comercial",
       });
@@ -274,7 +256,7 @@ export default function ClienteGPSNegocio() {
         ...((growthResult as any).result || {}),
         ...((comercialResult as any).result || {}),
       };
-      
+
       await saveStrategy.mutateAsync({
         answers: allAnswers,
         score_percentage: (unifiedResult as any)?.diagnostico?.score_geral || 0,
@@ -317,6 +299,25 @@ export default function ClienteGPSNegocio() {
       toast({ title: "Erro ao gerar estratégia", description: (err as Error).message, variant: "destructive" });
       setPhase("chat-sofia");
     }
+  };
+
+  const handleSofiaComplete = async (sofiaAnswers: Record<string, any>) => {
+    if (!orgId) return;
+
+    // Merge all answers — use salesPlan.answers as base fallback for retry scenarios
+    const baseAnswers = Object.keys(rafaelAnswers).length > 0 ? rafaelAnswers : (salesPlan?.answers || {});
+    const allAnswers = { ...baseAnswers, ...sofiaAnswers };
+
+    // Persist merged answers immediately before generation
+    saveSalesPlan.mutate({ answers: allAnswers, score: 0 });
+
+    runGeneration(allAnswers);
+  };
+
+  const handleRetryGeneration = () => {
+    if (!salesPlan?.answers) return;
+    setRafaelAnswers(salesPlan.answers);
+    runGeneration(salesPlan.answers);
   };
 
   const handleApprove = async () => {
