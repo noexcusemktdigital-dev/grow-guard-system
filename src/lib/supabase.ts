@@ -15,26 +15,34 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // ARCH-002 / ARCH-003: Guard against SSR/test environments where window is not defined.
-// ARCH-003: Prefer a previously persisted portal key from localStorage so that
-// direct navigation to /reset-password or a fresh page load inside a portal
-// doesn't fall back to URL detection (which can be wrong on redirects).
+// Explicit portal routes must always win over any previously stored token key;
+// otherwise a stale SaaS token can force the franchise portal into a reload loop.
 function getPortalStorageKey(): string {
-  // SSR / Vitest / non-browser environments
   if (typeof window === "undefined" || typeof window.location === "undefined") {
     return "noe-saas-auth";
   }
 
-  // ARCH-003: If the user already has a live session token, use that portal's
-  // storage key directly — avoids misdetection when URL doesn't match the portal.
-  if (typeof localStorage !== "undefined") {
-    const hasFranchise = !!localStorage.getItem("noe-franchise-auth");
-    const hasSaas = !!localStorage.getItem("noe-saas-auth");
-    // Only trust the stored key when exactly one portal has a session.
-    if (hasFranchise && !hasSaas) return "noe-franchise-auth";
-    if (hasSaas && !hasFranchise) return "noe-saas-auth";
+  const path = window.location.pathname;
+
+  const isExplicitFranchiseRoute =
+    path.startsWith("/franqueadora") ||
+    path.startsWith("/franqueado") ||
+    path.startsWith("/acessofranquia");
+
+  if (isExplicitFranchiseRoute) {
+    return "noe-franchise-auth";
   }
 
-  const path = window.location.pathname;
+  const isExplicitSaasRoute =
+    path.startsWith("/cliente") ||
+    path === "/" ||
+    path.startsWith("/crescimento") ||
+    path.startsWith("/termos") ||
+    path.startsWith("/privacidade");
+
+  if (isExplicitSaasRoute) {
+    return "noe-saas-auth";
+  }
 
   // For /reset-password, /welcome, /apresentacao — respect the ?portal= query param
   // so the recovery session is stored under the same key the target portal will read.
@@ -44,17 +52,18 @@ function getPortalStorageKey(): string {
     path.startsWith("/apresentacao")
   ) {
     const portal = new URLSearchParams(window.location.search).get("portal");
-    return portal === "franchise" ? "noe-franchise-auth" : "noe-saas-auth";
+    if (portal === "franchise") return "noe-franchise-auth";
+    if (portal === "saas") return "noe-saas-auth";
   }
 
-  const isSaas =
-    path.startsWith("/cliente") ||
-    path === "/" ||
-    path.startsWith("/crescimento") ||
-    path.startsWith("/termos") ||
-    path.startsWith("/privacidade");
+  if (typeof localStorage !== "undefined") {
+    const hasFranchise = !!localStorage.getItem("noe-franchise-auth");
+    const hasSaas = !!localStorage.getItem("noe-saas-auth");
+    if (hasFranchise && !hasSaas) return "noe-franchise-auth";
+    if (hasSaas && !hasFranchise) return "noe-saas-auth";
+  }
 
-  return isSaas ? "noe-saas-auth" : "noe-franchise-auth";
+  return "noe-saas-auth";
 }
 
 export const PORTAL_STORAGE_KEY = getPortalStorageKey();

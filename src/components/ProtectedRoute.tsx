@@ -1,53 +1,33 @@
 // @ts-nocheck
 import { useAuth } from "@/contexts/AuthContext";
+import { PORTAL_STORAGE_KEY } from "@/lib/supabase";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+...
+function getExpectedPortalStorageKey(pathname: string): string | null {
+  if (pathname.startsWith("/franqueadora") || pathname.startsWith("/franqueado") || pathname.startsWith("/acessofranquia")) {
+    return "noe-franchise-auth";
+  }
 
-type AppRole = "super_admin" | "admin" | "franqueado" | "cliente_admin" | "cliente_user";
+  if (pathname.startsWith("/cliente") || pathname === "/") {
+    return "noe-saas-auth";
+  }
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  allowedRoles?: AppRole[];
-}
-
-function getRoleRedirect(role: AppRole | null): string {
-  if (!role) return "/acessofranquia";
-  if (role === "super_admin" || role === "admin") return "/franqueadora/inicio";
-  if (role === "franqueado") return "/franqueado/inicio";
-  return "/cliente/inicio";
-}
-
-function getLoginPath(pathname: string): string {
-  if (pathname.startsWith("/cliente")) return "/";
-  return "/acessofranquia";
+  return null;
 }
 
 /**
  * Detect if the current pathname belongs to a different portal than the
- * storageKey that was calculated at module-load time. If so, a full page
- * reload is needed so supabase.ts recalculates the storageKey.
+ * storageKey used when the shared Supabase client was initialized.
  */
 function detectPortalMismatch(): boolean {
-  const path = window.location.pathname;
-  const isSaasRoute = path.startsWith("/cliente") || path === "/";
-  const isFranchiseRoute = path.startsWith("/franqueadora") || path.startsWith("/franqueado") || path.startsWith("/acessofranquia");
+  if (typeof window === "undefined") return false;
 
-  // Only check when we can clearly identify the portal from the route
-  if (!isSaasRoute && !isFranchiseRoute) return false;
+  const expectedKey = getExpectedPortalStorageKey(window.location.pathname);
+  if (!expectedKey) return false;
 
-  const expectedKey = isSaasRoute ? "noe-saas-auth" : "noe-franchise-auth";
-
-  // Check which key the supabase client is actually using by looking at localStorage
-  const saasToken = localStorage.getItem("noe-saas-auth");
-  const franchiseToken = localStorage.getItem("noe-franchise-auth");
-
-  // If there's a token in the OTHER portal's key but not in the expected one,
-  // it means the client was initialized with the wrong storageKey
-  if (expectedKey === "noe-saas-auth" && !saasToken && franchiseToken) return true;
-  if (expectedKey === "noe-franchise-auth" && !franchiseToken && saasToken) return true;
-
-  return false;
+  return PORTAL_STORAGE_KEY !== expectedKey;
 }
 
 const ROLE_TIMEOUT_MS = 6000;
