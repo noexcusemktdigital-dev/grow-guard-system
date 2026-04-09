@@ -76,7 +76,7 @@ const _storage =
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
-    storageKey: getPortalStorageKey(),
+    storageKey: PORTAL_STORAGE_KEY,
     storage: _storage,
     persistSession: true,
     autoRefreshToken: true,
