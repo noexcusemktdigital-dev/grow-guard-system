@@ -267,7 +267,7 @@ function BatchFolder({ batch, navigate, onCopy, onExpand, onDelete }: {
                     <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onExpand(item)}>
                       <Eye className="w-3 h-3 mr-1" /> Ver
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/cliente/redes-sociais?content_id=${item.id}`)}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/cliente/postagem?content_id=${item.id}`)}>
                       <ExternalLink className="w-3 h-3 mr-1" /> Postagem
                     </Button>
                     {onDelete && item.status !== "approved" && (
