@@ -21,12 +21,16 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs'],
-          charts: ['recharts'],
-          supabase: ['@supabase/supabase-js'],
-          query: ['@tanstack/react-query'],
+        // manualChunks as function (required by rolldown/Vite 8+) — PERF-001
+        manualChunks(id: string) {
+          if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas')) return 'pdf';
+          if (id.includes('node_modules/docx')) return 'docx';
+          if (id.includes('node_modules/recharts')) return 'charts';
+          if (id.includes('node_modules/@supabase')) return 'supabase';
+          if (id.includes('node_modules/@tanstack/react-query')) return 'query';
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) return 'vendor';
+          if (id.includes('node_modules/react/')) return 'vendor';
+          if (id.includes('node_modules/@radix-ui')) return 'ui';
         },
       },
     },

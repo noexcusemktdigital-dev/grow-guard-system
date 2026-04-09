@@ -1,4 +1,5 @@
-import jsPDF from "jspdf";
+// jsPDF is loaded dynamically to keep it out of the initial bundle (PERF-001)
+type jsPDFType = import("jspdf").default;
 import type {
   FollowupAnalise,
   FollowupPlano,
@@ -43,10 +44,10 @@ async function loadLogoAsDataUrl(): Promise<string | null> {
 }
 
 class PdfHelper {
-  pdf: jsPDF;
+  pdf: jsPDFType;
   y = MT;
 
-  constructor(pdf: jsPDF) { this.pdf = pdf; }
+  constructor(pdf: jsPDFType) { this.pdf = pdf; }
 
   ensureSpace(needed: number) {
     if (this.y + needed > PH - 15) { this.pdf.addPage(); this.y = MT; }
@@ -202,6 +203,7 @@ export async function generateFollowupPdf(
   analise: FollowupAnalise,
   plano: FollowupPlano,
 ) {
+  const { default: jsPDF } = await import("jspdf");
   const pdf = new jsPDF("p", "mm", "a4");
   const logo = await loadLogoAsDataUrl();
   const h = new PdfHelper(pdf);

@@ -1,24 +1,10 @@
 // @ts-nocheck
-import {
-  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  AlignmentType, WidthType, ShadingType, BorderStyle, HeadingLevel,
-  Header, Footer, PageNumber, ImageRun,
-} from "docx";
+// docx is loaded dynamically to keep it out of the initial bundle (PERF-001)
 import { saveAs } from "file-saver";
 
 const PRIMARY_COLOR = "DC2626"; // red-600
 const DARK_COLOR = "111111";
 const GRAY_COLOR = "6B7280";
-const LIGHT_BG = "F9FAFB";
-
-const cellBorder = { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" };
-const cellBorders = { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder };
-const noBorders = {
-  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-  right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-};
 
 interface ContractData {
   title: string;
@@ -28,9 +14,10 @@ interface ContractData {
   contract_type?: string | null;
 }
 
-function parseContractContent(content: string): Paragraph[] {
+function parseContractContent(content: string, docxLib: typeof import("docx")): unknown[] {
+  const { Paragraph, TextRun, AlignmentType, BorderStyle, ShadingType } = docxLib;
   const lines = content.split("\n");
-  const paragraphs: Paragraph[] = [];
+  const paragraphs: unknown[] = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -134,6 +121,13 @@ function parseContractContent(content: string): Paragraph[] {
 }
 
 export async function downloadContractDocx(contract: ContractData) {
+  // Dynamic import keeps docx (~1MB) out of the initial bundle
+  const docxLib = await import("docx");
+  const {
+    Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle,
+    Header, Footer, PageNumber,
+  } = docxLib;
+
   const content = contract.content || "Conteúdo do contrato não disponível.";
   const contractTitle = contract.contract_type === "franquia"
     ? "CONTRATO DE FRANQUIA EMPRESARIAL"
@@ -142,7 +136,7 @@ export async function downloadContractDocx(contract: ContractData) {
   const now = new Date();
   const dateStr = now.toLocaleDateString("pt-BR");
 
-  const contentParagraphs = parseContractContent(content);
+  const contentParagraphs = parseContractContent(content, docxLib);
 
   const doc = new Document({
     styles: {
