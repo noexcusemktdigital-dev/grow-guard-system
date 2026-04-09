@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * QA-002: Credit Wallet — deduction, balance floor, null wallet guard, concurrency
  * Covers: FIN-001 null wallet guard, balance never below 0, debit RPC logic,
