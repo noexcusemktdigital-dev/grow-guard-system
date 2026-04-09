@@ -21,6 +21,19 @@ async function getAuthUser(req: Request, supabaseUrl: string) {
   return user.id;
 }
 
+// SEC: Allowlist of valid origins to prevent open-redirect via attacker-controlled state
+const ALLOWED_ORIGINS = [
+  "https://sistema.noexcusedigital.com.br",
+  "https://app.noexcuse.com.br",
+  "https://grow-guard-system.lovable.app",
+];
+
+function sanitizeOrigin(origin: string): string {
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  // Fall back to production URL for any unrecognized origin (incl. localhost dev URLs)
+  return "https://sistema.noexcusedigital.com.br";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
@@ -53,6 +66,9 @@ serve(async (req) => {
       } catch {
         return new Response("Invalid state parameter", { status: 400 });
       }
+
+      // SEC: Sanitize origin to prevent open-redirect via stale dev state tokens
+      state.origin = sanitizeOrigin(state.origin);
 
       if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
         return Response.redirect(`${state.origin}${state.path || "/cliente/agenda"}?google_error=missing_credentials`, 302);
@@ -141,12 +157,16 @@ serve(async (req) => {
       if (!userId) return jsonRes(req, { error: "Unauthorized" }, 401);
 
       // Get origin and path from request headers
-      const origin = req.headers.get("Origin") || req.headers.get("Referer")?.replace(/\/[^/]*$/, "") || "";
+      const rawOrigin = req.headers.get("Origin") || req.headers.get("Referer")?.replace(/\/[^/]*$/, "") || "";
       const referer = req.headers.get("Referer") || "";
+      // SEC: Only allow production origins — strip any localhost/dev origin so the
+      // OAuth callback always redirects to the real app (fixes BUG-004 / BUG-005)
+      const origin = sanitizeOrigin(rawOrigin);
       let path = "/cliente/agenda";
       try {
         const refUrl = new URL(referer);
-        path = refUrl.pathname;
+        // Only keep path if origin was valid; otherwise keep default
+        if (rawOrigin === origin) path = refUrl.pathname;
       } catch { /* keep default */ }
 
       // Encode state with userId + origin + path
