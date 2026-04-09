@@ -38,6 +38,7 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7h-22h
 
 type ViewMode = "month" | "week" | "day";
+type AgendaEvent = { id: string; title: string; start_at: string; end_at: string; description?: string; location?: string; all_day?: boolean; color?: string; calendar_id?: string; visibility?: string; [key: string]: unknown };
 
 /* ───────── Week View ───────── */
 function WeekView({ currentDate, events, onEventClick, onNewEvent }: {
@@ -197,7 +198,7 @@ export default function Agenda() {
   async function handleGooglePull() {
     setSyncing(true);
     try {
-      const result = await syncGoogle.mutateAsync("pull" as unknown as string);
+      const result = await syncGoogle.mutateAsync("pull" as any);
       toast.success(`Sincronizado! ${(result as Record<string, unknown>)?.imported || 0} novos eventos importados.`);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
     setSyncing(false);
@@ -231,7 +232,7 @@ export default function Agenda() {
   const eventsByDay = useMemo(() => {
     const map: Record<string, any[]> = {};
     (events ?? []).forEach(ev => {
-      const key = format(parseISO(ev.start_at), "yyyy-MM-dd");
+      const key = format(parseISO(ev.start_at as string), "yyyy-MM-dd");
       if (!map[key]) map[key] = [];
       map[key].push(ev);
     });
@@ -279,7 +280,7 @@ export default function Agenda() {
         onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); },
       });
     } else {
-      createEvent.mutate(payload, {
+      createEvent.mutate(payload as any, {
         onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); },
       });
     }
