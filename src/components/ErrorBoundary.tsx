@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 interface Props {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  pageName?: string;
 }
 
 interface State {
@@ -23,7 +24,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    console.error(`[ErrorBoundary] ${this.props.pageName || "Page"} crashed:`, error, info.componentStack);
   }
 
   handleReset = () => {

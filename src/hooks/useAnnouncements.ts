@@ -3,16 +3,20 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function useAnnouncements() {
+export function useAnnouncements(filterByRole?: string) {
   const { data: orgId } = useUserOrgId();
   return useQuery({
-    queryKey: ["announcements", orgId],
+    queryKey: ["announcements", orgId, filterByRole],
     queryFn: async () => {
       // Use the DB function that also returns parent org announcements
       const { data, error } = await supabase.rpc("get_announcements_with_parent", {
         _org_id: orgId!,
       });
       if (error) throw error;
+      // Filter by target_roles if specified: show announcements with no role restriction OR that include this role
+      if (filterByRole && data) {
+        return data.filter((a) => !a.target_roles || a.target_roles.length === 0 || a.target_roles.includes(filterByRole));
+      }
       return data;
     },
     enabled: !!orgId,

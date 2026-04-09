@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { logger } from "@/lib/logger";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,14 @@ const SUBCATEGORIAS: Record<string, string[]> = {
   "Dúvidas gerais": ["Dúvida", "Sugestão", "Reclamação"],
 };
 export default function FranqueadoSuporte() {
+  return (
+    <ErrorBoundary pageName="FranqueadoSuporte">
+      <FranqueadoSuporteContent />
+    </ErrorBoundary>
+  );
+}
+
+function FranqueadoSuporteContent() {
   const { user } = useAuth();
   const { data: tickets, isLoading } = useSupportTickets();
   const { createTicket, sendMessage } = useSupportTicketMutations();

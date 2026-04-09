@@ -16,14 +16,24 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const PRIORITY_LABELS: Record<string, string> = { Normal: "Normal", Alta: "Alta", "Crítica": "Crítica" };
 const PRIORITY_VARIANTS: Record<string, "default" | "secondary" | "destructive"> = { Normal: "secondary", Alta: "default", "Crítica": "destructive" };
 const TYPE_LABELS: Record<string, string> = { Informativo: "Informativo", "Atualização de sistema": "Atualização", "Alerta operacional": "Alerta", Campanha: "Campanha", Institucional: "Institucional", Urgente: "Urgente" };
 
 export default function FranqueadoComunicados() {
+  return (
+    <ErrorBoundary pageName="FranqueadoComunicados">
+      <FranqueadoComunicadosContent />
+    </ErrorBoundary>
+  );
+}
+
+function FranqueadoComunicadosContent() {
   const { user } = useAuth();
-  const { data: announcements, isLoading } = useAnnouncements();
+  // Filter announcements to only show those targeted to "franqueado" role (or with no role restriction)
+  const { data: announcements, isLoading } = useAnnouncements("franqueado");
   const { data: views } = useAnnouncementViews();
   const { markViewed, confirmRead } = useAnnouncementViewMutations();
   const [filterPriority, setFilterPriority] = useState("all");
@@ -52,8 +62,9 @@ export default function FranqueadoComunicados() {
 
   function openDetail(item: Record<string, unknown>) {
     setDetailItem(item);
-    if (!viewedIds.has(item.id)) {
-      markViewed.mutate(item.id);
+    const itemId = item.id as string;
+    if (!viewedIds.has(itemId)) {
+      markViewed.mutate(itemId);
     }
   }
 
@@ -200,18 +211,18 @@ export default function FranqueadoComunicados() {
               <div className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed border-t border-border pt-4">
                 {detailItem.content || "Sem conteúdo."}
               </div>
-              {detailItem.priority === "Crítica" && !confirmedIds.has(detailItem.id) && (
+              {detailItem.priority === "Crítica" && !confirmedIds.has(detailItem.id as string) && (
                 <div className="border border-destructive/30 rounded-lg p-4 bg-destructive/5 space-y-3">
                   <div className="flex items-center gap-2 text-destructive text-sm font-medium">
                     <AlertTriangle className="w-4 h-4" /> Confirmação obrigatória
                   </div>
                   <p className="text-xs text-muted-foreground">Este comunicado requer sua confirmação de leitura para fins de conformidade.</p>
-                  <Button size="sm" variant="destructive" onClick={() => handleConfirm(detailItem.id)} disabled={confirmRead.isPending}>
+                  <Button size="sm" variant="destructive" onClick={() => handleConfirm(detailItem.id as string)} disabled={confirmRead.isPending}>
                     <CheckCircle2 className="w-4 h-4 mr-1" /> Li e concordo
                   </Button>
                 </div>
               )}
-              {confirmedIds.has(detailItem.id) && (
+              {confirmedIds.has(detailItem.id as string) && (
                 <div className="flex items-center gap-2 text-emerald-600 text-sm bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-lg">
                   <CheckCircle2 className="w-4 h-4" /> Leitura confirmada
                 </div>
@@ -225,8 +236,8 @@ export default function FranqueadoComunicados() {
 }
 
 function ComunicadoCard({ item, viewedIds, confirmedIds, onClick }: { item: Record<string, unknown>; viewedIds: Set<string>; confirmedIds: Set<string>; onClick: () => void }) {
-  const isViewed = viewedIds.has(item.id);
-  const isConfirmed = confirmedIds.has(item.id);
+  const isViewed = viewedIds.has(item.id as string);
+  const isConfirmed = confirmedIds.has(item.id as string);
   return (
     <Card
       className={`hover-lift cursor-pointer transition-all ${!isViewed ? "border-l-4 border-l-primary" : ""} ${item.priority === "Crítica" && !isConfirmed ? "ring-1 ring-destructive/30" : ""}`}
