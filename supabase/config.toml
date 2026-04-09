@@ -179,8 +179,14 @@ project_id = "gxrhdpbbxfipeopdyygn"
     verify_jwt = false
 
   # --- Ads platform functions (require authenticated user session) ---
+  [functions.ads-oauth-start]
+    # Inicia fluxo OAuth Meta Ads — valida JWT manualmente, gera state seguro
+    verify_jwt = false
   [functions.ads-oauth-callback]
     # OAuth callback from ad platforms, cannot carry JWT
+    verify_jwt = false
+  [functions.ads-token-refresh]
+    # Cron job para renovar tokens Meta Ads — protegido por CRON_SECRET
     verify_jwt = false
   [functions.ads-get-config]
     # Returns OAuth client IDs for frontend use — no sensitive data

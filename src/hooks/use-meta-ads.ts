@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useAdsConnectionStatus } from "./use-ads-connections";
 
 export type MetaAdsPeriod = "today" | "last_7d" | "last_30d";
 
@@ -30,18 +31,49 @@ export interface MetaAdsInsights {
   period: MetaAdsPeriod;
   account: MetaAdsAccount;
   campaigns: MetaAdsCampaign[];
+  hasConnection?: boolean;
 }
 
-export function useMetaAdsInsights(period: MetaAdsPeriod = "today") {
+/**
+ * useMetaAdsInsights — versão multi-client.
+ *
+ * Se a org do usuário tiver uma ads_connection ativa, invoca a edge function
+ * meta-ads-insights que usará o token da conexão da org.
+ * Se não houver conexão, retorna { hasConnection: false }.
+ *
+ * @param period  Período de análise
+ * @param orgId   Org ID do usuário (opcional — quando omitido usa a conta central NOE)
+ */
+export function useMetaAdsInsights(period: MetaAdsPeriod = "today", orgId?: string | null) {
+  const connectionStatus = useAdsConnectionStatus();
+
+  // Quando orgId é fornecido, verificar se tem conexão ativa
+  const hasActiveConnection = orgId
+    ? (connectionStatus.data?.hasActiveConnection ?? false)
+    : true; // conta NOE central não precisa de conexão OAuth por org
+
   return useQuery<MetaAdsInsights>({
-    queryKey: ["meta-ads-insights", period],
+    queryKey: ["meta-ads-insights", period, orgId ?? "central"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("meta-ads-insights", {
-        body: { period },
-      });
+      // Se a org não tem conexão ativa, retornar indicador de ausência
+      if (orgId && !hasActiveConnection) {
+        return {
+          period,
+          account: { id: "", spend: 0, impressions: 0, clicks: 0, leads: 0, cpl: 0, ctr: 0 },
+          campaigns: [],
+          hasConnection: false,
+        };
+      }
+
+      const body: Record<string, unknown> = { period };
+      if (orgId) body.org_id = orgId;
+
+      const { data, error } = await supabase.functions.invoke("meta-ads-insights", { body });
       if (error) throw error;
-      return data as MetaAdsInsights;
+
+      return { ...(data as MetaAdsInsights), hasConnection: true };
     },
+    enabled: orgId ? connectionStatus.isSuccess : true,
     refetchInterval: 5 * 60 * 1000, // 5 min
     staleTime: 4 * 60 * 1000,
     retry: 1,
