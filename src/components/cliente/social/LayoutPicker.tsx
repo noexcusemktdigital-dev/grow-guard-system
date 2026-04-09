@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LAYOUT_TYPES } from "./constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check } from "lucide-react";

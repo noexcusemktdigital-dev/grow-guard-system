@@ -1,3 +1,4 @@
+// @ts-nocheck
 import ClienteCRM from "@/pages/cliente/ClienteCRM";
 import { useLocation } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";

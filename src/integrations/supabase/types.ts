@@ -434,6 +434,89 @@ export type Database = {
           },
         ]
       }
+      ads_connections: {
+        Row: {
+          access_token: string
+          ad_account_id: string
+          ad_account_name: string | null
+          business_id: string | null
+          connected_at: string | null
+          connected_by: string | null
+          id: string
+          last_synced_at: string | null
+          org_id: string
+          page_id: string | null
+          page_name: string | null
+          provider: string
+          status: string
+          token_expires_at: string | null
+        }
+        Insert: {
+          access_token: string
+          ad_account_id: string
+          ad_account_name?: string | null
+          business_id?: string | null
+          connected_at?: string | null
+          connected_by?: string | null
+          id?: string
+          last_synced_at?: string | null
+          org_id: string
+          page_id?: string | null
+          page_name?: string | null
+          provider?: string
+          status?: string
+          token_expires_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          ad_account_id?: string
+          ad_account_name?: string | null
+          business_id?: string | null
+          connected_at?: string | null
+          connected_by?: string | null
+          id?: string
+          last_synced_at?: string | null
+          org_id?: string
+          page_id?: string | null
+          page_name?: string | null
+          provider?: string
+          status?: string
+          token_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_connections_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_oauth_states: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          org_id: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          org_id: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          org_id?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_conversation_logs: {
         Row: {
           agent_id: string
@@ -6803,7 +6886,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ads_connections_network: {
+        Row: {
+          access_token: string | null
+          ad_account_id: string | null
+          ad_account_name: string | null
+          business_id: string | null
+          connected_at: string | null
+          connected_by: string | null
+          id: string | null
+          last_synced_at: string | null
+          org_id: string | null
+          org_name: string | null
+          page_id: string | null
+          page_name: string | null
+          provider: string | null
+          status: string | null
+          token_expires_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_connections_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       assign_lead_round_robin: {
@@ -6818,6 +6928,7 @@ export type Database = {
         Args: { _ids: string[]; _tag: string }
         Returns: undefined
       }
+      cleanup_ads_oauth_states: { Args: never; Returns: undefined }
       debit_credits: {
         Args: {
           _amount: number

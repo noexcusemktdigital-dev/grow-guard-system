@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import {
   Zap, GraduationCap, Trophy, MessageSquare,

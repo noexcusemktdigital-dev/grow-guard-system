@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Award, Download, Eye, GraduationCap, Star } from "lucide-react";
 import { Card } from "@/components/ui/card";

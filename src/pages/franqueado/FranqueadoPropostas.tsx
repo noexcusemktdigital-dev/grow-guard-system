@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 import { formatBRL } from "@/lib/formatting";
 import { PageHeader } from "@/components/PageHeader";

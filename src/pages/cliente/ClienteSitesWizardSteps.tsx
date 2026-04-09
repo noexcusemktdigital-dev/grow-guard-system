@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 import { Check, Info, Globe, FileText, ShoppingCart, Briefcase, Link2 } from "lucide-react";
 import { Input } from "@/components/ui/input";

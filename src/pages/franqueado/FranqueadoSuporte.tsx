@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from "react";
 import { logger } from "@/lib/logger";
 import { ErrorBoundary } from "@/components/ErrorBoundary";

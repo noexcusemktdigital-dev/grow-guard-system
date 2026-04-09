@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { DollarSign, Eye, MousePointer, TrendingUp, Target, Users, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

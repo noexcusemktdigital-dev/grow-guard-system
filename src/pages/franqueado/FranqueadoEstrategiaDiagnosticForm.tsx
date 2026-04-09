@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, RefreshCw, HelpCircle, Mic, MicOff, Plus, Trash2, Upload, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";

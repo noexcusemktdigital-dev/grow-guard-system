@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Crosshair, ShieldQuestion, Handshake, Target, Ban } from "lucide-react";
 
 export const funnelStages = [

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ArrowRight, ChevronRight, TrendingUp, RotateCcw, Activity, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

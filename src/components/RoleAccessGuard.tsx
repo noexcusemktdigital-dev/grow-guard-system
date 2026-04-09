@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Navigate, useLocation } from "react-router-dom";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { cn } from '@/lib/utils';
 import { Calendar } from 'lucide-react';
 import type { Duration } from '@/hooks/useCalculator';

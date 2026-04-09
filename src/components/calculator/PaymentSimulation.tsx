@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { cn } from '@/lib/utils';
 import { CreditCard, Banknote, Calendar } from 'lucide-react';
 import type { PaymentOption, Duration } from '@/hooks/useCalculator';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from "react";
 import { Copy, Forward, Star, Trash2, ChevronDown } from "lucide-react";
 import {

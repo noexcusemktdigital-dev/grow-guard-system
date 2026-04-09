@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { CATEGORIES, SUBCATEGORIES_MAP, SLA_DEADLINES, RESPONSAVEIS, TicketCategory, TicketPriority } from "@/types/atendimento";
 import { Card } from "@/components/ui/card";

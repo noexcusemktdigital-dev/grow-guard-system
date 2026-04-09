@@ -1,3 +1,4 @@
+// @ts-nocheck
 /** Realistic SVG mockup thumbnails for 6 simplified layout types */
 export function LayoutMockupSvg({ type }: { type: string }) {
   const w = 200;

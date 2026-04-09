@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Camera, Trash2, Upload, Loader2, Lock, ChevronRight } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";

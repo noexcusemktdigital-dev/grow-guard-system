@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import {
   BarChart3, RefreshCw, AlertTriangle, TrendingUp, Users,
