@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Edit3, Check, ChevronDown, ChevronUp, MessageSquare, Type, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";

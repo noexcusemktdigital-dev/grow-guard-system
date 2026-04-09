@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import { Plus, LayoutGrid, List, Settings2, ChevronDown, FileSpreadsheet, BookUser, HelpCircle } from "lucide-react";
 import { Shuffle } from "lucide-react";

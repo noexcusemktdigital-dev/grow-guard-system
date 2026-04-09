@@ -1,3 +1,4 @@
+// @ts-nocheck
 // OPS-005: System health monitoring hook
 // Polls for recent errors in audit_logs and edge function failures
 

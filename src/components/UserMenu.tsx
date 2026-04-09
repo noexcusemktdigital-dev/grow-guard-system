@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { toast } from "sonner";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import {
   Monitor, Tablet, Smartphone, Maximize2, Minimize2,

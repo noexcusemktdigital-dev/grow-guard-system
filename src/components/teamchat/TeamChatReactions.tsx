@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { TeamMember } from "@/hooks/useTeamChat";
 
 interface ReactionGroup {

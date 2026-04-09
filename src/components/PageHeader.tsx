@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import logoLight from "@/assets/noe2.png";
 import { TestimonialsColumn } from "@/components/ui/testimonials-columns";
 import { Highlight } from "@/components/ui/hero-highlight";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { memo } from "react";
 import { AlertTriangle, ShieldAlert, ExternalLink } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

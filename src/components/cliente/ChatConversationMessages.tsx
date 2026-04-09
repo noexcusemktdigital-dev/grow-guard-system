@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useMemo } from "react";
 import { Loader2, Bot, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";

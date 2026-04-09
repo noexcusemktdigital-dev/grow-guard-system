@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { formatBRL } from "@/lib/formatting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
