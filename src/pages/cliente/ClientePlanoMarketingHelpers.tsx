@@ -98,7 +98,7 @@ const TOOL_ICON_MAP: Record<string, React.ElementType> = {
 
 const TOOL_ROUTES_MAP: Record<string, { label: string; path: string }> = {
   conteudos: { label: "Conteudos", path: "/cliente/conteudos" },
-  postagens: { label: "Postagens", path: "/cliente/redes-sociais" },
+  postagens: { label: "Postagens", path: "/cliente/postagem" },
   sites: { label: "Sites", path: "/cliente/sites" },
   trafego: { label: "Trafego Pago", path: "/cliente/trafego-pago" },
   crm: { label: "CRM", path: "/cliente/crm" },
