@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {

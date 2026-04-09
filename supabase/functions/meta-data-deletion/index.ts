@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Meta Data Deletion Callback — obrigatório pela Plataforma Meta
  * https://developers.facebook.com/docs/development/create-an-app/app-dashboard/data-deletion-callback

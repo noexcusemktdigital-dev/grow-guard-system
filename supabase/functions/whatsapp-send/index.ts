@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 // INT-004: Circuit breaker for WhatsApp provider failover (Evolution ↔ Z-API)
