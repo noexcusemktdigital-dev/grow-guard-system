@@ -83,7 +83,7 @@ export function useArchiveSalesPlan() {
           answers,
           score,
           created_by: user?.id,
-        });
+        } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -108,7 +108,7 @@ export function useSaveSalesPlan() {
             answers,
             score,
             created_by: user?.id,
-          },
+          } as any,
           { onConflict: "organization_id" }
         )
         .select()

@@ -22,7 +22,7 @@ export function useActiveStrategy() {
     queryKey: ["marketing-strategy-active", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_strategies" as unknown as "profiles")
+        .from("marketing_strategies" as any)
         .select("*")
         .eq("organization_id", orgId ?? "")
         .eq("is_active", true)

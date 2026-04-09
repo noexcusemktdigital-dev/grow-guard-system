@@ -48,7 +48,7 @@ export function useConnectSocialAccount() {
       return;
     }
 
-    if (platform === "meta" || platform === "instagram" || platform === "facebook") {
+    if ((platform as string) === "meta" || platform === "instagram" || platform === "facebook") {
       window.location.href = `${SUPABASE_URL}/functions/v1/social-oauth-meta?org_id=${orgId}`;
     } else if (platform === "linkedin") {
       window.location.href = `${SUPABASE_URL}/functions/v1/social-oauth-linkedin?org_id=${orgId}`;

@@ -18,7 +18,7 @@ export function usePlatformErrors(filters?: { severity?: string; source?: string
     queryKey: ["platform-errors", filters],
     queryFn: async () => {
       let query = supabase
-        .from("platform_error_logs" as unknown as "profiles")
+        .from("platform_error_logs" as any)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);

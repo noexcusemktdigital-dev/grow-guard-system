@@ -255,7 +255,7 @@ export function Step13Restrictions({ restrictions, setRestrictions }: StepProps)
             key={s}
             variant="outline"
             className="cursor-pointer hover:bg-destructive/10 text-xs"
-            onClick={() => setRestrictions((prev) => prev ? `${prev}, ${s.toLowerCase()}` : s.toLowerCase())}
+            onClick={() => setRestrictions(restrictions ? `${restrictions}, ${s.toLowerCase()}` : s.toLowerCase())}
           >
             {s}
           </Badge>

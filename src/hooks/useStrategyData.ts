@@ -10,7 +10,7 @@ import { useSalesPlan } from "./useSalesPlan";
 export function useStrategyData() {
   const { data: strategy, isLoading } = useActiveStrategy();
   const { data: salesPlan, isLoading: salesLoading } = useSalesPlan();
-  const result = strategy?.strategy_result;
+  const result = strategy?.strategy_result as any;
   const spAnswers = (salesPlan?.answers || {}) as Record<string, unknown>;
 
   return {

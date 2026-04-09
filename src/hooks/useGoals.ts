@@ -85,7 +85,7 @@ export function useHistoricGoals() {
         _org_id: orgId ?? "",
       });
       if (error) throw error;
-      const results = (data as GoalRow[]).filter((g: GoalRow) => g.period_end && g.period_end < firstOfMonth);
+      const results = (data as unknown as GoalRow[]).filter((g: GoalRow) => g.period_end && g.period_end < firstOfMonth);
       results.sort((a: GoalRow, b: GoalRow) => (b.period_end ?? "").localeCompare(a.period_end ?? ""));
       return results;
     },
@@ -100,7 +100,7 @@ export function useRankings(month?: number, year?: number) {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_rankings_with_parent", { _org_id: orgId ?? "" });
       if (error) throw error;
-      let results = data as GoalRow[];
+      let results = data as unknown as RankingRow[];
       if (month) results = results.filter((r: RankingRow) => r.month === month);
       if (year) results = results.filter((r: RankingRow) => r.year === year);
       return results;

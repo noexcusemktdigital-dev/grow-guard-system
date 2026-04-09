@@ -59,8 +59,8 @@ export function useSaveVisualIdentity() {
         return data as unknown as VisualIdentity;
       } else {
         const { data, error } = await supabase
-          .from("marketing_visual_identities" as unknown as "marketing_folders")
-          .insert({ ...payload, organization_id: orgId } as Record<string, unknown>)
+          .from("marketing_visual_identities" as any)
+          .insert({ ...payload, organization_id: orgId } as any)
           .select()
           .single();
         if (error) throw error;

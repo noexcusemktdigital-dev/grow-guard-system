@@ -53,7 +53,7 @@ export function useActiveTrafficStrategy() {
     queryKey: ["traffic-strategy-active", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("traffic_strategies" as unknown as "organizations")
+        .from("traffic_strategies" as any)
         .select("*")
         .eq("organization_id", orgId!)
         .eq("is_active", true)
