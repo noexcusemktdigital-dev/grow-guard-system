@@ -201,6 +201,10 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.social-token-refresh]
     # Cron job for token refresh — called by pg_cron, no user JWT
     verify_jwt = false
+  [functions.social-metrics-sync]
+    # Phase 4 — Cron job: pulls engagement metrics from Meta/LinkedIn for published posts
+    # Auth: Bearer CRON_SECRET header (not JWT) — called by pg_cron daily at 6 AM UTC
+    verify_jwt = false
 
   # --- Social media publishing (Phase 3) ---
   [functions.social-publish]
