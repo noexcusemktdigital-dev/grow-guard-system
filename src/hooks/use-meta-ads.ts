@@ -69,7 +69,11 @@ export function useMetaAdsInsights(period: MetaAdsPeriod = "today", orgId?: stri
       const body: Record<string, unknown> = { period };
       if (orgId) body.org_id = orgId;
 
-      const { data, error } = await supabase.functions.invoke("meta-ads-insights", { body });
+      // WORKAROUND: meta-ads-insights não está deployed ainda — usar ads-sync-metrics com mode="noe_insights"
+      // Quando meta-ads-insights for deployada pelo Lovable Publish, reverter esta linha.
+      const { data, error } = await supabase.functions.invoke("ads-sync-metrics", {
+        body: { ...body, mode: "noe_insights" },
+      });
       if (error) throw error;
 
       return { ...(data as MetaAdsInsights), hasConnection: true };

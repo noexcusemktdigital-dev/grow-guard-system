@@ -15,9 +15,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useAdsConnections, useAdsConnectionStatus } from "@/hooks/use-ads-connections";
+import { useAdsConnections, useAdsConnectionStatus, useInitiateMetaOAuth } from "@/hooks/use-ads-connections";
 import { useMetaAdsInsights, type MetaAdsPeriod, type MetaAdsCampaign } from "@/hooks/use-meta-ads";
 import { useAdsAlerts } from "@/hooks/use-ads-alerts";
 
@@ -434,6 +433,7 @@ export default function FranqueadoAnuncios() {
   const { data: orgId } = useUserOrgId();
   const { connections, disconnect } = useAdsConnections();
   const connectionStatus = useAdsConnectionStatus();
+  const initiateOAuth = useInitiateMetaOAuth();
 
   // Mostrar toast quando OAuth callback retorna com ?connected=true
   useEffect(() => {
@@ -445,16 +445,12 @@ export default function FranqueadoAnuncios() {
     }
   }, [searchParams]);
 
+  // WORKAROUND: ads-oauth-start não está deployed — usa RPC + ads-get-config
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ads-oauth-start", {
-        body: { provider: "meta", org_id: orgId },
-      });
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url as string;
-      }
+      const url = await initiateOAuth.mutateAsync();
+      window.location.href = url;
     } catch (err) {
       toast.error("Erro ao iniciar conexão", {
         description: err instanceof Error ? err.message : "Tente novamente.",
@@ -464,7 +460,8 @@ export default function FranqueadoAnuncios() {
   };
 
   const handleDisconnect = async () => {
-    const activeConnection = connections.find((c) => c.is_active);
+    // Usar 'status' em vez do antigo 'is_active'
+    const activeConnection = connections.find((c) => c.status === "active");
     if (!activeConnection) return;
     try {
       await disconnect.mutateAsync(activeConnection.id);

@@ -306,7 +306,82 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { connection_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { connection_id, mode, period } = body;
+
+    // ── NOE_INSIGHTS mode: busca direto na conta central NOE via META_ACCESS_TOKEN ──
+    // Substitui meta-ads-insights enquanto o deploy da edge fn não está disponível.
+    if (mode === "noe_insights") {
+      const accessToken = Deno.env.get("META_ACCESS_TOKEN");
+      const adAccountId = Deno.env.get("META_AD_ACCOUNT_ID") ?? "act_961503441507397";
+      const META_VER = "v21.0";
+      const BASE = `https://graph.facebook.com/${META_VER}`;
+      const PERIOD_MAP: Record<string, string> = { today: "today", last_7d: "last_7_d", last_30d: "last_30_d" };
+      const datePreset = PERIOD_MAP[period as string] ?? "today";
+
+      if (!accessToken) {
+        return new Response(JSON.stringify({ error: "META_ACCESS_TOKEN not set" }), {
+          status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
+
+      const [campaignsRes, insightsRes] = await Promise.all([
+        fetch(`${BASE}/${adAccountId}/campaigns?fields=id,name,status,daily_budget,objective&access_token=${accessToken}&limit=100`),
+        fetch(`${BASE}/${adAccountId}/insights?` + new URLSearchParams({
+          fields: "spend,impressions,clicks,actions", date_preset: datePreset, level: "account", access_token: accessToken,
+        })),
+      ]);
+
+      const campaigns = (await campaignsRes.json())?.data ?? [];
+      const insightRow = (await insightsRes.json())?.data?.[0] ?? {};
+      const spend = parseFloat(insightRow.spend ?? "0");
+      const impressions = parseInt(insightRow.impressions ?? "0", 10);
+      const clicks = parseInt(insightRow.clicks ?? "0", 10);
+      const leadTypes = ["lead","leadgen_grouped","onsite_conversion.lead_grouped","offsite_conversion.fb_pixel_lead"];
+      const leads = (insightRow.actions ?? []).filter((a: {action_type:string}) => leadTypes.includes(a.action_type)).reduce((s: number, a: {value:string}) => s + parseInt(a.value ?? "0", 10), 0);
+
+      // Busca insights por campanha
+      let campaignInsights: Record<string, {spend:string;impressions:string;clicks:string;actions:{action_type:string;value:string}[];}> = {};
+      if (campaigns.length > 0) {
+        const ciRes = await fetch(`${BASE}/${adAccountId}/insights?` + new URLSearchParams({
+          fields: "campaign_id,spend,impressions,clicks,actions", date_preset: datePreset, level: "campaign", access_token: accessToken, limit: "100",
+        }));
+        if (ciRes.ok) {
+          for (const r of ((await ciRes.json())?.data ?? [])) {
+            if (r.campaign_id) campaignInsights[r.campaign_id] = r;
+          }
+        }
+      }
+
+      const campaignsOut = campaigns.map((c: {id:string;name:string;status:string;daily_budget?:string;objective?:string}) => {
+        const ci = campaignInsights[c.id] ?? {};
+        const cspend = parseFloat(ci.spend ?? "0");
+        const cimpr = parseInt(ci.impressions ?? "0", 10);
+        const cclicks = parseInt(ci.clicks ?? "0", 10);
+        const cleads = (ci.actions ?? []).filter((a: {action_type:string}) => leadTypes.includes(a.action_type)).reduce((s: number, a: {value:string}) => s + parseInt(a.value ?? "0", 10), 0);
+        return { id: c.id, name: c.name, status: c.status, daily_budget: c.daily_budget ? parseInt(c.daily_budget, 10)/100 : null, objective: c.objective ?? null, spend: cspend, impressions: cimpr, clicks: cclicks, leads: cleads, cpl: cleads > 0 ? parseFloat((cspend/cleads).toFixed(2)) : 0 };
+      });
+
+      // Validar user e salvar snapshot
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const userToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (userToken) {
+        const { data: { user } } = await supabase.auth.getUser(userToken);
+        if (user) {
+          const { data: profile } = await supabase.from("profiles").select("organization_id").eq("id", user.id).maybeSingle();
+          if (profile?.organization_id) {
+            await supabase.from("meta_ads_snapshots").insert({ org_id: profile.organization_id, period: period ?? "today", spend, impressions, clicks, leads, campaigns_data: campaignsOut }).then(({error: e}) => { if (e) console.warn("snapshot error:", e.message); });
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({
+        period: period ?? "today",
+        account: { id: adAccountId, spend, impressions, clicks, leads, cpl: leads > 0 ? parseFloat((spend/leads).toFixed(2)) : 0, ctr: impressions > 0 ? parseFloat(((clicks/impressions)*100).toFixed(2)) : 0 },
+        campaigns: campaignsOut,
+      }), { status: 200, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    }
+
     if (!connection_id) {
       return new Response(JSON.stringify({ error: "Missing connection_id" }), {
         status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
