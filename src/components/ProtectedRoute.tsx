@@ -4,7 +4,26 @@ import { PORTAL_STORAGE_KEY } from "@/lib/supabase";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-...
+
+type AppRole = "super_admin" | "admin" | "franqueado" | "cliente_admin" | "cliente_user";
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  allowedRoles?: AppRole[];
+}
+
+function getRoleRedirect(role: AppRole | null): string {
+  if (!role) return "/acessofranquia";
+  if (role === "super_admin" || role === "admin") return "/franqueadora/inicio";
+  if (role === "franqueado") return "/franqueado/inicio";
+  return "/cliente/inicio";
+}
+
+function getLoginPath(pathname: string): string {
+  if (pathname.startsWith("/cliente")) return "/";
+  return "/acessofranquia";
+}
+
 function getExpectedPortalStorageKey(pathname: string): string | null {
   if (pathname.startsWith("/franqueadora") || pathname.startsWith("/franqueado") || pathname.startsWith("/acessofranquia")) {
     return "noe-franchise-auth";
@@ -17,10 +36,6 @@ function getExpectedPortalStorageKey(pathname: string): string | null {
   return null;
 }
 
-/**
- * Detect if the current pathname belongs to a different portal than the
- * storageKey used when the shared Supabase client was initialized.
- */
 function detectPortalMismatch(): boolean {
   if (typeof window === "undefined") return false;
 
@@ -38,18 +53,15 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const [timedOut, setTimedOut] = useState(false);
   const portalCheckDone = useRef(false);
 
-  // Portal mismatch guard — run once per mount
   useEffect(() => {
     if (portalCheckDone.current) return;
     portalCheckDone.current = true;
 
     if (detectPortalMismatch()) {
-      // Force full reload to recalculate storageKey in supabase.ts
       window.location.reload();
     }
   }, []);
 
-  // Timeout: if user exists but role never resolves, stop waiting
   useEffect(() => {
     if (!user || role || loading) {
       setTimedOut(false);
@@ -71,7 +83,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to={getLoginPath(location.pathname)} replace />;
   }
 
-  // Waiting for role to resolve
   if (allowedRoles && allowedRoles.length > 0 && !role) {
     if (timedOut) {
       return (
