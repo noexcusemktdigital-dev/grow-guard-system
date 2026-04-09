@@ -1,3 +1,13 @@
+// ============================================================
+// ARCH-ADS-001 — DEPRECATED (manter por ora, NÃO deletar)
+// Este arquivo sincroniza métricas de Meta Ads e Google Ads via conexões
+// OAuth da tabela ad_platform_connections (sistema antigo de conexões).
+//
+// O sistema NOVO é: meta-ads-insights (Meta Ads direto, conta fixa NOE)
+// meta-ads-insights é a fonte canônica para o dashboard de Anúncios.
+// ads-sync-metrics continua ativo para sincronização histórica de outras contas.
+// ============================================================
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
@@ -199,7 +209,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   const since = thirtyDaysAgo.toISOString().split("T")[0];
   const until = today.toISOString().split("T")[0];
 
-  const insightsUrl = `https://graph.facebook.com/v19.0/act_${accountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,actions,ctr,cpc&time_range={"since":"${since}","until":"${until}"}&time_increment=1&level=campaign&limit=500&access_token=${accessToken}`;
+  // DATA-ADS-001: inclui effective_status para usar o status real da campanha (não hardcoded)
+  const insightsUrl = `https://graph.facebook.com/v19.0/act_${accountId}/insights?fields=campaign_id,campaign_name,effective_status,impressions,clicks,spend,actions,ctr,cpc&time_range={"since":"${since}","until":"${until}"}&time_increment=1&level=campaign&limit=500&access_token=${accessToken}`;
 
   console.log(`[Meta] Syncing account act_${accountId}, period ${since} to ${until}`);
 
@@ -230,7 +241,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
       platform: "meta_ads",
       campaign_id: row.campaign_id,
       campaign_name: row.campaign_name || "Unknown",
-      campaign_status: "ACTIVE",
+      // DATA-ADS-001: usar effective_status real da campanha (não hardcoded)
+      campaign_status: row.effective_status || row.status || "UNKNOWN",
       date: row.date_start,
       impressions: parseInt(row.impressions || "0"),
       clicks: parseInt(row.clicks || "0"),
@@ -264,7 +276,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
         platform: "meta_ads",
         campaign_id: row.campaign_id,
         campaign_name: row.campaign_name || "Unknown",
-        campaign_status: "ACTIVE",
+        // DATA-ADS-001: usar effective_status real da campanha (não hardcoded)
+        campaign_status: row.effective_status || row.status || "UNKNOWN",
         date: row.date_start,
         impressions: parseInt(row.impressions || "0"),
         clicks: parseInt(row.clicks || "0"),

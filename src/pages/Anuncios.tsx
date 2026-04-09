@@ -19,6 +19,7 @@ import {
   type MetaAdsPeriod,
   type MetaAdsCampaign,
 } from "@/hooks/use-meta-ads";
+import { useAdsAlerts } from "@/hooks/use-ads-alerts";
 
 // -----------------------------------------------------------------------
 // Helpers
@@ -159,6 +160,9 @@ const PERIOD_LABELS: Record<MetaAdsPeriod, string> = {
 export default function Anuncios() {
   const [period, setPeriod] = useState<MetaAdsPeriod>("today");
   const { data, isLoading, isError, error, refetch, isFetching } = useMetaAdsInsights(period);
+
+  // FUNC-ADS-002: alertas proativos de CPL alto
+  useAdsAlerts(data);
 
   const account = data?.account;
   const campaigns: MetaAdsCampaign[] = data?.campaigns ?? [];
@@ -375,7 +379,7 @@ export default function Anuncios() {
 
       {/* Footer note */}
       <p className="text-xs text-muted-foreground text-center">
-        Dados atualizados automaticamente a cada 5 minutos via Meta Graph API v21.0 — Conta: act_961503441507397
+        Dados atualizados automaticamente a cada 5 minutos via Meta Graph API v21.0
       </p>
     </div>
   );

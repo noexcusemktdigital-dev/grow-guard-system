@@ -1,16 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 // ============================================================
 // meta-ads-insights
-// Retorna métricas da conta Meta Ads (act_961503441507397)
-// diretamente da Graph API v21.0. Sem autenticação JWT (verify_jwt=false).
+// Retorna métricas da conta Meta Ads via Graph API v21.0.
+// verify_jwt=false — mas valida autenticação Supabase via Authorization header.
 // Chamado pelo frontend via supabase.functions.invoke('meta-ads-insights').
+// SEC-ADS-001: META_AD_ACCOUNT_ID via env var (fallback: act_961503441507397)
+// ARCH-ADS-002: Salva snapshot na tabela meta_ads_snapshots após cada fetch
+// SEC-ADS-002: Valida que o usuário está autenticado via JWT antes de responder
 // ============================================================
 
-const META_ACCOUNT_ID = "act_961503441507397";
+// SEC-ADS-001 — conta vem de env var, não hardcoded
+const adAccountId = Deno.env.get("META_AD_ACCOUNT_ID") ?? "act_961503441507397";
 const META_API_VERSION = "v21.0";
 const META_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
+
+// Supabase admin client para salvar snapshots e validar usuário
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 // Mapeia período para o date_preset aceito pela Graph API
 const PERIOD_MAP: Record<string, string> = {
@@ -47,6 +57,37 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
+  // --- SEC-ADS-002: Validar autenticação do usuário via JWT ---
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const userToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  let orgId: string | null = null;
+
+  if (userToken) {
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(userToken);
+    if (authError || !user) {
+      console.warn("meta-ads-insights: unauthorized — invalid or missing JWT");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: jsonHeaders },
+      );
+    }
+    // Busca org_id do usuário para salvar o snapshot
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    orgId = profile?.organization_id ?? null;
+  } else {
+    // Sem token: rejeitar — fail-closed
+    console.warn("meta-ads-insights: no Authorization header — unauthorized");
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: jsonHeaders },
+    );
+  }
+
   // --- Env var ---
   const accessToken = Deno.env.get("META_ACCESS_TOKEN");
   if (!accessToken) {
@@ -72,7 +113,7 @@ serve(async (req) => {
 
   try {
     // 1. Busca campanhas da conta
-    const campaignsUrl = new URL(`${META_BASE_URL}/${META_ACCOUNT_ID}/campaigns`);
+    const campaignsUrl = new URL(`${META_BASE_URL}/${adAccountId}/campaigns`);
     campaignsUrl.searchParams.set("fields", "id,name,status,daily_budget,objective");
     campaignsUrl.searchParams.set("access_token", accessToken);
     campaignsUrl.searchParams.set("limit", "100");
@@ -81,7 +122,7 @@ serve(async (req) => {
       fetch(campaignsUrl.toString()),
       // 2. Busca insights agregados da conta inteira
       fetch(
-        `${META_BASE_URL}/${META_ACCOUNT_ID}/insights?` +
+        `${META_BASE_URL}/${adAccountId}/insights?` +
           new URLSearchParams({
             fields: "spend,impressions,clicks,actions",
             date_preset: datePreset,
@@ -121,7 +162,7 @@ serve(async (req) => {
 
     if (campaignIds.length > 0) {
       const campaignInsightsRes = await fetch(
-        `${META_BASE_URL}/${META_ACCOUNT_ID}/insights?` +
+        `${META_BASE_URL}/${adAccountId}/insights?` +
           new URLSearchParams({
             fields: "campaign_id,campaign_name,spend,impressions,clicks,actions",
             date_preset: datePreset,
@@ -179,7 +220,7 @@ serve(async (req) => {
     const payload = {
       period,
       account: {
-        id: META_ACCOUNT_ID,
+        id: adAccountId,
         spend: accountSpend,
         impressions: accountImpressions,
         clicks: accountClicks,
@@ -196,6 +237,25 @@ serve(async (req) => {
     console.log(
       `meta-ads-insights: period=${period} spend=${accountSpend} leads=${accountLeads} campaigns=${campaigns.length}`,
     );
+
+    // ARCH-ADS-002: Salvar snapshot no banco (série temporal — INSERT simples)
+    if (orgId) {
+      const { error: snapshotError } = await supabaseAdmin
+        .from("meta_ads_snapshots")
+        .insert({
+          org_id: orgId,
+          period,
+          spend: accountSpend,
+          impressions: accountImpressions,
+          clicks: accountClicks,
+          leads: accountLeads,
+          campaigns_data: campaignsWithMetrics,
+        });
+      if (snapshotError) {
+        // Não bloqueia a resposta — apenas loga o erro
+        console.warn("meta-ads-insights: failed to save snapshot:", snapshotError.message);
+      }
+    }
 
     return new Response(JSON.stringify(payload), { status: 200, headers: jsonHeaders });
   } catch (err) {
