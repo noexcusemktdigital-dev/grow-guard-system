@@ -57,7 +57,7 @@ jobs:
           cache: npm
       - run: npm ci || npm install
       - name: Security audit
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high
 
   bundle-size:
     name: Bundle Size
