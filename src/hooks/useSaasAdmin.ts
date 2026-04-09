@@ -50,7 +50,7 @@ export function useResolveError() {
   return useMutation({
     mutationFn: async ({ errorId, note }: { errorId: string; note?: string }) => {
       const { error } = await supabase
-        .from("platform_error_logs" as unknown as "profiles")
+        .from("platform_error_logs" as any)
         .update({ resolved: true, resolved_at: new Date().toISOString(), resolved_note: note || null } as Record<string, unknown>)
         .eq("id", errorId);
       if (error) throw error;
@@ -67,7 +67,7 @@ export function useDeleteError() {
   return useMutation({
     mutationFn: async (errorId: string) => {
       const { error } = await supabase
-        .from("platform_error_logs" as unknown as "profiles")
+        .from("platform_error_logs" as any)
         .delete()
         .eq("id", errorId);
       if (error) throw error;
@@ -84,7 +84,7 @@ export function useErrorStats() {
     queryKey: ["error-stats"],
     queryFn: async () => {
       const { data: all, error } = await supabase
-        .from("platform_error_logs" as unknown as "profiles")
+        .from("platform_error_logs" as any)
         .select("id, severity, source, resolved, created_at, resolved_at")
         .order("created_at", { ascending: false })
         .limit(1000);

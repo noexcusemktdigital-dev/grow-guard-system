@@ -23,7 +23,7 @@ export function useVisualIdentity() {
     queryKey: ["visual-identity", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_visual_identities" as unknown as "marketing_folders")
+        .from("marketing_visual_identities" as any)
         .select("*")
         .eq("organization_id", orgId!)
         .maybeSingle();
@@ -43,14 +43,14 @@ export function useSaveVisualIdentity() {
       if (!orgId) throw new Error("Org not found");
 
       const { data: existing } = await supabase
-        .from("marketing_visual_identities" as unknown as "marketing_folders")
+        .from("marketing_visual_identities" as any)
         .select("id")
         .eq("organization_id", orgId)
         .maybeSingle();
 
       if (existing) {
         const { data, error } = await supabase
-          .from("marketing_visual_identities" as unknown as "marketing_folders")
+          .from("marketing_visual_identities" as any)
           .update({ ...payload, updated_at: new Date().toISOString() } as Record<string, unknown>)
           .eq("organization_id", orgId)
           .select()

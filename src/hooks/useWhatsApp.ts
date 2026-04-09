@@ -57,7 +57,7 @@ export function useWhatsAppInstances() {
     queryFn: async () => {
       if (!orgId) return [];
       const { data, error } = await supabase
-        .from("whatsapp_instances" as unknown as "profiles")
+        .from("whatsapp_instances" as any)
         .select("*")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: true });
@@ -94,7 +94,7 @@ export function useWhatsAppContacts(_filterInstanceId?: string | null) {
       if (!orgId) return [];
       // DATA-003: limite de 300 contatos mais recentes — evita timeout com inboxes volumosas
       const query = supabase
-        .from("whatsapp_contacts" as unknown as "profiles")
+        .from("whatsapp_contacts" as any)
         .select("*")
         .eq("organization_id", orgId)
         .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -136,7 +136,7 @@ export function useWhatsAppMessages(contactId: string | null) {
     queryFn: async () => {
       if (!orgId || !contactId) return [];
       const { data, error } = await supabase
-        .from("whatsapp_messages" as unknown as "profiles")
+        .from("whatsapp_messages" as any)
         .select("*")
         .eq("organization_id", orgId)
         .eq("contact_id", contactId)
@@ -210,7 +210,7 @@ export function useMarkContactRead() {
     mutationFn: async (contactId: string) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_contacts" as unknown as "profiles")
+        .from("whatsapp_contacts" as any)
         .update({ unread_count: 0 } as Record<string, unknown>)
         .eq("id", contactId)
         .eq("organization_id", orgId);
@@ -230,7 +230,7 @@ export function useUpdateAttendingMode() {
     mutationFn: async ({ contactId, mode }: { contactId: string; mode: "ai" | "human" }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_contacts" as unknown as "profiles")
+        .from("whatsapp_contacts" as any)
         .update({ attending_mode: mode } as Record<string, unknown>)
         .eq("id", contactId)
         .eq("organization_id", orgId);
@@ -250,7 +250,7 @@ export function useUpdateContactAgent() {
     mutationFn: async ({ contactId, agentId }: { contactId: string; agentId: string }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_contacts" as unknown as "profiles")
+        .from("whatsapp_contacts" as any)
         .update({ agent_id: agentId } as Record<string, unknown>)
         .eq("id", contactId)
         .eq("organization_id", orgId);
@@ -271,7 +271,7 @@ export function useLinkContactToCrmLead() {
       if (!orgId) return;
       await Promise.all([
         supabase
-          .from("whatsapp_contacts" as unknown as "profiles")
+          .from("whatsapp_contacts" as any)
           .update({ crm_lead_id: leadId } as Record<string, unknown>)
           .eq("id", contactId)
           .eq("organization_id", orgId),
@@ -343,7 +343,7 @@ export function useStarMessage() {
     mutationFn: async ({ messageId, starred }: { messageId: string; starred: boolean }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_messages" as unknown as "profiles")
+        .from("whatsapp_messages" as any)
         .update({ is_starred: starred } as Record<string, unknown>)
         .eq("id", messageId)
         .eq("organization_id", orgId);
@@ -364,7 +364,7 @@ export function useDeleteMessage() {
     mutationFn: async ({ messageId, forEveryone }: { messageId: string; forEveryone: boolean }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_messages" as unknown as "profiles")
+        .from("whatsapp_messages" as any)
         .update({ is_deleted: true } as Record<string, unknown>)
         .eq("id", messageId)
         .eq("organization_id", orgId);
@@ -386,7 +386,7 @@ export function usePinContact() {
     mutationFn: async ({ contactId, pinned }: { contactId: string; pinned: boolean }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_contacts" as unknown as "profiles")
+        .from("whatsapp_contacts" as any)
         .update({ is_pinned: pinned } as Record<string, unknown>)
         .eq("id", contactId)
         .eq("organization_id", orgId);
@@ -407,7 +407,7 @@ export function useArchiveContact() {
     mutationFn: async ({ contactId, archived }: { contactId: string; archived: boolean }) => {
       if (!orgId) return;
       const { error } = await supabase
-        .from("whatsapp_contacts" as unknown as "profiles")
+        .from("whatsapp_contacts" as any)
         .update({ is_archived: archived } as Record<string, unknown>)
         .eq("id", contactId)
         .eq("organization_id", orgId);

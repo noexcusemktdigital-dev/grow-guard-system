@@ -43,7 +43,7 @@ export function useStrategyHistory() {
     queryKey: ["marketing-strategy-history", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_strategies" as unknown as "profiles")
+        .from("marketing_strategies" as any)
         .select("*")
         .eq("organization_id", orgId ?? "")
         .eq("is_active", false)
@@ -76,14 +76,14 @@ export function useSaveStrategy() {
 
       // Deactivate previous active strategies
       await supabase
-        .from("marketing_strategies" as unknown as "profiles")
+        .from("marketing_strategies" as any)
         .update({ is_active: false } as Record<string, unknown>)
         .eq("organization_id", orgId)
         .eq("is_active", true);
 
       // Insert new active strategy
       const { data, error } = await supabase
-        .from("marketing_strategies" as unknown as "profiles")
+        .from("marketing_strategies" as any)
         .insert({
           organization_id: orgId,
           answers: payload.answers,
@@ -128,7 +128,7 @@ export function useApproveStrategy() {
 
       if (sub?.status !== "trial") {
         // Call debit via RPC (server-side)
-        const { error: debitError } = await supabase.rpc("debit_credits" as unknown as "get_goals_with_parent", {
+        const { error: debitError } = await supabase.rpc("debit_credits" as any, {
           _org_id: orgId,
           _amount: 50,
           _description: "Estratégia de marketing aprovada",
@@ -139,7 +139,7 @@ export function useApproveStrategy() {
 
       // Update status
       const { data, error } = await supabase
-        .from("marketing_strategies" as unknown as "profiles")
+        .from("marketing_strategies" as any)
         .update({ status: "approved" } as Record<string, unknown>)
         .eq("id", strategyId)
         .select()

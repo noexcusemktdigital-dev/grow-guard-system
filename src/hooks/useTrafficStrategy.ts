@@ -74,7 +74,7 @@ export function useTrafficStrategyHistory() {
     queryKey: ["traffic-strategy-history", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("traffic_strategies" as unknown as "organizations")
+        .from("traffic_strategies" as any)
         .select("*")
         .eq("organization_id", orgId!)
         .eq("is_active", false)
@@ -132,7 +132,7 @@ export function useApproveTrafficStrategy() {
       if (rpcErr) throw rpcErr;
       // Update status
       const { error } = await supabase
-        .from("traffic_strategies" as unknown as "organizations")
+        .from("traffic_strategies" as any)
         .update({ status: "approved" } as Record<string, unknown>)
         .eq("id", strategyId);
       if (error) throw error;
