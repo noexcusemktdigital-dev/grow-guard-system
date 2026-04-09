@@ -64,7 +64,7 @@ export function ApprovalDashboard() {
           {(stats.posts.pending > 0 || stats.posts.approved > 0) && (
             <button
               className="w-full text-left hover:bg-amber-100/50 dark:hover:bg-amber-900/20 rounded-lg p-2 -m-2 transition-colors"
-              onClick={() => navigate("/cliente/redes-sociais")}
+              onClick={() => navigate("/cliente/postagem")}
             >
               <div className="flex items-center gap-2 mb-1.5">
                 <Image className="w-3.5 h-3.5 text-muted-foreground" />

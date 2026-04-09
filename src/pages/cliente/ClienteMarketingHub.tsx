@@ -28,7 +28,7 @@ function inMonth(dateStr: string | null | undefined, start: Date, end: Date) {
 const TOOLS = [
   { key: "strategy", label: "Estratégia", icon: Megaphone, path: "/cliente/plano-marketing", color: "text-orange-500 bg-orange-500/10" },
   { key: "content", label: "Conteúdos", icon: FileText, path: "/cliente/conteudos", color: "text-blue-500 bg-blue-500/10" },
-  { key: "posts", label: "Postagens", icon: Share2, path: "/cliente/redes-sociais", color: "text-pink-500 bg-pink-500/10" },
+  { key: "posts", label: "Postagens", icon: Share2, path: "/cliente/postagem", color: "text-pink-500 bg-pink-500/10" },
   { key: "sites", label: "Sites", icon: Globe, path: "/cliente/sites", color: "text-emerald-500 bg-emerald-500/10" },
   { key: "traffic", label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", color: "text-purple-500 bg-purple-500/10" },
 ] as const;

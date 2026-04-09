@@ -44,6 +44,7 @@ const CREDIT_REQUIRED = [
   "/cliente/conteudos",
   "/cliente/sites",
   "/cliente/disparos",
+  "/cliente/postagem",
   "/cliente/redes-sociais",
   "/cliente/trafego-pago",
 ];
@@ -57,6 +58,7 @@ const GPS_REQUIRED = [
   "/cliente/disparos",
   "/cliente/dashboard",
   "/cliente/conteudos",
+  "/cliente/postagem",
   "/cliente/redes-sociais",
   "/cliente/sites",
   "/cliente/trafego-pago",

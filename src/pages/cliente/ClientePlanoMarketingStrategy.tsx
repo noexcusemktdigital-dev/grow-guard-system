@@ -94,7 +94,7 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {[
               { key: "conteudos", label: "Gerar Conteúdos", desc: "Textos estratégicos com IA", icon: FileText, path: "/cliente/conteudos" },
-              { key: "postagens", label: "Criar Postagens", desc: "Artes para redes sociais", icon: Palette, path: "/cliente/redes-sociais" },
+              { key: "postagens", label: "Criar Postagens", desc: "Artes para redes sociais", icon: Palette, path: "/cliente/postagem" },
               { key: "sites", label: "Criar Site", desc: "Landing pages otimizadas", icon: Monitor, path: "/cliente/sites" },
               { key: "trafego", label: "Tráfego Pago", desc: "Estratégia de anúncios", icon: Sparkles, path: "/cliente/trafego-pago" },
               { key: "scripts", label: "Gerar Scripts", desc: "Roteiros de venda", icon: PenTool, path: "/cliente/scripts" },

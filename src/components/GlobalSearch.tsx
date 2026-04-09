@@ -73,6 +73,7 @@ const clientePages = [
   { label: "Relatórios", path: "/cliente/dashboard" },
   { label: "Plano de Marketing", path: "/cliente/plano-marketing" },
   { label: "Conteúdos", path: "/cliente/conteudos" },
+  { label: "Postagem", path: "/cliente/postagem" },
   { label: "Redes Sociais", path: "/cliente/redes-sociais" },
   { label: "Sites", path: "/cliente/sites" },
   { label: "Tráfego Pago", path: "/cliente/trafego-pago" },

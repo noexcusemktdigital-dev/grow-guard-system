@@ -115,7 +115,7 @@ export const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 
 
 export const TOOL_ROUTES: Record<string, { label: string; path: string; icon: string }> = {
   conteudos: { label: "Conteudos", path: "/cliente/conteudos", icon: "FileText" },
-  postagens: { label: "Postagens", path: "/cliente/redes-sociais", icon: "Palette" },
+  postagens: { label: "Postagens", path: "/cliente/postagem", icon: "Palette" },
   sites: { label: "Sites", path: "/cliente/sites", icon: "Monitor" },
   trafego: { label: "Trafego Pago", path: "/cliente/trafego-pago", icon: "Zap" },
   crm: { label: "CRM", path: "/cliente/crm", icon: "Users" },

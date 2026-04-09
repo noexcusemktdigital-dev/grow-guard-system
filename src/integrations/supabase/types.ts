@@ -7421,6 +7421,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      start_meta_ads_oauth: { Args: { p_org_id?: string }; Returns: Json }
       sync_team_chat_channels: { Args: { _org_id: string }; Returns: undefined }
     }
     Enums: {

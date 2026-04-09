@@ -104,6 +104,8 @@ const ClienteComunicados = lazy(() => import("./pages/cliente/ClienteComunicados
 const ClienteFaq = lazy(() => import("./pages/cliente/ClienteFaq"));
 const ContasSociais = lazy(() => import("./pages/cliente/ContasSociais"));
 const SocialAnalytics = lazy(() => import("./pages/cliente/SocialAnalytics"));
+const ClienteRedesSociaisHub = lazy(() => import("./pages/cliente/ClienteRedesSociaisHub"));
+const ClientePostagem = lazy(() => import("./pages/cliente/ClientePostagem"));
 
 // PERF-004: staleTime global 2min é agressivo para dados transacionais.
 // Queries financeiras e de créditos usam staleTime: 0 via queryKey prefix.
@@ -257,7 +259,8 @@ function App() {
                   <Route path="dashboard" element={<AdminOnlyRoute><PageBoundary><ClienteDashboard /></PageBoundary></AdminOnlyRoute>} />
                   <Route path="plano-marketing" element={<Navigate to="/cliente/gps-negocio" replace />} />
                   <Route path="conteudos" element={<PageBoundary><ClienteConteudos /></PageBoundary>} />
-                  <Route path="redes-sociais" element={<PageBoundary><ClienteRedesSociais /></PageBoundary>} />
+                  <Route path="postagem" element={<PageBoundary><ClientePostagem /></PageBoundary>} />
+                  <Route path="redes-sociais" element={<PageBoundary><ClienteRedesSociaisHub /></PageBoundary>} />
                   <Route path="sites" element={<PageBoundary><ClienteSites /></PageBoundary>} />
                   <Route path="trafego-pago" element={<AdminOnlyRoute><PageBoundary><ClienteTrafegoPago /></PageBoundary></AdminOnlyRoute>} />
                   <Route path="integracoes" element={<AdminOnlyRoute><PageBoundary><ClienteIntegracoes /></PageBoundary></AdminOnlyRoute>} />
@@ -268,8 +271,8 @@ function App() {
                   <Route path="marketing-hub" element={<ClienteMarketingHub />} />
                   <Route path="comunicados" element={<ClienteComunicados />} />
                   <Route path="faq" element={<ClienteFaq />} />
-                  <Route path="contas-sociais" element={<PageBoundary><ContasSociais /></PageBoundary>} />
-                  <Route path="analytics-social" element={<PageBoundary><SocialAnalytics /></PageBoundary>} />
+                  <Route path="contas-sociais" element={<Navigate to="/cliente/redes-sociais?tab=contas" replace />} />
+                  <Route path="analytics-social" element={<Navigate to="/cliente/redes-sociais?tab=analytics" replace />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

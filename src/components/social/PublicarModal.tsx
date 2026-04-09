@@ -127,7 +127,7 @@ export function PublicarModal({ open, onOpenChange, postId }: PublicarModalProps
                 Nenhuma conta social conectada.
               </p>
               <p className="text-xs text-muted-foreground/70">
-                Acesse <strong>Postagem → Contas Sociais</strong> para conectar sua conta.
+                Acesse <strong>Redes Sociais → Contas</strong> para conectar sua conta.
               </p>
             </div>
           )}
