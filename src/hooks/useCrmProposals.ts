@@ -73,7 +73,7 @@ export function useCrmProposalMutations() {
           organization_id: orgId!,
           created_by: user?.id ?? null,
           items: JSON.stringify(proposal.items ?? []),
-        } as Record<string, unknown>)
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -123,7 +123,7 @@ export function useCrmProposalMutations() {
           payment_terms: proposal.payment_terms,
           discount_total: proposal.discount_total,
           created_by: user?.id ?? null,
-        } as Record<string, unknown>)
+        } as any)
         .select()
         .single();
       if (error) throw error;

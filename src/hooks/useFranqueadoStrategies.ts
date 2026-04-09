@@ -240,11 +240,11 @@ export function useCreateStrategy() {
         .insert({
           organization_id: orgId,
           title,
-          diagnostic_answers: answers as Record<string, unknown>,
+          diagnostic_answers: answers as any,
           status: "draft",
           created_by: user.id,
           lead_id: leadId || null,
-        })
+        } as any)
         .select()
         .single();
       if (insertErr) throw insertErr;
@@ -272,7 +272,7 @@ export function useCreateStrategy() {
 
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_strategies")
-        .update({ result: fnData.result as Record<string, unknown>, status: "completed" })
+        .update({ result: fnData.result as any, status: "completed" })
         .eq("id", row.id)
         .select()
         .single();
@@ -326,7 +326,7 @@ export function useRegenerateStrategy() {
         .from("franqueado_strategies")
         .update({
           title,
-          diagnostic_answers: answers as Record<string, unknown>,
+          diagnostic_answers: answers as any,
           status: "draft",
         })
         .eq("id", id);
@@ -354,7 +354,7 @@ export function useRegenerateStrategy() {
 
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_strategies")
-        .update({ result: fnData.result as Record<string, unknown>, status: "completed" })
+        .update({ result: fnData.result as any, status: "completed" })
         .eq("id", id)
         .select()
         .single();

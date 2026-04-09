@@ -27,7 +27,7 @@ export function useCrmLeadProducts(leadId: string | null) {
         .eq("lead_id", leadId!)
         .order("created_at");
       if (error) throw error;
-      return (data || []).map((row: Record<string, unknown> & { crm_products: { name: string } | null }) => ({
+      return (data || []).map((row: any) => ({
         ...row,
         product_name: row.crm_products?.name || "Produto removido",
       })) as CrmLeadProduct[];

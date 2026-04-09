@@ -126,7 +126,7 @@ describe("useCrmFunnelMutations", () => {
     const { result } = renderHook(() => useCrmFunnelMutations(), { wrapper: createWrapper() });
 
     act(() => {
-      result.current.createFunnel.mutate({ name: "New Funnel", stages: ["stage1"] });
+      result.current.createFunnel.mutate({ name: "New Funnel", stages: ["stage1"] as any });
     });
 
     await waitFor(() => expect(result.current.createFunnel.isSuccess || result.current.createFunnel.isError).toBe(true));

@@ -43,7 +43,7 @@ export function useCrmProductMutations() {
     mutationFn: async (product: Partial<CrmProduct> & { name: string }) => {
       const { data, error } = await supabase
         .from("crm_products")
-        .insert({ ...product, organization_id: orgId ?? "" } as Record<string, unknown>)
+        .insert({ ...product, organization_id: orgId ?? "" } as any)
         .select()
         .single();
       if (error) throw error;

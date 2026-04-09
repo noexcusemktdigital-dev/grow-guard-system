@@ -43,7 +43,7 @@ export function useCrmTeamMutations() {
     mutationFn: async (team: { name: string; description?: string; members?: string[]; funnel_ids?: string[] }) => {
       const { data, error } = await supabase
         .from("crm_teams")
-        .insert({ ...team, organization_id: orgId ?? "" } as Record<string, unknown>)
+        .insert({ ...team, organization_id: orgId ?? "" } as any)
         .select()
         .single();
       if (error) throw error;

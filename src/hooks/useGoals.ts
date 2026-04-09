@@ -39,7 +39,7 @@ export function useGoals(scope?: string, month?: string) {
         _org_id: orgId ?? "",
       });
       if (error) throw error;
-      let results = data as GoalRow[];
+      let results = data as unknown as GoalRow[];
       if (scope && scope !== "all") results = results.filter((g: GoalRow) => g.scope === scope);
       return results;
     },
@@ -60,7 +60,7 @@ export function useActiveGoals(scope?: string) {
         _org_id: orgId ?? "",
       });
       if (error) throw error;
-      let results = (data as GoalRow[]).filter((g: GoalRow) =>
+      let results = (data as unknown as GoalRow[]).filter((g: GoalRow) =>
         ["active", "completed"].includes(g.status) &&
         (!g.period_end || g.period_end >= firstOfMonth)
       );

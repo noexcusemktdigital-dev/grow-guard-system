@@ -233,7 +233,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
                 </Button>
               </div>
             ) : (
-              leadProposals.map((p: Record<string, unknown>) => {
+              leadProposals.map((p: any) => {
                 const statusColors: Record<string, string> = {
                   draft: "bg-muted text-muted-foreground",
                   sent: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",

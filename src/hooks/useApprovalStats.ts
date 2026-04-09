@@ -39,9 +39,9 @@ export function useApprovalStats() {
         };
       };
 
-      const contents = countStatus(contentsRes.data, ["pending"], ["approved"]);
-      const posts = countStatus(postsRes.data, ["pending"], ["approved"]);
-      const sites = countStatus(sitesRes.data, ["Rascunho", "pending"], ["Aprovado", "approved", "Publicado", "published"]);
+      const contents = countStatus(contentsRes.data as any, ["pending"], ["approved"]);
+      const posts = countStatus(postsRes.data as any, ["pending"], ["approved"]);
+      const sites = countStatus(sitesRes.data as any, ["Rascunho", "pending"], ["Aprovado", "approved", "Publicado", "published"]);
 
       return {
         contents,

@@ -41,7 +41,7 @@ export function useCrmPartnerMutations() {
     mutationFn: async (partner: Partial<CrmPartner> & { name: string }) => {
       const { data, error } = await supabase
         .from("crm_partner_companies")
-        .insert({ ...partner, organization_id: orgId ?? "" } as Record<string, unknown>)
+        .insert({ ...partner, organization_id: orgId ?? "" } as any)
         .select()
         .single();
       if (error) throw error;

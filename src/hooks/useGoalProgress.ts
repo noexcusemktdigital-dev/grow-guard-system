@@ -121,7 +121,7 @@ export function useGoalProgress(goals: GoalInput[] | undefined) {
         });
 
         // Scope filtering
-        const filterByScope = (items: Record<string, unknown>[], field: string = "assigned_to") => {
+        const filterByScope = (items: any[], field: string = "assigned_to") => {
           if (goal.scope === "individual" && goal.assigned_to) {
             return items.filter(i => i[field] === goal.assigned_to);
           }

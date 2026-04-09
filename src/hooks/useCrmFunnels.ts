@@ -124,8 +124,8 @@ export function useCrmFunnelMutations() {
         .insert({
           ...funnel,
           organization_id: orgId!,
-          stages: funnel.stages ?? DEFAULT_STAGES,
-        })
+          stages: (funnel.stages ?? DEFAULT_STAGES) as any,
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -148,7 +148,7 @@ export function useCrmFunnelMutations() {
       }
       const { data, error } = await supabase
         .from("crm_funnels")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();

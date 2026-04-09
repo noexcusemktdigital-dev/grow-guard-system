@@ -96,10 +96,10 @@ export function useCreateProspection() {
         .insert({
           organization_id: orgId,
           title,
-          inputs: inputs as Record<string, unknown>,
+          inputs: inputs as any,
           status: "draft",
           created_by: user.id,
-        })
+        } as any)
         .select()
         .single();
       if (insertErr) throw insertErr;
@@ -131,7 +131,7 @@ export function useCreateProspection() {
       // 3. Update with result
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_prospections")
-        .update({ result: fnData.result as Record<string, unknown>, status: "completed" })
+        .update({ result: fnData.result as any, status: "completed" })
         .eq("id", row.id)
         .select()
         .single();
