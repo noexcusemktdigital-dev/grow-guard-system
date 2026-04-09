@@ -391,26 +391,23 @@ async function executeAction(
     }
 
     case "assign_to_team": {
-      // API-006: Round-robin atômico via RPC — elimina race condition de SELECT+UPDATE
+      // API-006: Round-robin com advisory lock via assign_lead_round_robin RPC
+      // O advisory lock pg_advisory_xact_lock(org_id) serializa workers concorrentes,
+      // prevenindo que dois workers atribuam o mesmo lead ao mesmo agente.
       if (actionConfig.team_id) {
-        const { data: teamMembers } = await admin
-          .from("crm_team_members")
-          .select("user_id")
-          .eq("team_id", actionConfig.team_id)
-          .eq("is_active", true);
+        const { data: assignedUserId, error: rpcErr } = await admin.rpc(
+          "assign_lead_round_robin",
+          {
+            p_organization_id: orgId,
+            p_lead_id: lead.id,
+            p_team_id: actionConfig.team_id,
+          }
+        );
 
-        if (teamMembers && teamMembers.length > 0) {
-          // Incremento atômico: lê e atualiza em uma única operação DB
-          const { data: nextIndex } = await admin.rpc("get_and_increment_roulette_index", {
-            _org_id: orgId,
-            _member_count: teamMembers.length,
-          });
-
-          const assignedUser = teamMembers[nextIndex ?? 0].user_id;
-          await admin
-            .from("crm_leads")
-            .update({ assigned_to: assignedUser })
-            .eq("id", lead.id);
+        if (rpcErr) {
+          console.error("assign_lead_round_robin error:", rpcErr.message);
+        } else if (!assignedUserId) {
+          console.log(`assign_lead_round_robin: no eligible agents for team ${actionConfig.team_id}`);
         }
       }
       break;
