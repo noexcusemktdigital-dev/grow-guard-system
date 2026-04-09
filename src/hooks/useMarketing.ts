@@ -1,11 +1,7 @@
-// @ts-nocheck
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState, useCallback } from "react";
-
-const ASSET_PAGE_SIZE = 50;
 
 /** Resolves to parent_org_id if franchisee, otherwise own org_id */
 export function useContentSourceOrgId() {
@@ -36,57 +32,20 @@ export function useMarketingFolders(sourceOrgId?: string) {
   });
 }
 
-export function useMarketingAssets(folderId?: string, sourceOrgId?: string, initialPage = 0) {
+export function useMarketingAssets(folderId?: string, sourceOrgId?: string) {
   const { data: orgId } = useUserOrgId();
   const effectiveOrgId = sourceOrgId || orgId;
-  const [page, setPage] = useState(initialPage);
-
-  const query = useQuery({
-    queryKey: ["marketing-assets", effectiveOrgId, folderId, page],
+  return useQuery({
+    queryKey: ["marketing-assets", effectiveOrgId, folderId],
     queryFn: async () => {
-      const from = page * ASSET_PAGE_SIZE;
-      const to = from + ASSET_PAGE_SIZE - 1;
-      let q = supabase
-        .from("marketing_assets")
-        .select("*", { count: "exact" })
-        .eq("organization_id", effectiveOrgId!)
-        .order("created_at", { ascending: false })
-        .range(from, to);
+      let q = supabase.from("marketing_assets").select("*").eq("organization_id", effectiveOrgId!).order("created_at", { ascending: false });
       if (folderId) q = q.eq("folder_id", folderId);
-      const { data, error, count } = await q;
+      const { data, error } = await q;
       if (error) throw error;
-      return { data: data ?? [], count: count ?? 0, page, pageSize: ASSET_PAGE_SIZE };
+      return data;
     },
     enabled: !!effectiveOrgId,
-    staleTime: 60_000,
-    placeholderData: keepPreviousData,
   });
-
-  const nextPage = useCallback(() => {
-    const total = query.data?.count ?? 0;
-    if ((page + 1) * ASSET_PAGE_SIZE < total) setPage(p => p + 1);
-  }, [page, query.data?.count]);
-
-  const prevPage = useCallback(() => {
-    if (page > 0) setPage(p => p - 1);
-  }, [page]);
-
-  // Reset to page 0 when folder changes
-  const resetPage = useCallback(() => setPage(0), []);
-
-  return {
-    ...query,
-    // Flatten for backward compat — consumers use `data` as array
-    data: query.data?.data,
-    totalCount: query.data?.count ?? 0,
-    page,
-    pageSize: ASSET_PAGE_SIZE,
-    nextPage,
-    prevPage,
-    resetPage,
-    hasNextPage: query.data ? (page + 1) * ASSET_PAGE_SIZE < query.data.count : false,
-    hasPrevPage: page > 0,
-  };
 }
 
 export function useMarketingMutations() {

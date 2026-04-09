@@ -1,9 +1,7 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
-import { aiCacheKey, withAICache } from "@/lib/aiCache";
 
 export interface MarketingStrategy {
   id: string;
@@ -164,28 +162,23 @@ export function useGenerateStrategy() {
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
-      // PERF-003: cache identical strategy generation calls for 30min
-      const cacheKey = aiCacheKey({ fn: "generate-strategy", ...payload, section: payload.section || "marketing" });
-
-      return withAICache(cacheKey, async () => {
-        const resp = await supabase.functions.invoke("generate-strategy", {
-          body: {
-            answers: payload.answers,
-            organization_id: payload.organization_id,
-            section: payload.section || "marketing",
-          },
-        });
-
-        if (resp.error) {
-          const realError = await extractEdgeFunctionError(resp.error);
-          throw realError;
-        }
-
-        const data = resp.data as Record<string, unknown>;
-        if (data?.error) throw new Error(String(data.error));
-
-        return data;
+      const resp = await supabase.functions.invoke("generate-strategy", {
+        body: { 
+          answers: payload.answers, 
+          organization_id: payload.organization_id,
+          section: payload.section || "marketing",
+        },
       });
+
+      if (resp.error) {
+        const realError = await extractEdgeFunctionError(resp.error);
+        throw realError;
+      }
+      
+      const data = resp.data as Record<string, unknown>;
+      if (data?.error) throw new Error(String(data.error));
+      
+      return data;
     },
   });
 }

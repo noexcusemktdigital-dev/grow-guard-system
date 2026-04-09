@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
@@ -7,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useClienteSubscription } from "./useClienteSubscription";
 import { useClienteWallet } from "./useClienteWallet";
 import { CREDIT_COSTS } from "@/constants/plans";
-import { aiCacheKey, withAICache } from "@/lib/aiCache";
 
 const CREDIT_COST_PER_CONTENT = CREDIT_COSTS["generate-content"].cost;
 export const CREDIT_COST_APPROVE_CONTENT = CREDIT_COSTS["approve-content"].cost;
@@ -108,39 +106,35 @@ export function useGenerateContent() {
     }) => {
       if (!orgId) throw new Error("Org not found");
 
-      // PERF-003: cache identical content generation calls for 30min
-      const contentBody = {
-        organization_id: orgId,
-        quantidade: payload.quantidade,
-        formatos: payload.formatos,
-        objetivos: payload.objetivos,
-        tema: payload.tema || "",
-        plataforma: payload.plataforma,
-        tom: payload.tom || "",
-        publico: payload.publico || "",
-        estrategia: payload.estrategia,
-        funilMomento: payload.funilMomento || "",
-        contextoEspecial: payload.contextoEspecial || "",
-        contextoDetalhe: payload.contextoDetalhe || "",
-        estiloLote: payload.estiloLote || "",
-        nomeEmpresa: payload.nomeEmpresa || "",
-        produto: payload.produto || "",
-        diferencial: payload.diferencial || "",
-        doresPublico: payload.doresPublico || "",
-        desejosPublico: payload.desejosPublico || "",
-      };
-      const cacheKey = aiCacheKey({ fn: "generate-content", ...contentBody });
-
-      const result = await withAICache(cacheKey, async () => {
-        const resp = await supabase.functions.invoke("generate-content", { body: contentBody });
-        if (resp.error) {
-          const realError = await extractEdgeFunctionError(resp.error);
-          throw realError;
-        }
-        const r = resp.data as any;
-        if (r?.error) throw new Error(r.error as string);
-        return r;
+      const resp = await supabase.functions.invoke("generate-content", {
+        body: {
+          organization_id: orgId,
+          quantidade: payload.quantidade,
+          formatos: payload.formatos,
+          objetivos: payload.objetivos,
+          tema: payload.tema || "",
+          plataforma: payload.plataforma,
+          tom: payload.tom || "",
+          publico: payload.publico || "",
+          estrategia: payload.estrategia,
+          funilMomento: payload.funilMomento || "",
+          contextoEspecial: payload.contextoEspecial || "",
+          contextoDetalhe: payload.contextoDetalhe || "",
+          estiloLote: payload.estiloLote || "",
+          nomeEmpresa: payload.nomeEmpresa || "",
+          produto: payload.produto || "",
+          diferencial: payload.diferencial || "",
+          doresPublico: payload.doresPublico || "",
+          desejosPublico: payload.desejosPublico || "",
+        },
       });
+
+      if (resp.error) {
+        const realError = await extractEdgeFunctionError(resp.error);
+        throw realError;
+      }
+      const result = resp.data as any;
+      if (result?.error) throw new Error(result.error as string);
 
       const conteudos = (result.conteudos || []) as any[];
       if (conteudos.length === 0) throw new Error("Nenhum conteúdo gerado");

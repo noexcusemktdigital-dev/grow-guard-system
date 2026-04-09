@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
@@ -27,7 +26,7 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
       return { data: data ?? [], count: count ?? 0, page, pageSize: PAGE_SIZE };
     },
     enabled: !!orgId,
-    staleTime: 30_000, // PERF-004: 30s (was 2min — too stale for CRM lead state changes)
+    staleTime: 1000 * 60 * 2,
     placeholderData: keepPreviousData,
   });
 
