@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';

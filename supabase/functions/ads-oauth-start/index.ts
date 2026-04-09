@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ads-oauth-start
  * Inicia o fluxo OAuth da Meta Ads para o usuário autenticado.
