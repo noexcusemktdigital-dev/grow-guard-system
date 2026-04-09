@@ -28,15 +28,20 @@ const Auth = () => {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
   const navigate = useNavigate();
+  const { user: authUser, role: authRole, loading: authLoading } = useAuth();
 
-  // Guard: if JS module was loaded from a SaaS path (/app, /cliente, /),
-  // the storageKey is "noe-saas-auth" but this page needs "noe-franchise-auth".
-  // Force a hard reload so the module re-initializes with the correct key.
+  // Redirect already-authenticated users based on their role
   useEffect(() => {
-    if (PORTAL_STORAGE_KEY !== "noe-franchise-auth") {
-      window.location.replace(window.location.href);
+    if (authLoading || !authUser) return;
+
+    if (authRole === "super_admin" || authRole === "admin") {
+      navigate("/franqueadora/inicio", { replace: true });
+    } else if (authRole === "franqueado") {
+      navigate("/franqueado/inicio", { replace: true });
+    } else if (authRole === "cliente_admin" || authRole === "cliente_user") {
+      navigate("/cliente/inicio", { replace: true });
     }
-  }, []);
+  }, [authUser, authRole, authLoading, navigate]);
 
   useEffect(() => {
     const interval = setInterval(() => {
