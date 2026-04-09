@@ -205,6 +205,10 @@ project_id = "gxrhdpbbxfipeopdyygn"
     # Phase 4 — Cron job: pulls engagement metrics from Meta/LinkedIn for published posts
     # Auth: Bearer CRON_SECRET header (not JWT) — called by pg_cron daily at 6 AM UTC
     verify_jwt = false
+  [functions.social-ads-metrics]
+    # Phase 5 — Cron job: pulls Google Ads campaign performance data via REST API
+    # Auth: Bearer CRON_SECRET header (not JWT) — called by pg_cron daily at 6:30 AM UTC
+    verify_jwt = false
 
   # --- Social media publishing (Phase 3) ---
   [functions.social-publish]
