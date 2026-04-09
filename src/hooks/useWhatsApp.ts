@@ -102,7 +102,7 @@ export function useWhatsAppContacts(_filterInstanceId?: string | null) {
 
       const { data, error } = await query;
       if (error) throw error;
-      const enriched = (data || []).map((c: Record<string, unknown>) => {
+      const enriched = (data || []).map((c: any) => {
         const phone = (c.phone as string) || "";
         let contact_type: "individual" | "group" | "lid" = (c.contact_type as string as "individual" | "group" | "lid") || "individual";
         if (contact_type === "individual") {

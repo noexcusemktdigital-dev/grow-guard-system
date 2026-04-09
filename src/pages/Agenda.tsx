@@ -445,12 +445,12 @@ export default function Agenda() {
 
           {/* Week View */}
           {viewMode === "week" && (
-            <WeekView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+            <WeekView currentDate={currentDate} events={(events ?? []) as any} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
           )}
 
           {/* Day View */}
           {viewMode === "day" && (
-            <DayView currentDate={currentDate} events={events ?? []} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+            <DayView currentDate={currentDate} events={(events ?? []) as any} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
           )}
         </div>
       </div>
