@@ -49,6 +49,7 @@ const FranqueadoraPerfil = lazy(() => import("./pages/franqueadora/FranqueadoraP
 const FranqueadoraChat = lazy(() => import("./pages/franqueadora/FranqueadoraChat"));
 const NotificacoesPage = lazy(() => import("./pages/NotificacoesPage"));
 const ApresentacaoPage = lazy(() => import("./pages/Apresentacao"));
+const Anuncios = lazy(() => import("./pages/Anuncios"));
 
 // Franqueado pages
 const FranqueadoDashboard = lazy(() => import("./pages/franqueado/FranqueadoDashboard"));
@@ -200,6 +201,7 @@ function App() {
                   <Route path="candidatos" element={<FranqueadoraCandidatos />} />
                   <Route path="chat" element={<FranqueadoraChat />} />
                   <Route path="notificacoes" element={<NotificacoesPage />} />
+                  <Route path="anuncios" element={<PageBoundary><Anuncios /></PageBoundary>} />
                 </Route>
               </Route>
 
