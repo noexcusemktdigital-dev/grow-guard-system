@@ -46,23 +46,21 @@ const SaasAuth = () => {
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get("ref") || "";
   const [referralInfo, setReferralInfo] = useState<{ org_name: string; discount: number } | null>(null);
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser, role: authRole, loading: authLoading } = useAuth();
 
-  // Redirect if already authenticated (handles Google OAuth callback)
+  // Redirect already-authenticated users based on their role
   useEffect(() => {
-    if (!authLoading && authUser) {
+    if (authLoading || !authUser) return;
+
+    if (authRole === "cliente_admin" || authRole === "cliente_user") {
       navigate("/cliente/inicio", { replace: true });
+    } else if (authRole === "super_admin" || authRole === "admin") {
+      navigate("/franqueadora/inicio", { replace: true });
+    } else if (authRole === "franqueado") {
+      navigate("/franqueado/inicio", { replace: true });
     }
-  }, [authUser, authLoading, navigate]);
-
-  // Guard: if JS module was loaded from a franchise path (/acessofranquia, /franqueado, /franqueadora),
-  // the storageKey is "noe-franchise-auth" but this page needs "noe-saas-auth".
-  // Force a hard reload so the module re-initializes with the correct key.
-  useEffect(() => {
-    if (PORTAL_STORAGE_KEY !== "noe-saas-auth") {
-      window.location.replace(window.location.href);
-    }
-  }, []);
+    // If role is null but user exists, wait for role to resolve
+  }, [authUser, authRole, authLoading, navigate]);
 
   // Resolve referral code on mount
   useEffect(() => {

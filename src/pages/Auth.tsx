@@ -9,6 +9,7 @@ import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PHRASES = [
   "SEM DESCULPAS.\nSÓ RESULTADOS.",
