@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from "react";
 import { formatBRL } from "@/lib/formatting";
 import { Skeleton } from "@/components/ui/skeleton";

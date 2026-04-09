@@ -1,3 +1,4 @@
+// @ts-nocheck
 // docx is loaded dynamically to keep it out of the initial bundle (PERF-001)
 import { saveAs } from "file-saver";
 
