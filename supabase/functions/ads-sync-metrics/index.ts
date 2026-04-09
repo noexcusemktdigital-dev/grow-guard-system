@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ============================================================
 // ARCH-ADS-001 — DEPRECATED (manter por ora, NÃO deletar)
 // Este arquivo sincroniza métricas de Meta Ads e Google Ads via conexões

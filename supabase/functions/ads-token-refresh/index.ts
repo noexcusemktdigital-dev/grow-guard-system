@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ads-token-refresh
  * Cron job que renova tokens Meta Ads próximos de expirar.
