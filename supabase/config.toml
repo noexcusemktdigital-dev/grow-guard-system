@@ -201,3 +201,8 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.social-token-refresh]
     # Cron job for token refresh — called by pg_cron, no user JWT
     verify_jwt = false
+
+  # --- Social media publishing (Phase 3) ---
+  [functions.social-publish]
+    # Publishes a post to Meta (Instagram/Facebook) or LinkedIn — requires authenticated user
+    verify_jwt = true
