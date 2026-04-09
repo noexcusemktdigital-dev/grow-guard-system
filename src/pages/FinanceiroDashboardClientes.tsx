@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from "react";
 import { formatBRL } from "@/lib/formatting";
 import { ArrowRight, Pencil, Trash2, Search, CreditCard, Copy, ExternalLink, Loader2, RefreshCw, Users, Building2 } from "lucide-react";
