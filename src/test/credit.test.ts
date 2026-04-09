@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * QA-001: Credit wallet & transaction tests
  * Covers: fetch enabled/disabled, error handling, limits, credit alert level logic

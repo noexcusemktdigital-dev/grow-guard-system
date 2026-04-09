@@ -1,15 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function jsonRes(data: unknown, status = 200) {
+function jsonRes(data: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
@@ -27,7 +22,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -35,7 +30,7 @@ Deno.serve(async (req) => {
     const audioFile = formData.get("audio") as File | null;
 
     if (!audioFile) {
-      return jsonRes({ error: "Nenhum áudio enviado" }, 400);
+      return jsonRes({ error: "Nenhum áudio enviado" }, 400, req);
     }
 
     const arrayBuffer = await audioFile.arrayBuffer();
@@ -43,7 +38,7 @@ Deno.serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
-      return jsonRes({ error: "API key não configurada" }, 500);
+      return jsonRes({ error: "API key não configurada" }, 500, req);
     }
 
     // Use Gemini Flash with inline_data for audio transcription
@@ -124,21 +119,22 @@ Deno.serve(async (req) => {
         console.error("Fallback also failed:", fallbackResponse.status, fallbackError);
         return jsonRes(
           { error: "Erro ao transcrever áudio. Tente novamente." },
-          502
+          502,
+          req
         );
       }
 
       const fallbackResult = await fallbackResponse.json();
       const fallbackText = fallbackResult.choices?.[0]?.message?.content?.trim() || "";
-      return jsonRes({ text: fallbackText });
+      return jsonRes({ text: fallbackText }, 200, req);
     }
 
     const result = await response.json();
     const transcription = result.choices?.[0]?.message?.content?.trim() || "";
 
-    return jsonRes({ text: transcription });
+    return jsonRes({ text: transcription }, 200, req);
   } catch (err) {
     console.error("Transcription error:", err);
-    return jsonRes({ error: "Erro interno ao processar áudio" }, 500);
+    return jsonRes({ error: "Erro interno ao processar áudio" }, 500, req);
   }
 });

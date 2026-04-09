@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatBRL } from "@/lib/formatting";

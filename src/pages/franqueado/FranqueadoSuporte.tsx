@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { logger } from "@/lib/logger";
 import { Card } from "@/components/ui/card";

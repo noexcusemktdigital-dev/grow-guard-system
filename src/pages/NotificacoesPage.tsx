@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 import { useState, useRef, useCallback, useMemo } from "react";
 import { Bell, Users, MessageCircle, Rocket, Target, CheckCheck, Loader2 } from "lucide-react";

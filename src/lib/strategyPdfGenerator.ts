@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Professional A4 PDF generator for Strategy Results.
  * Builds the PDF programmatically with jsPDF — no html2canvas dependency for main content.

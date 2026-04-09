@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Building2, FileText, Users, DollarSign } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

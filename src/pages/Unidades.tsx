@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 import { useState } from "react";
 import { Building2, ArrowLeft, Users, FileText, Settings, ClipboardList, Inbox, Plus, LayoutGrid, List, Check, Trash2 } from "lucide-react";

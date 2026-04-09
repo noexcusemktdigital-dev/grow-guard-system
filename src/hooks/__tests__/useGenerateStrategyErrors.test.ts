@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Isolated tests for useGenerateStrategy error paths.
  * Must be in a separate file to avoid cross-test contamination from shared mock state
