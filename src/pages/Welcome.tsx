@@ -46,7 +46,6 @@ const Welcome = () => {
 
       // If we have token_hash params, we can still try explicit verification
       if (tokenHash && tokenType) {
-        console.log("[Welcome] Hash error detected but token_hash available, attempting explicit verify");
         // Clean the hash so it doesn't interfere
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
       } else {
@@ -59,7 +58,6 @@ const Welcome = () => {
 
     // If we have token_hash, verify explicitly (new flow)
     if (tokenHash && tokenType) {
-      console.log("[Welcome] Verifying token_hash explicitly...");
       supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: tokenType as "recovery",
@@ -69,7 +67,6 @@ const Welcome = () => {
           setSessionError(true);
           setVerifying(false);
         } else if (data?.session) {
-          console.log("[Welcome] verifyOtp success, session ready");
           setSessionReady(true);
           setVerifying(false);
         } else {
@@ -83,7 +80,6 @@ const Welcome = () => {
 
     // Legacy flow: listen for auth state changes (for old action_link style)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[Welcome] onAuthStateChange:", event);
       if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
         setSessionReady(true);
         setVerifying(false);
@@ -163,8 +159,6 @@ const Welcome = () => {
             console.warn("[Welcome] manage-member invoke error:", fnErr);
           } else if (respData?.error) {
             console.warn("[Welcome] manage-member returned error:", respData.error);
-          } else {
-            console.log("[Welcome] Invitation marked as accepted");
           }
         }
       } catch (e) {

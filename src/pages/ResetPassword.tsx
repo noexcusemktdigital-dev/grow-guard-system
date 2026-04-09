@@ -39,7 +39,6 @@ const ResetPassword = () => {
 
     // --- Method 1: Explicit token_hash verification (scanner-proof) ---
     if (tokenHash) {
-      console.log("[ResetPassword] Verifying token_hash explicitly…");
       supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: otpType as any,
@@ -49,7 +48,6 @@ const ResetPassword = () => {
           console.error("[ResetPassword] verifyOtp error:", error.message);
           setSessionError(true);
         } else if (data?.session) {
-          console.log("[ResetPassword] verifyOtp success, session established");
           setSessionReady(true);
           setRecoveryConfirmed(true);
         } else {
@@ -63,7 +61,6 @@ const ResetPassword = () => {
     // --- Method 2: Fallback for old-style action_link URLs ---
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
-      console.log("[ResetPassword] onAuthStateChange:", event);
       if (event === "PASSWORD_RECOVERY" && session) {
         setSessionReady(true);
         setRecoveryConfirmed(true);
