@@ -1,37 +1,33 @@
 
 
-# Corrigir integração Meta Ads e Instagram
+# Corrigir erro "Missing authorization header" no OAuth Meta/Instagram
 
-## Dois problemas identificados
+## Problema
+A edge function `social-oauth-meta` constrói o `redirect_uri` usando `SITE_URL` (grow-guard-system.lovable.app), mas as edge functions são hospedadas no domínio do Supabase (`gxrhdpbbxfipeopdyygn.supabase.co`). Quando o Facebook redireciona de volta, ele envia o usuário para o domínio do app Lovable, que não tem a edge function — retornando "Missing authorization header".
 
-### Problema 1: "Requested function was not found"
-As edge functions `social-oauth-meta` (Instagram) e `ads-oauth-start` (Meta Ads) existem no código mas **não estão implantadas** no servidor. Precisam ser deployed.
+O mesmo problema existe em `social-oauth-callback` (linha 161).
 
-**Ação**: Deploy das funções relevantes:
+## Solução
+Trocar `SITE_URL` por `SUPABASE_URL` para construir o `redirect_uri` nas duas funções:
+
+### 1. `supabase/functions/social-oauth-meta/index.ts`
+- Linha 63: Usar `Deno.env.get("SUPABASE_URL")` em vez de `SITE_URL` para o redirect URI
+- Alterar: `const redirectUri = \`\${siteUrl}/functions/v1/social-oauth-callback\``
+- Para: `const redirectUri = \`\${Deno.env.get("SUPABASE_URL")}/functions/v1/social-oauth-callback\``
+
+### 2. `supabase/functions/social-oauth-callback/index.ts`
+- Linha 161: Mesmo ajuste para que o redirect_uri no token exchange combine com o usado no início do fluxo
+- Alterar: `const redirectUri = \`\${siteUrl}/functions/v1/social-oauth-callback\``
+- Para: `const redirectUri = \`\${supabaseUrl}/functions/v1/social-oauth-callback\``
+
+### 3. Atualizar URI no Facebook Developers
+Você precisará garantir que a URI de redirecionamento cadastrada no painel do Facebook seja:
+`https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/social-oauth-callback`
+
+### 4. Deploy das funções alteradas
 - `social-oauth-meta`
 - `social-oauth-callback`
-- `ads-oauth-start`
-- `ads-oauth-callback`
 
-### Problema 2: "Não é possível carregar a URL"
-O Facebook está rejeitando o redirecionamento porque o **domínio da aplicação** (grow-guard-system.lovable.app e os domínios de preview) não está cadastrado nas configurações do app Meta/Facebook.
-
-**Ação necessária no painel do Facebook Developers** (developers.facebook.com):
-1. Acesse seu app Meta → **Configurações** → **Básico**
-2. Em **Domínios do app**, adicione:
-   - `grow-guard-system.lovable.app`
-   - `lovable.app`
-3. Em **Produtos** → **Login do Facebook** → **Configurações**:
-   - Adicione as URIs de redirecionamento OAuth válidas:
-     - `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/ads-oauth-callback`
-     - `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/social-oauth-callback`
-
-### Resumo das ações
-| Ação | Quem faz |
-|------|----------|
-| Deploy das 4 edge functions | Lovable (automático) |
-| Adicionar domínios no app Facebook | Você, no painel developers.facebook.com |
-| Adicionar redirect URIs no Login do Facebook | Você, no painel developers.facebook.com |
-
-Sem o cadastro dos domínios no Facebook, o OAuth sempre retornará o erro "Não é possível carregar a URL", independente do deploy.
+## Detalhes técnicos
+O `SUPABASE_URL` já está disponível automaticamente em todas as edge functions. O `SITE_URL` continua sendo usado apenas para os redirects finais ao frontend (após salvar os tokens).
 
