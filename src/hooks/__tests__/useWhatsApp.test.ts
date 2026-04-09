@@ -40,6 +40,7 @@ function buildChain(finalFn: () => any) {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  PORTAL_STORAGE_KEY: "noe-saas-auth",
   supabase: {
     from: (table: string) => ({
       select: (...args: any[]) => {
@@ -169,7 +170,7 @@ describe("useWhatsAppInstance", () => {
     expect(result.current.data?.status).toBe("connected");
   });
 
-  it("returns first instance when no connected instance", async () => {
+  it("returns null when no connected instance exists (disconnected instances ignored)", async () => {
     mockOrgId.data = "org-1";
     const instances = [
       { id: "i1", instance_id: "inst-1", status: "disconnected", provider: "zapi" },
@@ -179,8 +180,8 @@ describe("useWhatsAppInstance", () => {
 
     const { result } = renderHook(() => useWhatsAppInstance(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.data).toBeTruthy());
-    expect(result.current.data?.id).toBe("i1");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeNull();
   });
 
   it("returns null when no instances exist", async () => {

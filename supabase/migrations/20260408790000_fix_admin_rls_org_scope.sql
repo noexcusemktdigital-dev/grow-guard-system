@@ -19,10 +19,10 @@ CREATE POLICY "Admins can manage own org wallets"
     OR (
       has_role(auth.uid(), 'admin'::app_role)
       AND (
-        organization_id = get_user_org_id(auth.uid())
+        organization_id = get_user_org_id(auth.uid(), NULL::text)
         OR organization_id IN (
           SELECT id FROM public.organizations
-          WHERE parent_org_id = get_user_org_id(auth.uid())
+          WHERE parent_org_id = get_user_org_id(auth.uid(), NULL::text)
         )
       )
     )
@@ -32,10 +32,10 @@ CREATE POLICY "Admins can manage own org wallets"
     OR (
       has_role(auth.uid(), 'admin'::app_role)
       AND (
-        organization_id = get_user_org_id(auth.uid())
+        organization_id = get_user_org_id(auth.uid(), NULL::text)
         OR organization_id IN (
           SELECT id FROM public.organizations
-          WHERE parent_org_id = get_user_org_id(auth.uid())
+          WHERE parent_org_id = get_user_org_id(auth.uid(), NULL::text)
         )
       )
     )
@@ -53,10 +53,10 @@ CREATE POLICY "Admins can manage own org subscriptions"
     OR (
       has_role(auth.uid(), 'admin'::app_role)
       AND (
-        organization_id = get_user_org_id(auth.uid())
+        organization_id = get_user_org_id(auth.uid(), NULL::text)
         OR organization_id IN (
           SELECT id FROM public.organizations
-          WHERE parent_org_id = get_user_org_id(auth.uid())
+          WHERE parent_org_id = get_user_org_id(auth.uid(), NULL::text)
         )
       )
     )
@@ -66,10 +66,10 @@ CREATE POLICY "Admins can manage own org subscriptions"
     OR (
       has_role(auth.uid(), 'admin'::app_role)
       AND (
-        organization_id = get_user_org_id(auth.uid())
+        organization_id = get_user_org_id(auth.uid(), NULL::text)
         OR organization_id IN (
           SELECT id FROM public.organizations
-          WHERE parent_org_id = get_user_org_id(auth.uid())
+          WHERE parent_org_id = get_user_org_id(auth.uid(), NULL::text)
         )
       )
     )

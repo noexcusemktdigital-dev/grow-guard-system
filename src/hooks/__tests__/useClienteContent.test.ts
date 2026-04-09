@@ -56,6 +56,7 @@ function buildChain(finalFn: () => any) {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  PORTAL_STORAGE_KEY: "noe-saas-auth",
   supabase: {
     from: (table: string) => ({
       select: (...args: any[]) => {
@@ -81,13 +82,13 @@ vi.mock("@/lib/supabase", () => ({
 import {
   useClienteContent,
   useClienteCampaigns,
-  useClienteScripts,
-  useClienteDispatches,
   useClienteSites,
   useClienteChecklist,
   useClienteGamification,
   useClienteContentMutations,
 } from "../useClienteContent";
+import { useClienteScripts } from "../useClienteScripts";
+import { useClienteDispatches } from "../useClienteDispatches";
 
 function createWrapper() {
   const qc = new QueryClient({

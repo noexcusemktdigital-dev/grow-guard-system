@@ -8,6 +8,7 @@ import { createElement } from "react";
 const mockRpc = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
+  PORTAL_STORAGE_KEY: "noe-saas-auth",
   supabase: {
     rpc: (...args: any[]) => mockRpc(...args),
   },

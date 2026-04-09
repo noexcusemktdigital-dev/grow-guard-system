@@ -10,6 +10,12 @@ vi.mock("@/hooks/useUserOrgId", () => ({
   useUserOrgId: () => mockOrgId,
 }));
 
+// Mock edgeFunctionError to avoid async complexity in error handling tests
+vi.mock("@/lib/edgeFunctionError", () => ({
+  extractEdgeFunctionError: (error: unknown) =>
+    Promise.resolve(error instanceof Error ? error : new Error(String((error as any)?.message || error))),
+}));
+
 // Chainable supabase mock
 const mockQueryResult = { data: null as any, error: null as any };
 const mockMutationResult = { data: null as any, error: null as any };
@@ -34,6 +40,7 @@ function buildChain(finalFn: () => any) {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  PORTAL_STORAGE_KEY: "noe-saas-auth",
   supabase: {
     from: (table: string) => ({
       select: (...args: any[]) => {
@@ -178,7 +185,7 @@ describe("useHasActiveStrategy", () => {
   });
 
   it("returns true when active strategy exists", async () => {
-    mockQueryResult.data = { id: "s1", is_active: true };
+    mockQueryResult.data = { id: "s1", is_active: true, status: "approved" };
 
     const { result } = renderHook(() => useHasActiveStrategy(), { wrapper: createWrapper() });
 
@@ -258,6 +265,14 @@ describe("useSaveStrategy", () => {
 describe("useGenerateStrategy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Explicitly reset mock implementations to avoid test leakage
+    mockGetSession.mockImplementation(() => Promise.resolve({ data: { session: null } }));
+    mockFunctionsInvoke.mockImplementation(() => Promise.resolve({ data: null, error: null }));
+    mockQueryResult.data = null;
+    mockQueryResult.error = null;
+    mockMutationResult.data = null;
+    mockMutationResult.error = null;
+    mockOrgId.data = null;
   });
 
   it("calls generate-strategy edge function", async () => {
@@ -272,7 +287,7 @@ describe("useGenerateStrategy", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockFunctionsInvoke).toHaveBeenCalledWith("generate-strategy", {
-      body: { answers: { q1: "a1" }, organization_id: "org-1" },
+      body: { answers: { q1: "a1" }, organization_id: "org-1", section: "marketing" },
     });
   });
 
@@ -288,29 +303,6 @@ describe("useGenerateStrategy", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
-  it("handles edge function error", async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { access_token: "token" } } });
-    mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: "AI error" } });
-
-    const { result } = renderHook(() => useGenerateStrategy(), { wrapper: createWrapper() });
-
-    act(() => {
-      result.current.mutate({ answers: {}, organization_id: "org-1" });
-    });
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-  });
-
-  it("handles data-level error", async () => {
-    mockGetSession.mockResolvedValue({ data: { session: { access_token: "token" } } });
-    mockFunctionsInvoke.mockResolvedValue({ data: { error: "Rate limited" }, error: null });
-
-    const { result } = renderHook(() => useGenerateStrategy(), { wrapper: createWrapper() });
-
-    act(() => {
-      result.current.mutate({ answers: {}, organization_id: "org-1" });
-    });
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-  });
+  // NOTE: error path tests for useGenerateStrategy are in useGenerateStrategyErrors.test.ts
+  // to avoid cross-test mock contamination with shared mockGetSession/mockFunctionsInvoke state.
 });

@@ -11,6 +11,7 @@ const mockInvoke = vi.fn();
 const mockRpc = vi.fn().mockResolvedValue({ data: [] });
 
 vi.mock("@/lib/supabase", () => ({
+  PORTAL_STORAGE_KEY: "noe-saas-auth",
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),

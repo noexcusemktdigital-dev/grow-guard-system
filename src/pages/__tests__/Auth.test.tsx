@@ -10,6 +10,7 @@ const mockSignOut = vi.fn();
 const mockInvoke = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
+  PORTAL_STORAGE_KEY: "noe-franchise-auth",
   supabase: {
     auth: {
       signInWithPassword: (...args: any[]) => mockSignIn(...args),

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 function getPortalContext(): string {
   const path = window.location.pathname;
-  if (path.startsWith("/cliente") || path === "/") return "saas";
+  if (path.startsWith("/cliente") || path === "/" || path.startsWith("/app")) return "saas";
   return "franchise";
 }
 
