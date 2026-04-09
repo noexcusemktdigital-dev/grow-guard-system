@@ -51,7 +51,7 @@ export function useSaveVisualIdentity() {
       if (existing) {
         const { data, error } = await supabase
           .from("marketing_visual_identities" as any)
-          .update({ ...payload, updated_at: new Date().toISOString() } as Record<string, unknown>)
+          .update({ ...payload, updated_at: new Date().toISOString() } as any)
           .eq("organization_id", orgId)
           .select()
           .single();

@@ -77,7 +77,7 @@ export function useSaveStrategy() {
       // Deactivate previous active strategies
       await supabase
         .from("marketing_strategies" as any)
-        .update({ is_active: false } as Record<string, unknown>)
+        .update({ is_active: false } as any)
         .eq("organization_id", orgId)
         .eq("is_active", true);
 
@@ -92,7 +92,7 @@ export function useSaveStrategy() {
           is_active: true,
           strategy_result: payload.strategy_result || null,
           status: payload.status || "pending",
-        } as Record<string, unknown>)
+        } as any)
         .select()
         .single();
 
@@ -140,7 +140,7 @@ export function useApproveStrategy() {
       // Update status
       const { data, error } = await supabase
         .from("marketing_strategies" as any)
-        .update({ status: "approved" } as Record<string, unknown>)
+        .update({ status: "approved" } as any)
         .eq("id", strategyId)
         .select()
         .single();
