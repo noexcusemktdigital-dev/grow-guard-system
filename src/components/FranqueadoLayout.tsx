@@ -4,6 +4,7 @@ import { FranqueadoSidebar, FranqueadoSidebarContent } from "./FranqueadoSidebar
 import { FranqueadoTour } from "./FranqueadoTour";
 import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
 import { FranqueadoWelcomeModal } from "./FranqueadoWelcomeModal";
+import { SystemAlertBanner } from "./SystemAlertBanner";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -36,6 +37,7 @@ export function FranqueadoLayout() {
 
       <main className="flex-1 overflow-x-hidden">
         <div key={location.pathname} className="page-enter p-6 lg:p-8">
+          <SystemAlertBanner />
           <Outlet />
         </div>
       </main>

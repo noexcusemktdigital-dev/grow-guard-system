@@ -12,6 +12,7 @@ import { OnboardingTour } from "./cliente/OnboardingTour";
 import { TrialWelcomeModal } from "./cliente/TrialWelcomeModal";
 import { CelebrationEffect } from "./CelebrationEffect";
 import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
+import { SystemAlertBanner } from "./SystemAlertBanner";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -70,6 +71,7 @@ export function ClienteLayout() {
             }`}
           >
             {tourDone && !isChatRoute && <ActionAlertsBanner />}
+            {tourDone && !isChatRoute && <SystemAlertBanner />}
             <Outlet />
           </div>
           <FeatureGateOverlay />

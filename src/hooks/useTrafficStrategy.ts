@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
+import { aiCacheKey, withAICache } from "@/lib/aiCache";
 
 export interface TrafficPlatformStrategy {
   platform: string;
@@ -94,20 +95,24 @@ export function useGenerateTrafficStrategy() {
   return useMutation({
     mutationFn: async (wizardData: TrafficWizardData & { strategy_id?: string }) => {
       if (!orgId) throw new Error("Org not found");
-      const resp = await supabase.functions.invoke("generate-traffic-strategy", {
-        body: { organization_id: orgId, ...wizardData },
+      // PERF-003: cache identical traffic strategy calls for 30min
+      const cacheKey = aiCacheKey({ fn: "generate-traffic-strategy", orgId, ...wizardData });
+      return withAICache(cacheKey, async () => {
+        const resp = await supabase.functions.invoke("generate-traffic-strategy", {
+          body: { organization_id: orgId, ...wizardData },
+        });
+        if (resp.error) {
+          const realError = await extractEdgeFunctionError(resp.error);
+          throw realError;
+        }
+        const data = resp.data as Record<string, unknown>;
+        if (data?.error) {
+          const err = new Error(String(data.error));
+          (err as unknown as Record<string, unknown>).code = data.code;
+          throw err;
+        }
+        return data.strategy as TrafficStrategy;
       });
-      if (resp.error) {
-        const realError = await extractEdgeFunctionError(resp.error);
-        throw realError;
-      }
-      const data = resp.data as Record<string, unknown>;
-      if (data?.error) {
-        const err = new Error(String(data.error));
-        (err as unknown as Record<string, unknown>).code = data.code;
-        throw err;
-      }
-      return data.strategy as TrafficStrategy;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["traffic-strategy-active"] });
