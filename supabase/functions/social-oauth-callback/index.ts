@@ -158,7 +158,7 @@ serve(async (req) => {
       });
     }
 
-    const redirectUri = `${siteUrl}/functions/v1/social-oauth-callback`;
+    const redirectUri = `${supabaseUrl}/functions/v1/social-oauth-callback`;
 
     // ================================================================
     // META (Facebook / Instagram)
