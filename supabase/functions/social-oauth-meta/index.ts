@@ -78,7 +78,7 @@ serve(async (req) => {
     };
     const state = await signState(statePayload, stateSecret);
 
-    const redirectUri = `${siteUrl}/functions/v1/social-oauth-callback`;
+    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/social-oauth-callback`;
     const scopes = [
       "instagram_basic",
       "instagram_content_publish",
