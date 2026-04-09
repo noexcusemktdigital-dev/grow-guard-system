@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "meta-ads": {
+      "type": "http",
+      "url": "http://127.0.0.1:3001/mcp",
+      "description": "Meta Ads MCP — Noexcuse (36 tools: campanhas, adsets, ads, criativos, insights)"
+    },
+    "google-ads": {
+      "type": "http",
+      "url": "http://127.0.0.1:3002/mcp",
+      "description": "Google Ads MCP — Noexcuse (GAQL + accounts + keywords, aguarda Basic Access)"
+    }
+  }
+}
