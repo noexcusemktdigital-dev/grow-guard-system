@@ -6,7 +6,7 @@ import {
   Target, MessageCircle, Users, Bot, BookOpen, Send, BarChart3,
   Megaphone, Rocket, FileText, Share2, Globe, DollarSign,
   ChevronDown, Link, CreditCard, Settings, Zap, Lock, Trophy, ClipboardCheck,
-  Headphones, Calendar, Video, Image, Navigation,
+  Headphones, Calendar, Video, Image, Navigation, BarChart2,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
@@ -59,6 +59,7 @@ const marketingSection: SidebarItem[] = [
   { label: "Roteiros", icon: Video, path: "/cliente/conteudos" },
   { label: "Postagem", icon: Image, path: "/cliente/redes-sociais" },
   { label: "Contas Sociais", icon: Share2, path: "/cliente/contas-sociais" },
+  { label: "Analytics Social", icon: BarChart2, path: "/cliente/analytics-social" },
   { label: "Sites", icon: Globe, path: "/cliente/sites" },
   { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", adminOnly: true },
 ];

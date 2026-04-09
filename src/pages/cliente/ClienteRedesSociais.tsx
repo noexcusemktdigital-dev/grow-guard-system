@@ -14,11 +14,13 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 
-
 import { PostGallery } from "@/components/cliente/social/PostGallery";
 import { ArtWizard, ArtGeneratePayload, ArtBriefingResult } from "@/components/cliente/social/ArtWizard";
 import { PostResult } from "@/components/cliente/social/PostResult";
 import { LOADING_PHRASES } from "@/components/cliente/social/constants";
+import { PublicarModal } from "@/components/social/PublicarModal";
+import { Button } from "@/components/ui/button";
+import { Share2 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
@@ -84,6 +86,8 @@ export default function ClienteRedesSociais() {
   const [loadingPhraseIdx, setLoadingPhraseIdx] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
+  const [publishPostId, setPublishPostId] = useState<string | null>(null);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   const { data: orgId } = useUserOrgId();
   const { data: posts, isLoading: postsLoading } = usePostHistory();
@@ -314,6 +318,11 @@ export default function ClienteRedesSociais() {
           isBulkApproving={bulkApprove.isPending}
         />
         <InsufficientCreditsDialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog} actionLabel="esta arte" creditCost={CREDIT_COST_ART} />
+        <PublicarModal
+          open={showPublishModal}
+          onOpenChange={setShowPublishModal}
+          postId={publishPostId}
+        />
       </>
     );
   }
@@ -347,6 +356,7 @@ export default function ClienteRedesSociais() {
 
   // ═══════ RESULT ═══════
   if (view === "result") {
+    const currentPostId = generatedResult?.post?.id ?? null;
     return (
       <>
         <PostResult
@@ -370,7 +380,27 @@ export default function ClienteRedesSociais() {
           }}
           onBack={resetAll}
         />
+        {!isGenerating && currentPostId && (
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPublishPostId(currentPostId);
+                setShowPublishModal(true);
+              }}
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Publicar nas Redes
+            </Button>
+          </div>
+        )}
         <InsufficientCreditsDialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog} actionLabel="este material" creditCost={CREDIT_COST_ART} />
+        <PublicarModal
+          open={showPublishModal}
+          onOpenChange={setShowPublishModal}
+          postId={publishPostId}
+        />
       </>
     );
   }

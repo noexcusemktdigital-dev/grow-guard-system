@@ -80,3 +80,35 @@ export function useDisconnectSocialAccount() {
     },
   });
 }
+
+export interface PublishPostPayload {
+  social_post_id: string;
+  org_id: string;
+  account_id?: string;
+}
+
+export function usePublishPost() {
+  const qc = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+
+  return useMutation({
+    mutationFn: async (payload: PublishPostPayload) => {
+      const { data, error } = await supabase.functions.invoke("social-publish", {
+        body: payload,
+      });
+      if (error) throw error;
+      return data as Record<string, unknown>;
+    },
+    onSuccess: () => {
+      if (orgId) {
+        qc.invalidateQueries({ queryKey: ["social_posts", orgId] });
+        qc.invalidateQueries({ queryKey: ["social_accounts", orgId] });
+      }
+    },
+    onError: (err: unknown) => {
+      toast.error(
+        err instanceof Error ? err.message : "Erro ao publicar post.",
+      );
+    },
+  });
+}
