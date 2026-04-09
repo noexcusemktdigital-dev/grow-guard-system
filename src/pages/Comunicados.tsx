@@ -90,11 +90,18 @@ export default function Comunicados() {
       require_confirmation: data.exigirConfirmacao ?? false,
     };
     if (view === "edit" && selectedId) {
-      updateAnnouncement.mutate({ id: selectedId, ...payload });
-      toast({ title: "Comunicado atualizado e publicado" });
+      updateAnnouncement.mutate(
+        { id: selectedId, ...payload },
+        {
+          onSuccess: () => toast({ title: "Comunicado atualizado e publicado" }),
+          onError: (err) => toast({ title: "Erro ao publicar", description: (err as Error).message, variant: "destructive" }),
+        }
+      );
     } else {
-      createAnnouncement.mutate(payload);
-      toast({ title: "Comunicado publicado com sucesso" });
+      createAnnouncement.mutate(payload, {
+        onSuccess: () => toast({ title: "Comunicado publicado com sucesso" }),
+        onError: (err) => toast({ title: "Erro ao publicar", description: (err as Error).message, variant: "destructive" }),
+      });
     }
     setView("list");
     setSelectedId(null);
@@ -114,11 +121,19 @@ export default function Comunicados() {
       require_confirmation: data.exigirConfirmacao ?? false,
     };
     if (view === "edit" && selectedId) {
-      updateAnnouncement.mutate({ id: selectedId, ...payload });
+      updateAnnouncement.mutate(
+        { id: selectedId, ...payload },
+        {
+          onSuccess: () => toast({ title: "Rascunho atualizado" }),
+          onError: (err) => toast({ title: "Erro ao salvar rascunho", description: (err as Error).message, variant: "destructive" }),
+        }
+      );
     } else {
-      createAnnouncement.mutate(payload);
+      createAnnouncement.mutate(payload, {
+        onSuccess: () => toast({ title: "Rascunho salvo" }),
+        onError: (err) => toast({ title: "Erro ao salvar rascunho", description: (err as Error).message, variant: "destructive" }),
+      });
     }
-    toast({ title: "Rascunho salvo" });
     setView("list");
     setSelectedId(null);
   };
