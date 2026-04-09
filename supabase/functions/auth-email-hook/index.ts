@@ -15,8 +15,9 @@ const SITE_NAME = "NoExcuse Digital"
 const ROOT_DOMAIN = "sistema.noexcusedigital.com.br"
 const FROM_ADDRESS = `${SITE_NAME} <noreply@noexcusedigital.com.br>`
 
+// API-004: webhook is called server-to-server by Lovable; no wildcard needed.
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': `https://${ROOT_DOMAIN}`,
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
@@ -56,7 +57,7 @@ const SAMPLE_DATA: Record<string, object> = {
 // Preview endpoint — returns rendered HTML without sending
 async function handlePreview(req: Request): Promise<Response> {
   const previewCorsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': Deno.env.get('FRONTEND_URL') ?? `https://${ROOT_DOMAIN}`,
     'Access-Control-Allow-Headers': 'authorization, content-type',
   }
 
