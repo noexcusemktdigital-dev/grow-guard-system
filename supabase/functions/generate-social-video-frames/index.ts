@@ -21,6 +21,25 @@ const FORMAT_SPECS: Record<string, { label: string; aspect: string; resolution: 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
+  // SEC-NOE-002: User auth required
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+  const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user: _authUser }, error: _authErr } = await userClient.auth.getUser();
+  if (_authErr || !_authUser) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const {
       video_description,

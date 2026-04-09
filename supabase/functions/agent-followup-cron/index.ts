@@ -6,6 +6,23 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
 
+  // SEC-NOE-002: Cron secret validation — reject all requests without CRON_SECRET
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (!cronSecret) {
+    console.error("[agent-followup-cron] CRON_SECRET not configured — rejecting all requests");
+    return new Response(JSON.stringify({ error: "Service misconfigured" }), {
+      status: 500,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+  const authHeader = req.headers.get("authorization") ?? "";
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

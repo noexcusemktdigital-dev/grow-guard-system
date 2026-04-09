@@ -3,7 +3,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
 [functions]
   # --- Cron / internal triggers (use service_role or own auth) ---
   [functions.agent-followup-cron]
-    # Called by cron scheduler, not by authenticated users
+    # Called by cron scheduler — SEC-NOE-002 fixed: requires Authorization: Bearer CRON_SECRET
     verify_jwt = false
 
   # --- AI agent functions (require authenticated user session) ---
@@ -55,36 +55,51 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.crm-run-automations]
     verify_jwt = true
 
-  # --- AI generate functions (verify_jwt=false, auth validated in code) ---
+  # --- AI generate functions (SEC-NOE-002: auth enforced in code via getUser) ---
   [functions.extract-strategy-answers]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-content]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-prospection]
+    # Already had user auth in code
     verify_jwt = false
   [functions.generate-script]
+    # Already had user auth in code
     verify_jwt = false
   [functions.generate-site]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-social-briefing]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-social-concepts]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-social-image]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-social-video-frames]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-strategy]
+    # Already had user auth in code
     verify_jwt = false
   [functions.generate-template-layout]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-traffic-strategy]
+    # Already had user auth in code
     verify_jwt = false
   [functions.generate-video-briefing]
+    # SEC-NOE-002 fixed: user auth added in code
     verify_jwt = false
   [functions.generate-daily-checklist]
+    # Already had user auth in code
     verify_jwt = false
   [functions.generate-daily-tasks]
+    # Already had user auth in code
     verify_jwt = false
 
   # --- Utility functions (require auth) ---
@@ -151,10 +166,10 @@ project_id = "gxrhdpbbxfipeopdyygn"
 
   # --- WhatsApp/Evolution external webhooks (use own secret validation) ---
   [functions.evolution-webhook]
-    # External webhook from Evolution API, validates via webhook secret
+    # External webhook from Evolution API — SEC-NOE-002 fixed: fail-closed EVOLUTION_WEBHOOK_SECRET
     verify_jwt = false
   [functions.whatsapp-webhook]
-    # External webhook from WhatsApp provider, validates via webhook secret
+    # External webhook from WhatsApp provider — SEC-NOE-002 fixed: mandatory client-token enforcement
     verify_jwt = false
 
   # --- Google Calendar (require authenticated user session) ---

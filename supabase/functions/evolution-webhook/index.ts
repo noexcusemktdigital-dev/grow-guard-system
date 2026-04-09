@@ -7,17 +7,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate webhook secret if configured
+    // SEC-NOE-002: Fail-closed secret validation — mandatory, rejects if not configured
     const expectedSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
-    if (expectedSecret) {
-      const receivedSecret = req.headers.get("x-evolution-secret") || "";
-      if (receivedSecret !== expectedSecret) {
-        console.warn("Evolution webhook: invalid secret received");
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
+    if (!expectedSecret) {
+      console.error("[evolution-webhook] EVOLUTION_WEBHOOK_SECRET not configured — rejecting all requests");
+      return new Response(JSON.stringify({ error: "Webhook not configured" }), {
+        status: 500,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    const receivedSecret = req.headers.get("x-evolution-secret") || "";
+    if (receivedSecret !== expectedSecret) {
+      console.warn("[evolution-webhook] Invalid secret received");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

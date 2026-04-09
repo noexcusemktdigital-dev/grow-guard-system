@@ -75,6 +75,25 @@ function getNivelInstructions(nivel: string): string {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
+  // SEC-NOE-002: User auth required
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+  const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user: _authUser }, error: _authErr } = await userClient.auth.getUser();
+  if (_authErr || !_authUser) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const { briefing, quantidade, estilo, tipo_post, nivel, descricao_produto, roteiros_importados, persona, identidade_visual, referencias_tipo, organization_id, reference_images, incluir_video, art_style, video_style } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

@@ -23,8 +23,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate client-token
+    // SEC-NOE-002: Mandatory client-token validation — fail-closed
     const clientToken = req.headers.get("client-token") || req.headers.get("Client-Token");
+    if (!clientToken) {
+      return new Response(JSON.stringify({ error: "Unauthorized — client-token required" }), {
+        status: 401,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch ALL instances for this org (supports multiple)
     const { data: instances } = await adminClient
@@ -39,18 +45,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Match instance by client_token, or fallback to first
-    let instance = instances[0];
-    if (clientToken) {
-      const matched = instances.find((i: { client_token: string }) => i.client_token === clientToken);
-      if (matched) {
-        instance = matched;
-      } else {
-        return new Response(JSON.stringify({ error: "Invalid client token" }), {
-          status: 403,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
+    // Match instance by client_token — mandatory, no fallback
+    const instance = instances.find((i: { client_token: string }) => i.client_token === clientToken);
+    if (!instance) {
+      return new Response(JSON.stringify({ error: "Invalid client token" }), {
+        status: 403,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
     }
 
     const body = await req.json();
