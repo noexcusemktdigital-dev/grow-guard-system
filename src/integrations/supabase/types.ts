@@ -384,6 +384,8 @@ export type Database = {
           id: string
           last_synced_at: string | null
           organization_id: string
+          pending_accounts: Json | null
+          pending_created_at: string | null
           platform: string
           refresh_token: string | null
           status: string
@@ -398,6 +400,8 @@ export type Database = {
           id?: string
           last_synced_at?: string | null
           organization_id: string
+          pending_accounts?: Json | null
+          pending_created_at?: string | null
           platform: string
           refresh_token?: string | null
           status?: string
@@ -412,6 +416,8 @@ export type Database = {
           id?: string
           last_synced_at?: string | null
           organization_id?: string
+          pending_accounts?: Json | null
+          pending_created_at?: string | null
           platform?: string
           refresh_token?: string | null
           status?: string
@@ -620,6 +626,113 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      audit_logs_noe: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          new_value: Json | null
+          old_value: Json | null
+          organization_id: string | null
+          resource_id: string | null
+          resource_type: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          organization_id?: string | null
+          resource_id?: string | null
+          resource_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          new_value?: Json | null
+          old_value?: Json | null
+          organization_id?: string | null
+          resource_id?: string | null
+          resource_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_noe_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_execution_log: {
+        Row: {
+          automation_type: string
+          contact_id: string | null
+          error_message: string | null
+          event_id: string | null
+          executed_at: string | null
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          organization_id: string
+          result: string
+        }
+        Insert: {
+          automation_type: string
+          contact_id?: string | null
+          error_message?: string | null
+          event_id?: string | null
+          executed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id: string
+          result: string
+        }
+        Update: {
+          automation_type?: string
+          contact_id?: string | null
+          error_message?: string | null
+          event_id?: string | null
+          executed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_execution_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "crm_automation_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_execution_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       automation_execution_logs: {
         Row: {
@@ -1564,7 +1677,10 @@ export type Database = {
           format: string | null
           id: string
           input_text: string | null
+          is_published: boolean | null
           organization_id: string
+          platforms: string[] | null
+          published_platforms: string[] | null
           reference_image_urls: string[] | null
           result_data: Json | null
           result_url: string | null
@@ -1581,7 +1697,10 @@ export type Database = {
           format?: string | null
           id?: string
           input_text?: string | null
+          is_published?: boolean | null
           organization_id: string
+          platforms?: string[] | null
+          published_platforms?: string[] | null
           reference_image_urls?: string[] | null
           result_data?: Json | null
           result_url?: string | null
@@ -1598,7 +1717,10 @@ export type Database = {
           format?: string | null
           id?: string
           input_text?: string | null
+          is_published?: boolean | null
           organization_id?: string
+          platforms?: string[] | null
+          published_platforms?: string[] | null
           reference_image_urls?: string[] | null
           result_data?: Json | null
           result_url?: string | null
@@ -2006,22 +2128,37 @@ export type Database = {
       credit_wallets: {
         Row: {
           balance: number
+          budget_alert_sent: boolean | null
+          budget_alert_threshold: number | null
+          budget_month: string | null
           created_at: string
           id: string
+          monthly_budget_credits: number | null
+          monthly_consumed_credits: number | null
           organization_id: string
           updated_at: string
         }
         Insert: {
           balance?: number
+          budget_alert_sent?: boolean | null
+          budget_alert_threshold?: number | null
+          budget_month?: string | null
           created_at?: string
           id?: string
+          monthly_budget_credits?: number | null
+          monthly_consumed_credits?: number | null
           organization_id: string
           updated_at?: string
         }
         Update: {
           balance?: number
+          budget_alert_sent?: boolean | null
+          budget_alert_threshold?: number | null
+          budget_month?: string | null
           created_at?: string
           id?: string
+          monthly_budget_credits?: number | null
+          monthly_consumed_credits?: number | null
           organization_id?: string
           updated_at?: string
         }
@@ -4249,6 +4386,56 @@ export type Database = {
           },
         ]
       }
+      meta_ads_snapshots: {
+        Row: {
+          campaigns_data: Json | null
+          captured_at: string | null
+          clicks: number | null
+          cpl: number | null
+          ctr: number | null
+          id: string
+          impressions: number | null
+          leads: number | null
+          org_id: string | null
+          period: string
+          spend: number | null
+        }
+        Insert: {
+          campaigns_data?: Json | null
+          captured_at?: string | null
+          clicks?: number | null
+          cpl?: number | null
+          ctr?: number | null
+          id?: string
+          impressions?: number | null
+          leads?: number | null
+          org_id?: string | null
+          period: string
+          spend?: number | null
+        }
+        Update: {
+          campaigns_data?: Json | null
+          captured_at?: string | null
+          clicks?: number | null
+          cpl?: number | null
+          ctr?: number | null
+          id?: string
+          impressions?: number | null
+          leads?: number | null
+          org_id?: string | null
+          period?: string
+          spend?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ads_snapshots_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_create: boolean | null
@@ -5264,6 +5451,68 @@ export type Database = {
           },
         ]
       }
+      social_accounts: {
+        Row: {
+          access_token: string
+          account_id: string
+          account_name: string | null
+          account_username: string | null
+          created_at: string | null
+          id: string
+          last_synced_at: string | null
+          metadata: Json | null
+          organization_id: string
+          platform: string
+          refresh_token: string | null
+          scopes: string[] | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token: string
+          account_id: string
+          account_name?: string | null
+          account_username?: string | null
+          created_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json | null
+          organization_id: string
+          platform: string
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          account_id?: string
+          account_name?: string | null
+          account_username?: string | null
+          created_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          platform?: string
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_art_feedback: {
         Row: {
           art_id: string
@@ -5307,6 +5556,223 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_engagement_metrics: {
+        Row: {
+          clicks: number | null
+          comments: number | null
+          cpc_cents: number | null
+          date: string
+          engagement_rate: number | null
+          id: string
+          impressions: number | null
+          likes: number | null
+          organization_id: string
+          platform: string
+          reach: number | null
+          saves: number | null
+          shares: number | null
+          social_post_id: string
+          spend_cents: number | null
+          synced_at: string | null
+        }
+        Insert: {
+          clicks?: number | null
+          comments?: number | null
+          cpc_cents?: number | null
+          date: string
+          engagement_rate?: number | null
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          organization_id: string
+          platform: string
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          social_post_id: string
+          spend_cents?: number | null
+          synced_at?: string | null
+        }
+        Update: {
+          clicks?: number | null
+          comments?: number | null
+          cpc_cents?: number | null
+          date?: string
+          engagement_rate?: number | null
+          id?: string
+          impressions?: number | null
+          likes?: number | null
+          organization_id?: string
+          platform?: string
+          reach?: number | null
+          saves?: number | null
+          shares?: number | null
+          social_post_id?: string
+          spend_cents?: number | null
+          synced_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_engagement_metrics_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_engagement_metrics_social_post_id_fkey"
+            columns: ["social_post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posting_queue: {
+        Row: {
+          attempted_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          error_details: Json | null
+          id: string
+          max_retries: number | null
+          next_retry_at: string | null
+          organization_id: string
+          platform: string
+          retry_count: number | null
+          scheduled_for: string
+          social_post_id: string
+          status: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_details?: Json | null
+          id?: string
+          max_retries?: number | null
+          next_retry_at?: string | null
+          organization_id: string
+          platform: string
+          retry_count?: number | null
+          scheduled_for: string
+          social_post_id: string
+          status?: string
+        }
+        Update: {
+          attempted_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_details?: Json | null
+          id?: string
+          max_retries?: number | null
+          next_retry_at?: string | null
+          organization_id?: string
+          platform?: string
+          retry_count?: number | null
+          scheduled_for?: string
+          social_post_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posting_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posting_queue_social_post_id_fkey"
+            columns: ["social_post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          caption: string | null
+          client_post_id: string | null
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          hashtags: string[] | null
+          id: string
+          media_urls: string[] | null
+          metadata: Json | null
+          organization_id: string
+          platform: string
+          platform_post_id: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          social_account_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          caption?: string | null
+          client_post_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          hashtags?: string[] | null
+          id?: string
+          media_urls?: string[] | null
+          metadata?: Json | null
+          organization_id: string
+          platform: string
+          platform_post_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          social_account_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          caption?: string | null
+          client_post_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          hashtags?: string[] | null
+          id?: string
+          media_urls?: string[] | null
+          metadata?: Json | null
+          organization_id?: string
+          platform?: string
+          platform_post_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          social_account_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_client_post_id_fkey"
+            columns: ["client_post_id"]
+            isOneToOne: false
+            referencedRelation: "client_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -6340,6 +6806,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_lead_round_robin: {
+        Args: {
+          p_lead_id: string
+          p_organization_id: string
+          p_team_id?: string
+        }
+        Returns: string
+      }
       bulk_add_tag: {
         Args: { _ids: string[]; _tag: string }
         Returns: undefined
@@ -6828,6 +7302,14 @@ export type Database = {
         }[]
       }
       seed_default_teams: { Args: { _org_id: string }; Returns: undefined }
+      set_org_ai_budget: {
+        Args: {
+          _alert_threshold?: number
+          _monthly_budget: number
+          _org_id: string
+        }
+        Returns: undefined
+      }
       sync_team_chat_channels: { Args: { _org_id: string }; Returns: undefined }
     }
     Enums: {
