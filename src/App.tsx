@@ -50,6 +50,8 @@ const FranqueadoraChat = lazy(() => import("./pages/franqueadora/FranqueadoraCha
 const NotificacoesPage = lazy(() => import("./pages/NotificacoesPage"));
 const ApresentacaoPage = lazy(() => import("./pages/Apresentacao"));
 const Anuncios = lazy(() => import("./pages/Anuncios"));
+const FranqueadoAnuncios = lazy(() => import("./pages/franqueado/FranqueadoAnuncios"));
+const AdsNetwork = lazy(() => import("./pages/franqueadora/AdsNetwork"));
 
 // Franqueado pages
 const FranqueadoDashboard = lazy(() => import("./pages/franqueado/FranqueadoDashboard"));
@@ -202,6 +204,7 @@ function App() {
                   <Route path="chat" element={<FranqueadoraChat />} />
                   <Route path="notificacoes" element={<NotificacoesPage />} />
                   <Route path="anuncios" element={<PageBoundary><Anuncios /></PageBoundary>} />
+                  <Route path="ads-rede" element={<PageBoundary><AdsNetwork /></PageBoundary>} />
                 </Route>
               </Route>
 
@@ -228,6 +231,7 @@ function App() {
                   <Route path="perfil" element={<FranqueadoPerfil />} />
                   <Route path="configuracoes" element={<FranqueadoConfiguracoes />} />
                   <Route path="notificacoes" element={<NotificacoesPage />} />
+                  <Route path="anuncios" element={<PageBoundary><FranqueadoAnuncios /></PageBoundary>} />
                 </Route>
               </Route>
 

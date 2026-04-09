@@ -54,6 +54,7 @@ const comercialSection: SidebarItem[] = [
 const marketingSection: SidebarItem[] = [
   { label: "Marketing", icon: Zap, path: "/franqueadora/marketing" },
   { label: "Anúncios", icon: TrendingUp, path: "/franqueadora/anuncios" },
+  { label: "Rede de Anúncios", icon: BarChart3, path: "/franqueadora/ads-rede" },
   { label: "NOE Academy", icon: GraduationCap, path: "/franqueadora/treinamentos" },
   { label: "Playbooks", icon: Copy, path: "/franqueadora/playbooks" },
 ];

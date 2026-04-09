@@ -5,11 +5,13 @@ import {
   LayoutDashboard, Calendar, Megaphone, MessageSquare, ChevronLeft, ChevronRight,
   Sparkles, ClipboardCheck, FileText, Users, FolderOpen, GraduationCap,
   DollarSign, FileSignature, User, Target, ChevronDown, Settings, ChevronsUpDown, Building2, Trophy, LogOut, ClipboardList,
+  TrendingUp,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAdsConnectionStatus } from "@/hooks/use-ads-connections";
 
 interface SidebarItem {
   label: string;
@@ -37,6 +39,7 @@ const comercialSection: SidebarItem[] = [
 const marketingSection: SidebarItem[] = [
   { label: "Marketing", icon: FolderOpen, path: "/franqueado/materiais" },
   { label: "NOE Academy", icon: GraduationCap, path: "/franqueado/academy" },
+  { label: "Anúncios", icon: TrendingUp, path: "/franqueado/anuncios" },
 ];
 
 const gestaoSection: SidebarItem[] = [
@@ -105,12 +108,66 @@ function NavItem({ item, collapsed }: { item: SidebarItem; collapsed: boolean })
   return link;
 }
 
+// AdsNavItem — item especial para /franqueado/anuncios com badge de status OAuth
+function AdsNavItem({ collapsed }: { collapsed: boolean }) {
+  const location = useLocation();
+  const isActive = location.pathname.startsWith("/franqueado/anuncios");
+  const { data: status } = useAdsConnectionStatus();
+
+  const link = (
+    <RouterNavLink
+      to="/franqueado/anuncios"
+      className={`group flex items-center gap-2.5 px-3 py-[7px] text-[13px] transition-all duration-200 rounded-lg mx-1.5
+        ${collapsed ? "justify-center px-2 mx-1" : ""}
+        ${isActive
+          ? "bg-sidebar-primary/15 text-white font-medium"
+          : "text-sidebar-foreground hover:text-white hover:bg-white/[0.06]"
+        }
+      `}
+    >
+      <div className="relative">
+        <TrendingUp className={`w-[18px] h-[18px] flex-shrink-0 transition-colors duration-200 ${
+          isActive ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground"
+        }`} />
+        {isActive && (
+          <div className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-sidebar-primary" />
+        )}
+        {/* dot de status no canto superior direito do ícone */}
+        {!collapsed && (
+          <span
+            className={`absolute -top-0.5 -right-1 w-2 h-2 rounded-full border border-sidebar ${
+              status?.hasActiveConnection ? "bg-emerald-500" : "bg-zinc-400"
+            }`}
+          />
+        )}
+      </div>
+      {!collapsed && <span className="truncate flex-1">Anúncios</span>}
+    </RouterNavLink>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">
+          Anúncios {status?.hasActiveConnection ? "• Conectado" : "• Sem conexão"}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+}
+
 function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
   return (
     <nav className="flex flex-col gap-[2px]">
-      {items.map((item) => (
-        <NavItem key={item.path} item={item} collapsed={collapsed} />
-      ))}
+      {items.map((item) => {
+        if (item.path === "/franqueado/anuncios") {
+          return <AdsNavItem key={item.path} collapsed={collapsed} />;
+        }
+        return <NavItem key={item.path} item={item} collapsed={collapsed} />;
+      })}
     </nav>
   );
 }
