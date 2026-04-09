@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+// INT-004: Circuit breaker for WhatsApp provider failover (Evolution ↔ Z-API)
+import { recordSuccess, recordFailure, isOpen } from '../_shared/whatsappCircuitBreaker.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -147,6 +149,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ─── INT-004: Circuit breaker guard ───
+    // Warn (but do not block) if the selected instance's circuit is OPEN.
+    // This allows the send to proceed while surfacing the degraded state in logs.
+    // A full failover requires a second connected instance of the opposite provider
+    // in the same org — the resolveInstance() helper already picks the first
+    // connected one, so the circuit state here is informational + enables future
+    // automatic failover when multi-instance orgs are supported.
+    const providerType = (instance.provider === "evolution" ? "evolution" : "z-api") as "evolution" | "z-api";
+    if (isOpen(providerType, String(instance.instance_id))) {
+      console.warn(`[CircuitBreaker] Instance ${instance.instance_id} (${providerType}) circuit is OPEN — proceeding with caution`);
+    }
+
     // ─── Send via provider ───
     let apiRes: Response;
     let apiData: Record<string, unknown>;
@@ -224,6 +238,13 @@ Deno.serve(async (req) => {
       });
 
       apiData = await apiRes.json();
+    }
+
+    // ─── INT-004: Record circuit breaker outcome ───
+    if (apiRes.ok) {
+      recordSuccess(providerType, String(instance.instance_id));
+    } else {
+      recordFailure(providerType, String(instance.instance_id));
     }
 
     const messageStatus = apiRes.ok ? "sent" : "failed";
