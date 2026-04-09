@@ -6929,6 +6929,15 @@ export type Database = {
         Returns: undefined
       }
       cleanup_ads_oauth_states: { Args: never; Returns: undefined }
+      collect_meta_noe_insights: {
+        Args: {
+          p_acct_id: number
+          p_camp_id: number
+          p_ci_id: number
+          p_period?: string
+        }
+        Returns: Json
+      }
       debit_credits: {
         Args: {
           _amount: number
@@ -7183,6 +7192,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_meta_noe_insights: { Args: { p_period?: string }; Returns: Json }
       get_network_ai_usage: {
         Args: { _org_id: string }
         Returns: {
@@ -7412,6 +7422,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      request_meta_noe_insights: { Args: { p_period?: string }; Returns: Json }
       seed_default_teams: { Args: { _org_id: string }; Returns: undefined }
       set_org_ai_budget: {
         Args: {

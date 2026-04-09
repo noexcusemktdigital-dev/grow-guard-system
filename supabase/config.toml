@@ -197,7 +197,7 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.ads-select-account]
     verify_jwt = true
   [functions.ads-sync-metrics]
-    verify_jwt = true
+    verify_jwt = false
   [functions.ads-disconnect]
     verify_jwt = true
   [functions.ads-analyze]
