@@ -1,33 +1,68 @@
 
 
-# Corrigir erro "Missing authorization header" no OAuth Meta/Instagram
+# Corrigir integrações Meta Ads e Redes Sociais (Instagram/Facebook)
 
-## Problema
-A edge function `social-oauth-meta` constrói o `redirect_uri` usando `SITE_URL` (grow-guard-system.lovable.app), mas as edge functions são hospedadas no domínio do Supabase (`gxrhdpbbxfipeopdyygn.supabase.co`). Quando o Facebook redireciona de volta, ele envia o usuário para o domínio do app Lovable, que não tem a edge function — retornando "Missing authorization header".
+## Problemas identificados
 
-O mesmo problema existe em `social-oauth-callback` (linha 161).
+### 1. Erro `save_failed` no Meta Ads (Tráfego Pago)
+**Causa raiz**: A tabela `ad_platform_connections` tem um CHECK constraint que só permite `status IN ('active', 'expired', 'disconnected')`. Quando o usuário tem múltiplas contas de anúncio, o callback tenta inserir com `status: 'pending'`, violando a constraint.
 
-## Solução
-Trocar `SITE_URL` por `SUPABASE_URL` para construir o `redirect_uri` nas duas funções:
+### 2. Secrets ausentes para Redes Sociais (Instagram/Facebook)
+A edge function `social-oauth-meta` requer `META_CLIENT_ID`, `META_CLIENT_SECRET` e `OAUTH_STATE_SECRET`, mas nenhum desses secrets existe. Existem apenas `META_APP_ID` e `META_APP_SECRET`.
 
-### 1. `supabase/functions/social-oauth-meta/index.ts`
-- Linha 63: Usar `Deno.env.get("SUPABASE_URL")` em vez de `SITE_URL` para o redirect URI
-- Alterar: `const redirectUri = \`\${siteUrl}/functions/v1/social-oauth-callback\``
-- Para: `const redirectUri = \`\${Deno.env.get("SUPABASE_URL")}/functions/v1/social-oauth-callback\``
+### 3. Dois fluxos OAuth duplicados e conflitantes
+Existem dois caminhos paralelos:
+- **Ads**: `ads-oauth-start` → `ads-oauth-callback` (usa `META_APP_ID`, tabelas `ads_connections` e `ad_platform_connections`)
+- **Social**: `social-oauth-meta` → `social-oauth-callback` (usa `META_CLIENT_ID`, tabela `social_accounts`)
 
-### 2. `supabase/functions/social-oauth-callback/index.ts`
-- Linha 161: Mesmo ajuste para que o redirect_uri no token exchange combine com o usado no início do fluxo
-- Alterar: `const redirectUri = \`\${siteUrl}/functions/v1/social-oauth-callback\``
-- Para: `const redirectUri = \`\${supabaseUrl}/functions/v1/social-oauth-callback\``
+Ambos autenticam com o mesmo app Meta mas usam secrets com nomes diferentes e salvam em tabelas diferentes.
 
-### 3. Atualizar URI no Facebook Developers
-Você precisará garantir que a URI de redirecionamento cadastrada no painel do Facebook seja:
-`https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/social-oauth-callback`
+---
 
-### 4. Deploy das funções alteradas
-- `social-oauth-meta`
-- `social-oauth-callback`
+## Plano de correção
 
-## Detalhes técnicos
-O `SUPABASE_URL` já está disponível automaticamente em todas as edge functions. O `SITE_URL` continua sendo usado apenas para os redirects finais ao frontend (após salvar os tokens).
+### Etapa 1: Corrigir constraint do banco de dados
+Migração SQL para adicionar `'pending'` ao CHECK constraint de `ad_platform_connections`:
+```sql
+ALTER TABLE public.ad_platform_connections
+  DROP CONSTRAINT ad_platform_connections_status_check;
+ALTER TABLE public.ad_platform_connections
+  ADD CONSTRAINT ad_platform_connections_status_check
+  CHECK (status IN ('active', 'expired', 'disconnected', 'pending'));
+```
+
+### Etapa 2: Adicionar secrets ausentes
+Criar 3 secrets reutilizando os valores do app Meta existente:
+- `META_CLIENT_ID` → mesmo valor de `META_APP_ID`
+- `META_CLIENT_SECRET` → mesmo valor de `META_APP_SECRET`
+- `OAUTH_STATE_SECRET` → gerar um valor aleatório seguro
+
+### Etapa 3: Corrigir redirect do `social-oauth-callback`
+O `social-oauth-callback` redireciona para `/cliente/contas-sociais` (rota legada). Atualizar para redirecionar para `/cliente/redes-sociais` (hub unificado atual).
+
+### Etapa 4: Deploy das edge functions atualizadas
+Redeplorar `ads-oauth-callback` e `social-oauth-callback` após as correções.
+
+---
+
+## Configuração externa necessária (Facebook Developers)
+
+Você precisa garantir no painel developers.facebook.com:
+
+| Configuração | Valor |
+|---|---|
+| App Domains | `sistema.noexcusedigital.com.br`, `grow-guard-system.lovable.app` |
+| Valid OAuth Redirect URIs | `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/ads-oauth-callback` |
+| | `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/social-oauth-callback` |
+| Permissões necessárias | `instagram_basic`, `instagram_content_publish`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `ads_read`, `ads_management` |
+
+## Resumo
+
+| Ação | Quem |
+|---|---|
+| Migração DB (adicionar 'pending' ao check) | Lovable |
+| Adicionar 3 secrets | Você (informar valores) |
+| Corrigir redirect no social-oauth-callback | Lovable |
+| Deploy das funções | Lovable |
+| Configurar URIs no Facebook Developers | Você |
 
