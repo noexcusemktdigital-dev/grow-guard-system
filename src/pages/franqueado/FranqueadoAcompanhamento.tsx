@@ -627,7 +627,7 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 
           <AnaliseAreaEditor title="Conteúdo & Criativos" description="Performance dos criativos orgânicos e pagos" icon={Palette} accentColor="bg-violet-500"
             metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
-            section={analiseConteudo} onChange={setAnaliseConteudo} />
+            section={analiseConteudo} onChange={setAnaliseConteudo} showImageUpload />
 
           <AnaliseAreaEditor title="Tráfego Pago" description="Números das campanhas — investimento, custo e conversões" icon={MousePointerClick} accentColor="bg-blue-500"
             metricLabels={["Investimento Total", "Impressões", "Cliques", "CTR (%)", "CPC (R$)", "CPL (R$)", "Conversões", "ROAS"]}
