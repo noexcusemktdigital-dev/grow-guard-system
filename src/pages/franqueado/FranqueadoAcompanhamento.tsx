@@ -138,7 +138,7 @@ function AnaliseAreaEditor({
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const { supabase } = await import("@/integrations/supabase/client");
+      const { supabase } = await import("@/lib/supabase");
       const newUrls: string[] = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
