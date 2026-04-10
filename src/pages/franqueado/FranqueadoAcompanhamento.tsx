@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   useClientFolders,
   useClientFoldersForUnit,
@@ -32,6 +32,7 @@ import {
   BarChart3, Megaphone, TrendingUp, Globe, Target,
   ThumbsUp, ThumbsDown, Eye, Palette, MousePointerClick, ShoppingCart,
   ArrowUpRight, AlertTriangle, Sparkles, Calendar, Clock, Link2, FileText, Crosshair, DollarSign, Users,
+  Upload, Loader2, ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -119,14 +120,50 @@ function AnaliseMetricsChart({ metricas, title }: { metricas: Record<string, num
 
 // ─── Analysis sub-section editor ───
 function AnaliseAreaEditor({
-  title, description, icon: Icon, accentColor, metricLabels, section, onChange,
+  title, description, icon: Icon, accentColor, metricLabels, section, onChange, showImageUpload = false,
 }: {
   title: string; description: string; icon: React.ElementType; accentColor: string;
   metricLabels: string[]; section: AnaliseSubSection; onChange: (s: AnaliseSubSection) => void;
+  showImageUpload?: boolean;
 }) {
   const metricas = section.metricas || {};
   const positivos = section.positivos || [""];
   const negativos = section.negativos || [""];
+  const imagens = section.imagens || [];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) continue;
+        const ext = file.name.split(".").pop() || "png";
+        const path = `criativos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("followup-assets").upload(path, file);
+        if (error) { console.error(error); continue; }
+        const { data: urlData } = supabase.storage.from("followup-assets").getPublicUrl(path);
+        if (urlData?.publicUrl) newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        onChange({ ...section, imagens: [...imagens, ...newUrls] });
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    const updated = imagens.filter((_, i) => i !== idx);
+    onChange({ ...section, imagens: updated });
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -156,6 +193,64 @@ function AnaliseAreaEditor({
         <AnaliseMetricsChart metricas={metricas} title={`Visão Geral — ${title}`} />
 
         <Separator />
+
+        {showImageUpload && (
+          <>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Anúncios em Destaque
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                  {uploading ? "Enviando..." : "Adicionar Imagem"}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+              </div>
+              {imagens.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {imagens.map((url, idx) => (
+                    <div key={idx} className="relative group rounded-lg overflow-hidden border bg-muted aspect-square">
+                      <img src={url} alt={`Criativo ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold"
+                      >
+                        ✕
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-2 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        Criativo {idx + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}>
+                  <ImageIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-xs text-muted-foreground">Clique para adicionar imagens dos anúncios em veiculação</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">PNG, JPEG • Múltiplas imagens</p>
+                </div>
+              )}
+            </div>
+            <Separator />
+          </>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -532,7 +627,7 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 
           <AnaliseAreaEditor title="Conteúdo & Criativos" description="Performance dos criativos orgânicos e pagos" icon={Palette} accentColor="bg-violet-500"
             metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
-            section={analiseConteudo} onChange={setAnaliseConteudo} />
+            section={analiseConteudo} onChange={setAnaliseConteudo} showImageUpload />
 
           <AnaliseAreaEditor title="Tráfego Pago" description="Números das campanhas — investimento, custo e conversões" icon={MousePointerClick} accentColor="bg-blue-500"
             metricLabels={["Investimento Total", "Impressões", "Cliques", "CTR (%)", "CPC (R$)", "CPL (R$)", "Conversões", "ROAS"]}
