@@ -10,6 +10,7 @@ export interface AnaliseSubSection {
   positivos?: string[];
   negativos?: string[];
   observacoes?: string;
+  imagens?: string[];
 }
 
 export interface FollowupAnalise {
