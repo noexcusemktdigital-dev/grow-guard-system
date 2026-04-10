@@ -32,6 +32,7 @@ import {
   BarChart3, Megaphone, TrendingUp, Globe, Target,
   ThumbsUp, ThumbsDown, Eye, Palette, MousePointerClick, ShoppingCart,
   ArrowUpRight, AlertTriangle, Sparkles, Calendar, Clock, Link2, FileText, Crosshair, DollarSign, Users,
+  Upload, Loader2, ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
