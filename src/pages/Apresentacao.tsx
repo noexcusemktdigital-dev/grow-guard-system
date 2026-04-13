@@ -189,6 +189,17 @@ function AnaliseSection({ analise }: { analise: FollowupAnalise }) {
                   </div>
                 </div>
               )}
+
+              {a.name === "Conteúdo" && (analise.conteudo?.imagens?.filter(Boolean)?.length ?? 0) > 0 && (
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <p className="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-3">Criativos em Veiculação</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {analise.conteudo!.imagens!.filter(Boolean).map((url, idx) => (
+                      <img key={idx} src={url} alt={`Criativo ${idx + 1}`} className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           );
         })}
@@ -247,6 +258,8 @@ function ConteudoSection({ plano }: { plano: FollowupPlano }) {
           </div>
         </div>
       )}
+
+      {/* Criativos em Veiculação - from analise stored in plano parent */}
 
       {/* Pautas */}
       <div className="space-y-6">
