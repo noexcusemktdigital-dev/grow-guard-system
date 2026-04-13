@@ -259,7 +259,16 @@ function ConteudoSection({ plano, analise }: { plano: FollowupPlano; analise?: F
         </div>
       )}
 
-      {/* Criativos em Veiculação - from analise stored in plano parent */}
+      {(analise?.conteudo?.imagens?.filter(Boolean)?.length ?? 0) > 0 && (
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 mb-12">
+          <h3 className="text-lg font-semibold text-white mb-4">Criativos em Veiculação</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {analise!.conteudo!.imagens!.filter(Boolean).map((url, idx) => (
+              <img key={idx} src={url} alt={`Criativo ${idx + 1}`} className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pautas */}
       <div className="space-y-6">
