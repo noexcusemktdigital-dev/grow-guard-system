@@ -209,7 +209,7 @@ function AnaliseSection({ analise }: { analise: FollowupAnalise }) {
 }
 
 /* ── CONTEÚDO ── */
-function ConteudoSection({ plano }: { plano: FollowupPlano }) {
+function ConteudoSection({ plano, analise }: { plano: FollowupPlano; analise?: FollowupAnalise }) {
   const pautas = plano.conteudo?.pautas || [];
   const orgCount = pautas.filter((p) => p.tipo === "organico").length;
   const pagoCount = pautas.filter((p) => p.tipo === "pago").length;
@@ -660,7 +660,7 @@ export default function Apresentacao() {
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
 
-      <ConteudoSection plano={plano} />
+      <ConteudoSection plano={plano} analise={analise} />
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
