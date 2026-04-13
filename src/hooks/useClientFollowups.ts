@@ -242,23 +242,34 @@ export function useSaveFollowup() {
       analise: FollowupAnalise;
       plano_proximo: FollowupPlano;
       unit_org_id?: string | null;
+      organization_id?: string;
     }) => {
       if (!orgId) throw new Error("Organização não encontrada");
-      const payload = {
-        organization_id: orgId,
-        client_name: input.client_name,
-        month_ref: input.month_ref,
-        status: input.status || "draft",
-        analise: input.analise as any,
-        plano_proximo: input.plano_proximo as any,
-        unit_org_id: input.unit_org_id || null,
-      };
       if (input.id) {
-        const { data, error } = await supabase.from("client_followups").update(payload).eq("id", input.id).select().single();
+        // Update: don't overwrite organization_id — preserve the original
+        const updatePayload = {
+          client_name: input.client_name,
+          month_ref: input.month_ref,
+          status: input.status || "draft",
+          analise: input.analise as any,
+          plano_proximo: input.plano_proximo as any,
+          unit_org_id: input.unit_org_id || null,
+        };
+        const { data, error } = await supabase.from("client_followups").update(updatePayload).eq("id", input.id).select().single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from("client_followups").insert(payload).select().single();
+        // Insert: set organization_id and unit_org_id
+        const insertPayload = {
+          organization_id: input.organization_id || orgId,
+          client_name: input.client_name,
+          month_ref: input.month_ref,
+          status: input.status || "draft",
+          analise: input.analise as any,
+          plano_proximo: input.plano_proximo as any,
+          unit_org_id: input.unit_org_id || orgId,
+        };
+        const { data, error } = await supabase.from("client_followups").insert(insertPayload).select().single();
         if (error) throw error;
         return data;
       }
