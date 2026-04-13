@@ -189,6 +189,17 @@ function AnaliseSection({ analise }: { analise: FollowupAnalise }) {
                   </div>
                 </div>
               )}
+
+              {a.name === "Conteúdo" && (analise.conteudo?.imagens?.filter(Boolean)?.length ?? 0) > 0 && (
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <p className="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-3">Criativos em Veiculação</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {analise.conteudo!.imagens!.filter(Boolean).map((url, idx) => (
+                      <img key={idx} src={url} alt={`Criativo ${idx + 1}`} className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           );
         })}
@@ -198,7 +209,7 @@ function AnaliseSection({ analise }: { analise: FollowupAnalise }) {
 }
 
 /* ── CONTEÚDO ── */
-function ConteudoSection({ plano }: { plano: FollowupPlano }) {
+function ConteudoSection({ plano, analise }: { plano: FollowupPlano; analise?: FollowupAnalise }) {
   const pautas = plano.conteudo?.pautas || [];
   const orgCount = pautas.filter((p) => p.tipo === "organico").length;
   const pagoCount = pautas.filter((p) => p.tipo === "pago").length;
@@ -244,6 +255,17 @@ function ConteudoSection({ plano }: { plano: FollowupPlano }) {
                 <Legend wrapperStyle={{ color: "#999", fontSize: 13 }} />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {(analise?.conteudo?.imagens?.filter(Boolean)?.length ?? 0) > 0 && (
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 mb-12">
+          <h3 className="text-lg font-semibold text-white mb-4">Criativos em Veiculação</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {analise!.conteudo!.imagens!.filter(Boolean).map((url, idx) => (
+              <img key={idx} src={url} alt={`Criativo ${idx + 1}`} className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
+            ))}
           </div>
         </div>
       )}
@@ -647,7 +669,7 @@ export default function Apresentacao() {
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
 
-      <ConteudoSection plano={plano} />
+      <ConteudoSection plano={plano} analise={analise} />
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
 
