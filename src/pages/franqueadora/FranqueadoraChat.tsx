@@ -148,7 +148,7 @@ export default function FranqueadoraChat() {
   return (
     <div className="flex h-[calc(100vh-120px)] border rounded-xl bg-card overflow-hidden">
       {/* Sidebar */}
-      <div className="w-64 border-r flex flex-col bg-muted/30">
+      <div className="w-64 shrink-0 border-r flex flex-col bg-muted/30">
         <div className="px-4 py-3 border-b">
           <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
             <MessageCircle className="h-4 w-4 text-primary" />
@@ -236,7 +236,7 @@ export default function FranqueadoraChat() {
       </div>
 
       {/* Conversation */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {selectedChannelId && selectedChannel ? (
           <TeamChatConversation
             messages={messagesQuery.data || []}
