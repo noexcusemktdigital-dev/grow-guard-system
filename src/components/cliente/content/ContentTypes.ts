@@ -22,30 +22,59 @@ export interface ContentBatch {
   items: import("@/hooks/useClienteContentV2").ContentItem[];
 }
 
+/**
+ * Converts a Python-style dict/list string into valid JSON.
+ * Uses a state-machine to handle internal apostrophes within values.
+ */
+function pythonToJson(src: string): string {
+  let s = src.trim();
+  s = s.replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
+
+  const out: string[] = [];
+  let inString = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+
+    if (inString) {
+      if (c === "'") {
+        // Check if this quote ends the string:
+        // Look ahead (skip whitespace) for structural chars: , ] } :
+        const rest = s.slice(i + 1).trimStart();
+        const next = rest[0] || "";
+        if ([",", "]", "}", ":"].includes(next) || rest.length === 0) {
+          out.push('"');
+          inString = false;
+          continue;
+        }
+        // Internal apostrophe — keep as-is
+        out.push("'");
+        continue;
+      }
+      if (c === '"') {
+        out.push('\\"');
+        continue;
+      }
+      out.push(c);
+    } else {
+      if (c === "'") {
+        out.push('"');
+        inString = true;
+      } else {
+        out.push(c);
+      }
+    }
+  }
+
+  return out.join("");
+}
+
 export function parseConteudoPrincipal(raw: unknown): unknown {
   if (!raw) return null;
   if (typeof raw === "string") {
     try { return JSON.parse(raw); } catch {}
-    // Attempt to fix Python-style dict/list strings
-    try {
-      let s = raw.trim();
-      // Replace Python literals
-      s = s.replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
-      // Smart single-to-double quote conversion:
-      // Match keys and values delimited by single quotes, handling internal apostrophes
-      // Strategy: replace quotes around keys/values contextually
-      s = s.replace(/(?<=[\[{,:])\s*'((?:[^'\\]|\\.|'(?=[a-zA-ZÀ-ÿ]))*?)'\s*(?=[,\]}\:])/g, '"$1"');
-      // Also handle leading key quotes: 'key':
-      s = s.replace(/'([^']{1,60}?)'\s*:/g, '"$1":');
-      // Handle remaining string values: : 'value'
-      s = s.replace(/:\s*'((?:[^'\\]|\\.)*?)'\s*(?=[,\]}])/g, ': "$1"');
-      // Handle array string items: ['item1', 'item2']
-      s = s.replace(/\[\s*'((?:[^'\\]|\\.)*?)'/g, '["$1"');
-      s = s.replace(/,\s*'((?:[^'\\]|\\.)*?)'\s*(?=[\],])/g, ', "$1"');
-      s = s.replace(/,\s*'((?:[^'\\]|\\.)*?)'\s*\]/g, ', "$1"]');
-      return JSON.parse(s);
-    } catch {}
-    // Last resort: try brute-force replacing all single quotes
+    try { return JSON.parse(pythonToJson(raw)); } catch {}
+    // Last resort: brute-force
     try {
       const fixed = raw.replace(/'/g, '"').replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
       return JSON.parse(fixed);
