@@ -58,6 +58,7 @@ export interface ArtGeneratePayload {
   outputMode?: "digital" | "print";
   printFormat?: string;
   artTexts?: ArtTextItem[];
+  caption?: string;
   // New fields from the art direction engine
   topic?: string;
   audience?: string;
@@ -81,6 +82,7 @@ export interface ArtBriefingResult {
   bullet_points: string;
   suggested_format: string;
   suggested_tipo: string;
+  legenda?: string;
 }
 
 export interface ArtTextItem {
