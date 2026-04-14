@@ -1,71 +1,27 @@
 
 
-## Plano: Adicionar Legenda (Caption) ao Fluxo de Geração de Post
+## Diagnóstico: Erro "invalid input syntax for type integer: 67.5"
 
-### Resumo
-Gerar automaticamente uma legenda pronta para redes sociais junto com a arte, salvar no banco, e exibir na tela de resultado para o usuário aprovar/copiar.
+### Causa raiz
+A coluna `score_percentage` na tabela `marketing_strategies` é do tipo `integer`. A IA está retornando scores decimais (ex: `67.5`), e o código insere esse valor diretamente sem arredondar, causando rejeição do Postgres.
 
----
+### Correção
 
-### 1. Migração de Banco — Adicionar coluna `caption`
+Arredondar o valor com `Math.round()` antes de salvar. Há dois pontos de inserção:
 
-```sql
-ALTER TABLE public.client_posts ADD COLUMN caption text;
+| Arquivo | Linha | Mudança |
+|---|---|---|
+| `src/pages/cliente/ClienteGPSNegocio.tsx` | ~426 | `Math.round(...)` no `score_percentage` |
+| `src/pages/cliente/ClientePlanoMarketing.tsx` | ~46 | `Math.round(...)` no `score_percentage` |
+
+Exemplo da mudança:
+```typescript
+// Antes
+score_percentage: (unifiedResult as any)?.diagnostico_gps?.score_geral || 0,
+
+// Depois
+score_percentage: Math.round((unifiedResult as any)?.diagnostico_gps?.score_geral || 0),
 ```
 
-A tabela `client_posts` hoje não tem campo de legenda. Adicionamos uma coluna `caption` para armazenar o texto.
-
----
-
-### 2. Edge Function `generate-social-briefing` — Gerar legenda
-
-Adicionar um novo campo `legenda` no tool call da IA, com instrução para gerar uma legenda completa para redes sociais (hook + valor + CTA + hashtags), pronta para copiar e colar.
-
-**Campos novos no schema do tool call:**
-- `legenda`: string — Legenda completa para redes sociais (2-4 linhas com emojis, hook, valor, CTA e hashtags)
-
-**Instrução no system prompt:** Adicionar regra para gerar legenda profissional com estrutura Hook → Valor → CTA → Hashtags.
-
----
-
-### 3. Hook `useClientePosts` — Persistir legenda
-
-- Adicionar `caption` ao payload do `useGeneratePost`
-- Salvar o `caption` no insert do `client_posts`
-- Retornar `caption` no resultado da mutação
-- Atualizar interface `PostItem` com campo `caption`
-
----
-
-### 4. ArtWizard — Capturar legenda do briefing
-
-No fluxo do wizard, quando o briefing retornar o campo `legenda`, armazená-lo no state e passá-lo ao `useGeneratePost`.
-
----
-
-### 5. PostResult — Exibir legenda
-
-Na tela de resultado (`PostResult.tsx`), abaixo da imagem gerada:
-- Mostrar a legenda em um card com estilo de "copy ready"
-- Botão "Copiar Legenda" para clipboard
-- A legenda aparece junto com o status de aprovação
-
----
-
-### 6. PostCard — Exibir legenda no histórico
-
-No card do histórico de posts (`PostCard.tsx`), mostrar um preview da legenda (truncado) quando disponível.
-
----
-
-### Arquivos alterados
-
-| Arquivo | Mudança |
-|---|---|
-| Migração SQL | `ALTER TABLE client_posts ADD COLUMN caption text` |
-| `supabase/functions/generate-social-briefing/index.ts` | Novo campo `legenda` no tool call + instrução no prompt |
-| `src/hooks/useClientePosts.ts` | Campo `caption` no payload, insert e interface |
-| `src/components/cliente/social/ArtWizard.tsx` | Capturar e passar `caption` do briefing |
-| `src/components/cliente/social/PostResult.tsx` | Exibir legenda + botão copiar |
-| `src/components/cliente/social/PostCard.tsx` | Preview da legenda no histórico |
+Correção simples e sem risco — apenas garante que decimais sejam arredondados para inteiro antes do insert.
 
