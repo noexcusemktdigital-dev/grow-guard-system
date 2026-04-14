@@ -1,30 +1,47 @@
 
 
-## Diagnóstico: O GPS está gerando dados completos, mas há problemas de mapeamento de campos
+## Diagnóstico
 
-### Problema encontrado
+Analisei o fluxo completo de geração em `supabase/functions/generate-social-image/index.ts` e identifiquei os dois problemas:
 
-Analisei os dados no banco e confirmei que o GPS **está gerando o diagnóstico completo** — todos os campos existem (`diagnostico_gps`, `etapas`, `projecoes`, `persona`, `analise_concorrencia`, etc.) com score_geral = 42.5.
+### Problema 1: Logo some no fundo
+O Stage 3 (composição da logo, linhas 1136-1199) diz ao modelo para colocar a logo "directly without adding any background behind it **unless the area is too busy**", mas não menciona nada sobre **contraste de cor**. Uma logo preta em fundo escuro fica invisível.
 
-O problema é de **mapeamento de campos** entre o que o backend retorna e o que o frontend espera:
+### Problema 2: Excesso de texto
+O prompt atual não limita a quantidade de texto renderizado. Headline + subheadline + supporting text + bullet points + CTA + brand name podem resultar em arte poluída e ilegível.
 
-1. **`score_percentage` salvo como 0**: Na hora de salvar, o código busca `unifiedResult.diagnostico.score_geral`, mas o campo real é `diagnostico_gps.score_geral`. Resultado: score salvo como 0, aparentando que nada foi gerado.
+---
 
-2. **`diagnostico_comercial` não existe mais**: O schema unificado GPS retorna tudo dentro de `diagnostico_gps` (scores de marketing E comercial), mas o dashboard ainda procura `diagnostico_comercial` separado (da arquitetura antiga de 3 chamadas).
+## Plano de Correção
 
-3. **Normalização parcial**: A normalização `diagnostico_gps → diagnostico` foi adicionada, mas não cobre todos os componentes — os sub-componentes comerciais (`ComScoreRadar`, `ComFunilReverso`, etc.) ainda recebem `result.diagnostico_comercial` que é `undefined`.
+### 1. Logo com proteção de contraste (Stage 3)
 
-### Plano de correção
+No prompt do Stage 3 (composição da logo), adicionar instruções de contraste inteligente:
 
-**Arquivo 1: `src/pages/cliente/ClienteGPSNegocio.tsx`**
-- Corrigir a linha de save para ler `diagnostico_gps.score_geral` em vez de `diagnostico.score_geral`
+- Analisar a cor dominante da área onde a logo será colocada
+- Se a logo for escura e o fundo for escuro: adicionar um **halo/glow branco sutil** ou uma **pill/badge de fundo claro semitransparente** atrás da logo
+- Se a logo for clara e o fundo for claro: adicionar sombra ou backdrop escuro
+- Garantir que a logo tenha **sempre legibilidade total** independente do fundo
 
-**Arquivo 2: `src/pages/cliente/ClientePlanoMarketingStrategy.tsx`**
-- Expandir a normalização para mapear campos comerciais do `diagnostico_gps` para `diagnostico_comercial` (score_comercial, etc.)
-- Garantir que todas as referências usem `result_` em vez de `result`
+### 2. Controle de quantidade de texto
 
-**Arquivo 3: `src/hooks/useStrategyData.ts`**
-- Atualizar o hook para ler dados de `diagnostico_gps` além de `diagnostico_comercial`, garantindo compatibilidade com a nova estrutura
+No `buildFinalPrompt` e `buildFallbackPrompt`, adicionar regras de hierarquia textual:
 
-Essas correções são não-destrutivas — estratégias antigas com `diagnostico_comercial` separado continuarão funcionando.
+- **Máximo 3 blocos de texto visíveis**: headline (obrigatório), subheadline (se houver), CTA (se houver)
+- Supporting text e bullet points devem ser **condensados** — máximo 2 linhas de suporte
+- Regra explícita: "If more than 40 words of text are provided, prioritize headline and CTA. Summarize or omit supporting text to keep the design clean and scannable"
+- Adicionar instrução: "TEXT DENSITY RULE: The image must remain at least 50% visual/graphic. Text should never dominate the canvas"
+
+### 3. Validação no frontend (ArtWizard)
+
+No Step 6 (texto/briefing) do wizard, adicionar um **contador de caracteres** com aviso visual quando o texto combinado (headline + sub + supporting + bullets + CTA) ultrapassar ~150 caracteres, orientando o usuário a simplificar.
+
+---
+
+### Arquivos alterados
+
+| Arquivo | Mudança |
+|---|---|
+| `supabase/functions/generate-social-image/index.ts` | Prompt do Stage 3 com regras de contraste; regras de densidade textual nos prompts |
+| `src/components/cliente/social/ArtWizardSteps.tsx` | Contador/aviso de excesso de texto no step de revisão |
 
