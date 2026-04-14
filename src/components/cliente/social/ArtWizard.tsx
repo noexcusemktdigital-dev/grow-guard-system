@@ -191,6 +191,7 @@ export function ArtWizard({
   const [elementosVisuais, setElementosVisuais] = useState("");
   const [bulletPoints, setBulletPoints] = useState("");
   const [editingPieceIndex, setEditingPieceIndex] = useState<number | null>(null);
+  const [caption, setCaption] = useState("");
 
   // Auto-load from visual identity
   useEffect(() => {
@@ -237,6 +238,7 @@ export function ArtWizard({
       setCena(result.cena || "");
       setElementosVisuais(result.elementos_visuais || "");
       setBulletPoints(result.bullet_points || "");
+      setCaption(result.legenda || "");
       setBriefingFilled(true);
     }
   };
