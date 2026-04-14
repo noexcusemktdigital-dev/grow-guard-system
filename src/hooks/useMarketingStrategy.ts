@@ -168,7 +168,7 @@ export function useGenerateStrategy() {
         body: { 
           answers: payload.answers, 
           organization_id: payload.organization_id,
-          section: payload.section || "marketing",
+          ...(payload.section ? { section: payload.section } : {}),
         },
       });
 
