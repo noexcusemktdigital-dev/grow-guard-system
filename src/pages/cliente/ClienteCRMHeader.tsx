@@ -70,6 +70,7 @@ export function ClienteCRMHeader({
             variant={activeTab === "contatos" ? "default" : "outline"}
             size="sm"
             className="gap-1.5 h-8"
+            data-tour="contatos"
             onClick={() => setActiveTab(activeTab === "contatos" ? "pipeline" : "contatos")}
           >
             <BookUser className="w-3.5 h-3.5" />
@@ -80,7 +81,7 @@ export function ClienteCRMHeader({
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="gap-1" disabled={atLimit}>
+                  <Button size="sm" className="gap-1" disabled={atLimit} data-tour="novo-lead">
                     <Plus className="w-3.5 h-3.5" /> Novo Lead
                     <ChevronDown className="w-3 h-3 ml-0.5" />
                   </Button>
@@ -112,7 +113,7 @@ export function ClienteCRMHeader({
             </>
           )}
 
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => navigate(configRoute)}>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" data-tour="config" onClick={() => navigate(configRoute)}>
             <Settings2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline text-xs">Configurações</span>
           </Button>

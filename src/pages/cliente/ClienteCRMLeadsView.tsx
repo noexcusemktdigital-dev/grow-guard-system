@@ -81,7 +81,7 @@ export function ClienteCRMLeadsView({
   if (view === "kanban") {
     return (
       <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-x-auto pb-4" data-tour="kanban">
           {stages.map(stage => {
             const stageLeads = leadsByStage[stage.key] || [];
             const colorStyle = getColorStyle(stage.color);
