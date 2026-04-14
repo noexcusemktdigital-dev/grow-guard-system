@@ -303,15 +303,17 @@ Gere o checklist diário personalizado.`;
     const { error: insertError } = await supabase.from("client_checklist_items").insert(inserts);
     if (insertError) throw insertError;
 
-    // Debit credits — skip for trial users
+    // Debit credits — only after first GPS is approved
     try {
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("status")
+      const { data: gpsData } = await supabase
+        .from("marketing_strategies")
+        .select("id")
         .eq("organization_id", orgId)
+        .eq("status", "approved")
+        .limit(1)
         .maybeSingle();
 
-      if (sub?.status !== "trial") {
+      if (gpsData) {
         await supabase.rpc("debit_credits", {
           _org_id: orgId,
           _amount: CREDIT_COST,
