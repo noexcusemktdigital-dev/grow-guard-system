@@ -370,7 +370,7 @@ export default function ClienteGPSNegocio() {
 
   // Detect if Rafael completed but Sofia/generation hasn't — partial progress
   const salesPlanKeys = salesPlan?.answers ? Object.keys(salesPlan.answers).length : 0;
-  const hasFullProgress = !!(salesPlanKeys >= 20 && !hasResult);
+  const hasFullProgress = !!(salesPlanKeys >= 10 && !hasResult);
   const hasPartialProgress = !!(salesPlanKeys >= 3 && !hasResult);
 
   // Auto-detect phase on load
