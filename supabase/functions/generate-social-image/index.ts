@@ -768,7 +768,14 @@ COMPOSITION RULES:
 - Clean, balanced layout that feels intentionally designed
 - Strong contrast between text and background — no busy backgrounds behind text
 - Do NOT improvise layout or reposition elements outside defined grid
-- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.${restrictionBlock}
+- MANDATORY TEXT RESTRICTION: Render ONLY the text elements explicitly provided above. Do NOT add, invent, or include ANY additional text, words, phrases, taglines, watermarks, or labels beyond what is explicitly listed.
+
+TEXT DENSITY RULE (CRITICAL):
+- Maximum 3 visible text blocks: Headline (required), Subheadline (optional), CTA (optional)
+- Supporting text and bullet points must be condensed to at most 2 short lines — if provided text exceeds 40 words total, prioritize the Headline and CTA, and summarize or omit supporting text
+- The image must remain at least 50% visual/graphic — text should NEVER dominate the canvas
+- If too much text is provided, REDUCE it to keep the design clean, scannable, and visually balanced
+- Each text block must have generous breathing room — no cramped or overlapping text${restrictionBlock}
 
 Generate this image now.`;
 }
@@ -1160,7 +1167,6 @@ RULES:
 - Place the logo in the top-left corner area of the design
 - Scale the logo to approximately 8-12% of the image width
 - The logo must appear EXACTLY as provided — same colors, same shape, same proportions, same text
-- The logo has a transparent background. Place it directly without adding any background behind it unless the area is too busy for legibility.
 - Do NOT redraw, stylize, modify, reinterpret, or simplify the logo in ANY way
 - Do NOT change any other part of the design — keep everything else pixel-perfect
 - If there is already a logo or brand mark visible in the design, REMOVE IT and replace with the provided logo
@@ -1168,7 +1174,14 @@ RULES:
 - Maintain the overall design composition and quality
 - Do NOT add any text, elements, or modifications beyond placing the logo
 
-OUTPUT: The same design with the real brand logo composited in.`,
+CONTRAST PROTECTION (CRITICAL):
+- Analyze the dominant color of the area where the logo will be placed
+- If the logo is DARK (black, dark gray, navy) and the background area is also DARK: add a subtle white/light semi-transparent pill or soft glow halo behind the logo to guarantee visibility
+- If the logo is LIGHT (white, cream, pastel) and the background area is also LIGHT: add a subtle dark shadow or semi-transparent dark pill behind the logo
+- The logo must ALWAYS have 100% legibility regardless of the background — if contrast is insufficient, you MUST add a backing element
+- The backing element should be subtle and professional (rounded rectangle with 30-50% opacity, or soft gaussian glow)
+
+OUTPUT: The same design with the real brand logo composited in, fully legible.`,
                   },
                   { type: "image_url", image_url: { url: imageData } },
                   { type: "image_url", image_url: { url: logoB64 } },
