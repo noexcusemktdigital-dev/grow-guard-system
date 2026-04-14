@@ -96,7 +96,7 @@ export interface ArtTextItem {
   subheadlineOptions?: string[];
 }
 
-const TOTAL_STEPS = 14;
+const TOTAL_STEPS = 4;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -226,23 +226,11 @@ export function ArtWizard({
   );
 
   const canProceed = () => {
-    switch (step) {
-      case 1: return true; // material type
-      case 2: return true; // format
-      case 3: return true; // type + quantity
-      case 4: return true; // objective
-      case 5: return !!topic.trim(); // topic required
-      case 6: return textMode === "ai" || !!(briefingText.trim()); // text mode
-      case 7: return true; // audience optional
-      case 8: return true; // layout
-      case 9: return referenceUrls.length >= 3; // min 3 references
-      case 10: return !!logoUrl; // logo required
-      case 11: return true; // images optional
-      case 12: return true; // elements optional
-      case 13: return true; // restrictions optional
-      case 14: return allTextsApproved; // all texts approved
-      default: return true;
-    }
+    if (step === 1) return !!artFormat; // formato escolhido
+    if (step === 2) return !!tipoPostagem && !!objective; // tipo e objetivo
+    if (step === 3) return topic.trim().length > 2; // tema definido
+    if (step === 4) return true; // revisão — sempre pode gerar
+    return false;
   };
 
   const handleStepChange = (nextStep: number) => {
@@ -369,10 +357,10 @@ export function ArtWizard({
   );
 
   const stepLabels: Record<number, string> = {
-    1: "Destino", 2: "Formato", 3: "Tipo", 4: "Objetivo",
-    5: "Tema", 6: "Texto", 7: "Público", 8: "Diagramação",
-    9: "Referências", 10: "Logo", 11: "Imagens", 12: "Elementos",
-    13: "Restrições", 14: "Revisão",
+    1: "Formato",
+    2: "Objetivo",
+    3: "Tema",
+    4: "Revisão",
   };
 
   const renderStep = () => {
