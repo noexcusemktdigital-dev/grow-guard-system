@@ -179,14 +179,141 @@ export function useEnsureDefaultFunnel() {
 
   useEffect(() => {
     if (isLoading || created.current) return;
-    if (funnels && funnels.length === 0) {
-      created.current = true;
+    if (!funnels || funnels.length > 0) return;
+
+    created.current = true;
+
+    // Tenta buscar dados do GPS para criar funil inteligente
+    const createSmartFunnel = async () => {
+      let stages = DEFAULT_STAGES;
+      let funnelName = "Funil de Vendas";
+
+      try {
+        // Busca o sales_plan do usuário
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: orgData } = await supabase.rpc("get_user_org_id", { _user_id: user.id, _portal: "saas" });
+          if (orgData) {
+            const { data: plan } = await supabaseClient
+              .from("sales_plans")
+              .select("answers")
+              .eq("organization_id", orgData)
+              .maybeSingle();
+
+            if (plan?.answers) {
+              const answers = plan.answers as Record<string, any>;
+              const etapasFunil = answers.etapas_funil || "";
+              const segmento = answers.segmento || "";
+
+              // Prioridade 1: etapas descritas pelo próprio cliente no GPS
+              if (etapasFunil && etapasFunil.length > 15) {
+                const rawStages = etapasFunil
+                  .split(/→|->|,|\n|\//)
+                  .map((s: string) => s.trim())
+                  .filter((s: string) => s.length > 1 && s.length < 40);
+
+                if (rawStages.length >= 2) {
+                  const colors = ["blue", "amber", "cyan", "purple", "orange", "emerald", "red"];
+                  stages = rawStages.map((label: string, i: number) => ({
+                    key: label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+                    label,
+                    color: colors[i % colors.length],
+                    icon: i === rawStages.length - 1 ? "shield-check" : i === 0 ? "circle-plus" : "circle-dot",
+                  }));
+                  // Garante etapa de perdido no final se não tiver
+                  if (!stages.some(s => s.label.toLowerCase().includes("perd"))) {
+                    stages.push({ key: "perdido", label: "Perdido", color: "red", icon: "ban" });
+                  }
+                  funnelName = "Meu Funil de Vendas";
+                }
+              }
+
+              // Prioridade 2: padrão por segmento
+              if (stages === DEFAULT_STAGES && segmento) {
+                const segmentStages: Record<string, FunnelStage[]> = {
+                  advocacia: [
+                    { key: "contato", label: "Primeiro Contato", color: "blue", icon: "circle-plus" },
+                    { key: "consulta", label: "Consulta Inicial", color: "amber", icon: "phone-outgoing" },
+                    { key: "proposta", label: "Proposta Enviada", color: "purple", icon: "clipboard" },
+                    { key: "contrato", label: "Contrato Assinado", color: "cyan", icon: "handshake" },
+                    { key: "cliente", label: "Cliente Ativo", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+                  ],
+                  saude: [
+                    { key: "contato", label: "Contato", color: "blue", icon: "circle-plus" },
+                    { key: "agendamento", label: "Agendamento", color: "amber", icon: "phone-outgoing" },
+                    { key: "avaliacao", label: "Avaliação", color: "cyan", icon: "search-check" },
+                    { key: "proposta", label: "Proposta", color: "purple", icon: "clipboard" },
+                    { key: "paciente", label: "Paciente Ativo", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+                  ],
+                  odontologia: [
+                    { key: "contato", label: "Contato", color: "blue", icon: "circle-plus" },
+                    { key: "agendamento", label: "Agendamento", color: "amber", icon: "phone-outgoing" },
+                    { key: "avaliacao", label: "Avaliação", color: "cyan", icon: "search-check" },
+                    { key: "orcamento", label: "Orçamento", color: "purple", icon: "clipboard" },
+                    { key: "tratamento", label: "Em Tratamento", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+                  ],
+                  psicologia: [
+                    { key: "contato", label: "Primeiro Contato", color: "blue", icon: "circle-plus" },
+                    { key: "triagem", label: "Triagem", color: "amber", icon: "search-check" },
+                    { key: "sessao_inicial", label: "Sessão Inicial", color: "cyan", icon: "phone-outgoing" },
+                    { key: "paciente", label: "Paciente Regular", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Encerrado", color: "red", icon: "ban" },
+                  ],
+                  consultoria: [
+                    { key: "contato", label: "Primeiro Contato", color: "blue", icon: "circle-plus" },
+                    { key: "diagnostico", label: "Diagnóstico", color: "amber", icon: "search-check" },
+                    { key: "proposta", label: "Proposta", color: "purple", icon: "clipboard" },
+                    { key: "negociacao", label: "Negociação", color: "orange", icon: "handshake" },
+                    { key: "cliente", label: "Cliente", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+                  ],
+                  varejo: [
+                    { key: "interesse", label: "Interesse", color: "blue", icon: "circle-plus" },
+                    { key: "demonstracao", label: "Demonstração", color: "amber", icon: "search-check" },
+                    { key: "proposta", label: "Proposta", color: "purple", icon: "clipboard" },
+                    { key: "venda", label: "Venda Fechada", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+                  ],
+                  educacao: [
+                    { key: "contato", label: "Contato", color: "blue", icon: "circle-plus" },
+                    { key: "apresentacao", label: "Apresentação", color: "amber", icon: "phone-outgoing" },
+                    { key: "matricula", label: "Em Matrícula", color: "purple", icon: "clipboard" },
+                    { key: "aluno", label: "Aluno", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Desistente", color: "red", icon: "ban" },
+                  ],
+                  imobiliario: [
+                    { key: "contato", label: "Contato", color: "blue", icon: "circle-plus" },
+                    { key: "visita", label: "Visita Agendada", color: "amber", icon: "phone-outgoing" },
+                    { key: "proposta", label: "Proposta", color: "purple", icon: "clipboard" },
+                    { key: "negociacao", label: "Negociação", color: "orange", icon: "handshake" },
+                    { key: "fechado", label: "Contrato Assinado", color: "emerald", icon: "shield-check" },
+                    { key: "perdido", label: "Perdido", color: "red", icon: "ban" },
+                  ],
+                };
+
+                if (segmentStages[segmento]) {
+                  stages = segmentStages[segmento];
+                  funnelName = `Funil ${segmento.charAt(0).toUpperCase() + segmento.slice(1)}`;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Falha silenciosa — usa padrão genérico
+      }
+
       createFunnel.mutate({
-        name: "Funil de Vendas",
-        description: "Funil padrão do CRM",
-        stages: DEFAULT_STAGES,
+        name: funnelName,
+        description: stages === DEFAULT_STAGES ? "Funil padrão do CRM" : "Criado automaticamente com base no seu GPS",
+        stages,
         is_default: true,
       });
-    }
+    };
+
+    createSmartFunnel();
   }, [funnels, isLoading]);
 }
