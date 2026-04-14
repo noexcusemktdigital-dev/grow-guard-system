@@ -377,6 +377,7 @@ export function ArtWizard({
       baseImageUrl: baseImageUrl || undefined,
       characterImageUrl: characterImageUrl || undefined,
       backgroundImageUrl: backgroundImageUrl || undefined,
+      caption: caption || undefined,
     });
   };
 

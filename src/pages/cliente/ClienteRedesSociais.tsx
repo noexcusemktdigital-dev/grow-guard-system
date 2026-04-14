@@ -205,6 +205,7 @@ export default function ClienteRedesSociais() {
             base_image_url: payload.baseImageUrl,
             character_image_url: payload.characterImageUrl,
             background_image_url: payload.backgroundImageUrl,
+            caption: payload.caption,
           });
           results.push(result);
         } catch (slideErr: unknown) {
