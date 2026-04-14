@@ -296,6 +296,13 @@ export default function ClienteGPSNegocio() {
       })();
 
       toast({ title: "GPS do Negócio gerado!", description: "Revise o resultado e aprove para finalizar." });
+
+      try {
+        await updateOrg.mutateAsync({ onboarding_completed: true } as Record<string, unknown>);
+      } catch (e) {
+        logger.error("Erro ao marcar onboarding_completed:", e);
+      }
+
       setPhase("result");
     } catch (err: unknown) {
       toast({ title: "Erro ao gerar estratégia", description: (err as Error).message, variant: "destructive" });
