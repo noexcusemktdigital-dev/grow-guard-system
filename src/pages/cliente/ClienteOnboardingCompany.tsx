@@ -120,11 +120,11 @@ export default function ClienteOnboardingCompany() {
         product_types: productTypesArray,
         employee_count: form.employee_count,
         website: form.website || undefined,
-        onboarding_completed: true,
+        company_profile_completed: true,
       } as Record<string, unknown>);
       
-      toast.success("Dados salvos! Vamos montar seu plano comercial.");
-      navigate("/cliente/plano-vendas");
+      toast.success("Dados salvos! Agora vamos fazer o diagnóstico do seu negócio.");
+      navigate("/cliente/gps-negocio");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : String(err) || "Erro ao salvar");
     } finally {
