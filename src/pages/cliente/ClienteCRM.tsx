@@ -84,8 +84,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const [bulkMoveStage, setBulkMoveStage] = useState("");
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkAssigned, setBulkAssigned] = useState("");
-  const [tutorialOpen, setTutorialOpen] = useState(() => !localStorage.getItem("crm_gps_tutorial_v2"));
   const [tourActive, setTourActive] = useState(() => !localStorage.getItem("crm_tour_v1"));
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   // All filters
   const [filterSource, setFilterSource] = useState("");
