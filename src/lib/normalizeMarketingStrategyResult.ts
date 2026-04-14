@@ -304,6 +304,7 @@ export function normalizeMarketingStrategyResult(rawResult: any) {
     investimento_recomendado: rawResult?.investimento_recomendado || averageInvestment,
     potencial_crescimento: rawResult?.potencial_crescimento || revenueGrowth || rawResult?.kpis_hero?.ltv_cac || null,
     icp: buildICP(rawResult),
+    tom_comunicacao: rawResult?.tom_comunicacao || buildTomComunicacao(rawResult),
     proposta_valor: buildValueProposition(rawResult),
     analise_concorrencia: buildCompetitorAnalysis(rawResult),
     estrategia_aquisicao: buildAcquisition(rawResult),

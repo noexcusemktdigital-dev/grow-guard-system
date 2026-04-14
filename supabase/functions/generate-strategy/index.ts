@@ -101,6 +101,19 @@ const GPS_DIAGNOSIS_SCHEMA = {
           },
           required: ["concorrentes", "diferencial_empresa", "posicionamento_recomendado"],
         },
+        tom_comunicacao: {
+          type: "object",
+          description: "Tom de voz e comunicação da marca baseado nas respostas do briefing",
+          properties: {
+            tom_principal: { type: "string", description: "Tom principal da comunicação (ex: Educativo e acessível, Profissional e inspirador)" },
+            personalidade_marca: { type: "array", items: { type: "string" }, description: "3-5 traços de personalidade da marca" },
+            palavras_usar: { type: "array", items: { type: "string" }, description: "5-8 palavras/expressões que a marca deve usar" },
+            palavras_evitar: { type: "array", items: { type: "string" }, description: "5-8 palavras/expressões que a marca deve evitar" },
+            exemplo_mensagem: { type: "string", description: "Exemplo de mensagem no tom ideal da marca" },
+            nivel_formalidade: { type: "string", description: "Nível de formalidade: Casual, Equilibrado, Formal" },
+          },
+          required: ["tom_principal", "personalidade_marca", "palavras_usar", "palavras_evitar"],
+        },
         kpis_hero: {
           type: "object",
           properties: {
@@ -112,7 +125,7 @@ const GPS_DIAGNOSIS_SCHEMA = {
           required: ["meta_faturamento", "ticket_medio", "recorrencia", "ltv_cac"],
         },
       },
-      required: ["resumo_executivo", "resumo_cliente", "score_marketing", "score_comercial", "diagnostico_gps", "persona", "analise_concorrencia", "kpis_hero"],
+      required: ["resumo_executivo", "resumo_cliente", "score_marketing", "score_comercial", "diagnostico_gps", "persona", "analise_concorrencia", "tom_comunicacao", "kpis_hero"],
       additionalProperties: false,
     },
   },
