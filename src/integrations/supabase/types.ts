@@ -1753,6 +1753,7 @@ export type Database = {
       }
       client_posts: {
         Row: {
+          caption: string | null
           content_id: string | null
           created_at: string | null
           created_by: string | null
@@ -1773,6 +1774,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          caption?: string | null
           content_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1793,6 +1795,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          caption?: string | null
           content_id?: string | null
           created_at?: string | null
           created_by?: string | null

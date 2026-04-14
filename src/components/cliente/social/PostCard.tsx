@@ -60,6 +60,9 @@ export const PostCard = memo(function PostCard({ post, selectionMode, isSelected
           <span className="ml-auto">{format(new Date(post.created_at), "dd/MM/yy")}</span>
         </div>
         <p className="text-sm line-clamp-2">{post.input_text}</p>
+        {post.caption && (
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">📝 {post.caption}</p>
+        )}
       </CardContent>
     </Card>
   );

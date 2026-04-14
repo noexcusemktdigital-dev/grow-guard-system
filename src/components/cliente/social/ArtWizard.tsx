@@ -58,6 +58,7 @@ export interface ArtGeneratePayload {
   outputMode?: "digital" | "print";
   printFormat?: string;
   artTexts?: ArtTextItem[];
+  caption?: string;
   // New fields from the art direction engine
   topic?: string;
   audience?: string;
@@ -81,6 +82,7 @@ export interface ArtBriefingResult {
   bullet_points: string;
   suggested_format: string;
   suggested_tipo: string;
+  legenda?: string;
 }
 
 export interface ArtTextItem {
@@ -189,6 +191,7 @@ export function ArtWizard({
   const [elementosVisuais, setElementosVisuais] = useState("");
   const [bulletPoints, setBulletPoints] = useState("");
   const [editingPieceIndex, setEditingPieceIndex] = useState<number | null>(null);
+  const [caption, setCaption] = useState("");
 
   // Auto-load from visual identity
   useEffect(() => {
@@ -235,6 +238,7 @@ export function ArtWizard({
       setCena(result.cena || "");
       setElementosVisuais(result.elementos_visuais || "");
       setBulletPoints(result.bullet_points || "");
+      setCaption(result.legenda || "");
       setBriefingFilled(true);
     }
   };
@@ -373,6 +377,7 @@ export function ArtWizard({
       baseImageUrl: baseImageUrl || undefined,
       characterImageUrl: characterImageUrl || undefined,
       backgroundImageUrl: backgroundImageUrl || undefined,
+      caption: caption || undefined,
     });
   };
 

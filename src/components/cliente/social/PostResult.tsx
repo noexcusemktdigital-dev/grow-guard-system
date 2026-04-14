@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { PostItem, CREDIT_COST_ART, getVideoCost } from "@/hooks/useClientePosts";
 import { PageHeader } from "@/components/PageHeader";
 import {
-  Check, RefreshCw, Download, Sparkles, Loader2, ArrowLeft, Trash2, Eye, Video, Image,
+  Check, RefreshCw, Download, Sparkles, Loader2, ArrowLeft, Trash2, Eye, Video, Image, Copy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LOADING_PHRASES } from "./constants";
+import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -19,7 +20,6 @@ interface PostResultProps {
   isGenerating: boolean;
   loadingPhraseIdx: number;
   generatedResult: { post: PostItem; result_url: string | null; result_data: Record<string, unknown> | null } | null;
-  /** Array of generated results for batch/carousel */
   batchResults?: { post: PostItem; result_url: string | null; result_data: Record<string, unknown> | null }[];
   postType: "art" | "video";
   videoDuration: string;
@@ -38,6 +38,15 @@ export function PostResult({
   const creditCost = postType === "video" ? getVideoCost(videoDuration) : CREDIT_COST_ART;
   const totalCost = allResults.length * creditCost;
   const allApproved = allResults.every(r => r.post.status === "approved");
+
+  const caption = allResults[0]?.post?.caption;
+
+  const handleCopyCaption = () => {
+    if (caption) {
+      navigator.clipboard.writeText(caption);
+      toast({ title: "Legenda copiada!" });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -67,7 +76,6 @@ export function PostResult({
         </Card>
       ) : (
         <div className="space-y-4">
-          {/* Grid of results */}
           <div className={`grid gap-4 ${allResults.length === 1 ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
             {allResults.map((result, idx) => (
               <Card key={result.post.id} className="overflow-hidden">
@@ -102,7 +110,22 @@ export function PostResult({
             ))}
           </div>
 
-          {/* Actions */}
+          {caption && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    📝 Legenda
+                  </h3>
+                  <Button variant="outline" size="sm" onClick={handleCopyCaption}>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Copiar
+                  </Button>
+                </div>
+                <p className="text-sm whitespace-pre-line leading-relaxed">{caption}</p>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3">
             {!allApproved ? (
               <Button onClick={onApprove} disabled={isApproving} className="flex-1" size="lg">

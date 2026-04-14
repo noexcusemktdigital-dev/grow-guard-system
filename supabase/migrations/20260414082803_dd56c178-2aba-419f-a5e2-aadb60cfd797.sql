@@ -1,0 +1,1 @@
+ALTER TABLE public.client_posts ADD COLUMN caption text;

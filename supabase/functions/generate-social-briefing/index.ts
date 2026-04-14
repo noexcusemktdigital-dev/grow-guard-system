@@ -103,7 +103,14 @@ As 3 headlines devem ter abordagens DIFERENTES:
 - Opção 2: Provocativa / pergunta
 - Opção 3: Emocional / aspiracional
 
-As 2 subheadlines devem complementar as headlines de formas diferentes.`;
+As 2 subheadlines devem complementar as headlines de formas diferentes.
+
+9. LEGENDA PARA REDES SOCIAIS: Gere uma legenda completa pronta para copiar e colar. Estrutura:
+   - Linha 1: Hook forte com emoji (frase que prende atenção)
+   - Linha 2-3: Valor/benefício principal
+   - Linha 4: CTA direto (ex: "Comente 'EU QUERO'", "Salve para depois")
+   - Linha 5: 3-5 hashtags relevantes
+   A legenda deve ter tom profissional mas acessível, usar emojis estrategicamente, e ser otimizada para engajamento.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -146,8 +153,9 @@ As 2 subheadlines devem complementar as headlines de formas diferentes.`;
                   bullet_points: { type: "string", description: "2-4 keywords separated by comma." },
                   suggested_format: { type: "string", enum: ["feed", "portrait", "story"], description: "Best format for this post." },
                   suggested_tipo: { type: "string", enum: ["post_unico", "capa_carrossel", "slide_carrossel", "story"], description: "Best post type." },
+                  legenda: { type: "string", description: "Complete social media caption ready to copy-paste. Structure: hook with emoji → value/benefit → CTA → hashtags. 2-4 lines, professional but accessible tone." },
                 },
-                required: ["headlines", "subheadlines", "headline", "subheadline", "cta", "cena", "elementos_visuais", "supporting_text", "bullet_points", "suggested_format", "suggested_tipo"],
+                required: ["headlines", "subheadlines", "headline", "subheadline", "cta", "cena", "elementos_visuais", "supporting_text", "bullet_points", "suggested_format", "suggested_tipo", "legenda"],
                 additionalProperties: false,
               },
             },
