@@ -120,7 +120,7 @@ export default function ClienteOnboardingCompany() {
         product_types: productTypesArray,
         employee_count: form.employee_count,
         website: form.website || undefined,
-        company_profile_completed: true,
+        onboarding_completed: true,
       } as Record<string, unknown>);
       
       toast.success("Dados salvos! Agora vamos fazer o diagnóstico do seu negócio.");
