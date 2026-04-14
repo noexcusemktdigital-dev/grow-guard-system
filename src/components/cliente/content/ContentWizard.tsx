@@ -1,37 +1,21 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import {
-  ArrowLeft, ArrowRight, Sparkles, Video, Smartphone, Monitor, Film,
-  Target, Clock,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkles, Video, Smartphone, Monitor, Film, Clock, Navigation, ChevronRight, Check, Lightbulb } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { motion, AnimatePresence } from "framer-motion";
-import { FORMATOS, OBJETIVOS, PLATAFORMAS, DURACOES, loadingPhrases } from "./ContentTypes";
+import { FORMATOS, OBJETIVOS, DURACOES, loadingPhrases, buildGpsSuggestions } from "./ContentTypes";
+import { useStrategyData } from "@/hooks/useStrategyData";
 
-const ICON_MAP: Record<string, React.ElementType> = {
-  Video, Monitor, Smartphone, Film,
-};
+const ICON_MAP: Record<string, React.ElementType> = { Video, Monitor, Smartphone, Film };
+const STORAGE_KEY = "roteiro-wizard-prefs-v2";
 
-const TOTAL_STEPS = 4;
-
-const STORAGE_KEY = "roteiro-wizard-prefs";
-
-interface WizardPrefs {
-  plataforma?: string;
-  objetivos?: string[];
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
 }
-
-function loadPrefs(): WizardPrefs {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-  } catch { return {}; }
-}
-
-function savePrefs(prefs: WizardPrefs) {
+function savePrefs(prefs: any) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
 }
 
@@ -60,7 +44,7 @@ interface ContentWizardProps {
 }
 
 export function ContentWizard({
-  quotaRemaining, quotaMax, creditBalance, costPerContent, hasStrategy, strategy,
+  quotaRemaining, creditBalance, costPerContent, hasStrategy,
   isGenerating, loadingIdx, quantidade,
   onGenerate, onQuantidadeChange,
   formatDist, onFormatDistChange,
@@ -69,239 +53,310 @@ export function ContentWizard({
   plataforma, onPlataformaChange,
   duracao, onDuracaoChange,
 }: ContentWizardProps) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<"sugestoes" | "config" | "gerando">("sugestoes");
+  const strategyData = useStrategyData();
+  const gpsSuggestions = buildGpsSuggestions(strategyData);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(null);
 
   useEffect(() => {
     const prefs = loadPrefs();
-    if (prefs.plataforma && !hasStrategy) onPlataformaChange(prefs.plataforma);
+    if (prefs.plataforma) onPlataformaChange(prefs.plataforma);
     if (prefs.objetivos?.length) onObjetivosChange(prefs.objetivos);
+    if (prefs.duracao) onDuracaoChange(prefs.duracao);
+    if (prefs.formato) onFormatDistChange({ [prefs.formato]: quantidade });
   }, []);
 
+  useEffect(() => {
+    if (isGenerating) setStep("gerando");
+  }, [isGenerating]);
+
   const formatTotal = Object.values(formatDist).reduce((a, b) => a + b, 0);
+  const selectedFormato = Object.keys(formatDist)[0] || "";
+  const canGenerate = formatTotal > 0 && objetivos.length > 0 && !!duracao;
 
-  const updateFormatDist = (fmt: string, val: number) => {
-    const next = { ...formatDist };
-    if (val <= 0) delete next[fmt]; else next[fmt] = val;
-    onFormatDistChange(next);
-  };
-
-  const toggleObjetivo = (v: string) => {
-    const next = objetivos.includes(v) ? objetivos.filter(x => x !== v) : [...objetivos, v];
-    onObjetivosChange(next);
-  };
-
-  const canAdvance = () => {
-    if (step === 1) return quantidade > 0 && quantidade <= quotaRemaining && formatTotal === quantidade;
-    if (step === 2) return objetivos.length > 0;
-    if (step === 3) return !!duracao;
-    if (step === 4) return !!plataforma;
-    return false;
+  const handleSelectSuggestion = (idx: number) => {
+    const s = gpsSuggestions[idx];
+    setSelectedSuggestion(idx);
+    onTemaChange(s.tema);
+    if (!objetivos.includes(s.objetivo)) onObjetivosChange([s.objetivo]);
   };
 
   const handleGenerate = () => {
-    savePrefs({ plataforma, objetivos });
+    savePrefs({ plataforma, objetivos, duracao, formato: selectedFormato });
     onGenerate();
   };
 
-  if (quotaRemaining <= 0) {
-    return (
-      <Card className="border-destructive">
-        <CardContent className="py-6 text-center space-y-2">
-          <p className="font-semibold text-destructive">Créditos insuficientes</p>
-          <p className="text-sm text-muted-foreground">Você tem {creditBalance} créditos. Cada roteiro custa {costPerContent} créditos. Recarregue para continuar gerando.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isGenerating) {
+  // Loading screen
+  if (step === "gerando" || isGenerating) {
     return (
       <Card>
-        <CardContent className="py-16 text-center space-y-4">
-          <div className="animate-spin mx-auto w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
-          <p className="text-lg font-medium animate-pulse">{loadingPhrases[loadingIdx]}</p>
-          <p className="text-sm text-muted-foreground">Gerando {quantidade} roteiros estratégicos...</p>
+        <CardContent className="py-16 text-center space-y-6">
+          <div className="flex items-center justify-center gap-3">
+            <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
+            <Sparkles className="w-6 h-6 text-amber-500 animate-pulse" />
+            <Navigation className="w-5 h-5 text-primary animate-bounce" />
+          </div>
+
+          <div>
+            <p className="text-lg font-semibold animate-pulse">{loadingPhrases[loadingIdx]}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Gerando {quantidade} roteiro{quantidade > 1 ? "s" : ""} personalizados para o seu negócio...
+            </p>
+          </div>
+
+          {hasStrategy && (
+            <div className="flex items-center justify-center gap-2 text-xs text-amber-600 bg-amber-500/10 rounded-full px-4 py-2 mx-auto w-fit">
+              <Navigation className="w-3.5 h-3.5" />
+              Usando dados do seu GPS do Negócio
+            </div>
+          )}
         </CardContent>
       </Card>
     );
   }
 
-  const renderStep1 = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Quantos roteiros e em quais formatos?</h3>
-        <p className="text-sm text-muted-foreground">
-          Você tem <strong className="text-primary">{creditBalance}</strong> créditos · Cada roteiro custa <strong>{costPerContent}</strong> créditos · Máximo neste lote: <strong className="text-primary">{quotaRemaining}</strong>
-        </p>
-      </div>
-      <div className="space-y-3">
-        <Slider value={[quantidade]} onValueChange={([v]) => { onQuantidadeChange(v); onFormatDistChange({}); }} min={1} max={Math.min(quotaRemaining, 30)} step={1} />
-        <div className="text-center text-4xl font-bold text-primary">{quantidade}</div>
-      </div>
-      <div>
-        <p className="text-sm font-medium mb-1">
-          Distribuição de formatos: <strong className={formatTotal === quantidade ? "text-primary" : "text-destructive"}>{formatTotal}/{quantidade}</strong>
-        </p>
-        {formatTotal === 0 && (
-          <p className="text-xs text-muted-foreground mb-3">Escolha como distribuir seus {quantidade} roteiros entre os formatos abaixo.</p>
+  // Step 1: Sugestões do GPS
+  if (step === "sugestoes") {
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+        {/* Header GPS */}
+        {hasStrategy && gpsSuggestions.length > 0 ? (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-amber-500" />
+                <h3 className="text-lg font-semibold">Sugestões do seu GPS do Negócio</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Com base no diagnóstico do seu negócio, essas são as melhores ideias de conteúdo para você agora.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {gpsSuggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleSelectSuggestion(i)}
+                  className={`text-left p-4 rounded-xl border-2 transition-all space-y-2 ${
+                    selectedSuggestion === i
+                      ? "border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20"
+                      : "border-border hover:border-amber-500/40 bg-card"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">{s.emoji}</span>
+                    {selectedSuggestion === i && (
+                      <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="font-medium text-sm">{s.tema}</p>
+                  <div className="flex items-start gap-1.5">
+                    <Navigation className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-muted-foreground">{s.why}</p>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {OBJETIVOS.find(o => o.value === s.objetivo)?.label || s.objetivo}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                disabled={selectedSuggestion === null}
+                onClick={() => setStep("config")}
+              >
+                Continuar com esse tema <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+              <button
+                onClick={() => setStep("config")}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Prefiro escolher meu próprio tema →
+              </button>
+            </div>
+          </>
+        ) : (
+          // Sem GPS — vai direto para config
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+              <Navigation className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium text-sm">Faça o GPS do Negócio para roteiros personalizados</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sem o diagnóstico, geramos roteiros genéricos. Com o GPS, cada roteiro é baseado no seu cliente ideal, suas objeções e seu tom de voz.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" onClick={() => setStep("config")}>
+              Criar roteiro mesmo assim →
+            </Button>
+          </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      </motion.div>
+    );
+  }
+
+  // Step 2: Configuração
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+      {/* Tema selecionado ou campo livre */}
+      <div className="space-y-2">
+        <label className="text-sm font-semibold">
+          {selectedSuggestion !== null ? (
+            <>🎯 Tema selecionado</>
+          ) : (
+            <>💡 Sobre o que será o roteiro?</>
+          )}
+        </label>
+        <Textarea
+          value={tema}
+          onChange={e => onTemaChange(e.target.value)}
+          placeholder="Ex: Como mulheres podem se proteger financeiramente no divórcio..."
+          className="resize-none text-sm"
+          rows={2}
+        />
+        {selectedSuggestion !== null && (
+          <button
+            onClick={() => { setSelectedSuggestion(null); onTemaChange(""); setStep("sugestoes"); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Voltar para sugestões do GPS
+          </button>
+        )}
+      </div>
+
+      {/* Formato */}
+      <div className="space-y-2">
+        <label className="text-sm font-semibold">Formato do conteúdo</label>
+        <div className="grid grid-cols-2 gap-2">
           {FORMATOS.map(f => {
             const Icon = ICON_MAP[f.icon];
-            const val = formatDist[f.value] || 0;
+            const selected = selectedFormato === f.value;
             return (
-              <div key={f.value} className="flex items-center gap-3 p-3 rounded-xl border bg-card">
-                {Icon && <Icon className="w-5 h-5 text-muted-foreground shrink-0" />}
-                <span className="text-sm font-medium flex-1">{f.label}</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, Math.max(0, val - 1))} disabled={val <= 0} aria-label="Diminuir">-</Button>
-                  <span className="w-6 text-center font-bold">{val}</span>
-                  <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateFormatDist(f.value, val + 1)} disabled={formatTotal >= quantidade} aria-label="Aumentar">+</Button>
+              <button
+                key={f.value}
+                onClick={() => onFormatDistChange({ [f.value]: quantidade })}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
+                  selected ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+                }`}
+              >
+                {Icon && <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+                <div>
+                  <p className="text-sm font-medium">{f.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{f.desc}</p>
                 </div>
-              </div>
+                {selected && <Check className="w-4 h-4 text-primary ml-auto shrink-0" />}
+              </button>
             );
           })}
         </div>
       </div>
-    </div>
-  );
 
-  const renderStep2 = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Qual é o objetivo desses roteiros?</h3>
-        <p className="text-sm text-muted-foreground">A nossa IA distribui os objetivos proporcionalmente entre os roteiros.</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {OBJETIVOS.map(o => (
-          <button key={o.value} onClick={() => toggleObjetivo(o.value)}
-            className={`p-4 rounded-xl border-2 text-left text-sm font-medium transition-all ${objetivos.includes(o.value) ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-            {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+      {/* Objetivo — mostra se não selecionou sugestão */}
+      {selectedSuggestion === null && (
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">Objetivo do conteúdo</label>
+          <div className="grid grid-cols-2 gap-2">
+            {OBJETIVOS.map(o => (
+              <button
+                key={o.value}
+                onClick={() => {
+                  const next = objetivos.includes(o.value)
+                    ? objetivos.filter(x => x !== o.value)
+                    : [...objetivos, o.value];
+                  onObjetivosChange(next);
+                }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  objetivos.includes(o.value)
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                <p className="text-sm font-medium">{o.label}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{o.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-  const renderStep3 = () => (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Duração e tema do vídeo</h3>
-        <p className="text-sm text-muted-foreground">
-          A nossa IA ajusta o roteiro (hook, desenvolvimento e CTA) para caber no tempo selecionado.
-        </p>
+      {/* Duração + Quantidade em linha */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" /> Duração
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {DURACOES.map(d => (
+              <button
+                key={d.value}
+                onClick={() => onDuracaoChange(d.value)}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                  duracao === d.value
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold">Quantidade</label>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8"
+              onClick={() => onQuantidadeChange(Math.max(1, quantidade - 1))}>-</Button>
+            <span className="text-2xl font-bold w-8 text-center">{quantidade}</span>
+            <Button variant="outline" size="icon" className="h-8 w-8"
+              onClick={() => onQuantidadeChange(Math.min(quotaRemaining, quantidade + 1, 10))}>+</Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">{creditBalance} créditos · {costPerContent} por roteiro</p>
+        </div>
       </div>
 
-      <div>
-        <p className="text-sm font-medium mb-2 flex items-center gap-1.5"><Clock className="w-4 h-4" /> Duração do vídeo</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {DURACOES.map(d => (
-            <button key={d.value} onClick={() => onDuracaoChange(d.value)}
-              className={`p-3 rounded-xl border-2 text-center transition-all ${duracao === d.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-              <p className="font-bold text-sm">{d.label}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
+      {/* Plataforma */}
+      <div className="space-y-2">
+        <label className="text-sm font-semibold">Plataforma</label>
+        <div className="flex flex-wrap gap-2">
+          {["Instagram", "TikTok", "YouTube", "LinkedIn"].map(p => (
+            <button
+              key={p}
+              onClick={() => onPlataformaChange(p)}
+              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+                plataforma === p
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border hover:border-primary/40"
+              }`}
+            >
+              {p}
             </button>
           ))}
         </div>
       </div>
 
-      <div>
-        <p className="text-sm font-medium mb-1">Tema ou assunto específico (opcional)</p>
-        {hasStrategy && Array.isArray(strategy.pilares) && (strategy.pilares as unknown[]).length > 0 && (
-          <div className="mb-2">
-            <p className="text-xs text-muted-foreground mb-1.5">Seus pilares estratégicos:</p>
-            <div className="flex flex-wrap gap-2">
-              {(strategy.pilares as Array<Record<string, unknown>>).map((p, i: number) => {
-                const name = typeof p === "string" ? p : String(p.nome || p.pilar || p.name || JSON.stringify(p));
-                return (
-                  <button key={i} onClick={() => onTemaChange(String(name))}
-                    className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${tema === name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40"}`}>
-                    {String(name)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        <Textarea placeholder="Ex: como investir em imóveis, marketing para médicos..." value={tema} onChange={e => onTemaChange(e.target.value)} rows={3} />
-      </div>
-    </div>
-  );
+      {/* Botão gerar */}
+      <Button
+        className="w-full gap-2 h-11 text-base"
+        disabled={!canGenerate}
+        onClick={handleGenerate}
+      >
+        <Sparkles className="w-4 h-4" />
+        Gerar {quantidade} roteiro{quantidade > 1 ? "s" : ""}
+        {hasStrategy && <Badge className="ml-1 bg-amber-500/20 text-amber-700 border-0 text-[10px]">GPS ativo</Badge>}
+      </Button>
 
-  const renderStep4 = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Onde esses vídeos serão publicados?</h3>
-        <p className="text-sm text-muted-foreground">Ajusta o estilo, linguagem e estrutura do roteiro.</p>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {PLATAFORMAS.map(p => (
-          <button key={p} onClick={() => onPlataformaChange(p)}
-            className={`p-4 rounded-xl border-2 text-center font-medium transition-all ${plataforma === p ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-            {p}
-          </button>
-        ))}
-      </div>
-
-      {/* Review summary */}
-      <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
-        <p className="text-sm font-semibold">Resumo do lote</p>
-        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-          <span>🎬 {quantidade} roteiros</span>
-          <span>📱 {plataforma}</span>
-          <span>⏱️ {DURACOES.find(d => d.value === duracao)?.label || duracao}</span>
-          <span>🎯 {objetivos.map(o => OBJETIVOS.find(x => x.value === o)?.label).join(", ")}</span>
-          {tema && <span className="col-span-2">📝 {tema}</span>}
-        </div>
-        {hasStrategy && (
-          <div className="pt-2 border-t mt-2 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-            <span className="text-primary font-medium col-span-2">✓ Dados importados da estratégia:</span>
-            {strategy.personaName && <span>👤 {String(strategy.personaName)}</span>}
-            {strategy.tomPrincipal && <span>🎯 Tom: {String(strategy.tomPrincipal)}</span>}
-            {Array.isArray(strategy.pilares) && (strategy.pilares as unknown[]).length > 0 && <span>📐 {(strategy.pilares as unknown[]).length} pilares</span>}
-            {Array.isArray(strategy.dores) && (strategy.dores as unknown[]).length > 0 && <span>💢 {(strategy.dores as unknown[]).length} dores</span>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderSteps = [renderStep1, renderStep2, renderStep3, renderStep4];
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Passo {step} de {TOTAL_STEPS}</CardTitle>
-          <div className="flex gap-1">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <div key={i} className={`h-2 w-8 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
-            ))}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <AnimatePresence mode="wait">
-          <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
-            {renderSteps[step - 1]()}
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="flex justify-between mt-8">
-          <Button variant="ghost" onClick={() => setStep(s => s - 1)} disabled={step === 1}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
-          </Button>
-          {step < TOTAL_STEPS ? (
-            <Button onClick={() => setStep(s => s + 1)} disabled={!canAdvance()}>
-              Próximo <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          ) : (
-            <Button onClick={handleGenerate} disabled={!canAdvance()}>
-              <Sparkles className="w-4 h-4 mr-1" /> Gerar {quantidade} Roteiros ({quantidade * costPerContent} créditos)
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      {!canGenerate && (
+        <p className="text-xs text-center text-muted-foreground">
+          {!selectedFormato ? "Selecione um formato · " : ""}
+          {objetivos.length === 0 ? "Selecione um objetivo · " : ""}
+          {!duracao ? "Selecione a duração" : ""}
+        </p>
+      )}
+    </motion.div>
   );
 }
