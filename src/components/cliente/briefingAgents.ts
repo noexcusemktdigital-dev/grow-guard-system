@@ -649,87 +649,70 @@ function computeArtSaldo(ctx: Record<string, any>, ans: Record<string, any>, oth
    ══════════════════════════════════════════════ */
 
 export const GPS_RAFAEL_STEPS: BriefingStep[] = [
+
   {
     id: "_intro_gps_rafael",
-    agentMessage: "Oi! 👋 Eu sou o **Rafael**, especialista comercial do GPS do Negócio.\n\nVou fazer algumas perguntas sobre o seu negócio, estrutura comercial, financeiro e gestão de leads.\n\nSuas respostas vão alimentar toda a inteligência da plataforma — CRM, scripts, agentes de IA e muito mais.\n\nVamos lá? 🚀",
+    agentMessage: "Oi! 👋 Eu sou o **Rafael**, especialista comercial do GPS do Negócio.\n\nVou te fazer algumas perguntas sobre seu negócio. Não precisa ter todos os números na ponta da língua — **estimativas já nos ajudam muito**.\n\nSuas respostas vão alimentar toda a inteligência da plataforma: CRM, scripts, agentes de IA, relatórios e muito mais. Quanto mais honesto você for, mais preciso será o seu diagnóstico.\n\nVamos lá? 🚀",
     inputType: "info",
   },
 
-  // ── Bloco 1: Negócio
-  { id: "empresa", section: "Negócio", agentMessage: "Qual é o nome da sua empresa e o que ela faz?", inputType: "textarea", placeholder: "Ex: Somos uma clínica odontológica especializada em implantes.", helpText: "Uma descrição clara ajuda a IA a direcionar toda a estratégia." },
-  { id: "produto", section: "Negócio", agentMessage: "Qual é o principal produto ou serviço que você quer vender agora?", inputType: "textarea", placeholder: "Ex: Implantes dentários, consultoria empresarial, curso online...", helpText: "Focamos a estratégia no produto/serviço com maior potencial de retorno." },
-  { id: "segmento", section: "Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", options: SEGMENTO_OPTIONS, helpText: "O segmento influencia benchmarks, concorrência e estratégia." },
-  { id: "modelo_negocio", section: "Negócio", agentMessage: "Modelo de negócio: B2B, B2C ou ambos?", inputType: "select", options: [
-    { value: "b2b", label: "B2B (empresas)" }, { value: "b2c", label: "B2C (consumidor final)" }, { value: "ambos", label: "Ambos" },
-  ], helpText: "Saber se vende para empresas ou consumidor final muda toda a estratégia." },
+  { id: "tempo_mercado", section: "Sobre o Negócio", agentMessage: "Primeiro: há quanto tempo sua empresa está no mercado?", inputType: "select", helpText: "Isso nos ajuda a calibrar as recomendações para o momento real do seu negócio.", options: [ { value: "menos_1ano", label: "Menos de 1 ano" }, { value: "1_3anos", label: "1 a 3 anos" }, { value: "3_7anos", label: "3 a 7 anos" }, { value: "mais_7anos", label: "Mais de 7 anos" } ] },
 
-  // ── Bloco 2: Financeiro
-  { id: "ticket_medio", section: "Financeiro", agentMessage: "Qual é o ticket médio do seu principal produto/serviço?", inputType: "select", options: [
-    { value: "0-500", label: "Até R$ 500" }, { value: "500-2k", label: "R$ 500 a R$ 2.000" },
-    { value: "2k-5k", label: "R$ 2.000 a R$ 5.000" }, { value: "5k-15k", label: "R$ 5.000 a R$ 15.000" },
-    { value: "15k+", label: "Mais de R$ 15.000" }, { value: "personalizar", label: "Outro valor" },
-  ], helpText: "O ticket médio impacta diretamente nas projeções de receita." },
-  { id: "faturamento", section: "Financeiro", agentMessage: "Qual o faturamento mensal aproximado?", inputType: "select", options: [
-    { value: "0-10k", label: "Até R$ 10 mil" }, { value: "10-30k", label: "R$ 10-30 mil" },
-    { value: "30-100k", label: "R$ 30-100 mil" }, { value: "100-300k", label: "R$ 100-300 mil" },
-    { value: "300k+", label: "R$ 300 mil+" },
-  ], helpText: "Usado para calcular projeções de crescimento." },
-  { id: "meta_faturamento", section: "Financeiro", agentMessage: "Qual a meta de faturamento mensal?", inputType: "select", options: [
-    { value: "0-20k", label: "Até R$ 20 mil" }, { value: "20-50k", label: "R$ 20-50 mil" },
-    { value: "50-150k", label: "R$ 50-150 mil" }, { value: "150-500k", label: "R$ 150-500 mil" },
-    { value: "500k+", label: "R$ 500 mil+" },
-  ], helpText: "Sua meta ideal de receita. Usamos para projetar o funil reverso." },
-  { id: "tem_recorrencia", section: "Financeiro", agentMessage: "Você tem clientes que compram mais de uma vez? 🔄", inputType: "select", options: [
-    { value: "sim", label: "Sim, boa parte volta" }, { value: "parcialmente", label: "Parcialmente" }, { value: "nao", label: "Não, sempre clientes novos" },
-  ], helpText: "Recorrência é a base de um negócio previsível e escalável." },
+  { id: "controle_leads", section: "Sobre o Negócio", agentMessage: "Como você controla seus clientes e oportunidades hoje?\n\n💡 _Sem julgamentos — queremos entender o ponto de partida para te ajudar da forma certa._", inputType: "select", helpText: "Isso classifica o nível de maturidade do seu negócio para personalizar todo o diagnóstico.", options: [ { value: "nada", label: "Não controlo, está na minha cabeça" }, { value: "whatsapp", label: "Pelo WhatsApp / conversas" }, { value: "planilha", label: "Planilha ou caderno" }, { value: "crm_basico", label: "CRM básico" }, { value: "crm_pro", label: "CRM profissional com processos definidos" } ] },
 
-  // ── Bloco 3: Equipe e Estrutura
-  { id: "tamanho_equipe", section: "Equipe Comercial", agentMessage: "Qual o tamanho da equipe comercial?", inputType: "select", options: [
-    { value: "1", label: "Só eu" }, { value: "2-3", label: "2-3 pessoas" },
-    { value: "4-7", label: "4-7 pessoas" }, { value: "8-15", label: "8-15 pessoas" }, { value: "16+", label: "16+" },
-  ], helpText: "Quantas pessoas estão envolvidas em vendas e prospecção." },
-  { id: "funcoes_equipe", section: "Equipe Comercial", agentMessage: "Quais funções existem na equipe?", inputType: "multi-select", options: [
-    { value: "sdr", label: "SDR / Pré-vendas" }, { value: "closer", label: "Closer / Vendedor" },
-    { value: "cs", label: "CS / Pós-venda" }, { value: "gestor", label: "Gestor Comercial" }, { value: "nenhuma", label: "Nenhuma definida" },
-  ], helpText: "Equipes com funções definidas têm maior previsibilidade." },
-  { id: "tempo_fechamento", section: "Equipe Comercial", agentMessage: "Tempo médio pra fechar uma venda?", inputType: "select", options: [
-    { value: "mesmo_dia", label: "No mesmo dia" }, { value: "1-7", label: "1 a 7 dias" },
-    { value: "1-4sem", label: "1 a 4 semanas" }, { value: "1-3m", label: "1 a 3 meses" }, { value: "3m+", label: "Mais de 3 meses" },
-  ], helpText: "Ciclos mais longos exigem automação e cadências de follow-up robustas." },
+  { id: "empresa", section: "Negócio", agentMessage: "Me conta: qual o nome da sua empresa e o que ela faz?\n\n💡 _Pode ser simples — tipo: 'Sou advogada especializada em direito de família' ou 'Tenho uma clínica odontológica'._", inputType: "textarea", placeholder: "Ex: Studio Fit — academia de musculação com foco em resultados para mulheres acima de 35 anos.", helpText: "Uma descrição clara ajuda a IA a personalizar toda a estratégia para o SEU negócio." },
 
-  // ── Bloco 4: Gestão de Leads
-  { id: "usa_crm", section: "Gestão de Leads", agentMessage: "Usa algum CRM atualmente?", inputType: "select", options: [
-    { value: "nao", label: "Não uso nada" }, { value: "planilha", label: "Planilha / anotações" },
-    { value: "crm_basico", label: "CRM básico" }, { value: "crm_pro", label: "CRM profissional" },
-  ], helpText: "CRM centraliza informações e evita perda de oportunidades." },
-  { id: "followup", section: "Gestão de Leads", agentMessage: "Tem follow-up estruturado?", inputType: "select", options: [
-    { value: "nao", label: "Não faço follow-up" }, { value: "eventual", label: "Faço quando lembro" },
-    { value: "cadencia", label: "Sim, com cadência definida" }, { value: "auto", label: "Sim, automatizado" },
-  ], helpText: "80% das vendas precisam de 5+ follow-ups para fechar." },
-  { id: "dor_principal", section: "Gestão de Leads", agentMessage: "Qual a maior dor ou necessidade do seu cliente ideal? 🎯", inputType: "textarea", placeholder: "Ex: Perdem muito tempo com processos manuais, não conseguem escalar vendas...", helpText: "Entender a dor do cliente é essencial para criar scripts e conteúdos que convertem." },
+  { id: "produto", section: "Negócio", agentMessage: "Qual é o principal produto ou serviço que você quer vender agora?\n\n💡 _Se tiver vários, escolha o que tem maior potencial ou que você quer priorizar._", inputType: "textarea", placeholder: "Ex: Plano mensal de treino personalizado. Ex: Consultoria jurídica para divórcio.", helpText: "Vamos construir toda a estratégia em torno desse produto/serviço principal." },
 
-  // ── Bloco 5: Canais
-  { id: "canais_aquisicao", section: "Canais", agentMessage: "Quais canais de aquisição você usa?", inputType: "multi-select", options: [
-    { value: "google", label: "Google Ads" }, { value: "instagram", label: "Instagram" },
-    { value: "facebook", label: "Facebook" }, { value: "linkedin", label: "LinkedIn" },
-    { value: "indicacao", label: "Indicação" }, { value: "whatsapp", label: "WhatsApp" },
-    { value: "cold_call", label: "Cold Call" }, { value: "cold_email", label: "Cold Email" },
-    { value: "eventos", label: "Eventos" }, { value: "parcerias", label: "Parcerias" },
-  ], helpText: "Diversificar canais reduz o risco." },
+  { id: "segmento", section: "Negócio", agentMessage: "Qual é o segmento da sua empresa?", inputType: "select", options: SEGMENTO_OPTIONS, helpText: "O segmento nos dá benchmarks do mercado e ajuda a comparar com a concorrência." },
 
-  // ── Bloco 6: Processo de Vendas
-  { id: "etapas_funil", section: "Processo de Vendas", agentMessage: "Descreva as etapas do seu processo de vendas, da prospecção ao fechamento 🎯", inputType: "textarea", placeholder: "Ex: Prospecção → Qualificação → Reunião → Proposta → Negociação → Fechamento", helpText: "Vamos criar seu funil automaticamente a partir dessas etapas!" },
+  { id: "modelo_negocio", section: "Negócio", agentMessage: "Você vende para empresas, para pessoas físicas ou para os dois?\n\n💡 _B2B = vende para empresas. B2C = vende para consumidor final._", inputType: "select", helpText: "Isso muda completamente a estratégia de abordagem, linguagem e canais.", options: [ { value: "b2b", label: "B2B — vendo para empresas" }, { value: "b2c", label: "B2C — vendo para pessoas físicas" }, { value: "ambos", label: "Os dois" } ] },
 
-  // ── Bloco 7: Performance
-  { id: "metas_historicas", section: "Performance", agentMessage: "Suas metas são baseadas em dados históricos?", inputType: "select", options: [
-    { value: "nao", label: "Não tenho metas" }, { value: "achismo", label: "Metas por achismo" },
-    { value: "historico", label: "Baseadas em histórico" }, { value: "projecoes", label: "Com projeções e cenários" },
-  ], helpText: "Metas baseadas em dados evitam frustração e permitem projeções realistas." },
-  { id: "conversao_etapa", section: "Performance", agentMessage: "Pra finalizar a parte comercial: acompanha taxa de conversão por etapa do funil?", inputType: "select", options: [
-    { value: "nao", label: "Não acompanho" }, { value: "geral", label: "Apenas conversão geral" }, { value: "por_etapa", label: "Sim, por etapa" },
-  ], helpText: "Conversão por etapa revela onde os leads estão sendo perdidos." },
+  { id: "diferenciais", section: "Negócio", agentMessage: "O que faz um cliente escolher VOCÊ e não a concorrência? 💪\n\n💡 _Pode ser atendimento, resultado, preço, método, localização, especialização — qualquer coisa que te destaque._", inputType: "textarea", placeholder: "Ex: Atendimento 24h pelo WhatsApp. 15 anos de experiência. Única clínica da cidade com equipamento X.", helpText: "Seu diferencial vai aparecer nos scripts, conteúdos e em toda a comunicação gerada pela IA." },
+
+  { id: "ticket_medio", section: "Financeiro", agentMessage: "Qual o valor médio que um cliente paga por compra?\n\n💡 _Não sabe exatamente? Tudo bem — é só uma estimativa. Se vender um plano de R$500/mês, o ticket é R$500._", inputType: "select", helpText: "Ticket médio = valor médio por venda. Isso impacta nas projeções de receita e na estratégia de aquisição.", options: [ { value: "0-500", label: "Até R$ 500" }, { value: "500-2k", label: "R$ 500 a R$ 2.000" }, { value: "2k-5k", label: "R$ 2.000 a R$ 5.000" }, { value: "5k-15k", label: "R$ 5.000 a R$ 15.000" }, { value: "15k+", label: "Mais de R$ 15.000" } ] },
+
+  { id: "faturamento", section: "Financeiro", agentMessage: "Quanto sua empresa fatura por mês, em média?\n\n💡 _Se estiver começando e ainda não tiver histórico, selecione a faixa mais próxima do que espera faturar neste mês._", inputType: "select", helpText: "Faturamento atual é nosso ponto de partida para calcular metas realistas de crescimento.", options: [ { value: "0-10k", label: "Até R$ 10 mil" }, { value: "10-30k", label: "R$ 10 a R$ 30 mil" }, { value: "30-100k", label: "R$ 30 a R$ 100 mil" }, { value: "100-300k", label: "R$ 100 a R$ 300 mil" }, { value: "300k+", label: "Mais de R$ 300 mil" } ] },
+
+  { id: "meta_faturamento", section: "Financeiro", agentMessage: "Qual seria o faturamento ideal para você nos próximos 6 meses?\n\n💡 _Pense num número que te animaria, mas que seja possível. Vamos usar isso para montar seu funil reverso._", inputType: "select", helpText: "Funil reverso = calculamos quantos leads você precisa gerar para chegar nessa meta.", options: [ { value: "0-20k", label: "Até R$ 20 mil" }, { value: "20-50k", label: "R$ 20 a R$ 50 mil" }, { value: "50-150k", label: "R$ 50 a R$ 150 mil" }, { value: "150-500k", label: "R$ 150 a R$ 500 mil" }, { value: "500k+", label: "Mais de R$ 500 mil" } ] },
+
+  { id: "tem_recorrencia", section: "Financeiro", agentMessage: "Seus clientes costumam comprar mais de uma vez? 🔄", inputType: "select", helpText: "Recorrência é o que torna um negócio previsível. Se você ainda não tem, vamos trabalhar isso.", options: [ { value: "sim", label: "Sim, a maioria volta" }, { value: "parcialmente", label: "Alguns voltam, outros não" }, { value: "nao", label: "Não, sempre são clientes novos" } ] },
+
+  { id: "tamanho_equipe", section: "Equipe Comercial", agentMessage: "Quantas pessoas estão envolvidas em vendas na sua empresa?\n\n💡 _Inclui você mesmo se for o único vendedor._", inputType: "select", helpText: "O tamanho da equipe define quais ferramentas e automações fazem mais sentido para você.", options: [ { value: "1", label: "Só eu" }, { value: "2-3", label: "2 a 3 pessoas" }, { value: "4-7", label: "4 a 7 pessoas" }, { value: "8-15", label: "8 a 15 pessoas" }, { value: "16+", label: "Mais de 15 pessoas" } ] },
+
+  { id: "funcoes_equipe", section: "Equipe Comercial", agentMessage: "Quais funções existem na equipe de vendas? Pode marcar mais de uma.\n\n💡 _SDR = quem prospecta e qualifica. Closer = quem fecha a venda. CS = quem cuida do cliente depois._", inputType: "multi-select", helpText: "Funções bem definidas aumentam a previsibilidade e os resultados do time.", options: [ { value: "nenhuma", label: "Nenhuma definida — faço tudo" }, { value: "sdr", label: "SDR / Pré-vendas (prospecção)" }, { value: "closer", label: "Closer / Vendedor (fechamento)" }, { value: "cs", label: "CS / Pós-venda (retenção)" }, { value: "gestor", label: "Gestor Comercial" } ] },
+
+  { id: "tempo_fechamento", section: "Equipe Comercial", agentMessage: "Desde o primeiro contato até fechar a venda, quanto tempo leva em média?", inputType: "select", helpText: "Ciclos mais longos precisam de automações de follow-up. Ciclos curtos pedem abordagem mais direta.", options: [ { value: "mesmo_dia", label: "No mesmo dia" }, { value: "1-7", label: "1 a 7 dias" }, { value: "1-4sem", label: "1 a 4 semanas" }, { value: "1-3m", label: "1 a 3 meses" }, { value: "3m+", label: "Mais de 3 meses" } ] },
+
+  { id: "volume_leads", section: "Gestão de Leads", agentMessage: "Quantas pessoas demonstram interesse no seu produto por mês?\n\n💡 _Não precisa ser exato — pode estimar. Se não tiver ideia, pense: quantas mensagens, ligações ou pedidos de orçamento chegam por semana?_", inputType: "select", helpText: "Volume de leads + ticket médio = calculamos sua taxa de conversão atual e o que precisa melhorar.", options: [ { value: "0-10", label: "Menos de 10 por mês" }, { value: "10-30", label: "10 a 30 por mês" }, { value: "30-100", label: "30 a 100 por mês" }, { value: "100-300", label: "100 a 300 por mês" }, { value: "300+", label: "Mais de 300 por mês" } ] },
+
+  { id: "followup", section: "Gestão de Leads", agentMessage: "Quando um cliente demonstra interesse mas não fecha na hora, o que você faz?\n\n💡 _Follow-up = entrar em contato novamente para continuar a conversa._", inputType: "select", helpText: "80% das vendas acontecem após o 5º contato. A maioria das empresas desiste no 1º.", options: [ { value: "nao", label: "Não faço nada, espero ele me chamar" }, { value: "eventual", label: "Entro em contato quando lembro" }, { value: "cadencia", label: "Tenho uma sequência definida de contatos" }, { value: "auto", label: "Está automatizado" } ] },
+
+  { id: "maior_perda", section: "Gestão de Leads", agentMessage: "Onde você sente que perde mais clientes no processo de vendas?\n\n💡 _Pense no caminho desde o primeiro contato até fechar. Em qual momento mais pessoas 'somem' ou dizem não?_", inputType: "select", helpText: "Identificar onde está o gargalo é o primeiro passo para aumentar a conversão.", options: [ { value: "primeiro_contato", label: "No primeiro contato — não respondem" }, { value: "apresentacao", label: "Na apresentação / reunião" }, { value: "proposta", label: "Depois de enviar a proposta" }, { value: "negociacao", label: "Na negociação de preço" }, { value: "nao_sei", label: "Não sei identificar" } ] },
+
+  { id: "dor_principal", section: "Gestão de Leads", agentMessage: "Qual é o maior problema que seu cliente resolve ao contratar você?\n\n💡 _Pense no que o seu cliente fala ANTES de te contratar. Qual é a dor, o medo ou o desejo que o fez te procurar?_", inputType: "textarea", placeholder: "Ex: Meus clientes chegam perdendo dinheiro porque não controlam o estoque.", helpText: "A dor do cliente é o coração dos seus scripts, conteúdos e abordagem comercial." },
+
+  { id: "objecoes", section: "Gestão de Leads", agentMessage: "Quais são as principais objeções que você ouve antes de fechar uma venda?\n\n💡 _Objeção = o motivo que o cliente dá para não comprar. 'Está caro', 'vou pensar', 'não tenho tempo'..._", inputType: "textarea", placeholder: "Ex: 'Está caro', 'preciso falar com meu sócio', 'vou esperar o mês que vem'...", helpText: "Conhecer as objeções permite criar scripts que as antecipam e respondem antes do cliente falar." },
+
+  { id: "canais_aquisicao", section: "Canais", agentMessage: "Quais canais você usa hoje para atrair clientes? Pode marcar vários.", inputType: "multi-select", helpText: "Canais de aquisição = de onde vêm seus clientes. Isso define onde devemos investir energia.", options: [ { value: "indicacao", label: "Indicação de clientes" }, { value: "instagram", label: "Instagram" }, { value: "whatsapp", label: "WhatsApp" }, { value: "google", label: "Google Ads" }, { value: "facebook", label: "Facebook" }, { value: "linkedin", label: "LinkedIn" }, { value: "tiktok", label: "TikTok" }, { value: "cold_call", label: "Ligação fria / Prospecção ativa" }, { value: "eventos", label: "Eventos / Feiras" }, { value: "parcerias", label: "Parcerias" }, { value: "nenhum", label: "Ainda não tenho canal definido" } ] },
+
+  { id: "canal_principal", section: "Canais", agentMessage: "Qual desses canais traz os melhores resultados para você hoje?", inputType: "select", helpText: "Vamos potencializar o que já funciona antes de abrir novos canais.", options: [ { value: "indicacao", label: "Indicação" }, { value: "trafego", label: "Tráfego pago (anúncios)" }, { value: "prospeccao", label: "Prospecção ativa" }, { value: "organico", label: "Redes sociais orgânico" }, { value: "nao_sei", label: "Não sei / Ainda não tenho" } ] },
+
+  { id: "etapas_funil", section: "Processo de Vendas", agentMessage: "Como é o caminho de uma venda na sua empresa? Do primeiro contato até fechar.\n\n💡 _Se não tiver um processo definido, descreva como acontece na prática. Ex: 'O cliente me manda mensagem, a gente conversa, eu mando o valor e ele decide'._", inputType: "textarea", placeholder: "Ex: Lead entra pelo Instagram → Respondo no DM → Marco reunião → Envio proposta → Negocio → Fecho.", helpText: "Vamos criar seu funil de CRM automaticamente com base nessas etapas!" },
+
+  { id: "pos_venda", section: "Processo de Vendas", agentMessage: "O que acontece depois que o cliente fecha? Você tem algum processo de acompanhamento?\n\n💡 _Pós-venda = o que você faz para garantir que o cliente ficou satisfeito, use o produto e volte a comprar._", inputType: "select", helpText: "Clientes bem atendidos após a compra geram indicações e recompras — o canal mais barato que existe.", options: [ { value: "nao", label: "Não tenho nada estruturado" }, { value: "informal", label: "Acompanho de forma informal" }, { value: "processo", label: "Tenho um processo definido" }, { value: "automatizado", label: "Está automatizado" } ] },
+
+  { id: "metas_historicas", section: "Performance", agentMessage: "Suas metas de venda são baseadas em quê?\n\n💡 _Não tem meta ainda? Tudo bem — selecione 'Não tenho metas' e vamos criar juntos._", inputType: "select", helpText: "Metas sem base histórica viram frustração. Com dados, elas viram plano.", options: [ { value: "nao", label: "Não tenho metas definidas" }, { value: "achismo", label: "Defino por intuição" }, { value: "historico", label: "Baseadas no histórico de vendas" }, { value: "projecoes", label: "Com projeções e cenários" } ] },
+
+  { id: "conversao_etapa", section: "Performance", agentMessage: "Você sabe quantos clientes fecham de cada 10 que demonstram interesse?\n\n💡 _Ex: de cada 10 pessoas que pedem orçamento, 2 fecham = 20% de conversão. Se não souber, tudo bem._", inputType: "select", helpText: "Taxa de conversão é o indicador mais importante do comercial. Vamos te ajudar a medir isso.", options: [ { value: "nao", label: "Não sei / Nunca medi" }, { value: "menos_10", label: "Menos de 10% fecham" }, { value: "10-30", label: "Entre 10% e 30%" }, { value: "30-60", label: "Entre 30% e 60%" }, { value: "mais_60", label: "Mais de 60%" } ] },
+
+  { id: "momento_negocio", section: "Performance", agentMessage: "Como você descreveria o momento do seu negócio agora?", inputType: "select", helpText: "O momento atual define quais prioridades e ferramentas fazem mais sentido para você agora.", options: [ { value: "iniciando", label: "Estou começando — ainda estruturando tudo" }, { value: "crescendo", label: "Estou crescendo, mas de forma desorganizada" }, { value: "estavel", label: "Estável, mas quero crescer mais" }, { value: "plateau", label: "Travei — cresci até aqui e não consigo avançar" }, { value: "caindo", label: "Estou perdendo clientes / faturamento" } ] },
+
+  { id: "saude_convenios", section: "Performance", agentMessage: "Você trabalha com convênios ou planos de saúde?", inputType: "select", helpText: "Convênios impactam o ticket médio e o ciclo de pagamento.", options: [ { value: "nao", label: "Não" }, { value: "alguns", label: "Alguns convênios" }, { value: "principal", label: "Sim, é a principal fonte de receita" } ], skipIf: (ans) => ans.segmento !== "saude" && ans.segmento !== "odontologia" },
+
+  { id: "varejo_ecommerce", section: "Performance", agentMessage: "Você vende online além da loja física?", inputType: "select", helpText: "O canal online abre oportunidades de escala sem limite geográfico.", options: [ { value: "nao", label: "Apenas loja física" }, { value: "marketplace", label: "Sim, marketplace (Mercado Livre, Shopee...)" }, { value: "loja_propria", label: "Sim, loja online própria" }, { value: "ambos", label: "Marketplace + loja própria" } ], skipIf: (ans) => ans.segmento !== "varejo" && ans.segmento !== "ecommerce" },
+
 ];
-
 /* ══════════════════════════════════════════════
    GPS DO NEGÓCIO — SOFIA (Fase Marketing, ~13 perguntas)
    Perguntas duplicadas (empresa, produto, segmento, ticket_medio, dor_principal) 
