@@ -29,7 +29,8 @@ export const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 
 /* ═══════════════ MARKETING: RESUMO ═══════════════ */
 
 export function MktResumo({ result }: { result: StrategyResult }) {
-  const radar = result.diagnostico?.radar;
+  const diag = (result as any).diagnostico || (result as any).diagnostico_gps || {};
+  const radar = diag.radar;
   const radarData = radar ? [
     { subject: "Autoridade", value: radar.autoridade },
     { subject: "Aquisição", value: radar.aquisicao },
@@ -38,7 +39,7 @@ export function MktResumo({ result }: { result: StrategyResult }) {
     { subject: "Conteúdo", value: radar.conteudo ?? 5 },
     { subject: "Branding", value: radar.branding ?? 5 },
   ] : [];
-  const scoreGeral = result.diagnostico?.score_geral ?? 0;
+  const scoreGeral = diag.score_geral ?? 0;
 
   return (
     <div className="space-y-6">
@@ -87,12 +88,12 @@ export function MktResumo({ result }: { result: StrategyResult }) {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Diagnóstico</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground leading-relaxed">{result.diagnostico?.analise}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{diag.analise}</p>
             <div className="grid grid-cols-1 gap-3">
               {[
-                { label: "Pontos Fortes", items: result.diagnostico?.pontos_fortes, icon: Trophy, color: "text-green-600" },
-                { label: "Oportunidades", items: result.diagnostico?.oportunidades, icon: Lightbulb, color: "text-blue-600" },
-                { label: "Riscos", items: result.diagnostico?.riscos, icon: Shield, color: "text-orange-600" },
+                { label: "Pontos Fortes", items: diag.pontos_fortes, icon: Trophy, color: "text-green-600" },
+                { label: "Oportunidades", items: diag.oportunidades, icon: Lightbulb, color: "text-blue-600" },
+                { label: "Riscos", items: diag.riscos, icon: Shield, color: "text-orange-600" },
               ].map((section, i) => section.items?.length > 0 && (
                 <div key={i}>
                   <p className={`text-xs font-semibold ${section.color} mb-1 flex items-center gap-1`}>
