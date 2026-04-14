@@ -79,11 +79,26 @@ export default function ClienteConteudos() {
     try {
       const formatos = Object.entries(formatDist).map(([tipo, qtd]) => ({ tipo, qtd }));
       const strategyPayload = hasStrategy ? {
-        icp: strategy.icp, propostaValor: strategy.propostaValor,
-        tomComunicacao: strategy.tomComunicacao, pilares: strategy.pilares,
-        calendarioSemanal: strategy.calendarioSemanal, funil: strategy.funil,
-        analiseConcorrencia: strategy.analiseConcorrencia, benchmarks: strategy.benchmarks,
+        icp: strategy.icp,
+        propostaValor: strategy.propostaValor,
+        tomComunicacao: strategy.tomComunicacao,
+        pilares: strategy.pilares,
+        calendarioSemanal: strategy.calendarioSemanal,
+        funil: strategy.funil,
+        analiseConcorrencia: strategy.analiseConcorrencia,
+        benchmarks: strategy.benchmarks,
         answers: strategy.answers,
+        // Novos dados das perguntas enriquecidas do GPS
+        dorPrincipal: strategy.salesPlanDorPrincipal,
+        diferenciais: strategy.salesPlanDiferenciais,
+        segmento: strategy.salesPlanSegmento,
+        modeloNegocio: strategy.salesPlanModeloNegocio,
+        ticketMedio: strategy.salesPlanTicketMedio,
+        objecoes: strategy.salesPlanAnswers?.objecoes || "",
+        maiorPerda: strategy.salesPlanAnswers?.maior_perda || "",
+        momentoNegocio: strategy.salesPlanAnswers?.momento_negocio || "",
+        publicoAlvo: strategy.salesPlanAnswers?.publico || "",
+        canaisPrincipais: strategy.salesPlanAnswers?.canais_aquisicao || [],
       } : null;
 
       const res = await generateMutation.mutateAsync({
