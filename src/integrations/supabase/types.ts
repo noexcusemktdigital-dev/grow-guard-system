@@ -4472,6 +4472,73 @@ export type Database = {
           },
         ]
       }
+      member_permissions: {
+        Row: {
+          can_generate_content: boolean | null
+          can_generate_posts: boolean | null
+          can_generate_scripts: boolean | null
+          can_manage_crm: boolean | null
+          can_use_whatsapp: boolean | null
+          created_at: string
+          crm_visibility: string | null
+          id: string
+          organization_id: string
+          profile_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_generate_content?: boolean | null
+          can_generate_posts?: boolean | null
+          can_generate_scripts?: boolean | null
+          can_manage_crm?: boolean | null
+          can_use_whatsapp?: boolean | null
+          created_at?: string
+          crm_visibility?: string | null
+          id?: string
+          organization_id: string
+          profile_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_generate_content?: boolean | null
+          can_generate_posts?: boolean | null
+          can_generate_scripts?: boolean | null
+          can_manage_crm?: boolean | null
+          can_use_whatsapp?: boolean | null
+          created_at?: string
+          crm_visibility?: string | null
+          id?: string
+          organization_id?: string
+          profile_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_permissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_ads_snapshots: {
         Row: {
           campaigns_data: Json | null
@@ -4902,6 +4969,7 @@ export type Database = {
           id: string
           name: string
           organization_id: string
+          permission_profile_id: string | null
           slug: string
         }
         Insert: {
@@ -4909,6 +4977,7 @@ export type Database = {
           id?: string
           name: string
           organization_id: string
+          permission_profile_id?: string | null
           slug: string
         }
         Update: {
@@ -4916,6 +4985,7 @@ export type Database = {
           id?: string
           name?: string
           organization_id?: string
+          permission_profile_id?: string | null
           slug?: string
         }
         Relationships: [
@@ -4924,6 +4994,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_teams_permission_profile_id_fkey"
+            columns: ["permission_profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -7194,6 +7271,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_member_permissions: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: Json
       }
       get_meta_noe_insights: { Args: { p_period?: string }; Returns: Json }
       get_network_ai_usage: {
