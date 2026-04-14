@@ -1,27 +1,15 @@
 
 
-## Diagnóstico: Erro "invalid input syntax for type integer: 67.5"
+## Plano: Criar migration do Sistema de Permissões Granulares
 
-### Causa raiz
-A coluna `score_percentage` na tabela `marketing_strategies` é do tipo `integer`. A IA está retornando scores decimais (ex: `67.5`), e o código insere esse valor diretamente sem arredondar, causando rejeição do Postgres.
+### Resumo
+Criar uma única migration SQL contendo todo o sistema de permissões granulares: tabelas `permission_profiles` e `member_permissions`, coluna `permission_profile_id` em `org_teams`, políticas RLS e função `get_member_permissions`.
 
-### Correção
+### Mudança
 
-Arredondar o valor com `Math.round()` antes de salvar. Há dois pontos de inserção:
+| Ação | Detalhe |
+|---|---|
+| Migration SQL | Cria `permission_profiles`, `member_permissions`, altera `org_teams`, cria função `get_member_permissions` com hierarquia individual > time > padrão |
 
-| Arquivo | Linha | Mudança |
-|---|---|---|
-| `src/pages/cliente/ClienteGPSNegocio.tsx` | ~426 | `Math.round(...)` no `score_percentage` |
-| `src/pages/cliente/ClientePlanoMarketing.tsx` | ~46 | `Math.round(...)` no `score_percentage` |
-
-Exemplo da mudança:
-```typescript
-// Antes
-score_percentage: (unifiedResult as any)?.diagnostico_gps?.score_geral || 0,
-
-// Depois
-score_percentage: Math.round((unifiedResult as any)?.diagnostico_gps?.score_geral || 0),
-```
-
-Correção simples e sem risco — apenas garante que decimais sejam arredondados para inteiro antes do insert.
+O SQL será exatamente o conteúdo fornecido, executado via ferramenta de migração.
 
