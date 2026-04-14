@@ -79,7 +79,6 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
     } as any);
     reset();
     onOpenChange(false);
-    toast({ title: "Lead criado com sucesso" });
   };
 
   return (
