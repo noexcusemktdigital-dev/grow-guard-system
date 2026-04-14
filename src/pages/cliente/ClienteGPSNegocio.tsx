@@ -33,107 +33,279 @@ type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generati
 type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
 
 function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, onRetryGeneration }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void; hasFullProgress?: boolean; onRetryGeneration?: () => void }) {
+
+  const benefits = [
+
+    { icon: Target, title: "Descubra por que você está perdendo vendas", desc: "Vamos mapear os gargalos reais do seu processo comercial e mostrar exatamente onde estão as oportunidades perdidas.", color: "text-rose-500", bg: "bg-rose-500/10" },
+
+    { icon: TrendingUp, title: "Saiba onde investir primeiro", desc: "Com base no seu negócio, a IA define as prioridades certas — sem desperdiçar tempo ou dinheiro nas ações erradas.", color: "text-amber-500", bg: "bg-amber-500/10" },
+
+    { icon: Users, title: "Conheça seu cliente ideal de verdade", desc: "Perfil detalhado de quem compra de você, como falar com ele e como se destacar da concorrência.", color: "text-sky-500", bg: "bg-sky-500/10" },
+
+    { icon: Rocket, title: "Um plano de ação pronto para executar", desc: "Roadmap de 90 dias conectado às ferramentas da plataforma. Você sabe o quê, como e quando fazer.", color: "text-violet-500", bg: "bg-violet-500/10" },
+
+  ];
+
+  const tools = [
+
+    { icon: Users, label: "CRM" },
+
+    { icon: MessageCircle, label: "WhatsApp" },
+
+    { icon: Bot, label: "Agentes IA" },
+
+    { icon: PenTool, label: "Scripts" },
+
+    { icon: Send, label: "Disparos" },
+
+    { icon: Globe, label: "Tráfego Pago" },
+
+  ];
+
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="text-center max-w-2xl mx-auto space-y-4">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20">
+
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-3xl mx-auto">
+
+      {/* Hero */}
+
+      <div className="text-center space-y-4">
+
+        <motion.div
+
+          initial={{ scale: 0.8, opacity: 0 }}
+
+          animate={{ scale: 1, opacity: 1 }}
+
+          transition={{ delay: 0.1 }}
+
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/20"
+
+        >
+
           <Navigation className="w-10 h-10 text-white" />
+
+        </motion.div>
+
+        <div className="space-y-2">
+
+          <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-xs font-medium">Passo obrigatório</Badge>
+
+          <h2 className="text-2xl font-bold">Antes de tudo, precisamos entender seu negócio</h2>
+
+          <p className="text-muted-foreground text-sm max-w-xl mx-auto">
+
+            O GPS do Negócio é o coração da plataforma. Em ~12 minutos, dois especialistas de IA vão analisar seu comercial e marketing — e personalizar todas as ferramentas para a sua realidade.
+
+          </p>
+
         </div>
-        <h2 className="text-2xl font-bold">GPS do Negócio</h2>
-        <p className="text-muted-foreground">
-          O diagnóstico estratégico mais completo para o seu negócio. Dois especialistas vão analisar seu comercial e marketing para criar um plano de ação personalizado.
-        </p>
+
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-        {[
-          { icon: Target, title: "Diagnóstico Comercial", desc: "Análise do seu processo de vendas, equipe, funil e metas com score de maturidade" },
-          { icon: TrendingUp, title: "Projeções de Receita", desc: "Projeções de leads e faturamento para os próximos 6 meses com estratégias recomendadas" },
-          { icon: Users, title: "ICP & Posicionamento", desc: "Cliente ideal detalhado, proposta de valor, tom de voz e análise de concorrência" },
-          { icon: BarChart3, title: "Plano de Execução", desc: "Roadmap de 3 meses com ações vinculadas às ferramentas da plataforma" },
-        ].map((item, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.1 }}>
+      {/* Ferramentas bloqueadas */}
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+
+        <Card className="border-amber-500/20 bg-amber-500/5">
+
+          <CardContent className="p-4">
+
+            <div className="flex items-center gap-2 mb-3">
+
+              <Trophy className="w-4 h-4 text-amber-500" />
+
+              <p className="text-sm font-semibold">Complete o GPS e desbloqueie todas as ferramentas</p>
+
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+
+              {tools.map((t, i) => (
+
+                <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 border border-border text-xs text-muted-foreground">
+
+                  <t.icon className="w-3 h-3" />
+
+                  {t.label}
+
+                </div>
+
+              ))}
+
+            </div>
+
+          </CardContent>
+
+        </Card>
+
+      </motion.div>
+
+      {/* Benefícios */}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+        {benefits.map((item, i) => (
+
+          <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }}>
+
             <Card className="h-full hover:border-amber-500/30 transition-colors">
+
               <CardContent className="p-5 flex gap-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                  <item.icon className="w-5 h-5 text-amber-600" />
+
+                <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center shrink-0`}>
+
+                  <item.icon className={`w-5 h-5 ${item.color}`} />
+
                 </div>
+
                 <div>
+
                   <h3 className="font-semibold text-sm">{item.title}</h3>
+
                   <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+
                 </div>
+
               </CardContent>
+
             </Card>
+
           </motion.div>
+
         ))}
+
       </div>
 
-      <div className="text-center space-y-3">
-        <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~12 minutos</span>
-          <span className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> 50 créditos</span>
+      {/* Agentes + CTA */}
+
+      <div className="text-center space-y-4">
+
+        <div className="flex items-center justify-center gap-4 max-w-sm mx-auto">
+
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 flex-1 justify-center">
+
+            <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold">R</div>
+
+            <div className="text-left">
+
+              <p className="text-xs font-semibold">Rafael</p>
+
+              <p className="text-[10px] text-muted-foreground">Comercial</p>
+
+            </div>
+
+          </div>
+
+          <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 flex-1 justify-center">
+
+            <div className="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs font-bold">S</div>
+
+            <div className="text-left">
+
+              <p className="text-xs font-semibold">Sofia</p>
+
+              <p className="text-[10px] text-muted-foreground">Marketing</p>
+
+            </div>
+
+          </div>
+
         </div>
 
-        <div className="flex items-center justify-center gap-4 max-w-md mx-auto">
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20">
-            <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-xs font-bold">R</div>
-            <div className="text-left">
-              <p className="text-xs font-semibold">Rafael</p>
-              <p className="text-[10px] text-muted-foreground">Comercial</p>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-muted-foreground" />
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
-            <div className="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs font-bold">S</div>
-            <div className="text-left">
-              <p className="text-xs font-semibold">Sofia</p>
-              <p className="text-[10px] text-muted-foreground">Marketing</p>
-            </div>
-          </div>
+        <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+
+          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~12 minutos</span>
+
+          <span className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> 50 créditos</span>
+
         </div>
 
         {hasFullProgress && onRetryGeneration && (
+
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+
             <Card className="border-emerald-500/30 bg-emerald-500/5">
+
               <CardContent className="p-4 flex items-center gap-3">
+
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white shrink-0">
+
                   <CheckCircle2 className="w-5 h-5" />
+
                 </div>
+
                 <div className="flex-1">
+
                   <p className="text-sm font-semibold">Todas as informações já preenchidas!</p>
+
                   <p className="text-xs text-muted-foreground">Gere o resultado agora sem precisar responder novamente.</p>
+
                 </div>
+
                 <Button size="sm" onClick={onRetryGeneration} className="gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white shrink-0">
+
                   <Rocket className="w-3.5 h-3.5" /> Gerar Resultado
+
                 </Button>
+
               </CardContent>
+
             </Card>
+
           </motion.div>
+
         )}
 
         {hasPartialProgress && !hasFullProgress && onResume && (
+
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-md mx-auto">
+
             <Card className="border-violet-500/30 bg-violet-500/5">
+
               <CardContent className="p-4 flex items-center gap-3">
+
                 <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center text-white text-sm font-bold shrink-0">S</div>
+
                 <div className="flex-1">
+
                   <p className="text-sm font-semibold">Etapa comercial já concluída!</p>
+
                   <p className="text-xs text-muted-foreground">Continue de onde parou com a Sofia (marketing).</p>
+
                 </div>
+
                 <Button size="sm" onClick={onResume} className="gap-1.5 bg-violet-500 hover:bg-violet-600 text-white shrink-0">
+
                   <ArrowRight className="w-3.5 h-3.5" /> Continuar
+
                 </Button>
+
               </CardContent>
+
             </Card>
+
           </motion.div>
+
         )}
 
-        <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20">
-          <Navigation className="w-4 h-4" /> {hasPartialProgress || hasFullProgress ? "Recomeçar do Início" : "Iniciar Diagnóstico"}
+        <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20 px-8">
+
+          <Navigation className="w-4 h-4" />
+
+          {hasPartialProgress || hasFullProgress ? "Recomeçar do Início" : "Iniciar meu diagnóstico"}
+
         </Button>
+
+        <p className="text-xs text-muted-foreground">Feito uma vez. Válido para sempre. Você pode refazer quando quiser.</p>
+
       </div>
+
     </motion.div>
+
   );
+
 }
 
 function TransitionScreen() {
