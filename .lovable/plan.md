@@ -1,47 +1,28 @@
 
 
-## Diagnóstico
+## Plano: Refinar Stage 3 — Contraste da Logo
 
-Analisei o fluxo completo de geração em `supabase/functions/generate-social-image/index.ts` e identifiquei os dois problemas:
+### Diagnóstico
+Linhas 1177-1183 do `supabase/functions/generate-social-image/index.ts` contêm referências a "glow halo", "shadow" e "gaussian glow" — técnicas que IA generativa não executa bem, resultando em artefatos visuais ou simplesmente sendo ignoradas.
 
-### Problema 1: Logo some no fundo
-O Stage 3 (composição da logo, linhas 1136-1199) diz ao modelo para colocar a logo "directly without adding any background behind it **unless the area is too busy**", mas não menciona nada sobre **contraste de cor**. Uma logo preta em fundo escuro fica invisível.
+### Mudança
 
-### Problema 2: Excesso de texto
-O prompt atual não limita a quantidade de texto renderizado. Headline + subheadline + supporting text + bullet points + CTA + brand name podem resultar em arte poluída e ilegível.
+Substituir o bloco `CONTRAST PROTECTION` (linhas 1177-1183) por instruções com apenas duas estratégias confiáveis:
 
----
+```
+CONTRAST PROTECTION (CRITICAL):
+- Analyze the dominant color of the area where the logo will be placed
+- If the logo and background have LOW CONTRAST (both dark or both light), you MUST use ONE of these two strategies:
+  STRATEGY A — BACKGROUND SHAPE: Place a solid rounded rectangle (pill shape) in a contrasting color behind the logo. Use a fully opaque, clean shape that matches the design style. Example: white pill behind dark logo on dark background, or dark pill behind light logo on light background.
+  STRATEGY B — COLOR INVERSION: Invert the logo colors to contrast with the background. Example: if the logo is black and the background is dark, render the logo in white instead.
+- Choose the strategy that looks most professional for the specific design
+- Do NOT use glow, shadow, halo, blur, or semi-transparent effects — they produce unreliable results
+- The logo must ALWAYS have 100% legibility regardless of the background
+```
 
-## Plano de Correção
-
-### 1. Logo com proteção de contraste (Stage 3)
-
-No prompt do Stage 3 (composição da logo), adicionar instruções de contraste inteligente:
-
-- Analisar a cor dominante da área onde a logo será colocada
-- Se a logo for escura e o fundo for escuro: adicionar um **halo/glow branco sutil** ou uma **pill/badge de fundo claro semitransparente** atrás da logo
-- Se a logo for clara e o fundo for claro: adicionar sombra ou backdrop escuro
-- Garantir que a logo tenha **sempre legibilidade total** independente do fundo
-
-### 2. Controle de quantidade de texto
-
-No `buildFinalPrompt` e `buildFallbackPrompt`, adicionar regras de hierarquia textual:
-
-- **Máximo 3 blocos de texto visíveis**: headline (obrigatório), subheadline (se houver), CTA (se houver)
-- Supporting text e bullet points devem ser **condensados** — máximo 2 linhas de suporte
-- Regra explícita: "If more than 40 words of text are provided, prioritize headline and CTA. Summarize or omit supporting text to keep the design clean and scannable"
-- Adicionar instrução: "TEXT DENSITY RULE: The image must remain at least 50% visual/graphic. Text should never dominate the canvas"
-
-### 3. Validação no frontend (ArtWizard)
-
-No Step 6 (texto/briefing) do wizard, adicionar um **contador de caracteres** com aviso visual quando o texto combinado (headline + sub + supporting + bullets + CTA) ultrapassar ~150 caracteres, orientando o usuário a simplificar.
-
----
-
-### Arquivos alterados
+### Arquivo alterado
 
 | Arquivo | Mudança |
 |---|---|
-| `supabase/functions/generate-social-image/index.ts` | Prompt do Stage 3 com regras de contraste; regras de densidade textual nos prompts |
-| `src/components/cliente/social/ArtWizardSteps.tsx` | Contador/aviso de excesso de texto no step de revisão |
+| `supabase/functions/generate-social-image/index.ts` | Linhas 1177-1183: substituir bloco CONTRAST PROTECTION |
 
