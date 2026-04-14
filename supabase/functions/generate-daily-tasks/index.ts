@@ -287,14 +287,24 @@ REGRAS:
     const { error: insertError } = await supabase.from("client_tasks").insert(inserts);
     if (insertError) throw insertError;
 
-    // Debit credits
+    // Debit credits — only after first GPS is approved
     try {
-      await supabase.rpc("debit_credits", {
-        _org_id: orgId,
-        _amount: CREDIT_COST,
-        _description: "Tarefas diárias geradas por IA",
-        _source: "generate-daily-tasks",
-      });
+      const { data: gpsData } = await supabase
+        .from("marketing_strategies")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("status", "approved")
+        .limit(1)
+        .maybeSingle();
+
+      if (gpsData) {
+        await supabase.rpc("debit_credits", {
+          _org_id: orgId,
+          _amount: CREDIT_COST,
+          _description: "Tarefas diárias geradas por IA",
+          _source: "generate-daily-tasks",
+        });
+      }
     } catch (debitErr) {
       console.error("Debit error (non-blocking):", debitErr);
     }
