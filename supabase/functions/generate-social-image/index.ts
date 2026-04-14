@@ -1176,10 +1176,12 @@ RULES:
 
 CONTRAST PROTECTION (CRITICAL):
 - Analyze the dominant color of the area where the logo will be placed
-- If the logo is DARK (black, dark gray, navy) and the background area is also DARK: add a subtle white/light semi-transparent pill or soft glow halo behind the logo to guarantee visibility
-- If the logo is LIGHT (white, cream, pastel) and the background area is also LIGHT: add a subtle dark shadow or semi-transparent dark pill behind the logo
-- The logo must ALWAYS have 100% legibility regardless of the background — if contrast is insufficient, you MUST add a backing element
-- The backing element should be subtle and professional (rounded rectangle with 30-50% opacity, or soft gaussian glow)
+- If the logo and background have LOW CONTRAST (both dark or both light), you MUST use ONE of these two strategies:
+  STRATEGY A — BACKGROUND SHAPE: Place a solid rounded rectangle (pill shape) in a contrasting color behind the logo. Use a fully opaque, clean shape that matches the design style. Example: white pill behind dark logo on dark background, or dark pill behind light logo on light background.
+  STRATEGY B — COLOR INVERSION: Invert the logo colors to contrast with the background. Example: if the logo is black and the background is dark, render the logo in white instead.
+- Choose the strategy that looks most professional for the specific design
+- Do NOT use glow, shadow, halo, blur, or semi-transparent effects — they produce unreliable results
+- The logo must ALWAYS have 100% legibility regardless of the background
 
 OUTPUT: The same design with the real brand logo composited in, fully legible.`,
                   },
