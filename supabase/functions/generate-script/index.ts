@@ -280,12 +280,24 @@ IMPORTANTE:
       // Debit credits (skip for trial GPS auto-generation)
       if (!isTrialGps) {
         try {
-          await serviceClient.rpc("debit_credits", {
-            _org_id: orgData,
-            _amount: CREDIT_COST,
-            _description: `Geração de script (${stage})`,
-            _source: "generate-script",
-          });
+          const { data: gpsApproved } = await serviceClient
+            .from("marketing_strategies")
+            .select("id")
+            .eq("organization_id", orgData)
+            .eq("status", "approved")
+            .limit(1)
+            .maybeSingle();
+
+          if (!gpsApproved) {
+            console.log("GPS not yet approved — skipping credit debit");
+          } else {
+            await serviceClient.rpc("debit_credits", {
+              _org_id: orgData,
+              _amount: CREDIT_COST,
+              _description: `Geração de script (${stage})`,
+              _source: "generate-script",
+            });
+          }
         } catch (debitErr) {
           console.error("Debit error (non-blocking):", debitErr);
         }

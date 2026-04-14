@@ -22,19 +22,31 @@ serve(async (req) => {
       });
     }
 
-    // Debit 30 credits
-    const { error: debitError } = await supabase.rpc("debit_credits", {
-      _org_id: organization_id,
-      _amount: 30,
-      _description: "Análise IA de campanhas de tráfego pago",
-      _source: "ads_analyze",
-    });
+    // Debit 30 credits — only after first GPS is approved
+    const { data: gpsApproved } = await supabase
+      .from("marketing_strategies")
+      .select("id")
+      .eq("organization_id", organization_id)
+      .eq("status", "approved")
+      .limit(1)
+      .maybeSingle();
 
-    if (debitError) {
-      const status = debitError.message?.includes("INSUFFICIENT") ? 402 : 500;
-      return new Response(JSON.stringify({ error: debitError.message }), {
-        status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    if (!gpsApproved) {
+      console.log("GPS not yet approved — skipping credit debit");
+    } else {
+      const { error: debitError } = await supabase.rpc("debit_credits", {
+        _org_id: organization_id,
+        _amount: 30,
+        _description: "Análise IA de campanhas de tráfego pago",
+        _source: "ads_analyze",
       });
+
+      if (debitError) {
+        const status = debitError.message?.includes("INSUFFICIENT") ? 402 : 500;
+        return new Response(JSON.stringify({ error: debitError.message }), {
+          status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Fetch metrics

@@ -87,6 +87,19 @@ function hoursSince(dateStr: string): number {
 async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
   const FIXED_CREDIT_COST = 2;
   try {
+    const { data: gpsApproved } = await adminClient
+      .from("marketing_strategies")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("status", "approved")
+      .limit(1)
+      .maybeSingle();
+
+    if (!gpsApproved) {
+      console.log("GPS not yet approved — skipping credit debit");
+      return;
+    }
+
     await adminClient.rpc("debit_credits", {
       _org_id: orgId,
       _amount: FIXED_CREDIT_COST,

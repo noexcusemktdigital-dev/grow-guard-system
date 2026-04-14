@@ -894,23 +894,35 @@ Output ONLY the extracted logo image.`,
       });
     }
 
-    // Debit credits BEFORE generation (skip for test orgs)
+    // Debit credits BEFORE generation (skip for test orgs and before GPS is approved)
     const isTestOrg = typeof organization_id === "string" && organization_id.startsWith("test-");
     if (organization_id && !isTestOrg) {
-      const { error: debitError } = await supabase.rpc("debit_credits", {
-        _org_id: organization_id,
-        _amount: CREDIT_COST,
-        _description: "Arte de rede social gerada",
-        _source: "client-posts",
-      });
-      if (debitError) {
-        const isInsufficient = debitError.message?.includes("INSUFFICIENT_CREDITS") || debitError.message?.includes("WALLET_NOT_FOUND");
-        return new Response(
-          JSON.stringify({ error: isInsufficient ? "INSUFFICIENT_CREDITS" : debitError.message }),
-          { status: isInsufficient ? 402 : 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
+      const { data: gpsApproved } = await supabase
+        .from("marketing_strategies")
+        .select("id")
+        .eq("organization_id", organization_id)
+        .eq("status", "approved")
+        .limit(1)
+        .maybeSingle();
+
+      if (!gpsApproved) {
+        console.log("GPS not yet approved — skipping credit debit");
+      } else {
+        const { error: debitError } = await supabase.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: "Arte de rede social gerada",
+          _source: "client-posts",
+        });
+        if (debitError) {
+          const isInsufficient = debitError.message?.includes("INSUFFICIENT_CREDITS") || debitError.message?.includes("WALLET_NOT_FOUND");
+          return new Response(
+            JSON.stringify({ error: isInsufficient ? "INSUFFICIENT_CREDITS" : debitError.message }),
+            { status: isInsufficient ? 402 : 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          );
+        }
+        console.log(`✅ Debited ${CREDIT_COST} credits from org ${organization_id}`);
       }
-      console.log(`✅ Debited ${CREDIT_COST} credits from org ${organization_id}`);
     }
 
     const estilo = identidade_visual?.estilo || identidade_visual?.style || manual_style || "";

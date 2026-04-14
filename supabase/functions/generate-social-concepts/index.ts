@@ -386,15 +386,27 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
 
     const concepts = JSON.parse(toolCall.function.arguments);
 
-    // Debit credits after successful generation
+    // Debit credits after successful generation — only after first GPS is approved
     if (organization_id) {
       try {
-        await supabaseAdmin.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST,
-          _description: `Geração de ${quantidade} conceitos visuais`,
-          _source: "generate-social-concepts",
-        });
+        const { data: gpsApproved } = await supabaseAdmin
+          .from("marketing_strategies")
+          .select("id")
+          .eq("organization_id", organization_id)
+          .eq("status", "approved")
+          .limit(1)
+          .maybeSingle();
+
+        if (!gpsApproved) {
+          console.log("GPS not yet approved — skipping credit debit");
+        } else {
+          await supabaseAdmin.rpc("debit_credits", {
+            _org_id: organization_id,
+            _amount: CREDIT_COST,
+            _description: `Geração de ${quantidade} conceitos visuais`,
+            _source: "generate-social-concepts",
+          });
+        }
       } catch (debitErr) {
         console.error("Debit error (non-blocking):", debitErr);
       }
