@@ -2,6 +2,7 @@
 /* eslint-disable */
 import { useActiveStrategy } from "./useMarketingStrategy";
 import { useSalesPlan } from "./useSalesPlan";
+import { normalizeMarketingStrategyResult } from "@/lib/normalizeMarketingStrategyResult";
 
 /**
  * Shared hook for other tools to consume strategy data.
@@ -12,26 +13,7 @@ export function useStrategyData() {
   const { data: strategy, isLoading } = useActiveStrategy();
   const { data: salesPlan, isLoading: salesLoading } = useSalesPlan();
   const rawResult = strategy?.strategy_result as any;
-  const diagGps = rawResult?.diagnostico_gps || {};
-  const result = rawResult ? {
-    ...rawResult,
-    diagnostico: rawResult.diagnostico || {
-      score_geral: diagGps.score_geral || 0,
-      radar: diagGps.radar_data ? Object.fromEntries(
-        (diagGps.radar_data as any[]).map((r: any) => [r.eixo?.toLowerCase(), r.score])
-      ) : null,
-    },
-    diagnostico_comercial: rawResult.diagnostico_comercial || (diagGps.score_geral ? {
-      score_comercial: rawResult.score_comercial || diagGps.score_geral,
-      nivel: diagGps.nivel,
-      radar_comercial: diagGps.radar_data,
-      insights: diagGps.insights || [],
-      funil_reverso: rawResult.etapas || null,
-      projecao_leads: rawResult.projecoes || [],
-      projecao_receita: rawResult.projecoes || [],
-      plano_acao: rawResult.entregaveis_calculadora || [],
-    } : null),
-  } : null;
+  const result = normalizeMarketingStrategyResult(rawResult);
   const spAnswers = (salesPlan?.answers || {}) as Record<string, unknown>;
 
   return {

@@ -31,14 +31,18 @@ export const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 
 export function MktResumo({ result }: { result: StrategyResult }) {
   const diag = (result as any).diagnostico || (result as any).diagnostico_gps || {};
   const radar = diag.radar;
-  const radarData = radar ? [
-    { subject: "Autoridade", value: radar.autoridade },
-    { subject: "Aquisição", value: radar.aquisicao },
-    { subject: "Conversão", value: radar.conversao },
-    { subject: "Retenção", value: radar.retencao },
-    { subject: "Conteúdo", value: radar.conteudo ?? 5 },
-    { subject: "Branding", value: radar.branding ?? 5 },
-  ] : [];
+  const gpsRadarData = Array.isArray((diag as any).radar_data) ? (diag as any).radar_data : [];
+  const radarData = gpsRadarData.length > 0
+    ? gpsRadarData.map((item: any) => ({ subject: item.eixo, value: item.score, max: item.max || 100 }))
+    : radar ? [
+        { subject: "Autoridade", value: radar.autoridade, max: 10 },
+        { subject: "Aquisição", value: radar.aquisicao, max: 10 },
+        { subject: "Conversão", value: radar.conversao, max: 10 },
+        { subject: "Retenção", value: radar.retencao, max: 10 },
+        { subject: "Conteúdo", value: radar.conteudo ?? 5, max: 10 },
+        { subject: "Branding", value: radar.branding ?? 5, max: 10 },
+      ] : [];
+  const radarMax = radarData.length ? Math.max(...radarData.map((item) => item.max || 10)) : 10;
   const scoreGeral = diag.score_geral ?? 0;
 
   return (
@@ -78,7 +82,7 @@ export function MktResumo({ result }: { result: StrategyResult }) {
                 <RadarChart data={radarData}>
                   <PolarGrid stroke="hsl(var(--border))" />
                   <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 10]} tick={{ fontSize: 9 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, radarMax]} tick={{ fontSize: 9 }} />
                   <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.25} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>

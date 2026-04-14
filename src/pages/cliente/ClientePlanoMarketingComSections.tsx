@@ -32,11 +32,23 @@ export function getComercialNivel(score: number) {
 /* ═══════════════ COMERCIAL: SCORE & RADAR ═══════════════ */
 
 export function ComScoreRadar({ dc }: { dc: any }) {
+  if (!dc) return <p className="text-sm text-muted-foreground p-4">Diagnóstico comercial não disponível.</p>;
+
   const radarComercial = dc.radar_comercial;
-  const radarData = radarComercial ? Object.entries(radarComercial).map(([key, val]) => ({
-    subject: key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-    value: val as number,
-  })) : [];
+  const radarData = Array.isArray(radarComercial)
+    ? radarComercial.map((item: any) => ({
+        subject: item.eixo,
+        value: Number(item.score) || 0,
+        max: Number(item.max) || 100,
+      }))
+    : radarComercial
+      ? Object.entries(radarComercial).map(([key, val]) => ({
+          subject: key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+          value: val as number,
+          max: 10,
+        }))
+      : [];
+  const radarMax = radarData.length ? Math.max(...radarData.map((item) => item.max || 10)) : 10;
 
   const score = dc.score_comercial ?? 0;
   const nivel = getComercialNivel(score);
@@ -90,7 +102,7 @@ export function ComScoreRadar({ dc }: { dc: any }) {
                 <RadarChart data={radarData}>
                   <PolarGrid stroke="hsl(var(--border))" />
                   <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 10]} tick={{ fontSize: 9 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, radarMax]} tick={{ fontSize: 9 }} />
                   <Radar name="Score" dataKey="value" stroke={CHART_COLORS[1]} fill={CHART_COLORS[1]} fillOpacity={0.25} strokeWidth={2} />
                 </RadarChart>
               </ResponsiveContainer>
