@@ -24,6 +24,7 @@ import { CrmContactsView } from "@/components/crm/CrmContactsView";
 import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
 import { CrmSetupBar } from "@/components/crm/CrmSetupBar";
 import { CrmTutorial } from "@/components/crm/CrmTutorial";
+import { CrmTourGuide } from "@/components/crm/CrmTourGuide";
 import { DEFAULT_STAGES, type FunnelStage } from "@/components/crm/CrmStageSystem";
 import { type LeadRow } from "./ClienteCRMKanban";
 import { ClienteCRMSummary } from "./ClienteCRMSummary";
@@ -84,6 +85,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkAssigned, setBulkAssigned] = useState("");
   const [tutorialOpen, setTutorialOpen] = useState(() => !localStorage.getItem("crm_gps_tutorial_v2"));
+  const [tourActive, setTourActive] = useState(() => !localStorage.getItem("crm_tour_v1"));
 
   // All filters
   const [filterSource, setFilterSource] = useState("");
@@ -360,7 +362,9 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
 
           {/* Pipeline Summary */}
           {allLeads.length > 0 && (
-            <ClienteCRMSummary pipelineSummary={pipelineSummary} />
+            <div data-tour="summary">
+              <ClienteCRMSummary pipelineSummary={pipelineSummary} />
+            </div>
           )}
           {/* Funnel selector + Search + Unified Filter + Bulk Actions */}
           <ClienteCRMPipelineFilters
@@ -477,6 +481,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CrmTourGuide active={tourActive} onFinish={() => setTourActive(false)} />
     </div>
   );
 }
