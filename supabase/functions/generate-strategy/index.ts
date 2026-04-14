@@ -101,6 +101,19 @@ const GPS_DIAGNOSIS_SCHEMA = {
           },
           required: ["concorrentes", "diferencial_empresa", "posicionamento_recomendado"],
         },
+        tom_comunicacao: {
+          type: "object",
+          description: "Tom de voz e comunicação da marca baseado nas respostas do briefing",
+          properties: {
+            tom_principal: { type: "string", description: "Tom principal da comunicação (ex: Educativo e acessível, Profissional e inspirador)" },
+            personalidade_marca: { type: "array", items: { type: "string" }, description: "3-5 traços de personalidade da marca" },
+            palavras_usar: { type: "array", items: { type: "string" }, description: "5-8 palavras/expressões que a marca deve usar" },
+            palavras_evitar: { type: "array", items: { type: "string" }, description: "5-8 palavras/expressões que a marca deve evitar" },
+            exemplo_mensagem: { type: "string", description: "Exemplo de mensagem no tom ideal da marca" },
+            nivel_formalidade: { type: "string", description: "Nível de formalidade: Casual, Equilibrado, Formal" },
+          },
+          required: ["tom_principal", "personalidade_marca", "palavras_usar", "palavras_evitar"],
+        },
         kpis_hero: {
           type: "object",
           properties: {
@@ -112,7 +125,7 @@ const GPS_DIAGNOSIS_SCHEMA = {
           required: ["meta_faturamento", "ticket_medio", "recorrencia", "ltv_cac"],
         },
       },
-      required: ["resumo_executivo", "resumo_cliente", "score_marketing", "score_comercial", "diagnostico_gps", "persona", "analise_concorrencia", "kpis_hero"],
+      required: ["resumo_executivo", "resumo_cliente", "score_marketing", "score_comercial", "diagnostico_gps", "persona", "analise_concorrencia", "tom_comunicacao", "kpis_hero"],
       additionalProperties: false,
     },
   },
@@ -325,7 +338,15 @@ GERE:
 
 6. ANÁLISE DE CONCORRÊNCIA: Analise os concorrentes informados com pontos fortes, fracos e oportunidades
 
-7. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
+7. TOM DE COMUNICAÇÃO: Defina o tom de voz ideal para a marca com base no segmento, público e posicionamento. Inclua:
+   - Tom principal (ex: "Educativo e acessível", "Profissional e inspirador")
+   - 3-5 traços de personalidade da marca
+   - 5-8 palavras/expressões que a marca DEVE usar
+   - 5-8 palavras/expressões que a marca deve EVITAR
+   - Um exemplo de mensagem no tom ideal
+   - Nível de formalidade (Casual, Equilibrado, Formal)
+
+8. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
 
 REGRAS CRÍTICAS DE QUALIDADE:
 

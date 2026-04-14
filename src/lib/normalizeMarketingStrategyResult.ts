@@ -102,6 +102,22 @@ function buildICP(raw: any) {
   };
 }
 
+function buildTomComunicacao(raw: any) {
+  // Try to infer from briefing answers or persona
+  const segmento = raw?.resumo_cliente?.segmento || "";
+  const diferencial = raw?.resumo_cliente?.diferencial || "";
+  if (!segmento && !diferencial) return null;
+
+  return {
+    tom_principal: "Profissional e acessível",
+    personalidade_marca: ["Confiável", "Especialista", "Acessível"],
+    palavras_usar: [],
+    palavras_evitar: [],
+    exemplo_mensagem: null,
+    nivel_formalidade: "Equilibrado",
+  };
+}
+
 function buildValueProposition(raw: any) {
   if (raw?.proposta_valor) return raw.proposta_valor;
   const headline = raw?.resumo_cliente?.proposta_valor;
@@ -304,6 +320,7 @@ export function normalizeMarketingStrategyResult(rawResult: any) {
     investimento_recomendado: rawResult?.investimento_recomendado || averageInvestment,
     potencial_crescimento: rawResult?.potencial_crescimento || revenueGrowth || rawResult?.kpis_hero?.ltv_cac || null,
     icp: buildICP(rawResult),
+    tom_comunicacao: rawResult?.tom_comunicacao || buildTomComunicacao(rawResult),
     proposta_valor: buildValueProposition(rawResult),
     analise_concorrencia: buildCompetitorAnalysis(rawResult),
     estrategia_aquisicao: buildAcquisition(rawResult),
