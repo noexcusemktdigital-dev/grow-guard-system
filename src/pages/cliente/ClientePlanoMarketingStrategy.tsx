@@ -35,6 +35,7 @@ import {
 import type {
   StrategyResult, HistoryStrategy,
 } from "./ClientePlanoMarketingTypes";
+import { useStrategyHistory } from "@/hooks/useMarketingStrategy";
 
 /* ═══════════════ STRATEGY DASHBOARD ═══════════════ */
 
@@ -51,6 +52,8 @@ export interface StrategyDashboardProps {
 
 export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving, status, createdAt, metasProps, metasDialog }: StrategyDashboardProps) {
   const navigate = useNavigate();
+  const { data: history } = useStrategyHistory();
+  const isFirstGPS = !history || history.length === 0;
   if (!result) return null;
 
   const daysSinceCreation = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
@@ -81,7 +84,12 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
                 <AlertDialogTrigger asChild><Button variant="outline" size="sm" className="gap-1.5"><RotateCcw className="w-3.5 h-3.5" /> Nova Estratégia</Button></AlertDialogTrigger>
                 <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Criar nova estratégia?</AlertDialogTitle><AlertDialogDescription>Sua estratégia atual será movida para o histórico.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={onRegenerate}>Sim, criar nova</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
               </AlertDialog>
-              {status !== "approved" && <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> {isApproving ? "Aprovando..." : "Aprovar (50 créditos)"}</Button>}
+              {status !== "approved" && (
+                <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {isApproving ? "Aprovando..." : isFirstGPS ? "Aprovar Grátis 🎉" : "Aprovar (50 créditos)"}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
