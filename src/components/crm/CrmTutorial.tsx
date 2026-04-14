@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Layers, UserPlus, Zap, Shuffle, BarChart3,
+  Layers, UserPlus, Zap, Users, BarChart3,
   ChevronRight, ChevronLeft, X, Sparkles, Lightbulb,
-  AlertTriangle, Clock, Users, Navigation, Target,
+  Clock, Navigation, Target,
 } from "lucide-react";
 import { useSalesPlan } from "@/hooks/useSalesPlan";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
@@ -21,20 +21,17 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
   const followup = answers?.followup || "";
   const controle = answers?.controle_leads || answers?.usa_crm || "";
   const etapasFunil = answers?.etapas_funil || "";
-  const dor = answers?.dor_principal || "";
-  const objecoes = answers?.objecoes || "";
-  const canais = answers?.canais_aquisicao || [];
   const volumeLeads = answers?.volume_leads || "";
-  const momento = answers?.momento_negocio || "";
+  const metaFaturamento = answers?.meta_faturamento || "";
+  const faturamentoAtual = answers?.faturamento || "";
 
-  // ── PASSO 1: Funil personalizado ──
   const funil = (() => {
     let etapasSugeridas = "";
     let motivo = "";
     let alerta = "";
 
     if (etapasFunil && etapasFunil.length > 10) {
-      etapasSugeridas = `Com base no que você descreveu no GPS, seu funil foi criado com as etapas do seu processo real. Revise e ajuste os nomes se necessário.`;
+      etapasSugeridas = "Com base no que você descreveu no GPS, revise e ajuste os nomes das etapas se necessário.";
     } else if (segmento === "advocacia" || segmento === "psicologia" || segmento === "consultoria") {
       etapasSugeridas = "Sugestão: Primeiro Contato → Consulta Inicial → Proposta → Contrato Assinado → Cliente Ativo";
     } else if (segmento === "saude" || segmento === "odontologia") {
@@ -42,7 +39,7 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
     } else if (segmento === "varejo" || segmento === "ecommerce") {
       etapasSugeridas = "Sugestão: Interesse → Demonstração → Proposta → Negociação → Venda Fechada";
     } else if (ticketMedio === "15k+" || ticketMedio === "5k-15k") {
-      etapasSugeridas = "Com ticket alto, recomendamos: Qualificação → Reunião → Proposta Customizada → Negociação → Fechamento";
+      etapasSugeridas = "Com ticket alto: Qualificação → Reunião → Proposta Customizada → Negociação → Fechamento";
     } else {
       etapasSugeridas = "Personalize as etapas para refletir exatamente como sua venda acontece na prática.";
     }
@@ -51,7 +48,7 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
       motivo = "O GPS identificou que você perde mais leads no primeiro contato. Ter o funil configurado te ajuda a visualizar quantos leads estão parados nessa etapa e agir rápido.";
       alerta = "⚡ Leads sem resposta em até 5 minutos têm 80% menos chance de fechar.";
     } else if (maiorPerda === "proposta") {
-      motivo = "Você perde leads na fase de proposta. O funil vai te mostrar quantas propostas estão abertas e há quanto tempo — para você fazer follow-up antes do lead esfriar.";
+      motivo = "Você perde leads na fase de proposta. O funil mostra quantas propostas estão abertas e há quanto tempo — para você fazer follow-up antes do lead esfriar.";
       alerta = "💡 Configure uma etapa 'Proposta Enviada' e ative alerta de 2 dias sem resposta.";
     } else if (maiorPerda === "negociacao") {
       motivo = "A negociação é seu maior gargalo. Com o funil visual, você vê exatamente onde cada lead travou e pode agir com o argumento certo.";
@@ -66,11 +63,10 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
       title: "Configure seu Funil de Vendas",
       description: motivo,
       tips: [etapasSugeridas, alerta],
-      rec: `Clique em ⚙️ Configurações > Funis para ajustar as etapas do seu processo. ${maiorPerda === "primeiro_contato" ? "Crie a etapa 'Primeiro Contato' como a primeira coluna." : ""}`,
+      rec: `Clique em ⚙️ Configurações > Funis para ajustar as etapas do seu processo.`,
     };
   })();
 
-  // ── PASSO 2: Cadastro de leads ──
   const leads = (() => {
     let descricao = "";
     let tip1 = "";
@@ -78,7 +74,7 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
     let rec = "";
 
     if (controle === "nada" || controle === "whatsapp") {
-      descricao = "Você ainda controla leads pelo WhatsApp ou na memória. O primeiro passo é transferir essas conversas para o CRM — cada contato que ficou sem retorno é uma oportunidade que ainda pode ser recuperada.";
+      descricao = "Você ainda controla leads pelo WhatsApp ou na memória. O primeiro passo é transferir essas conversas para o CRM — cada contato sem retorno é uma oportunidade que ainda pode ser recuperada.";
       tip1 = "Abra seu WhatsApp agora e liste os últimos 10 contatos que pediram informação. Cadastre cada um aqui.";
       tip2 = "Use a importação CSV para trazer uma lista de contatos de uma vez.";
       rec = "Comece cadastrando manualmente os leads mais quentes — aqueles que demonstraram interesse nos últimos 30 dias.";
@@ -86,7 +82,7 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
       descricao = "Você usa planilha para controlar leads. Ótimo — isso significa que você já tem uma base para importar. No CRM, esses dados ficam organizados com etapas, histórico e alertas automáticos.";
       tip1 = "Use Importar CSV para trazer sua planilha atual de uma vez — economize horas de digitação.";
       tip2 = "Certifique-se que sua planilha tem colunas: Nome, Telefone, Email e Origem do lead.";
-      rec = "Importe sua base atual e classifique cada lead na etapa correta do funil. Leads novos vão para 'Primeiro Contato', leads com proposta enviada vão para 'Proposta'.";
+      rec = "Importe sua base e classifique cada lead na etapa correta do funil.";
     } else {
       descricao = "Cada lead é uma oportunidade de venda. Adicione manualmente, importe planilhas ou receba automaticamente via WhatsApp integrado.";
       tip1 = volumeLeads === "100-300" || volumeLeads === "300+" ? "Com alto volume, use a importação CSV e a Roleta para distribuir automaticamente." : "Com volume menor, capriche nos dados de cada lead — histórico completo aumenta a conversão.";
@@ -103,7 +99,6 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
     };
   })();
 
-  // ── PASSO 3: Follow-up e automações ──
   const automacoes = (() => {
     let descricao = "";
     let tip1 = "";
@@ -111,20 +106,20 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
     let rec = "";
 
     if (followup === "nao") {
-      descricao = "O GPS identificou que você não faz follow-up estruturado. Isso é seu maior ponto de perda — 80% das vendas acontecem após o 5º contato, mas a maioria das empresas desiste no 1º. O CRM resolve isso automaticamente.";
+      descricao = "O GPS identificou que você não faz follow-up estruturado. 80% das vendas acontecem após o 5º contato, mas a maioria das empresas desiste no 1º. O CRM resolve isso automaticamente.";
       tip1 = "Configure uma automação: quando um lead fica 2 dias sem movimentação → cria tarefa de follow-up para você.";
-      tip2 = "Use os scripts que foram gerados automaticamente pelo GPS para guiar suas mensagens de follow-up.";
-      rec = "Comece com 1 automação simples: 'Lead parado há 2 dias → Criar tarefa de contato'. Isso já vai recuperar vendas perdidas.";
+      tip2 = "Use os scripts gerados automaticamente pelo GPS para guiar suas mensagens de follow-up.";
+      rec = "Comece com 1 automação: 'Lead parado há 2 dias → Criar tarefa de contato'. Isso já vai recuperar vendas perdidas.";
     } else if (followup === "eventual") {
-      descricao = "Você faz follow-up quando lembra — o que significa que muitos leads estão esfriando enquanto você está ocupado com outros. O CRM vai te alertar automaticamente para não perder o timing.";
+      descricao = "Você faz follow-up quando lembra — o que significa que muitos leads estão esfriando enquanto você está ocupado. O CRM vai te alertar automaticamente para não perder o timing.";
       tip1 = "Configure alertas de lead parado: 2 dias para leads quentes, 5 dias para leads frios.";
       tip2 = "Use a visão de lista para ver todos os leads ordenados por 'último contato' — os mais antigos primeiro.";
-      rec = `Configure o alerta de follow-up baseado no seu ciclo de ${tempoFechamento === "1-7" ? "1-7 dias" : tempoFechamento === "1-4sem" ? "1-4 semanas" : "vendas"}. Leads sem contato dentro do prazo recebem um alerta vermelho.`;
+      rec = `Configure o alerta de follow-up baseado no seu ciclo de venda (${tempoFechamento || "1-7 dias"}). Leads sem contato dentro do prazo ficam com alerta vermelho.`;
     } else {
       descricao = "Automações trabalham por você 24h por dia — criam tarefas, enviam alertas e movem leads automaticamente baseado no comportamento deles.";
       tip1 = tempoFechamento === "mesmo_dia" ? "Ciclo rápido: configure alerta de lead novo sem contato em 2 horas." : "Configure follow-up automático baseado no tempo do seu ciclo de venda.";
       tip2 = "Automações com IA qualificam leads automaticamente via WhatsApp antes de chegarem para você.";
-      rec = "Ative a automação 'Lead parado → Tarefa de follow-up' como ponto de partida. Depois adicione mais conforme sua necessidade.";
+      rec = "Ative a automação 'Lead parado → Tarefa de follow-up' como ponto de partida.";
     }
 
     return {
@@ -136,63 +131,36 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
     };
   })();
 
-  // ── PASSO 4: Equipe ──
   const equipe = (() => {
     const sozinho = tamanhoEquipe === "1" || tamanhoEquipe === "Só eu";
-    let descricao = "";
-    let tip1 = "";
-    let tip2 = "";
-    let rec = "";
-
-    if (sozinho) {
-      descricao = "Você é o responsável por todas as vendas agora. O CRM garante que você não perca nenhuma oportunidade — mesmo quando está em reunião, atendimento ou offline.";
-      tip1 = "Configure notificações para receber alerta quando um lead novo entrar pelo WhatsApp ou formulário.";
-      tip2 = "Quando crescer o time, a Roleta distribui leads automaticamente entre os vendedores.";
-      rec = "No momento, foque em manter o funil organizado e o follow-up em dia. Quando contratar o primeiro vendedor, volte aqui para configurar a distribuição de leads.";
-    } else {
-      descricao = `Você tem uma equipe de vendas com ${tamanhoEquipe} pessoas. O CRM permite ver o desempenho de cada vendedor, distribuir leads automaticamente e garantir que ninguém fique sobrecarregado.`;
-      tip1 = "Adicione os membros da equipe em Configurações > Equipe e defina o responsável por cada lead.";
-      tip2 = "A Roleta distribui novos leads automaticamente — Round-Robin garante distribuição igual entre todos.";
-      rec = "Configure a Roleta agora para que os próximos leads já entrem distribuídos automaticamente. Evita conflito sobre 'quem pega qual lead'.";
-    }
-
     return {
       icon: sozinho ? <Navigation className="w-6 h-6" /> : <Users className="w-6 h-6" />,
       title: sozinho ? "Mantenha o Foco nas Vendas" : "Configure sua Equipe",
-      description: descricao,
-      tips: [tip1, tip2],
-      rec,
+      description: sozinho
+        ? "Você é o responsável por todas as vendas agora. O CRM garante que você não perca nenhuma oportunidade — mesmo quando está em reunião, atendimento ou offline."
+        : `Você tem uma equipe de vendas. O CRM permite ver o desempenho de cada vendedor, distribuir leads automaticamente e garantir que ninguém fique sobrecarregado.`,
+      tips: sozinho
+        ? ["Configure notificações para receber alerta quando um lead novo entrar pelo WhatsApp ou formulário.", "Quando crescer o time, a Roleta distribui leads automaticamente entre os vendedores."]
+        : ["Adicione os membros da equipe em Configurações > Equipe e defina o responsável por cada lead.", "A Roleta distribui novos leads automaticamente — Round-Robin garante distribuição igual entre todos."],
+      rec: sozinho
+        ? "No momento, foque em manter o funil organizado e o follow-up em dia. Quando contratar o primeiro vendedor, configure a distribuição de leads."
+        : "Configure a Roleta agora para que os próximos leads já entrem distribuídos automaticamente.",
     };
   })();
 
-  // ── PASSO 5: Métricas ──
   const metricas = (() => {
-    let descricao = "";
-    let tip1 = "";
-    let tip2 = "";
-    let rec = "";
+    let tip1 = metaFaturamento
+      ? `Sua meta é ${metaFaturamento}/mês. Monitore o pipeline diariamente — o valor total das propostas abertas indica se você vai atingir a meta.`
+      : "Acompanhe o valor total do pipeline — ele mostra o potencial de receita das oportunidades em andamento.";
 
-    const metaFaturamento = answers?.meta_faturamento || "";
-    const faturamentoAtual = answers?.faturamento || "";
-
-    descricao = `O GPS mostrou que suas metas são baseadas em ${answers?.metas_historicas === "nao" ? "intuição — sem dados históricos" : answers?.metas_historicas === "achismo" ? "estimativas sem base real" : "histórico, o que é ótimo"}. O resumo do pipeline mostra em tempo real o valor acumulado em cada etapa — assim você sabe se está no caminho certo para bater a meta.`;
-
-    if (metaFaturamento && faturamentoAtual) {
-      tip1 = `Sua meta é ${metaFaturamento === "50-150k" ? "R$50-150k" : metaFaturamento}/mês. Monitore o pipeline diariamente — o valor total das propostas abertas indica se você vai atingir a meta.`;
-    } else {
-      tip1 = "Acompanhe o valor total do pipeline — ele mostra o potencial de receita das oportunidades em andamento.";
-    }
-
-    tip2 = `Taxa de conversão atual estimada pelo GPS: ${answers?.conversao_etapa === "menos_10" ? "menos de 10%" : answers?.conversao_etapa === "10-30" ? "10-30%" : answers?.conversao_etapa === "nao" ? "não medida ainda" : "em desenvolvimento"}. Use os filtros para identificar em qual etapa você perde mais.`;
-
-    rec = "Configure a meta mensal nas Metas do sistema para acompanhar o progresso em tempo real no dashboard.";
+    let tip2 = `Taxa de conversão atual: ${answers?.conversao_etapa === "menos_10" ? "menos de 10%" : answers?.conversao_etapa === "10-30" ? "10-30%" : answers?.conversao_etapa === "nao" ? "não medida ainda — comece a medir agora" : "em desenvolvimento"}. Use os filtros para identificar em qual etapa você perde mais.`;
 
     return {
       icon: <BarChart3 className="w-6 h-6" />,
       title: "Acompanhe seu Pipeline",
-      description: descricao,
+      description: `O resumo do pipeline mostra em tempo real o valor acumulado em cada etapa — assim você sabe se está no caminho certo para bater a meta${metaFaturamento ? ` de ${metaFaturamento}/mês` : ""}.`,
       tips: [tip1, tip2],
-      rec,
+      rec: "Configure a meta mensal nas Metas do sistema para acompanhar o progresso em tempo real no dashboard.",
     };
   })();
 
@@ -218,7 +186,7 @@ export function CrmTutorial({ open, onOpenChange }: Props) {
   const current = steps[step];
 
   const handleClose = () => {
-    localStorage.setItem("crm_tutorial_seen", "true");
+    localStorage.setItem("crm_gps_tutorial_v2", "true");
     onOpenChange(false);
     setStep(0);
   };
