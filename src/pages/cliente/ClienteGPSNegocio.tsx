@@ -11,6 +11,7 @@ import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
 
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
@@ -160,6 +161,7 @@ export default function ClienteGPSNegocio() {
   const { data: activeStrategy, isLoading } = useActiveStrategy();
   const { data: history } = useStrategyHistory();
   const { data: orgId } = useUserOrgId();
+  const { update: updateOrg } = useOrgProfile();
   const { data: wallet } = useClienteWallet();
   const { data: salesPlan, isLoading: isLoadingSalesPlan } = useSalesPlan();
   const saveStrategy = useSaveStrategy();
@@ -294,6 +296,13 @@ export default function ClienteGPSNegocio() {
       })();
 
       toast({ title: "GPS do Negócio gerado!", description: "Revise o resultado e aprove para finalizar." });
+
+      try {
+        await updateOrg.mutateAsync({ onboarding_completed: true } as Record<string, unknown>);
+      } catch (e) {
+        logger.error("Erro ao marcar onboarding_completed:", e);
+      }
+
       setPhase("result");
     } catch (err: unknown) {
       toast({ title: "Erro ao gerar estratégia", description: (err as Error).message, variant: "destructive" });
