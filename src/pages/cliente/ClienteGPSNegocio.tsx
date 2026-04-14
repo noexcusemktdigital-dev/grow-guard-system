@@ -11,6 +11,7 @@ import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
 
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
