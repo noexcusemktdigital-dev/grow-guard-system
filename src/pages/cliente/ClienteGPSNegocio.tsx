@@ -423,7 +423,7 @@ export default function ClienteGPSNegocio() {
 
       await saveStrategy.mutateAsync({
         answers: allAnswers,
-        score_percentage: (unifiedResult as any)?.diagnostico_gps?.score_geral || (unifiedResult as any)?.diagnostico?.score_geral || 0,
+        score_percentage: Math.round((unifiedResult as any)?.diagnostico_gps?.score_geral || (unifiedResult as any)?.diagnostico?.score_geral || 0),
         nivel: "gerado",
         strategy_result: unifiedResult,
         status: "pending",
