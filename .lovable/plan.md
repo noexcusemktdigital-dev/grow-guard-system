@@ -1,28 +1,71 @@
 
 
-## Plano: Refinar Stage 3 — Contraste da Logo
+## Plano: Adicionar Legenda (Caption) ao Fluxo de Geração de Post
 
-### Diagnóstico
-Linhas 1177-1183 do `supabase/functions/generate-social-image/index.ts` contêm referências a "glow halo", "shadow" e "gaussian glow" — técnicas que IA generativa não executa bem, resultando em artefatos visuais ou simplesmente sendo ignoradas.
+### Resumo
+Gerar automaticamente uma legenda pronta para redes sociais junto com a arte, salvar no banco, e exibir na tela de resultado para o usuário aprovar/copiar.
 
-### Mudança
+---
 
-Substituir o bloco `CONTRAST PROTECTION` (linhas 1177-1183) por instruções com apenas duas estratégias confiáveis:
+### 1. Migração de Banco — Adicionar coluna `caption`
 
-```
-CONTRAST PROTECTION (CRITICAL):
-- Analyze the dominant color of the area where the logo will be placed
-- If the logo and background have LOW CONTRAST (both dark or both light), you MUST use ONE of these two strategies:
-  STRATEGY A — BACKGROUND SHAPE: Place a solid rounded rectangle (pill shape) in a contrasting color behind the logo. Use a fully opaque, clean shape that matches the design style. Example: white pill behind dark logo on dark background, or dark pill behind light logo on light background.
-  STRATEGY B — COLOR INVERSION: Invert the logo colors to contrast with the background. Example: if the logo is black and the background is dark, render the logo in white instead.
-- Choose the strategy that looks most professional for the specific design
-- Do NOT use glow, shadow, halo, blur, or semi-transparent effects — they produce unreliable results
-- The logo must ALWAYS have 100% legibility regardless of the background
+```sql
+ALTER TABLE public.client_posts ADD COLUMN caption text;
 ```
 
-### Arquivo alterado
+A tabela `client_posts` hoje não tem campo de legenda. Adicionamos uma coluna `caption` para armazenar o texto.
+
+---
+
+### 2. Edge Function `generate-social-briefing` — Gerar legenda
+
+Adicionar um novo campo `legenda` no tool call da IA, com instrução para gerar uma legenda completa para redes sociais (hook + valor + CTA + hashtags), pronta para copiar e colar.
+
+**Campos novos no schema do tool call:**
+- `legenda`: string — Legenda completa para redes sociais (2-4 linhas com emojis, hook, valor, CTA e hashtags)
+
+**Instrução no system prompt:** Adicionar regra para gerar legenda profissional com estrutura Hook → Valor → CTA → Hashtags.
+
+---
+
+### 3. Hook `useClientePosts` — Persistir legenda
+
+- Adicionar `caption` ao payload do `useGeneratePost`
+- Salvar o `caption` no insert do `client_posts`
+- Retornar `caption` no resultado da mutação
+- Atualizar interface `PostItem` com campo `caption`
+
+---
+
+### 4. ArtWizard — Capturar legenda do briefing
+
+No fluxo do wizard, quando o briefing retornar o campo `legenda`, armazená-lo no state e passá-lo ao `useGeneratePost`.
+
+---
+
+### 5. PostResult — Exibir legenda
+
+Na tela de resultado (`PostResult.tsx`), abaixo da imagem gerada:
+- Mostrar a legenda em um card com estilo de "copy ready"
+- Botão "Copiar Legenda" para clipboard
+- A legenda aparece junto com o status de aprovação
+
+---
+
+### 6. PostCard — Exibir legenda no histórico
+
+No card do histórico de posts (`PostCard.tsx`), mostrar um preview da legenda (truncado) quando disponível.
+
+---
+
+### Arquivos alterados
 
 | Arquivo | Mudança |
 |---|---|
-| `supabase/functions/generate-social-image/index.ts` | Linhas 1177-1183: substituir bloco CONTRAST PROTECTION |
+| Migração SQL | `ALTER TABLE client_posts ADD COLUMN caption text` |
+| `supabase/functions/generate-social-briefing/index.ts` | Novo campo `legenda` no tool call + instrução no prompt |
+| `src/hooks/useClientePosts.ts` | Campo `caption` no payload, insert e interface |
+| `src/components/cliente/social/ArtWizard.tsx` | Capturar e passar `caption` do briefing |
+| `src/components/cliente/social/PostResult.tsx` | Exibir legenda + botão copiar |
+| `src/components/cliente/social/PostCard.tsx` | Preview da legenda no histórico |
 
