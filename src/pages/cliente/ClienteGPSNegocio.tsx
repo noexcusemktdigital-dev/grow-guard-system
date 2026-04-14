@@ -13,6 +13,7 @@ import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -33,6 +34,8 @@ type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generati
 type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
 
 function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, onRetryGeneration }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void; hasFullProgress?: boolean; onRetryGeneration?: () => void }) {
+  const { data: subscription } = useClienteSubscription();
+  const isTrial = subscription?.plan === "trial" || subscription?.status === "trialing";
 
   const benefits = [
 
@@ -218,7 +221,11 @@ function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, on
 
           <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ~12 minutos</span>
 
-          <span className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> 50 créditos</span>
+          {isTrial ? (
+            <span className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-amber-500" /> Gratuito no seu trial</span>
+          ) : (
+            <span className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> 50 créditos</span>
+          )}
 
         </div>
 
