@@ -22,6 +22,7 @@ export function ClienteLayout() {
   const { data: orgData, isLoading: orgLoading } = useOrgProfile();
   const isChatRoute = location.pathname === "/cliente/chat";
   const isOnboardingRoute = location.pathname === "/cliente/onboarding";
+  const isGpsRoute = location.pathname === "/cliente/gps-negocio";
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Sequence: Welcome Modal → Tour → Announcements
@@ -32,8 +33,8 @@ export function ClienteLayout() {
   const handleWelcomeDone = useCallback(() => setWelcomeDone(true), []);
   const handleTourDone = useCallback(() => setTourDone(true), []);
 
-  // Gate: redirect to onboarding if not completed (skip if already on onboarding page)
-  if (!isOnboardingRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed !== true) {
+  // Gate: redirect to onboarding if not completed (skip if already on onboarding page or gps page)
+  if (!isOnboardingRoute && !isGpsRoute && !orgLoading && orgData && (orgData as unknown as { onboarding_completed?: boolean }).onboarding_completed !== true) {
     return <Navigate to="/cliente/onboarding" replace />;
   }
 
