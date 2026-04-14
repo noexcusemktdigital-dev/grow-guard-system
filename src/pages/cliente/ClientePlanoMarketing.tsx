@@ -43,7 +43,7 @@ export default function ClientePlanoMarketing() {
       const aiResult = await generateStrategy.mutateAsync({ answers, organization_id: orgId });
       await saveStrategy.mutateAsync({
         answers,
-        score_percentage: aiResult.result?.diagnostico?.score_geral || 0,
+        score_percentage: Math.round(aiResult.result?.diagnostico?.score_geral || 0),
         nivel: "gerado",
         strategy_result: aiResult.result,
         status: "pending",
