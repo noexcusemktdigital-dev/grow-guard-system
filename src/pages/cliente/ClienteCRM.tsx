@@ -484,7 +484,13 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
         </AlertDialogContent>
       </AlertDialog>
 
-      <CrmTourGuide active={tourActive} onFinish={() => setTourActive(false)} />
+      <CrmTourGuide active={tourActive} onFinish={() => {
+        setTourActive(false);
+        // Após o tour, abre o tutorial se nunca foi visto
+        if (!localStorage.getItem("crm_gps_tutorial_v2")) {
+          setTutorialOpen(true);
+        }
+      }} />
     </div>
   );
 }
