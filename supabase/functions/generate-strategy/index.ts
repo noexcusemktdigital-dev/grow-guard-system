@@ -26,12 +26,12 @@ const GPS_DIAGNOSIS_SCHEMA = {
           },
           required: ["nome_empresa", "segmento", "proposta_valor", "diferencial", "modelo_negocio"],
         },
-        score_marketing: { type: "number", description: "Score de marketing de 0-100 calculado com base nas respostas de conteúdo, tráfego e web" },
-        score_comercial: { type: "number", description: "Score comercial de 0-100 calculado com base nas respostas de sales, processo comercial e métricas" },
+        score_marketing: { type: "integer", description: "Score de marketing de 0-100, OBRIGATORIAMENTE número inteiro, nunca decimal" },
+        score_comercial: { type: "integer", description: "Score comercial de 0-100, OBRIGATORIAMENTE número inteiro, nunca decimal" },
         diagnostico_gps: {
           type: "object",
           properties: {
-            score_geral: { type: "number", description: "Média ponderada dos scores de marketing e comercial, 0-100" },
+            score_geral: { type: "integer", description: "Média ponderada dos scores de marketing e comercial, 0-100, OBRIGATORIAMENTE inteiro" },
             nivel: { type: "string", description: "Crítico (0-25), Básico (26-50), Intermediário (51-75), Avançado (76-100)" },
             descricao: { type: "string" },
             radar_data: {
@@ -363,6 +363,8 @@ REGRAS CRÍTICAS DE QUALIDADE:
 - Use CÁLCULOS REAIS baseados nos dados informados
 
 - Scores devem ser calculados pela IA, não informados pelo cliente
+
+- score_marketing e score_comercial DEVEM ser números inteiros entre 0 e 100 — NUNCA decimais. Arredonde sempre para o inteiro mais próximo.
 
 - Sempre em português brasileiro
 
@@ -719,11 +721,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    const mergedResult = {
+    // Garantir que scores são sempre inteiros antes de retornar
+    const sanitizeScores = (obj: Record<string, unknown>): Record<string, unknown> => {
+      const scoreFields = ["score_marketing", "score_comercial", "score_geral"];
+      const sanitized = { ...obj };
+      for (const field of scoreFields) {
+        if (typeof sanitized[field] === "number") {
+          sanitized[field] = Math.round(sanitized[field] as number);
+        }
+        if (sanitized.diagnostico_gps && typeof (sanitized.diagnostico_gps as any)?.[field] === "number") {
+          (sanitized.diagnostico_gps as any)[field] = Math.round((sanitized.diagnostico_gps as any)[field]);
+        }
+      }
+      return sanitized;
+    };
+
+    const mergedResult = sanitizeScores({
       ...(gpsResult.result || {}),
       ...(strategicResult.result || {}),
       ...(projectionsResult.result || {}),
-    };
+    });
 
     console.log(`Full strategy generated. Total tokens: ${totalTokens}`);
 
