@@ -407,7 +407,7 @@ export default function ClienteGPSNegocio() {
     try {
       // 1. Sales plan already saved in handleRafaelComplete
 
-      // 2. Generate strategy via AI — single call without section (returns full merged result)
+      // 2. Generate strategy via AI — full generation (3 parallel calls no backend)
 
       setGeneratingStep("marketing-core");
 
