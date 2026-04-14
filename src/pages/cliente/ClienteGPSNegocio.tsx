@@ -407,36 +407,16 @@ export default function ClienteGPSNegocio() {
     try {
       // 1. Sales plan already saved in handleRafaelComplete
 
-      // 2. Generate strategy via AI — three sequential calls
-      // Call 1: Marketing Core
-      const coreResult = await generateStrategy.mutateAsync({
+      // 2. Generate strategy via AI — single unified call
+
+      setGeneratingStep("marketing-core");
+      const gpsResult = await generateStrategy.mutateAsync({
         answers: allAnswers,
         organization_id: orgId,
-        section: "marketing-core",
+        section: "gps",
       });
 
-      // Call 2: Marketing Growth
-      setGeneratingStep("marketing-growth");
-      const growthResult = await generateStrategy.mutateAsync({
-        answers: allAnswers,
-        organization_id: orgId,
-        section: "marketing-growth",
-      });
-
-      // Call 3: Comercial
-      setGeneratingStep("comercial");
-      const comercialResult = await generateStrategy.mutateAsync({
-        answers: allAnswers,
-        organization_id: orgId,
-        section: "comercial",
-      });
-
-      // Merge results
-      const unifiedResult = {
-        ...((coreResult as any).result || {}),
-        ...((growthResult as any).result || {}),
-        ...((comercialResult as any).result || {}),
-      };
+      const unifiedResult = (gpsResult as any).result || {};
 
       await saveStrategy.mutateAsync({
         answers: allAnswers,
