@@ -407,16 +407,19 @@ export default function ClienteGPSNegocio() {
     try {
       // 1. Sales plan already saved in handleRafaelComplete
 
-      // 2. Generate strategy via AI — single unified call
+      // 2. Generate strategy via AI — single call without section (returns full merged result)
 
       setGeneratingStep("marketing-core");
+
       const gpsResult = await generateStrategy.mutateAsync({
+
         answers: allAnswers,
+
         organization_id: orgId,
-        section: "gps",
+
       });
 
-      const unifiedResult = (gpsResult as any).result || {};
+      const unifiedResult = (gpsResult as any).result || gpsResult || {};
 
       await saveStrategy.mutateAsync({
         answers: allAnswers,
