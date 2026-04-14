@@ -56,10 +56,32 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
   const isFirstGPS = !history || history.length === 0;
   if (!result) return null;
 
-  // Normaliza campo diagnostico_gps → diagnostico para compatibilidade
+  // Normaliza campo diagnostico_gps → diagnostico e diagnostico_comercial para compatibilidade
+  const diagGps = (result as any).diagnostico_gps || {};
   const normalizedResult = {
     ...result,
-    diagnostico: (result as any).diagnostico || (result as any).diagnostico_gps || null,
+    diagnostico: (result as any).diagnostico || {
+      score_geral: diagGps.score_geral || 0,
+      analise: diagGps.descricao || null,
+      radar: diagGps.radar_data ? Object.fromEntries(
+        (diagGps.radar_data as any[]).map((r: any) => [r.eixo?.toLowerCase(), r.score])
+      ) : (result as any).diagnostico?.radar || null,
+      pontos_fortes: diagGps.insights?.filter?.((i: any) => i.tipo === 'forte')?.map?.((i: any) => i.texto) || [],
+      oportunidades: diagGps.insights?.filter?.((i: any) => i.tipo === 'oportunidade')?.map?.((i: any) => i.texto) || [],
+      riscos: diagGps.gargalos_ece || [],
+    },
+    diagnostico_comercial: (result as any).diagnostico_comercial || (diagGps.score_geral ? {
+      score_comercial: (result as any).score_comercial || diagGps.score_geral,
+      nivel: diagGps.nivel || null,
+      radar_comercial: diagGps.radar_data || null,
+      insights: diagGps.insights || [],
+      gaps: diagGps.gargalos_ece || [],
+      funil_reverso: (result as any).etapas || null,
+      projecao_leads: (result as any).projecoes || [],
+      projecao_receita: (result as any).projecoes || [],
+      plano_acao: (result as any).entregaveis_calculadora || [],
+      estrategias_vendas: [],
+    } : null),
   };
   const result_ = normalizedResult;
 
