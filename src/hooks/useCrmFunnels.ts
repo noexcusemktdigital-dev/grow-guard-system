@@ -190,9 +190,9 @@ export function useEnsureDefaultFunnel() {
 
       try {
         // Busca o sales_plan do usuário
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: orgData } = await supabaseClient.rpc("get_user_org_id", { _user_id: user.id, _portal: "saas" });
+          const { data: orgData } = await supabase.rpc("get_user_org_id", { _user_id: user.id, _portal: "saas" });
           if (orgData) {
             const { data: plan } = await supabaseClient
               .from("sales_plans")
