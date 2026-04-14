@@ -589,6 +589,9 @@ Deno.serve(async (req) => {
         "gps": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
         "strategic": { schema: STRATEGIC_PLAN_SCHEMA, prompt: STRATEGIC_PLAN_PROMPT },
         "projections": { schema: PROJECTIONS_SCHEMA, prompt: PROJECTIONS_PROMPT },
+        "marketing-core": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
+        "marketing-growth": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
+        "comercial": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
       };
       const config = configs[section];
       if (!config) {
