@@ -22,7 +22,7 @@ import { CrmNewLeadDialog } from "@/components/crm/CrmNewLeadDialog";
 import { CrmFunnelManager } from "@/components/crm/CrmFunnelManager";
 import { CrmContactsView } from "@/components/crm/CrmContactsView";
 import { CrmCsvImportDialog } from "@/components/crm/CrmCsvImportDialog";
-import { CrmTutorial } from "@/components/crm/CrmTutorial";
+import { CrmSetupBar } from "@/components/crm/CrmSetupBar";
 import { DEFAULT_STAGES, type FunnelStage } from "@/components/crm/CrmStageSystem";
 import { type LeadRow } from "./ClienteCRMKanban";
 import { ClienteCRMSummary } from "./ClienteCRMSummary";
@@ -300,7 +300,11 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
 
   return (
     <div className="w-full space-y-5">
-      <CrmTutorial open={tutorialOpen} onOpenChange={setTutorialOpen} />
+      <CrmSetupBar
+        onOpenNewLead={() => setNewLeadOpen(true)}
+        onOpenFunnelManager={() => setFunnelManagerOpen(true)}
+        configRoute={configRoute}
+      />
       <ClienteCRMHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
