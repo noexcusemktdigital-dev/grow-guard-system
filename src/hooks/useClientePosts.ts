@@ -91,6 +91,7 @@ export function useGeneratePost() {
       base_image_url?: string;
       character_image_url?: string;
       background_image_url?: string;
+      caption?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
