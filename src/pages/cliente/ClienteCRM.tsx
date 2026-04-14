@@ -266,7 +266,9 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
     const totalValue = activeLeads.reduce((s, l) => s + (l.value || 0), 0);
     const wonLeads = filteredLeads.filter(l => l.won_at);
     const wonValue = wonLeads.reduce((s, l) => s + (l.value || 0), 0);
-    const convRate = filteredLeads.length > 0 ? Math.round((wonLeads.length / filteredLeads.length) * 100) : 0;
+    const lostLeads = filteredLeads.filter(l => l.lost_at);
+    const closedLeads = wonLeads.length + lostLeads.length;
+    const convRate = closedLeads > 0 ? Math.round((wonLeads.length / closedLeads) * 100) : 0;
     const avgValue = activeLeads.length > 0 ? Math.round(totalValue / activeLeads.length) : 0;
     return { totalLeads: activeLeads.length, totalValue, wonLeads: wonLeads.length, wonValue, convRate, avgValue };
   }, [filteredLeads]);
