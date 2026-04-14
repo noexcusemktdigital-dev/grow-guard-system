@@ -462,13 +462,21 @@ function buildUserPrompt(answers: Record<string, unknown>, section: string): str
     })
     .join("\n");
 
-  return `Com base nas respostas do briefing do cliente abaixo, gere o ${
-    section === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO (com scores automáticos de marketing e comercial, persona e análise de concorrência)" :
-    section === "strategic" ? "PLANEJAMENTO ESTRATÉGICO DAS 5 ETAPAS" :
-    "PROJEÇÕES FINANCEIRAS E ENTREGÁVEIS"
-  }.
+  const sectionLabel =
+    section === "gps" || section === "marketing-core"
+      ? "DIAGNÓSTICO GPS DO NEGÓCIO — MARKETING (scores de marketing, persona, ICP, posicionamento, tom de voz, canais, concorrência, projeções e plano de execução)"
+      : section === "marketing-growth"
+      ? "DIAGNÓSTICO GPS DO NEGÓCIO — CRESCIMENTO (estratégias de crescimento, roadmap 90 dias, oportunidades de mercado e recomendações de canais pagos)"
+      : section === "comercial"
+      ? "DIAGNÓSTICO GPS DO NEGÓCIO — COMERCIAL (score comercial, radar 5 eixos, funil reverso, insights comerciais, estratégias de vendas, projeções de receita e plano de ação comercial)"
+      : section === "strategic"
+      ? "PLANEJAMENTO ESTRATÉGICO DAS 5 ETAPAS"
+      : "PROJEÇÕES FINANCEIRAS E ENTREGÁVEIS";
+
+  return `Com base nas respostas do briefing do cliente abaixo, gere o ${sectionLabel}.
 
 RESPOSTAS DO BRIEFING:
+
 ${answersText}
 
 Use a ferramenta generate_strategy para retornar.`;
@@ -587,11 +595,11 @@ Deno.serve(async (req) => {
     if (section) {
       const configs: Record<string, { schema: any; prompt: string }> = {
         "gps": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
-        "strategic": { schema: STRATEGIC_PLAN_SCHEMA, prompt: STRATEGIC_PLAN_PROMPT },
-        "projections": { schema: PROJECTIONS_SCHEMA, prompt: PROJECTIONS_PROMPT },
         "marketing-core": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
         "marketing-growth": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
         "comercial": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
+        "strategic": { schema: STRATEGIC_PLAN_SCHEMA, prompt: STRATEGIC_PLAN_PROMPT },
+        "projections": { schema: PROJECTIONS_SCHEMA, prompt: PROJECTIONS_PROMPT },
       };
       const config = configs[section];
       if (!config) {
