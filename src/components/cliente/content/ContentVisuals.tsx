@@ -67,7 +67,13 @@ export function VideoVisual({ content }: { content: any }) {
         {content.texto_tela && (
           <div className="rounded-lg bg-muted/40 p-3">
             <p className="text-xs font-semibold text-muted-foreground mb-1">Texto na tela</p>
-            <p className="text-sm">{content.texto_tela}</p>
+            {Array.isArray(content.texto_tela) ? (
+              <ul className="text-sm space-y-1 list-disc list-inside">
+                {content.texto_tela.map((t: string, i: number) => <li key={i}>{t}</li>)}
+              </ul>
+            ) : (
+              <p className="text-sm">{content.texto_tela}</p>
+            )}
           </div>
         )}
       </div>

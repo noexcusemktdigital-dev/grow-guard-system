@@ -22,12 +22,61 @@ export interface ContentBatch {
   items: import("@/hooks/useClienteContentV2").ContentItem[];
 }
 
+/**
+ * Converts a Python-style dict/list string into valid JSON.
+ * Uses a state-machine to handle internal apostrophes within values.
+ */
+function pythonToJson(src: string): string {
+  let s = src.trim();
+  s = s.replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
+
+  const out: string[] = [];
+  let inString = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+
+    if (inString) {
+      if (c === "'") {
+        // Check if this quote ends the string:
+        // Look ahead (skip whitespace) for structural chars: , ] } :
+        const rest = s.slice(i + 1).trimStart();
+        const next = rest[0] || "";
+        if ([",", "]", "}", ":"].includes(next) || rest.length === 0) {
+          out.push('"');
+          inString = false;
+          continue;
+        }
+        // Internal apostrophe — keep as-is
+        out.push("'");
+        continue;
+      }
+      if (c === '"') {
+        out.push('\\"');
+        continue;
+      }
+      out.push(c);
+    } else {
+      if (c === "'") {
+        out.push('"');
+        inString = true;
+      } else {
+        out.push(c);
+      }
+    }
+  }
+
+  return out.join("");
+}
+
 export function parseConteudoPrincipal(raw: unknown): unknown {
   if (!raw) return null;
   if (typeof raw === "string") {
     try { return JSON.parse(raw); } catch {}
+    try { return JSON.parse(pythonToJson(raw)); } catch {}
+    // Last resort: brute-force
     try {
-      const fixed = raw.replace(/'/g, '"').replace(/None/g, "null").replace(/True/g, "true").replace(/False/g, "false");
+      const fixed = raw.replace(/'/g, '"').replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
       return JSON.parse(fixed);
     } catch { return raw; }
   }
