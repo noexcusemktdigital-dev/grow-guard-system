@@ -96,7 +96,7 @@ export interface ArtTextItem {
   subheadlineOptions?: string[];
 }
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 14;
 
 export function ArtWizard({
   orgId, visualIdentity, contentHistory, contentData, setContentData,
@@ -391,10 +391,10 @@ export function ArtWizard({
   );
 
   const stepLabels: Record<number, string> = {
-    1: "Formato",
-    2: "Objetivo",
-    3: "Tema",
-    4: "Revisão",
+    1: "Destino", 2: "Formato", 3: "Tipo", 4: "Objetivo",
+    5: "Tema", 6: "Texto", 7: "Público", 8: "Layout",
+    9: "Referências", 10: "Logo", 11: "Imagens",
+    12: "Elementos", 13: "Restrições", 14: "Revisão",
   };
 
   const renderStep = () => {
