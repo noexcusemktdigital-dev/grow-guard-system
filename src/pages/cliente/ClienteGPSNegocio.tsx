@@ -161,6 +161,7 @@ export default function ClienteGPSNegocio() {
   const { data: activeStrategy, isLoading } = useActiveStrategy();
   const { data: history } = useStrategyHistory();
   const { data: orgId } = useUserOrgId();
+  const { update: updateOrg } = useOrgProfile();
   const { data: wallet } = useClienteWallet();
   const { data: salesPlan, isLoading: isLoadingSalesPlan } = useSalesPlan();
   const saveStrategy = useSaveStrategy();
