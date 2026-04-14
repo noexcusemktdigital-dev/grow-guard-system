@@ -23,6 +23,7 @@ export interface PostItem {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  caption: string | null;
 }
 
 export function usePostHistory() {
@@ -190,6 +191,7 @@ export function useGeneratePost() {
           result_data,
           status: "pending",
           created_by: user?.id,
+          caption: payload.caption || null,
         } as any)
         .select()
         .single();
