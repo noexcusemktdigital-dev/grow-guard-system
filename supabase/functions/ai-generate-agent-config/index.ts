@@ -120,15 +120,27 @@ Gere um system prompt detalhado e prático em português brasileiro.`;
     const data = await aiResponse.json();
     const result = data.choices?.[0]?.message?.content || "";
 
-    // Debit credits after successful generation
+    // Debit credits after successful generation — only after first GPS is approved
     if (organization_id) {
       try {
-        await supabaseAdmin.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST,
-          _description: `Config. automática agente (${type})`,
-          _source: "ai-generate-agent-config",
-        });
+        const { data: gpsApproved } = await supabaseAdmin
+          .from("marketing_strategies")
+          .select("id")
+          .eq("organization_id", organization_id)
+          .eq("status", "approved")
+          .limit(1)
+          .maybeSingle();
+
+        if (!gpsApproved) {
+          console.log("GPS not yet approved — skipping credit debit");
+        } else {
+          await supabaseAdmin.rpc("debit_credits", {
+            _org_id: organization_id,
+            _amount: CREDIT_COST,
+            _description: `Config. automática agente (${type})`,
+            _source: "ai-generate-agent-config",
+          });
+        }
       } catch (debitErr) {
         console.error("Debit error (non-blocking):", debitErr);
       }

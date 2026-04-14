@@ -294,14 +294,26 @@ Sempre responda em português brasileiro. Seja prático, direto e use linguagem 
         model: "google/gemini-3-flash-preview",
       });
 
-      // Debit credits
+      // Debit credits — only after first GPS is approved
       try {
-        await serviceClient.rpc("debit_credits", {
-          _org_id: orgData,
-          _amount: CREDIT_COST,
-          _description: `Prospecção IA (${nicho})`,
-          _source: "generate-prospection",
-        });
+        const { data: gpsApproved } = await serviceClient
+          .from("marketing_strategies")
+          .select("id")
+          .eq("organization_id", orgData)
+          .eq("status", "approved")
+          .limit(1)
+          .maybeSingle();
+
+        if (!gpsApproved) {
+          console.log("GPS not yet approved — skipping credit debit");
+        } else {
+          await serviceClient.rpc("debit_credits", {
+            _org_id: orgData,
+            _amount: CREDIT_COST,
+            _description: `Prospecção IA (${nicho})`,
+            _source: "generate-prospection",
+          });
+        }
       } catch (debitErr) {
         console.error("Debit error (non-blocking):", debitErr);
       }

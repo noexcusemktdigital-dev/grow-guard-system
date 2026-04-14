@@ -50,23 +50,35 @@ serve(async (req) => {
     const organization_id = body.organization_id;
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Skip credit debit on edit mode
+    // Skip credit debit on edit mode and before GPS is approved
     if (!edit_mode && organization_id) {
-      const { error: debitError } = await adminClient.rpc("debit_credits", {
-        _org_id: organization_id,
-        _amount: CREDIT_COST,
-        _description: "Geração de site com IA",
-        _source: "generate-site",
-      });
-      if (debitError) {
-        const isInsufficient = debitError.message?.includes("INSUFFICIENT_CREDITS") || debitError.message?.includes("WALLET_NOT_FOUND");
-        return new Response(
-          JSON.stringify({
-            error: isInsufficient ? `Créditos insuficientes. Você precisa de ${CREDIT_COST} créditos.` : "Erro ao debitar créditos.",
-            code: isInsufficient ? "INSUFFICIENT_CREDITS" : "DEBIT_ERROR",
-          }),
-          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
+      const { data: gpsApproved } = await adminClient
+        .from("marketing_strategies")
+        .select("id")
+        .eq("organization_id", organization_id)
+        .eq("status", "approved")
+        .limit(1)
+        .maybeSingle();
+
+      if (!gpsApproved) {
+        console.log("GPS not yet approved — skipping credit debit");
+      } else {
+        const { error: debitError } = await adminClient.rpc("debit_credits", {
+          _org_id: organization_id,
+          _amount: CREDIT_COST,
+          _description: "Geração de site com IA",
+          _source: "generate-site",
+        });
+        if (debitError) {
+          const isInsufficient = debitError.message?.includes("INSUFFICIENT_CREDITS") || debitError.message?.includes("WALLET_NOT_FOUND");
+          return new Response(
+            JSON.stringify({
+              error: isInsufficient ? `Créditos insuficientes. Você precisa de ${CREDIT_COST} créditos.` : "Erro ao debitar créditos.",
+              code: isInsufficient ? "INSUFFICIENT_CREDITS" : "DEBIT_ERROR",
+            }),
+            { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 

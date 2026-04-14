@@ -128,15 +128,27 @@ Deno.serve(async (req) => {
     }
     reply = reply.replace(/\[AI_ACTION:[^\]]+\]/g, "").trim();
 
-    // Debit credits after successful simulation
+    // Debit credits after successful simulation — only after first GPS is approved
     if (organization_id) {
       try {
-        await supabaseAdmin.rpc("debit_credits", {
-          _org_id: organization_id,
-          _amount: CREDIT_COST,
-          _description: "Simulação de agente IA",
-          _source: "ai-agent-simulate",
-        });
+        const { data: gpsApproved } = await supabaseAdmin
+          .from("marketing_strategies")
+          .select("id")
+          .eq("organization_id", organization_id)
+          .eq("status", "approved")
+          .limit(1)
+          .maybeSingle();
+
+        if (!gpsApproved) {
+          console.log("GPS not yet approved — skipping credit debit");
+        } else {
+          await supabaseAdmin.rpc("debit_credits", {
+            _org_id: organization_id,
+            _amount: CREDIT_COST,
+            _description: "Simulação de agente IA",
+            _source: "ai-agent-simulate",
+          });
+        }
       } catch (debitErr) {
         console.error("Debit error (non-blocking):", debitErr);
       }
