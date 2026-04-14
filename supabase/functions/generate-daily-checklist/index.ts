@@ -303,14 +303,22 @@ Gere o checklist diário personalizado.`;
     const { error: insertError } = await supabase.from("client_checklist_items").insert(inserts);
     if (insertError) throw insertError;
 
-    // Debit credits
+    // Debit credits — skip for trial users
     try {
-      await supabase.rpc("debit_credits", {
-        _org_id: orgId,
-        _amount: CREDIT_COST,
-        _description: "Checklist diário gerado por IA",
-        _source: "generate-daily-checklist",
-      });
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("organization_id", orgId)
+        .maybeSingle();
+
+      if (sub?.status !== "trial") {
+        await supabase.rpc("debit_credits", {
+          _org_id: orgId,
+          _amount: CREDIT_COST,
+          _description: "Checklist diário gerado por IA",
+          _source: "generate-daily-checklist",
+        });
+      }
     } catch (debitErr) {
       console.error("Debit error (non-blocking):", debitErr);
     }
