@@ -120,19 +120,20 @@ export function useApproveStrategy() {
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
-      // Check if trial — skip debit for trial users (GPS is free)
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("status")
+      // Primeiro GPS é sempre gratuito — cobra só a partir do segundo
+      const { data: previousStrategies } = await supabase
+        .from("marketing_strategies" as any)
+        .select("id")
         .eq("organization_id", orgId)
-        .maybeSingle();
+        .eq("status", "approved");
 
-      if (sub?.status !== "trial") {
-        // Call debit via RPC (server-side)
+      const isFirstGPS = !previousStrategies || previousStrategies.length === 0;
+
+      if (!isFirstGPS) {
         const { error: debitError } = await supabase.rpc("debit_credits" as any, {
           _org_id: orgId,
           _amount: 50,
-          _description: "Estratégia de marketing aprovada",
+          _description: "Novo GPS do Negócio aprovado",
           _source: "marketing-strategy",
         });
         if (debitError) throw debitError;
