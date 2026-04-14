@@ -84,8 +84,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const [bulkMoveStage, setBulkMoveStage] = useState("");
   const [bulkTagInput, setBulkTagInput] = useState("");
   const [bulkAssigned, setBulkAssigned] = useState("");
-  const [tutorialOpen, setTutorialOpen] = useState(() => !localStorage.getItem("crm_gps_tutorial_v2"));
   const [tourActive, setTourActive] = useState(() => !localStorage.getItem("crm_tour_v1"));
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   // All filters
   const [filterSource, setFilterSource] = useState("");
@@ -484,7 +484,13 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
         </AlertDialogContent>
       </AlertDialog>
 
-      <CrmTourGuide active={tourActive} onFinish={() => setTourActive(false)} />
+      <CrmTourGuide active={tourActive} onFinish={() => {
+        setTourActive(false);
+        // Após o tour, abre o tutorial se nunca foi visto
+        if (!localStorage.getItem("crm_gps_tutorial_v2")) {
+          setTutorialOpen(true);
+        }
+      }} />
     </div>
   );
 }
