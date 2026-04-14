@@ -56,9 +56,16 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
   const isFirstGPS = !history || history.length === 0;
   if (!result) return null;
 
+  // Normaliza campo diagnostico_gps → diagnostico para compatibilidade
+  const normalizedResult = {
+    ...result,
+    diagnostico: (result as any).diagnostico || (result as any).diagnostico_gps || null,
+  };
+  const result_ = normalizedResult;
+
   const daysSinceCreation = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
   const isStale = daysSinceCreation >= 30;
-  const hasComercial = !!result.diagnostico_comercial;
+  const hasComercial = !!result_.diagnostico_comercial;
 
   return (
     <div className="space-y-4">
@@ -68,8 +75,8 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
             <div className="flex items-center gap-4">
               <div className="relative flex gap-2">
-                <ScoreRing score={result.diagnostico?.score_geral ?? 0} label="Marketing" size={70} />
-                {hasComercial && <ScoreRing score={(result.diagnostico_comercial as any)?.score_comercial ?? 0} label="Comercial" size={70} />}
+                <ScoreRing score={result_.diagnostico?.score_geral ?? 0} label="Marketing" size={70} />
+                {hasComercial && <ScoreRing score={(result_.diagnostico_comercial as any)?.score_comercial ?? 0} label="Comercial" size={70} />}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
