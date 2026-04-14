@@ -1,5 +1,6 @@
 // @ts-nocheck
-import React from "react";
+import React, { useMemo } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -307,6 +308,11 @@ function Step5Topic({ topic, setTopic, suggestions }: StepProps) {
 
 /* ── Step 6: Text Mode ── */
 function Step6TextMode({ textMode, setTextMode, briefingText, setBriefingText, mandatoryPhrase, setMandatoryPhrase }: StepProps) {
+  const totalChars = useMemo(() => {
+    return (briefingText?.length || 0) + (mandatoryPhrase?.length || 0);
+  }, [briefingText, mandatoryPhrase]);
+  const isOverLimit = totalChars > 150;
+
   return (
     <div className="space-y-4">
       <div>
@@ -325,13 +331,26 @@ function Step6TextMode({ textMode, setTextMode, briefingText, setBriefingText, m
         ))}
       </div>
       {textMode === "manual" && (
-        <Textarea
-          placeholder="Descreva o que quer comunicar na arte..."
-          value={briefingText}
-          onChange={(e) => setBriefingText(e.target.value)}
-          rows={3}
-          className="resize-none"
-        />
+        <div>
+          <Textarea
+            placeholder="Descreva o que quer comunicar na arte..."
+            value={briefingText}
+            onChange={(e) => setBriefingText(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+          <div className="flex items-center justify-between mt-1">
+            <span className={`text-[10px] ${isOverLimit ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+              {totalChars}/150 caracteres
+            </span>
+            {isOverLimit && (
+              <span className="text-[10px] text-destructive flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Texto longo pode poluir a arte
+              </span>
+            )}
+          </div>
+        </div>
       )}
       <div>
         <Label className="text-xs">Frase obrigatória (opcional)</Label>
