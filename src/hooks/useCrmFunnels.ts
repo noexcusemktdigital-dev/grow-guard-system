@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { supabase as supabaseClient } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { DEFAULT_STAGES, FunnelStage } from "@/components/crm/CrmStageSystem";
 
