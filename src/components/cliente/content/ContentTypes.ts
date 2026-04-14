@@ -26,8 +26,28 @@ export function parseConteudoPrincipal(raw: unknown): unknown {
   if (!raw) return null;
   if (typeof raw === "string") {
     try { return JSON.parse(raw); } catch {}
+    // Attempt to fix Python-style dict/list strings
     try {
-      const fixed = raw.replace(/'/g, '"').replace(/None/g, "null").replace(/True/g, "true").replace(/False/g, "false");
+      let s = raw.trim();
+      // Replace Python literals
+      s = s.replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
+      // Smart single-to-double quote conversion:
+      // Match keys and values delimited by single quotes, handling internal apostrophes
+      // Strategy: replace quotes around keys/values contextually
+      s = s.replace(/(?<=[\[{,:])\s*'((?:[^'\\]|\\.|'(?=[a-zA-ZÀ-ÿ]))*?)'\s*(?=[,\]}\:])/g, '"$1"');
+      // Also handle leading key quotes: 'key':
+      s = s.replace(/'([^']{1,60}?)'\s*:/g, '"$1":');
+      // Handle remaining string values: : 'value'
+      s = s.replace(/:\s*'((?:[^'\\]|\\.)*?)'\s*(?=[,\]}])/g, ': "$1"');
+      // Handle array string items: ['item1', 'item2']
+      s = s.replace(/\[\s*'((?:[^'\\]|\\.)*?)'/g, '["$1"');
+      s = s.replace(/,\s*'((?:[^'\\]|\\.)*?)'\s*(?=[\],])/g, ', "$1"');
+      s = s.replace(/,\s*'((?:[^'\\]|\\.)*?)'\s*\]/g, ', "$1"]');
+      return JSON.parse(s);
+    } catch {}
+    // Last resort: try brute-force replacing all single quotes
+    try {
+      const fixed = raw.replace(/'/g, '"').replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
       return JSON.parse(fixed);
     } catch { return raw; }
   }
