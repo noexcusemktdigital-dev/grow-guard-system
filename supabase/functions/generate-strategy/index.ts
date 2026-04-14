@@ -338,7 +338,15 @@ GERE:
 
 6. ANÁLISE DE CONCORRÊNCIA: Analise os concorrentes informados com pontos fortes, fracos e oportunidades
 
-7. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
+7. TOM DE COMUNICAÇÃO: Defina o tom de voz ideal para a marca com base no segmento, público e posicionamento. Inclua:
+   - Tom principal (ex: "Educativo e acessível", "Profissional e inspirador")
+   - 3-5 traços de personalidade da marca
+   - 5-8 palavras/expressões que a marca DEVE usar
+   - 5-8 palavras/expressões que a marca deve EVITAR
+   - Um exemplo de mensagem no tom ideal
+   - Nível de formalidade (Casual, Equilibrado, Formal)
+
+8. KPIs HERO: Meta faturamento, ticket médio, recorrência, LTV/CAC
 
 REGRAS CRÍTICAS DE QUALIDADE:
 
