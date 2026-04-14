@@ -248,11 +248,23 @@ export function ArtWizard({
   );
 
   const canProceed = () => {
-    if (step === 1) return !!artFormat; // formato escolhido
-    if (step === 2) return !!tipoPostagem && !!objective; // tipo e objetivo
-    if (step === 3) return topic.trim().length > 2; // tema definido
-    if (step === 4) return true; // revisão — sempre pode gerar
-    return false;
+    switch (step) {
+      case 1: return true;
+      case 2: return !!artFormat;
+      case 3: return !!tipoPostagem;
+      case 4: return !!objective;
+      case 5: return !!topic.trim();
+      case 6: return textMode === "ai" || !!(briefingText.trim());
+      case 7: return true;
+      case 8: return true;
+      case 9: return referenceUrls.length >= 1;
+      case 10: return true;
+      case 11: return true;
+      case 12: return true;
+      case 13: return true;
+      case 14: return allTextsApproved;
+      default: return true;
+    }
   };
 
   const handleStepChange = (nextStep: number) => {
@@ -317,7 +329,7 @@ export function ArtWizard({
       toast({ title: "Aprove todos os textos de todas as peças", variant: "destructive" });
       return;
     }
-    if (referenceUrls.length < 3) {
+    if (false) { // referências são opcionais
       toast({ title: "Envie pelo menos 3 referências", variant: "destructive" });
       return;
     }
