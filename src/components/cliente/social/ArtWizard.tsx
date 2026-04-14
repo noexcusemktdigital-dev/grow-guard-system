@@ -108,6 +108,28 @@ export function ArtWizard({
   const suggestions = useMemo(() => getSmartSuggestions(strategyData), [strategyData]);
   const referenceMemory = useReferenceMemory(orgId);
 
+  // Auto-fill from GPS on first open
+  useEffect(() => {
+    if (strategyData.hasStrategy) {
+      // Pré-preenche público com ICP do GPS
+      if (!audience && strategyData.publicoAlvo) {
+        setAudience(strategyData.publicoAlvo.slice(0, 200));
+      }
+      // Pré-preenche objetivo com base no objetivo do GPS
+      if (!objective && strategyData.objetivoPrincipal) {
+        const objMap: Record<string, string> = {
+          gerar_leads: "leads",
+          aumentar_vendas: "sales",
+          aumentar_autoridade: "authority",
+          fidelizar: "engagement",
+          lancar_produto: "sales",
+        };
+        const mapped = objMap[strategyData.objetivoPrincipal as string];
+        if (mapped) setObjective(mapped);
+      }
+    }
+  }, [strategyData.hasStrategy]);
+
   // Step 1: Material type
   const [outputMode, setOutputMode] = useState<"digital" | "print">("digital");
   const [printType, setPrintType] = useState("flyer");
