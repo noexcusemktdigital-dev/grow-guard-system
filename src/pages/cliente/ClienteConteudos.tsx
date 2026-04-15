@@ -138,11 +138,21 @@ export default function ClienteConteudos() {
   const handleApproveAll = async () => {
     setConfirmApproveAll(false);
     try {
-      await approveBatchMutation.mutateAsync(generatedIds);
-      toast({ title: "Lote aprovado!", description: `${generatedIds.length * CREDIT_COST_APPROVE_CONTENT} créditos debitados.` });
+      const result = await approveBatchMutation.mutateAsync(generatedIds);
+      const approved = (result as any)?.approved ?? generatedIds.length;
+      const skipped = (result as any)?.skipped ?? 0;
+
+      if (approved === 0) {
+        toast({ title: "Todos já aprovados!", description: "Nenhum crédito debitado." });
+      } else {
+        toast({
+          title: "Lote aprovado!",
+          description: `${approved * CREDIT_COST_APPROVE_CONTENT} créditos debitados.${skipped > 0 ? ` ${skipped} já estavam aprovados.` : ""}`,
+        });
+      }
     } catch (err: unknown) {
       if (isInsufficientCreditsError(err)) setShowCreditsDialog(true);
-      else toast({ title: "Erro", description: err?.message, variant: "destructive" });
+      else toast({ title: "Erro", description: (err as Error)?.message, variant: "destructive" });
     }
   };
 
