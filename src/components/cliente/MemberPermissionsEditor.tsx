@@ -38,7 +38,7 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
 
   const [selectedProfileId, setSelectedProfileId] = useState("custom");
   const [perms, setPerms] = useState(DEFAULT_PERMISSIONS);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [dirty, setDirty] = useState(false);
 
   // Carrega permissões existentes
@@ -92,7 +92,7 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
         can_use_whatsapp: perms.can_use_whatsapp,
         can_manage_crm: perms.can_manage_crm,
       });
-      toast({ title: "Permissões salvas!" });
+      toast({ title: "Permissões salvas!", description: `Permissões de ${userName} atualizadas com sucesso.` });
       setDirty(false);
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
@@ -257,11 +257,14 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
               </div>
             </div>
 
-            {dirty && (
-              <Button onClick={handleSave} disabled={saveMutation.isPending} className="w-full">
-                {saveMutation.isPending ? "Salvando..." : "Salvar permissões"}
-              </Button>
-            )}
+            <Button
+              onClick={handleSave}
+              disabled={saveMutation.isPending || !dirty}
+              className={`w-full ${dirty ? "opacity-100" : "opacity-50"}`}
+              variant={dirty ? "default" : "outline"}
+            >
+              {saveMutation.isPending ? "Salvando..." : dirty ? "Salvar permissões ●" : "Permissões salvas ✓"}
+            </Button>
           </CardContent>
         </Card>
       )}
