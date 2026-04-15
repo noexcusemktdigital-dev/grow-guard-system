@@ -1,15 +1,36 @@
 
 
-## Plano: Criar migration do Sistema de Permissões Granulares
+## Correções no MemberPermissionsEditor
 
-### Resumo
-Criar uma única migration SQL contendo todo o sistema de permissões granulares: tabelas `permission_profiles` e `member_permissions`, coluna `permission_profile_id` em `org_teams`, políticas RLS e função `get_member_permissions`.
+Três alterações no arquivo `src/components/cliente/MemberPermissionsEditor.tsx`:
 
-### Mudança
+1. **Painel expandido por padrão** — Linha 41: trocar `useState(false)` por `useState(true)`
 
-| Ação | Detalhe |
-|---|---|
-| Migration SQL | Cria `permission_profiles`, `member_permissions`, altera `org_teams`, cria função `get_member_permissions` com hierarquia individual > time > padrão |
+2. **Botão Salvar sempre visível** — Linhas 260-264: remover condicional `{dirty && ...}` e substituir por botão que muda aparência conforme estado (disabled quando não há mudanças, destaque quando há)
 
-O SQL será exatamente o conteúdo fornecido, executado via ferramenta de migração.
+3. **Toast mais descritivo** — Linha 95: incluir `description` com nome do usuário no toast de sucesso
+
+### Alterações técnicas
+
+**Linha 41:**
+```typescript
+const [expanded, setExpanded] = useState(true);
+```
+
+**Linhas 88-96 (handleSave):**
+```typescript
+toast({ title: "Permissões salvas!", description: `Permissões de ${userName} atualizadas com sucesso.` });
+```
+
+**Linhas 260-264 (botão):**
+```tsx
+<Button
+  onClick={handleSave}
+  disabled={saveMutation.isPending || !dirty}
+  className={`w-full ${dirty ? "opacity-100" : "opacity-50"}`}
+  variant={dirty ? "default" : "outline"}
+>
+  {saveMutation.isPending ? "Salvando..." : dirty ? "Salvar permissões ●" : "Permissões salvas ✓"}
+</Button>
+```
 
