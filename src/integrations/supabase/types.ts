@@ -6774,8 +6774,10 @@ export type Database = {
           instance_id: string | null
           is_archived: boolean | null
           is_pinned: boolean | null
+          jid: string | null
           last_message_at: string | null
           last_message_preview: string | null
+          linked_id: string | null
           name: string | null
           organization_id: string
           participant_count: number | null
@@ -6795,8 +6797,10 @@ export type Database = {
           instance_id?: string | null
           is_archived?: boolean | null
           is_pinned?: boolean | null
+          jid?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          linked_id?: string | null
           name?: string | null
           organization_id: string
           participant_count?: number | null
@@ -6816,8 +6820,10 @@ export type Database = {
           instance_id?: string | null
           is_archived?: boolean | null
           is_pinned?: boolean | null
+          jid?: string | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          linked_id?: string | null
           name?: string | null
           organization_id?: string
           participant_count?: number | null
@@ -6852,6 +6858,7 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          anti_ban_settings: Json
           asaas_subscription_id: string | null
           base_url: string | null
           billing_status: string | null
@@ -6863,12 +6870,14 @@ export type Database = {
           organization_id: string
           phone_number: string | null
           provider: string
+          send_stats: Json
           status: string
           token: string
           updated_at: string
           webhook_url: string | null
         }
         Insert: {
+          anti_ban_settings?: Json
           asaas_subscription_id?: string | null
           base_url?: string | null
           billing_status?: string | null
@@ -6880,12 +6889,14 @@ export type Database = {
           organization_id: string
           phone_number?: string | null
           provider?: string
+          send_stats?: Json
           status?: string
           token: string
           updated_at?: string
           webhook_url?: string | null
         }
         Update: {
+          anti_ban_settings?: Json
           asaas_subscription_id?: string | null
           base_url?: string | null
           billing_status?: string | null
@@ -6897,6 +6908,7 @@ export type Database = {
           organization_id?: string
           phone_number?: string | null
           provider?: string
+          send_stats?: Json
           status?: string
           token?: string
           updated_at?: string
@@ -6912,15 +6924,91 @@ export type Database = {
           },
         ]
       }
+      whatsapp_media_archive: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          error_message: string | null
+          expires_at: string
+          file_size_bytes: number | null
+          id: string
+          instance_id: string | null
+          message_external_id: string | null
+          mime_type: string | null
+          organization_id: string
+          original_url: string
+          provider: string
+          retry_count: number
+          status: string
+          storage_path: string | null
+          storage_url: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at: string
+          file_size_bytes?: number | null
+          id?: string
+          instance_id?: string | null
+          message_external_id?: string | null
+          mime_type?: string | null
+          organization_id: string
+          original_url: string
+          provider?: string
+          retry_count?: number
+          status?: string
+          storage_path?: string | null
+          storage_url?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          file_size_bytes?: number | null
+          id?: string
+          instance_id?: string | null
+          message_external_id?: string | null
+          mime_type?: string | null
+          organization_id?: string
+          original_url?: string
+          provider?: string
+          retry_count?: number
+          status?: string
+          storage_path?: string | null
+          storage_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_media_archive_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_media_archive_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
+          archived_media_url: string | null
           contact_id: string
           content: string | null
           created_at: string
+          deleted_at: string | null
           direction: string
           id: string
           is_deleted: boolean | null
           is_starred: boolean | null
+          linked_id: string | null
+          media_archived_at: string | null
           media_url: string | null
           message_id_zapi: string | null
           metadata: Json
@@ -6929,13 +7017,17 @@ export type Database = {
           type: string
         }
         Insert: {
+          archived_media_url?: string | null
           contact_id: string
           content?: string | null
           created_at?: string
+          deleted_at?: string | null
           direction?: string
           id?: string
           is_deleted?: boolean | null
           is_starred?: boolean | null
+          linked_id?: string | null
+          media_archived_at?: string | null
           media_url?: string | null
           message_id_zapi?: string | null
           metadata?: Json
@@ -6944,13 +7036,17 @@ export type Database = {
           type?: string
         }
         Update: {
+          archived_media_url?: string | null
           contact_id?: string
           content?: string | null
           created_at?: string
+          deleted_at?: string | null
           direction?: string
           id?: string
           is_deleted?: boolean | null
           is_starred?: boolean | null
+          linked_id?: string | null
+          media_archived_at?: string | null
           media_url?: string | null
           message_id_zapi?: string | null
           metadata?: Json
@@ -6971,6 +7067,32 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_send_recipients: {
+        Row: {
+          date_key: string
+          instance_id: string
+          recipient: string
+        }
+        Insert: {
+          date_key: string
+          instance_id: string
+          recipient: string
+        }
+        Update: {
+          date_key?: string
+          instance_id?: string
+          recipient?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_send_recipients_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
             referencedColumns: ["id"]
           },
         ]
@@ -7024,6 +7146,7 @@ export type Database = {
         Returns: undefined
       }
       cleanup_ads_oauth_states: { Args: never; Returns: undefined }
+      cleanup_send_recipients: { Args: never; Returns: undefined }
       collect_meta_noe_insights: {
         Args: {
           p_acct_id: number
@@ -7481,6 +7604,10 @@ export type Database = {
         Returns: boolean
       }
       increment_referral_uses: { Args: { _org_id: string }; Returns: undefined }
+      increment_send_stats: {
+        Args: { p_date_key: string; p_instance_id: string; p_recipient: string }
+        Returns: undefined
+      }
       insert_support_access_log: {
         Args: {
           _action: string
