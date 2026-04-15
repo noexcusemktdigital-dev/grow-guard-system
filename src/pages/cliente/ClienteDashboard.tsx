@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { formatBRL } from "@/lib/formatting";
+import { CHART_COLORS, CHART_PALETTE, CHART_GRID_COLOR, ChartTooltip, formatBRL as formatBRLChart } from "@/lib/chartTheme";
 
 import {
   downloadCsv, downloadReportPdf, getDateRange, filterByDate,
