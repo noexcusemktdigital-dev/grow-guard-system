@@ -7015,6 +7015,10 @@ export type Database = {
         }
         Returns: string
       }
+      award_xp_to_user: {
+        Args: { _org_id: string; _user_id: string; _xp: number }
+        Returns: undefined
+      }
       bulk_add_tag: {
         Args: { _ids: string[]; _tag: string }
         Returns: undefined
