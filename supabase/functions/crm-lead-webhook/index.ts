@@ -205,6 +205,7 @@ Deno.serve(async (req) => {
         stage: firstStage,
         organization_id: orgId,
         assigned_to: assignedTo,
+        funnel_id: resolvedFunnelId,
       })
       .select("id")
       .single();
