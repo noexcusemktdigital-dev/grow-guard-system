@@ -15,9 +15,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // SEC-FIX SEC-NOE-003: HMAC-SHA256 signature validation — replaces plain Bearer string comparison.
-    // Callers must send: x-webhook-signature: sha256=<HMAC-SHA256(body, CRM_WEBHOOK_SECRET)>
-    // or x-hub-signature-256 (GitHub-compatible header). Simple Bearer tokens are rejected.
     const secret = Deno.env.get("CRM_WEBHOOK_SECRET");
     if (!secret) {
       console.error("CRM_WEBHOOK_SECRET not configured — rejecting all requests");
@@ -28,23 +25,36 @@ Deno.serve(async (req) => {
     }
 
     const rawBody = await req.text();
+
+    // Auth: accept HMAC-SHA256 signature OR simple x-api-key header
+    let authenticated = false;
+
+    // Method 1: HMAC-SHA256 signature (preferred)
     const sig = req.headers.get("x-webhook-signature") ?? req.headers.get("x-hub-signature-256") ?? "";
+    if (sig) {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+      const expected = "sha256=" + Array.from(new Uint8Array(mac))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      authenticated = sig === expected;
+    }
 
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
-    const expected = "sha256=" + Array.from(new Uint8Array(mac))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+    // Method 2: Simple API key header (for external sites like Balpas)
+    if (!authenticated) {
+      const apiKey = req.headers.get("x-api-key") ?? "";
+      authenticated = apiKey.length > 0 && apiKey === secret;
+    }
 
-    if (sig !== expected) {
-      console.warn("[crm-lead-webhook] Invalid or missing HMAC signature");
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+    if (!authenticated) {
+      console.warn("[crm-lead-webhook] Invalid or missing authentication");
+      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
         status: 401,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
