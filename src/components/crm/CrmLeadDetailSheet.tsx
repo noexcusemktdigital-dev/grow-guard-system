@@ -8,6 +8,7 @@ import {
   MoreHorizontal, ArrowRight, Loader2, Package
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { WhatsAppPhoneButton } from "@/components/crm/WhatsAppPhoneButton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -214,7 +215,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
           <div className="space-y-2">
             <div><Label className="text-xs">Nome</Label><Input value={editName} onChange={e => setEditName(e.target.value)} className="h-8 text-sm" /></div>
             <div className="grid grid-cols-2 gap-2">
-              <div><Label className="text-xs">Telefone</Label><Input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="h-8 text-sm" /></div>
+              <div><Label className="text-xs flex items-center gap-1">Telefone {editPhone && <WhatsAppPhoneButton phone={editPhone} size="xs" />}</Label><Input value={editPhone} onChange={e => setEditPhone(e.target.value)} className="h-8 text-sm" /></div>
               <div><Label className="text-xs">E-mail</Label><Input value={editEmail} onChange={e => setEditEmail(e.target.value)} className="h-8 text-sm" /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
