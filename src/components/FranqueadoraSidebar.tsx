@@ -36,7 +36,6 @@ const principalSection: SidebarItem[] = [
 ];
 
 const franquiaSection: SidebarItem[] = [
-  { label: "CRM Expansão", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Unidades", icon: Building2, path: "/franqueadora/unidades" },
   { label: "Onboarding", icon: Rocket, path: "/franqueadora/onboarding" },
   { label: "Candidatos", icon: Users, path: "/franqueadora/candidatos" },
@@ -44,7 +43,7 @@ const franquiaSection: SidebarItem[] = [
 ];
 
 const comercialSection: SidebarItem[] = [
-  { label: "CRM de Vendas", icon: TrendingUp, path: "/franqueadora/crm-vendas" },
+  { label: "CRM", icon: TrendingUp, path: "/franqueadora/crm" },
   { label: "Prospecção", icon: Sparkles, path: "/franqueadora/prospeccao" },
   { label: "Criador de Estratégia", icon: ClipboardCheck, path: "/franqueadora/estrategia" },
   { label: "Gerador de Proposta", icon: FileText, path: "/franqueadora/propostas" },

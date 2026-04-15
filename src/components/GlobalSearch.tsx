@@ -15,7 +15,7 @@ import {
 /* ─── Page definitions per portal ─── */
 const franqueadoraPages = [
   { label: "Início", path: "/franqueadora/inicio" },
-  { label: "CRM & Expansão", path: "/franqueadora/crm" },
+  { label: "CRM", path: "/franqueadora/crm" },
   { label: "Financeiro", path: "/franqueadora/financeiro" },
   { label: "Unidades", path: "/franqueadora/unidades" },
   { label: "Comunicados", path: "/franqueadora/comunicados" },
