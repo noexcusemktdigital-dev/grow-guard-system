@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
+import { MemberPermissionsEditor } from "@/components/cliente/MemberPermissionsEditor";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -116,6 +117,12 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
               </SelectContent>
             </Select>
           </div>
+          {member && (
+            <MemberPermissionsEditor
+              userId={member.user_id}
+              userName={member.full_name || "Usuário"}
+            />
+          )}
           {extraContent}
         </div>
         <DialogFooter className="flex items-center justify-between sm:justify-between gap-2">

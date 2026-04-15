@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { useState, useEffect, useRef } from "react";
+import { usePermissionProfiles, usePermissionProfileMutations } from "@/hooks/useMemberPermissions";
 import { useSearchParams } from "react-router-dom";
 import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -181,6 +182,10 @@ function UsersAndTeamsTab() {
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
+  const [profileManagerOpen, setProfileManagerOpen] = useState(false);
+  const { data: permProfiles } = usePermissionProfiles();
+  const { createProfile, deleteProfile } = usePermissionProfileMutations();
+  const [newProfileName, setNewProfileName] = useState("");
 
   const CLIENTE_ROLE_OPTIONS = [
     { value: "cliente_admin", label: "Admin" },
