@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     }
 
     const body = JSON.parse(rawBody);
-    const { name, email, phone, company, source, value, tags, custom_fields } = body;
+    const { name, email, phone, company, source, value, tags, custom_fields, funnel_id } = body;
 
     if (!name) {
       return new Response(JSON.stringify({ error: "Field 'name' is required" }), {
