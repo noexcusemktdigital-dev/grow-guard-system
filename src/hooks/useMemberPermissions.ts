@@ -77,7 +77,8 @@ export function useMemberPermissions() {
       return (data as MemberPermissions) ?? DEFAULT_USER_PERMISSIONS;
     },
     enabled: !!user?.id && !!orgId && !isAdmin,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
   });
 
   // Admin sempre retorna permissões completas sem bater no banco
