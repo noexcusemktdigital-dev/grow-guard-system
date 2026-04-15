@@ -14,6 +14,7 @@ import {
   ClipboardCheck, FileText, Trophy, XCircle, StickyNote,
   Clock, User, Eye, Plus,
 } from "lucide-react";
+import { WhatsAppPhoneButton } from "@/components/crm/WhatsAppPhoneButton";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
@@ -102,7 +103,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
         <div className="space-y-3 mb-4">
           {lead.company && <div className="flex items-center gap-2 text-sm"><Building2 className="w-4 h-4 text-muted-foreground" /><span>{lead.company}</span></div>}
           {lead.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" /><span>{lead.email}</span></div>}
-          {lead.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /><span>{lead.phone}</span></div>}
+          {lead.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /><span>{lead.phone}</span><WhatsAppPhoneButton phone={lead.phone} /></div>}
           {lead.value && Number(lead.value) > 0 && <div className="flex items-center gap-2 text-sm"><DollarSign className="w-4 h-4 text-muted-foreground" /><span className="font-medium">R$ {Number(lead.value).toLocaleString()}</span></div>}
           <div className="flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="w-3.5 h-3.5" /><span>Criado em {createdDate}</span></div>
         </div>
