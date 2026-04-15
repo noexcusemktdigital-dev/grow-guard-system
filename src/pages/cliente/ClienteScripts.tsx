@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { toast } from "@/hooks/use-toast";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { supabase } from "@/lib/supabase";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 import { ScriptContentRenderer } from "@/components/cliente/ScriptContentRenderer";
@@ -34,6 +35,8 @@ const funnelStages = [
 export default function ClienteScripts() {
   const { data: scripts, isLoading } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
+  const { permissions, isAdmin } = useMemberPermissions();
+  const canGenerate = isAdmin || permissions.can_generate_scripts;
   
   const { data: orgId } = useUserOrgId();
   const [search, setSearch] = useState("");
@@ -121,7 +124,7 @@ export default function ClienteScripts() {
         actions={
           <div className="flex items-center gap-2">
             <FeatureTutorialButton slug="scripts" />
-            <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Button size="sm" onClick={() => setShowCreate(true)} disabled={!canGenerate} title={!canGenerate ? "Sem permissão para criar scripts" : undefined}>
               <Plus className="w-4 h-4 mr-1" /> Novo Script
             </Button>
           </div>
@@ -158,7 +161,7 @@ export default function ClienteScripts() {
             <BookOpen className="w-12 h-12 text-muted-foreground/30 mb-4" />
             <p className="text-sm font-medium">Nenhum script cadastrado</p>
             <p className="text-xs text-muted-foreground mt-1 mb-4">Crie scripts com IA ou escreva manualmente para padronizar suas abordagens comerciais.</p>
-            <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Button size="sm" onClick={() => setShowCreate(true)} disabled={!canGenerate} title={!canGenerate ? "Sem permissão para criar scripts" : undefined}>
               <Plus className="w-4 h-4 mr-1" /> Novo Script
             </Button>
           </CardContent>
@@ -305,7 +308,7 @@ export default function ClienteScripts() {
                     {search ? `Nenhum resultado para "${search}"` : `Nenhum script de ${stage.label}`}
                   </p>
                   {!search && (
-                    <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="gap-1">
+                    <Button size="sm" variant="outline" onClick={() => setShowCreate(true)} className="gap-1" disabled={!canGenerate} title={!canGenerate ? "Sem permissão para criar scripts" : undefined}>
                       <Plus className="w-3.5 h-3.5" /> Criar Script de {stage.label}
                     </Button>
                   )}

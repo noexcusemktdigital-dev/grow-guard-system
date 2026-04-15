@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import {
   useContentHistory, useGenerateContent, useApproveContent,
   useApproveBatch, useContentQuota, useDeleteContent, CREDIT_COST_APPROVE_CONTENT,
@@ -34,6 +35,8 @@ const TOTAL_STEPS = 4;
 export default function ClienteConteudos() {
   const navigate = useNavigate();
   const strategy = useStrategyData();
+  const { permissions, isAdmin } = useMemberPermissions();
+  const canGenerate = isAdmin || permissions.can_generate_content;
   const { data: history } = useContentHistory();
   const quota = useContentQuota();
   const generateMutation = useGenerateContent();
@@ -270,6 +273,7 @@ export default function ClienteConteudos() {
               onPlataformaChange={setPlataforma}
               duracao={duracao}
               onDuracaoChange={setDuracao}
+              canGeneratePermission={canGenerate}
             />
           ) : (
             <div className="space-y-4">

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { logger } from "@/lib/logger";
 import {
   usePostHistory, useGeneratePost, useApprovePost, useDeletePost,
@@ -76,6 +77,8 @@ type MainView = "gallery" | "art-wizard" | "result";
 
 export default function ClienteRedesSociais() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { permissions, isAdmin } = useMemberPermissions();
+  const canGenerate = isAdmin || permissions.can_generate_posts;
   const [view, setView] = useState<MainView>("gallery");
 
   const [contentId, setContentId] = useState<string | null>(null);
@@ -128,6 +131,10 @@ export default function ClienteRedesSociais() {
   };
 
   const handleArtGenerate = async (payload: ArtGeneratePayload) => {
+    if (!canGenerate) {
+      toast({ title: "Sem permissão", description: "Você não tem permissão para gerar artes. Fale com o administrador.", variant: "destructive" });
+      return;
+    }
     if (!quota.canAffordArt) { setShowCreditsDialog(true); return; }
 
     setIsGenerating(true);
@@ -305,7 +312,7 @@ export default function ClienteRedesSociais() {
         <PostGallery
           posts={posts}
           isLoading={postsLoading}
-          onCreateNew={() => setView("art-wizard")}
+          onCreateNew={() => canGenerate ? setView("art-wizard") : toast({ title: "Sem permissão", description: "Você não tem permissão para gerar artes.", variant: "destructive" })}
           onViewPost={(post) => {
             setGeneratedResult({ post, result_url: post.result_url, result_data: post.result_data });
             setBatchResults([{ post, result_url: post.result_url, result_data: post.result_data }]);

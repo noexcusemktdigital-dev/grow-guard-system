@@ -16,8 +16,9 @@ import {
   CheckCircle2, Loader2, Wifi, ExternalLink,
   ArrowRight, ArrowLeft, ShieldCheck,
   QrCode, Copy, Headset,
-  MessageSquare, HelpCircle, Zap, CreditCard, Receipt,
+  MessageSquare, HelpCircle, Zap, CreditCard, Receipt, Lock,
 } from "lucide-react";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
 
 interface Props {
@@ -31,6 +32,8 @@ const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda pa
 export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const { refetch } = useWhatsAppInstances();
   const { data: orgId } = useUserOrgId();
+  const { isAdmin } = useMemberPermissions();
+  const canSetup = isAdmin;
   const [step, setStep] = useState(1);
   const [izitechName, setIzitechName] = useState("");
   const [izitechNameError, setIzitechNameError] = useState("");
@@ -175,6 +178,16 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); } onOpenChange(v); }}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+        {!canSetup ? (
+          <div className="px-6 py-12 flex flex-col items-center text-center space-y-4">
+            <Lock className="w-12 h-12 text-muted-foreground/40" />
+            <p className="text-sm font-semibold">Configuração restrita</p>
+            <p className="text-xs text-muted-foreground max-w-sm">
+              Apenas administradores podem configurar ou contratar o WhatsApp. Você pode usar o chat normalmente se ele já estiver ativo.
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-border">
           <DialogHeader>

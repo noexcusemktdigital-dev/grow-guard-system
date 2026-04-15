@@ -41,6 +41,7 @@ interface ContentWizardProps {
   onPlataformaChange: (p: string) => void;
   duracao: string;
   onDuracaoChange: (d: string) => void;
+  canGeneratePermission?: boolean;
 }
 
 export function ContentWizard({
@@ -52,6 +53,7 @@ export function ContentWizard({
   tema, onTemaChange,
   plataforma, onPlataformaChange,
   duracao, onDuracaoChange,
+  canGeneratePermission = true,
 }: ContentWizardProps) {
   const [step, setStep] = useState<"sugestoes" | "config" | "gerando">("sugestoes");
   const strategyData = useStrategyData();
@@ -72,7 +74,7 @@ export function ContentWizard({
 
   const formatTotal = Object.values(formatDist).reduce((a, b) => a + b, 0);
   const selectedFormato = Object.keys(formatDist)[0] || "";
-  const canGenerate = formatTotal > 0 && objetivos.length > 0 && !!duracao;
+  const canGenerate = formatTotal > 0 && objetivos.length > 0 && !!duracao && canGeneratePermission;
 
   const handleSelectSuggestion = (idx: number) => {
     const s = gpsSuggestions[idx];
@@ -350,7 +352,13 @@ export function ContentWizard({
         {hasStrategy && <Badge className="ml-1 bg-amber-500/20 text-amber-700 border-0 text-[10px]">GPS ativo</Badge>}
       </Button>
 
-      {!canGenerate && (
+      {!canGeneratePermission && (
+        <p className="text-xs text-center text-destructive">
+          Você não tem permissão para gerar roteiros. Fale com o administrador.
+        </p>
+      )}
+
+      {canGeneratePermission && !canGenerate && (
         <p className="text-xs text-center text-muted-foreground">
           {!selectedFormato ? "Selecione um formato · " : ""}
           {objetivos.length === 0 ? "Selecione um objetivo · " : ""}
