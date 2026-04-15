@@ -258,18 +258,21 @@ export function ComProjecoes({ dc }: { dc: any }) {
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={dc.projecao_leads.map((p: any) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
                 <defs>
-                  <linearGradient id="leadsComGrad2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={CHART_COLORS[1]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={CHART_COLORS[1]} stopOpacity={0} />
+                  <linearGradient id="areaAtual" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={THEME_COLORS.teal} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={THEME_COLORS.teal} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="areaEstrategia" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={THEME_COLORS.purple} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={THEME_COLORS.purple} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Legend />
-                <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted))" fillOpacity={0.3} name="Atual" strokeWidth={1.5} strokeDasharray="5 5" />
-                <Area type="monotone" dataKey="estrategia" stroke={CHART_COLORS[1]} fill="url(#leadsComGrad2)" name="Com Estratégia" strokeWidth={2} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Area type="monotone" dataKey="atual" name="Atual" stroke={THEME_COLORS.teal} strokeWidth={2} fill="url(#areaAtual)" />
+                <Area type="monotone" dataKey="estrategia" name="Com Estratégia" stroke={THEME_COLORS.purple} strokeWidth={2.5} fill="url(#areaEstrategia)" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -282,18 +285,21 @@ export function ComProjecoes({ dc }: { dc: any }) {
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={dc.projecao_receita.map((p: any) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
                 <defs>
-                  <linearGradient id="receitaComGrad2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <linearGradient id="areaRecAtual" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={THEME_COLORS.teal} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={THEME_COLORS.teal} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="areaRecEstrategia" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={THEME_COLORS.purple} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={THEME_COLORS.purple} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />
-                <Legend />
-                <Area type="monotone" dataKey="atual" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted))" fillOpacity={0.3} name="Atual" strokeWidth={1.5} strokeDasharray="5 5" />
-                <Area type="monotone" dataKey="estrategia" stroke="hsl(var(--primary))" fill="url(#receitaComGrad2)" name="Com Estratégia" strokeWidth={2} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip content={<ChartTooltip formatter={(v) => `R$ ${Number(v).toLocaleString("pt-BR")}`} />} />
+                <Area type="monotone" dataKey="atual" name="Atual" stroke={THEME_COLORS.teal} strokeWidth={2} fill="url(#areaRecAtual)" />
+                <Area type="monotone" dataKey="estrategia" name="Com Estratégia" stroke={THEME_COLORS.purple} strokeWidth={2.5} fill="url(#areaRecEstrategia)" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
