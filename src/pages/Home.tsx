@@ -118,7 +118,7 @@ export default function Home() {
     { label: "Novo chamado", path: "/franqueadora/atendimento", icon: "MessageSquare" },
     { label: "Criar evento", path: "/franqueadora/agenda", icon: "Calendar" },
     { label: "Novo comunicado", path: "/franqueadora/comunicados", icon: "Megaphone" },
-    { label: "CRM Expansão", path: "/franqueadora/crm", icon: "TrendingUp" },
+    { label: "CRM", path: "/franqueadora/crm", icon: "TrendingUp" },
   ];
 
   const isLoading = loadingMsg || loadingAnn || loadingEv;

@@ -35,7 +35,7 @@ const Marketing = lazy(() => import("./pages/Marketing"));
 const Academy = lazy(() => import("./pages/Academy"));
 const MetasRanking = lazy(() => import("./pages/MetasRanking"));
 const Unidades = lazy(() => import("./pages/Unidades"));
-const CrmExpansao = lazy(() => import("./pages/CrmExpansao"));
+
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Atendimento = lazy(() => import("./pages/Atendimento"));
 const Comunicados = lazy(() => import("./pages/Comunicados"));
@@ -186,10 +186,8 @@ function App() {
                   <Route path="treinamentos" element={<Academy />} />
                   <Route path="metas" element={<MetasRanking />} />
                   <Route path="unidades" element={<Unidades />} />
-                  <Route path="crm" element={<CrmExpansao />} />
-                  <Route path="crm/config" element={<CrmConfigPage />} />
-                  <Route path="crm-vendas" element={<PageBoundary><FranqueadoCRM /></PageBoundary>} />
-                  <Route path="crm-vendas/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
+                  <Route path="crm" element={<PageBoundary><FranqueadoCRM /></PageBoundary>} />
+                  <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="atendimento" element={<Atendimento />} />
                   <Route path="comunicados" element={<Comunicados />} />
