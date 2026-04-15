@@ -1,77 +1,69 @@
 
+Objetivo: corrigir por que a Pollyana continua bloqueada mesmo com CRM e Scripts já salvos pela Juliana.
 
-## Diagnóstico confirmado
+Diagnóstico confirmado:
+- O salvamento funcionou. Já existe um registro de permissões da Pollyana no workspace Fais e medina com:
+  - CRM liberado (`can_manage_crm = true`)
+  - Scripts liberados (`can_generate_scripts = true`)
+  - Visibilidade CRM em `all`
+- O problema está na leitura dessas permissões, não no salvamento.
+- A função de banco `get_member_permissions(...)` ainda está quebrando em runtime com:
+  `record "v_pp" has no field "crm_visibility"`
+- Quando essa RPC falha, o hook `useMemberPermissions` retorna o fallback padrão:
+  - CRM bloqueado
+  - Scripts bloqueados
+  - visibilidade `own`
+- Por isso a Pollyana não vê a liberação, mesmo com os dados corretos já gravados.
 
-A função `get_member_permissions` no banco de dados está crashando com:
-```
-record "v_profile" has no field "crm_visibility"
-```
+Por que a migration anterior não resolveu:
+- A função foi reescrita usando `v_pp` e `v_tp` como `%ROWTYPE`, mas esses registros continuam podendo ficar “não inicializados”.
+- Mesmo checando `CASE WHEN v_pp.id IS NOT NULL ...`, o acesso ao próprio registro ainda pode explodir.
+- Então a correção precisa ser refeita com variáveis escalares, sem acessar campos de registros vazios.
 
-**Por que isso acontece:** A Pollyana tem `profile_id = NULL`. A variável `v_profile` (tipo `%ROWTYPE`) nunca é preenchida. No PostgreSQL, acessar campos de um registro vazio causa esse erro. O `COALESCE(v_mp.crm_visibility, v_profile.crm_visibility, ...)` tenta ler `v_profile.crm_visibility` de um registro vazio → crash.
+Implementação proposta:
+1. Criar uma nova migration SQL substituindo `get_member_permissions`
+   - remover a dependência de `%ROWTYPE`
+   - usar variáveis simples para cada campo:
+     - `mp_crm_visibility`
+     - `pp_crm_visibility`
+     - `tp_crm_visibility`
+     - etc.
+   - carregar:
+     1. override individual em `member_permissions`
+     2. perfil direto, se existir
+     3. perfil do time como fallback
+   - retornar o JSON final com `COALESCE(...)` sobre variáveis escalares seguras
 
-**Impacto:** O hook `useMemberPermissions` captura o erro e retorna permissões padrão (tudo bloqueado). As permissões salvas pela Juliana existem no banco mas nunca chegam à Pollyana.
+2. Endurecer `save_member_permissions` no mesmo ajuste
+   - hoje ele valida se o caller é admin “em algum lugar”
+   - vou alinhar a checagem para exigir admin da mesma organização
+   - isso evita brecha em cenário multi-workspace
 
-## Solução
+3. Validar após a migration
+   - executar a função para a Pollyana e confirmar que ela retorna JSON, não erro
+   - confirmar que o resultado traz:
+     - `can_manage_crm = true`
+     - `can_generate_scripts = true`
+     - `crm_visibility = all`
 
-**1 migration SQL** — Recriar a função `get_member_permissions` com checagens seguras de registros nulos:
+4. Conferir o reflexo no app
+   - login da Pollyana
+   - verificar `/cliente/scripts` com criação de script liberada
+   - verificar `/cliente/crm` com comportamento liberado conforme as permissões
+   - confirmar que não cai mais no fallback padrão
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_member_permissions(_user_id uuid, _org_id uuid)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_mp   public.member_permissions%ROWTYPE;
-  v_pp   public.permission_profiles%ROWTYPE;
-  v_tp   public.permission_profiles%ROWTYPE;
-BEGIN
-  SELECT * INTO v_mp
-  FROM public.member_permissions
-  WHERE user_id = _user_id AND organization_id = _org_id
-  LIMIT 1;
+Arquivos/áreas envolvidos:
+- nova migration SQL em `supabase/migrations/...`
+- sem mudança obrigatória no frontend para corrigir o bug principal
 
-  IF v_mp.profile_id IS NOT NULL THEN
-    SELECT * INTO v_pp
-    FROM public.permission_profiles
-    WHERE id = v_mp.profile_id;
-  END IF;
+Detalhe técnico:
+- O erro real não é “não salvou”.
+- O erro real é:
+  ```text
+  member_permissions salva certo -> get_member_permissions quebra -> useMemberPermissions retorna permissões padrão -> Pollyana continua bloqueada
+  ```
 
-  IF v_pp.id IS NULL THEN
-    SELECT pp.* INTO v_tp
-    FROM public.org_team_memberships otm
-    JOIN public.org_teams ot ON ot.id = otm.team_id
-    JOIN public.permission_profiles pp ON pp.id = ot.permission_profile_id
-    WHERE otm.user_id = _user_id
-      AND ot.organization_id = _org_id
-      AND ot.permission_profile_id IS NOT NULL
-    LIMIT 1;
-  END IF;
-
-  RETURN jsonb_build_object(
-    'crm_visibility',       COALESCE(v_mp.crm_visibility,
-      CASE WHEN v_pp.id IS NOT NULL THEN v_pp.crm_visibility END,
-      CASE WHEN v_tp.id IS NOT NULL THEN v_tp.crm_visibility END, 'own'),
-    'can_generate_content', COALESCE(v_mp.can_generate_content,
-      CASE WHEN v_pp.id IS NOT NULL THEN v_pp.can_generate_content END,
-      CASE WHEN v_tp.id IS NOT NULL THEN v_tp.can_generate_content END, false),
-    'can_generate_posts',   COALESCE(v_mp.can_generate_posts,
-      CASE WHEN v_pp.id IS NOT NULL THEN v_pp.can_generate_posts END,
-      CASE WHEN v_tp.id IS NOT NULL THEN v_tp.can_generate_posts END, false),
-    'can_generate_scripts', COALESCE(v_mp.can_generate_scripts,
-      CASE WHEN v_pp.id IS NOT NULL THEN v_pp.can_generate_scripts END,
-      CASE WHEN v_tp.id IS NOT NULL THEN v_tp.can_generate_scripts END, false),
-    'can_use_whatsapp',     COALESCE(v_mp.can_use_whatsapp,
-      CASE WHEN v_pp.id IS NOT NULL THEN v_pp.can_use_whatsapp END,
-      CASE WHEN v_tp.id IS NOT NULL THEN v_tp.can_use_whatsapp END, true),
-    'can_manage_crm',       COALESCE(v_mp.can_manage_crm,
-      CASE WHEN v_pp.id IS NOT NULL THEN v_pp.can_manage_crm END,
-      CASE WHEN v_tp.id IS NOT NULL THEN v_tp.can_manage_crm END, false)
-  );
-END;
-$$;
-```
-
-A mudança usa `CASE WHEN v_pp.id IS NOT NULL THEN v_pp.campo END` para evitar acessar campos de registros vazios. Nenhuma alteração no frontend é necessária.
-
+Resultado esperado após a correção:
+- a Juliana continua salvando normalmente
+- a Pollyana passa a receber as permissões reais já registradas
+- CRM e Scripts deixam de aparecer bloqueados para ela
