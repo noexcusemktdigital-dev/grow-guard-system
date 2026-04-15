@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const secret = Deno.env.get("CRM_WEBHOOK_SECRET");
+    const secret = Deno.env.get("CRM_LEAD_WEBHOOK_SECRET") || Deno.env.get("CRM_WEBHOOK_SECRET");
     if (!secret) {
       console.error("CRM_WEBHOOK_SECRET not configured — rejecting all requests");
       return new Response(JSON.stringify({ error: "Not configured" }), {
