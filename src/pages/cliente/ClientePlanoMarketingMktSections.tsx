@@ -18,6 +18,7 @@ import {
   BarChart, Bar, AreaChart, Area,
 } from "recharts";
 
+import { CHART_COLORS as THEME_COLORS, CHART_TICK_STYLE, CHART_GRID_COLOR, ChartTooltip } from "@/lib/chartTheme";
 import { InfoTip, ScoreRing, TagList, ToolButton } from "./ClientePlanoMarketingHelpers";
 import type {
   StrategyResult, ConcorrenteRow, CanalRow, PilarRow, CalendarioRow,
