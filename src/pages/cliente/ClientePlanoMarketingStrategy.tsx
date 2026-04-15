@@ -43,7 +43,7 @@ import { normalizeMarketingStrategyResult } from "@/lib/normalizeMarketingStrate
 
 export interface StrategyDashboardProps {
   result: StrategyResult;
-  onApprove: () => void;
+  onApprove?: () => void;
   onRegenerate: () => void;
   isApproving: boolean;
   status: string;
@@ -91,7 +91,7 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
                 <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Criar nova estratégia?</AlertDialogTitle><AlertDialogDescription>Sua estratégia atual será movida para o histórico.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={onRegenerate}>Sim, criar nova</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
               </AlertDialog>
               )}
-              {status !== "approved" && (
+              {status !== "approved" && onApprove && (
                 <Button size="sm" onClick={onApprove} disabled={isApproving} className="gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   {isApproving ? "Aprovando..." : isFirstGPS ? "Aprovar Grátis 🎉" : "Aprovar (50 créditos)"}

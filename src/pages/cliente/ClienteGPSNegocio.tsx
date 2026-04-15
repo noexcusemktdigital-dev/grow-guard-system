@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy, useApproveStrategy, useGenerateStrategy } from "@/hooks/useMarketingStrategy";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
 
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
@@ -33,7 +34,7 @@ import { logger } from "@/lib/logger";
 type Phase = "welcome" | "chat-rafael" | "transition" | "chat-sofia" | "generating" | "result";
 type GeneratingStep = "marketing-core" | "marketing-growth" | "comercial";
 
-function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, onRetryGeneration }: { onStart: () => void; hasPartialProgress?: boolean; onResume?: () => void; hasFullProgress?: boolean; onRetryGeneration?: () => void }) {
+function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, onRetryGeneration }: { onStart?: () => void; hasPartialProgress?: boolean; onResume?: () => void; hasFullProgress?: boolean; onRetryGeneration?: () => void }) {
   const { data: subscription } = useClienteSubscription();
   const isTrial = subscription?.plan === "trial" || subscription?.status === "trialing";
 
@@ -297,13 +298,14 @@ function GPSWelcome({ onStart, hasPartialProgress, onResume, hasFullProgress, on
 
         )}
 
-        <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20 px-8">
-
-          <Navigation className="w-4 h-4" />
-
-          {hasPartialProgress || hasFullProgress ? "Recomeçar do Início" : "Iniciar meu diagnóstico"}
-
-        </Button>
+        {onStart ? (
+          <Button size="lg" onClick={onStart} className="gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg shadow-amber-500/20 px-8">
+            <Navigation className="w-4 h-4" />
+            {hasPartialProgress || hasFullProgress ? "Recomeçar do Início" : "Iniciar meu diagnóstico"}
+          </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">Apenas administradores podem gerar o GPS do Negócio.</p>
+        )}
 
         <p className="text-xs text-muted-foreground">Feito uma vez. Válido para sempre. Você pode refazer quando quiser.</p>
 
@@ -330,6 +332,7 @@ function TransitionScreen() {
 }
 
 export default function ClienteGPSNegocio() {
+  const { isAdmin } = useRoleAccess();
   const [phase, setPhase] = useState<Phase>("welcome");
   const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("marketing-core");
   const [rafaelAnswers, setRafaelAnswers] = useState<Record<string, any>>({});
@@ -607,7 +610,7 @@ export default function ClienteGPSNegocio() {
 
       <AnimatePresence mode="wait">
         {phase === "welcome" && (
-          <GPSWelcome key="welcome" onStart={() => setPhase("chat-rafael")} hasPartialProgress={hasPartialProgress} onResume={handleResumeFromSofia} hasFullProgress={hasFullProgress} onRetryGeneration={handleRetryGeneration} />
+          <GPSWelcome key="welcome" onStart={isAdmin ? () => setPhase("chat-rafael") : undefined} hasPartialProgress={hasPartialProgress} onResume={handleResumeFromSofia} hasFullProgress={hasFullProgress} onRetryGeneration={handleRetryGeneration} />
         )}
 
         {phase === "chat-rafael" && (
@@ -678,7 +681,7 @@ export default function ClienteGPSNegocio() {
 
             <StrategyDashboard
               result={activeStrategy?.strategy_result}
-              onApprove={handleApprove}
+              onApprove={isAdmin ? handleApprove : undefined}
               onRegenerate={() => { setRafaelAnswers({}); setPhase("welcome"); }}
               isApproving={approveStrategy.isPending}
               status={status}
