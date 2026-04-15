@@ -2,6 +2,8 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import { useMemberPermissions } from "./useMemberPermissions";
+import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
 import { useState, useCallback } from "react";
 
@@ -9,6 +11,8 @@ const PAGE_SIZE = 200;
 
 export function useCrmLeads(funnelId?: string, stage?: string) {
   const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
+  const { permissions, isAdmin } = useMemberPermissions();
   const [page, setPage] = useState(0);
 
   const query = useQuery({
@@ -22,6 +26,13 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (funnelId) q = q.eq("funnel_id", funnelId);
       if (stage) q = q.eq("stage", stage);
+      // Filtro de visibilidade baseado nas permissões do usuário
+      if (!isAdmin && permissions.crm_visibility === "own") {
+        q = q.eq("assigned_to", user?.id ?? "");
+      } else if (!isAdmin && permissions.crm_visibility === "team") {
+        q = q.or(`assigned_to.eq.${user?.id},assigned_to.is.null`);
+      }
+      // "all" não aplica filtro adicional
       const { data, error, count } = await q;
       if (error) throw error;
       return { data: data ?? [], count: count ?? 0, page, pageSize: PAGE_SIZE };

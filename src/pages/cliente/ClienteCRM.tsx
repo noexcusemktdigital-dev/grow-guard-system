@@ -31,6 +31,7 @@ import { ClienteCRMSummary } from "./ClienteCRMSummary";
 import { ClienteCRMPipelineFilters } from "./ClienteCRMPipelineFilters";
 import { ClienteCRMLeadsView } from "./ClienteCRMLeadsView";
 import { ClienteCRMHeader } from "./ClienteCRMHeader";
+import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 
 // ===== Main Component =====
 export interface ClienteCRMProps {
@@ -47,6 +48,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const { data: team } = useCrmTeam();
   const { activeLeadCount, maxLeads, atLimit: quotaAtLimit, planName } = useLeadQuota();
   const atLimit = hideQuota ? false : quotaAtLimit;
+  const { permissions, isAdmin } = useMemberPermissions();
+  const canManageCrm = isAdmin || permissions.can_manage_crm;
 
   const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
 
@@ -324,6 +327,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
         setTutorialOpen={setTutorialOpen}
         tutorialOpen={tutorialOpen}
         configRoute={configRoute}
+        showConfig={canManageCrm}
       />
 
       {/* ===== CONTACTS TAB ===== */}
@@ -345,9 +349,11 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
                 <p className="text-sm text-muted-foreground mb-6 max-w-md">
                   Antes de adicionar leads, crie pelo menos um funil com as etapas do seu processo comercial.
                 </p>
-                <Button onClick={() => navigate(configRoute || "/cliente/crm/config")} className="gap-2">
-                  <Settings2 className="w-4 h-4" /> Criar Funil
-                </Button>
+                {canManageCrm && (
+                  <Button onClick={() => navigate(configRoute || "/cliente/crm/config")} className="gap-2">
+                    <Settings2 className="w-4 h-4" /> Criar Funil
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (

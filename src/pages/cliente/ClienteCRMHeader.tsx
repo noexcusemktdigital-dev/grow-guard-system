@@ -23,6 +23,7 @@ interface ClienteCRMHeaderProps {
   setTutorialOpen: (v: boolean) => void;
   tutorialOpen: boolean;
   configRoute?: string;
+  showConfig?: boolean;
 }
 
 export function ClienteCRMHeader({
@@ -37,6 +38,7 @@ export function ClienteCRMHeader({
   setCsvImportOpen,
   setTutorialOpen,
   configRoute = "/cliente/crm/config",
+  showConfig = true,
 }: ClienteCRMHeaderProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -113,10 +115,12 @@ export function ClienteCRMHeader({
             </>
           )}
 
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" data-tour="config" onClick={() => navigate(configRoute)}>
-            <Settings2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-xs">Configurações</span>
-          </Button>
+          {showConfig && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" data-tour="config" onClick={() => navigate(configRoute)}>
+              <Settings2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-xs">Configurações</span>
+            </Button>
+          )}
         </div>
       }
     />
