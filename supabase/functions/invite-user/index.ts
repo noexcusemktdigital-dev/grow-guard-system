@@ -322,12 +322,13 @@ Deno.serve(async (req) => {
     // Insert role
     const { error: roleInsertErr } = await adminClient
       .from("user_roles")
-      .insert({ user_id: userId, role: validRole })
-      .select()
-      .maybeSingle();
+      .upsert(
+        { user_id: userId, role: validRole, organization_id },
+        { onConflict: "user_id,organization_id" }
+      );
 
-    if (roleInsertErr && !roleInsertErr.message?.includes("duplicate")) {
-      console.error("[invite-user] Role insert error:", roleInsertErr);
+    if (roleInsertErr) {
+      console.error("[invite-user] Role upsert error:", roleInsertErr);
     }
 
     // Assign to teams
