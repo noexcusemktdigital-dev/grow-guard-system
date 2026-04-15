@@ -118,10 +118,15 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
             </Select>
           </div>
           {member && (
-            <MemberPermissionsEditor
-              userId={member.user_id}
-              userName={member.full_name || "Usuário"}
-            />
+            <>
+              <MemberPermissionsEditor
+                userId={member.user_id}
+                userName={member.full_name || "Usuário"}
+              />
+              <p className="text-[10px] text-muted-foreground text-center">
+                💡 Salve as permissões acima separadamente antes de fechar.
+              </p>
+            </>
           )}
           {extraContent}
         </div>
