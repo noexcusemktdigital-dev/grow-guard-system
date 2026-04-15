@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { useState, useEffect, useRef } from "react";
+import { usePermissionProfiles, usePermissionProfileMutations } from "@/hooks/useMemberPermissions";
 import { useSearchParams } from "react-router-dom";
 import { Settings, User, Building2, Users, Bell, UserPlus, Shield, Camera, Crown, ChevronRight, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -181,6 +182,10 @@ function UsersAndTeamsTab() {
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
   const [editMember, setEditMember] = useState<any>(null);
   const qc = useQueryClient();
+  const [profileManagerOpen, setProfileManagerOpen] = useState(false);
+  const { data: permProfiles } = usePermissionProfiles();
+  const { createProfile, deleteProfile } = usePermissionProfileMutations();
+  const [newProfileName, setNewProfileName] = useState("");
 
   const CLIENTE_ROLE_OPTIONS = [
     { value: "cliente_admin", label: "Admin" },
@@ -265,9 +270,14 @@ function UsersAndTeamsTab() {
               <CardTitle className="text-sm font-semibold">Hierarquia da Organização</CardTitle>
               <CardDescription>{currentCount}/{maxUsers} usuários</CardDescription>
             </div>
-            <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
-              <UserPlus className="w-4 h-4" /> Convidar
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setProfileManagerOpen(true)}>
+                <Shield className="w-4 h-4" /> Perfis
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
+                <UserPlus className="w-4 h-4" /> Convidar
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -474,6 +484,80 @@ function UsersAndTeamsTab() {
         roleOptions={CLIENTE_ROLE_OPTIONS}
         onSuccess={() => setEditMember(null)}
       />
+
+      {/* Profile Manager Dialog */}
+      <Dialog open={profileManagerOpen} onOpenChange={setProfileManagerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Perfis de Permissão</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-xs text-muted-foreground">
+            Crie perfis reutilizáveis para aplicar o mesmo conjunto de permissões a múltiplos usuários ou times.
+          </p>
+
+          {/* Lista de perfis existentes */}
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {permProfiles?.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhum perfil criado ainda</p>
+            )}
+            {permProfiles?.map(p => (
+              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div>
+                  <p className="text-sm font-medium">{p.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    CRM: {p.crm_visibility === 'all' ? 'Todos' : p.crm_visibility === 'team' ? 'Time' : 'Próprios'} ·
+                    {p.can_generate_content ? ' Roteiros ✓' : ''}
+                    {p.can_generate_posts ? ' Artes ✓' : ''}
+                    {p.can_generate_scripts ? ' Scripts ✓' : ''}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive h-7"
+                  onClick={() => deleteProfile.mutate(p.id)}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Criar novo perfil */}
+          <div className="space-y-2 pt-2 border-t">
+            <p className="text-xs font-semibold">Novo Perfil</p>
+            <Input
+              placeholder="Nome do perfil (ex: Vendedor)"
+              value={newProfileName}
+              onChange={(e) => setNewProfileName(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Button
+              size="sm"
+              className="w-full"
+              disabled={!newProfileName.trim() || createProfile.isPending}
+              onClick={() => {
+                createProfile.mutate({
+                  name: newProfileName.trim(),
+                  crm_visibility: "own",
+                  can_generate_content: false,
+                  can_generate_posts: false,
+                  can_generate_scripts: false,
+                  can_use_whatsapp: true,
+                  can_manage_crm: false,
+                });
+                setNewProfileName("");
+              }}
+            >
+              Criar perfil
+            </Button>
+            <p className="text-[10px] text-muted-foreground">
+              Após criar, edite as permissões de um usuário e selecione este perfil para configurar os detalhes.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
