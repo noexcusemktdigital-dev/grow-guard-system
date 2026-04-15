@@ -201,6 +201,7 @@ export function useMemberPermissionById(targetUserId: string | undefined) {
 export function useSaveMemberPermission() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (payload: {
@@ -214,16 +215,23 @@ export function useSaveMemberPermission() {
       can_manage_crm?: boolean | null;
     }) => {
       if (!orgId) throw new Error("Org not found");
-      const { data, error } = await supabase
-        .from("member_permissions")
-        .upsert(
-          { ...payload, organization_id: orgId },
-          { onConflict: "user_id,organization_id" }
-        )
-        .select()
-        .single();
+      if (!user?.id) throw new Error("Not authenticated");
+
+      // Usa função SECURITY DEFINER que bypassa RLS
+      const { error } = await supabase.rpc("save_member_permissions" as any, {
+        _caller_id: user.id,
+        _user_id: payload.user_id,
+        _org_id: orgId,
+        _profile_id: payload.profile_id ?? null,
+        _crm_visibility: payload.crm_visibility ?? "own",
+        _can_generate_content: payload.can_generate_content ?? false,
+        _can_generate_posts: payload.can_generate_posts ?? false,
+        _can_generate_scripts: payload.can_generate_scripts ?? false,
+        _can_use_whatsapp: payload.can_use_whatsapp ?? true,
+        _can_manage_crm: payload.can_manage_crm ?? false,
+      });
+
       if (error) throw error;
-      return data;
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["member-permissions"] });
