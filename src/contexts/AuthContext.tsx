@@ -91,7 +91,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "Profile fetch"
         ),
         fetchWithRetry(
-          () => supabase.from("user_roles").select("role").eq("user_id", currentUser.id),
+          async () => {
+            // Busca org do usuário no portal atual para filtrar role por workspace
+            const { data: orgs } = await supabase
+              .from("organization_memberships")
+              .select("organization_id")
+              .eq("user_id", currentUser.id)
+              .limit(5);
+            const orgIds = orgs?.map(o => o.organization_id) || [];
+            return supabase
+              .from("user_roles")
+              .select("role, organization_id")
+              .eq("user_id", currentUser.id)
+              .in("organization_id", orgIds.length > 0 ? orgIds : ["00000000-0000-0000-0000-000000000000"]);
+          },
           "Role fetch"
         ),
       ]);
