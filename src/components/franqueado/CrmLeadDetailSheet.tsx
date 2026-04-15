@@ -14,6 +14,7 @@ import {
   ClipboardCheck, FileText, Trophy, XCircle, StickyNote,
   Clock, User, Eye, Plus,
 } from "lucide-react";
+import { WhatsAppPhoneButton } from "@/components/crm/WhatsAppPhoneButton";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
