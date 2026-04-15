@@ -270,9 +270,14 @@ function UsersAndTeamsTab() {
               <CardTitle className="text-sm font-semibold">Hierarquia da Organização</CardTitle>
               <CardDescription>{currentCount}/{maxUsers} usuários</CardDescription>
             </div>
-            <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
-              <UserPlus className="w-4 h-4" /> Convidar
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setProfileManagerOpen(true)}>
+                <Shield className="w-4 h-4" /> Perfis
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)} disabled={currentCount >= maxUsers}>
+                <UserPlus className="w-4 h-4" /> Convidar
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
