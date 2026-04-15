@@ -175,6 +175,15 @@ export function useApproveContent() {
     mutationFn: async (contentId: string) => {
       if (!orgId) throw new Error("Org not found");
 
+      // Verifica se já está aprovado para não debitar duas vezes
+      const { data: existing } = await supabase
+        .from("client_content")
+        .select("status")
+        .eq("id", contentId)
+        .maybeSingle();
+
+      if (existing?.status === "approved") return; // Já aprovado, sem débito
+
       const { error: debitError } = await supabase.rpc("debit_credits" as any, {
         _org_id: orgId,
         _amount: CREDIT_COST_APPROVE_CONTENT,
@@ -204,10 +213,20 @@ export function useApproveBatch() {
     mutationFn: async (contentIds: string[]) => {
       if (!orgId) throw new Error("Org not found");
 
-      // Process each content item: debit credits then mark approved.
-      // If a debit succeeds but the update fails, we throw immediately to
-      // surface the error rather than silently skipping remaining items.
-      for (const id of contentIds) {
+      // Busca status atual de todos os itens para filtrar já aprovados
+      const { data: existing } = await supabase
+        .from("client_content")
+        .select("id, status")
+        .in("id", contentIds);
+
+      const alreadyApproved = new Set(
+        (existing || []).filter(c => c.status === "approved").map(c => c.id)
+      );
+
+      // Processa apenas os que ainda não foram aprovados
+      const pendingIds = contentIds.filter(id => !alreadyApproved.has(id));
+
+      for (const id of pendingIds) {
         const { error: debitError } = await supabase.rpc("debit_credits" as any, {
           _org_id: orgId,
           _amount: CREDIT_COST_APPROVE_CONTENT,
@@ -222,6 +241,8 @@ export function useApproveBatch() {
           .eq("id", id);
         if (error) throw new Error(`Erro ao aprovar conteúdo ${id}: ${error.message}`);
       }
+
+      return { approved: pendingIds.length, skipped: alreadyApproved.size };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-content-v2"] });
