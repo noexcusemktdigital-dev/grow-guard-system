@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     }
 
     const body = JSON.parse(rawBody);
-    const { name, email, phone, company, source, value, tags, custom_fields } = body;
+    const { name, email, phone, company, source, value, tags, custom_fields, funnel_id } = body;
 
     if (!name) {
       return new Response(JSON.stringify({ error: "Field 'name' is required" }), {
@@ -133,17 +133,35 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get default funnel first stage
-    const { data: defaultFunnel } = await supabase
-      .from("crm_funnels")
-      .select("stages")
-      .eq("organization_id", orgId)
-      .eq("is_default", true)
-      .maybeSingle();
-
+    // Resolve funnel: use provided funnel_id or fall back to default funnel
+    let resolvedFunnelId: string | null = funnel_id || null;
     let firstStage = "novo";
-    if (defaultFunnel?.stages && Array.isArray(defaultFunnel.stages) && defaultFunnel.stages.length > 0) {
-      firstStage = (defaultFunnel.stages as { key: string }[])[0].key || "novo";
+
+    if (resolvedFunnelId) {
+      // Fetch stages from the specified funnel
+      const { data: specifiedFunnel } = await supabase
+        .from("crm_funnels")
+        .select("stages")
+        .eq("id", resolvedFunnelId)
+        .eq("organization_id", orgId)
+        .maybeSingle();
+      if (specifiedFunnel?.stages && Array.isArray(specifiedFunnel.stages) && specifiedFunnel.stages.length > 0) {
+        firstStage = (specifiedFunnel.stages as { key: string }[])[0].key || "novo";
+      }
+    } else {
+      // Fall back to default funnel
+      const { data: defaultFunnel } = await supabase
+        .from("crm_funnels")
+        .select("id, stages")
+        .eq("organization_id", orgId)
+        .eq("is_default", true)
+        .maybeSingle();
+      if (defaultFunnel) {
+        resolvedFunnelId = defaultFunnel.id;
+        if (defaultFunnel.stages && Array.isArray(defaultFunnel.stages) && defaultFunnel.stages.length > 0) {
+          firstStage = (defaultFunnel.stages as { key: string }[])[0].key || "novo";
+        }
+      }
     }
 
     // Check roulette
@@ -187,6 +205,7 @@ Deno.serve(async (req) => {
         stage: firstStage,
         organization_id: orgId,
         assigned_to: assignedTo,
+        funnel_id: resolvedFunnelId,
       })
       .select("id")
       .single();
