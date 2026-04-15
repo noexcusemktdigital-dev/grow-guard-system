@@ -3,6 +3,7 @@ import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, DollarSign, Phone, CheckCircle2 } from "lucide-react";
+import { WhatsAppPhoneButton } from "@/components/crm/WhatsAppPhoneButton";
 
 interface CrmKanbanCardProps {
   lead: {
@@ -40,9 +41,10 @@ export const CrmKanbanCard = memo(function CrmKanbanCard({
         )}
 
         {lead.phone && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Phone className="w-3 h-3 flex-shrink-0" />{lead.phone}
-          </p>
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <Phone className="w-3 h-3 flex-shrink-0" /><span className="truncate">{lead.phone}</span>
+            <WhatsAppPhoneButton phone={lead.phone} size="xs" />
+          </div>
         )}
 
         {lead.value && Number(lead.value) > 0 && (
