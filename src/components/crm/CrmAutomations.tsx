@@ -423,17 +423,43 @@ export function CrmAutomations() {
                 <div><Label className="text-xs">Filtrar por origem (opcional)</Label><Input value={triggerConfig.source_filter || ""} onChange={e => setTriggerConfig({ ...triggerConfig, source_filter: e.target.value })} placeholder="Ex: Ads, WhatsApp" className="h-8 text-xs" /></div>
               )}
               {triggerType === "lead_stuck" && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Tempo parado</Label>
-                  <div className="flex gap-2">
-                    <Input type="number" value={triggerConfig.days || triggerConfig.stuck_value || 7} onChange={e => setTriggerConfig({ ...triggerConfig, stuck_value: Number(e.target.value), days: triggerConfig.stuck_unit === "hours" ? undefined : Number(e.target.value) })} className="h-8 text-xs w-24" min={1} />
-                    <Select value={triggerConfig.stuck_unit || "days"} onValueChange={v => setTriggerConfig({ ...triggerConfig, stuck_unit: v, days: v === "days" ? (triggerConfig.stuck_value || 7) : undefined })}>
-                      <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hours" className="text-xs">Horas</SelectItem>
-                        <SelectItem value="days" className="text-xs">Dias</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-2">
+                  <Label className="text-xs">Lead parado há quantos dias?</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={triggerConfig.days || 3}
+                      onChange={e => setTriggerConfig({
+                        ...triggerConfig,
+                        days: Math.max(1, parseInt(e.target.value) || 3),
+                      })}
+                      className="h-8 text-xs w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">dias sem movimentação</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    O CRM verificará leads parados a cada 5 minutos e disparará esta automação.
+                  </p>
+                </div>
+              )}
+              {triggerType === "no_contact_sla" && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Sem contato há quantas horas?</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={168}
+                      value={triggerConfig.hours || 24}
+                      onChange={e => setTriggerConfig({
+                        ...triggerConfig,
+                        hours: Math.max(1, parseInt(e.target.value) || 24),
+                      })}
+                      className="h-8 text-xs w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">horas sem atividade registrada</span>
                   </div>
                 </div>
               )}
