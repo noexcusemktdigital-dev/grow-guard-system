@@ -7518,6 +7518,21 @@ export type Database = {
         }[]
       }
       request_meta_noe_insights: { Args: { p_period?: string }; Returns: Json }
+      save_member_permissions: {
+        Args: {
+          _caller_id: string
+          _can_generate_content?: boolean
+          _can_generate_posts?: boolean
+          _can_generate_scripts?: boolean
+          _can_manage_crm?: boolean
+          _can_use_whatsapp?: boolean
+          _crm_visibility?: string
+          _org_id: string
+          _profile_id?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       seed_default_teams: { Args: { _org_id: string }; Returns: undefined }
       set_org_ai_budget: {
         Args: {
