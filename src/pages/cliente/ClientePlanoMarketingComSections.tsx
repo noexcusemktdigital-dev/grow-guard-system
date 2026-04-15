@@ -10,6 +10,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area,
 } from "recharts";
 
+import { CHART_COLORS as THEME_COLORS, CHART_GRID_COLOR, ChartTooltip } from "@/lib/chartTheme";
 import { InfoTip } from "./ClientePlanoMarketingHelpers";
 import { CHART_COLORS } from "./ClientePlanoMarketingMktSections";
 
@@ -99,11 +100,19 @@ export function ComScoreRadar({ dc }: { dc: any }) {
             <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Comercial (5 eixos) <InfoTip text="Processo, gestão de leads, ferramentas, canais e performance." /></CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={280}>
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="hsl(var(--border))" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                  <PolarRadiusAxis angle={30} domain={[0, radarMax]} tick={{ fontSize: 9 }} />
-                  <Radar name="Score" dataKey="value" stroke={CHART_COLORS[1]} fill={CHART_COLORS[1]} fillOpacity={0.25} strokeWidth={2} />
+                <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                  <defs>
+                    <radialGradient id="radarGradCom" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor={THEME_COLORS.teal} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={THEME_COLORS.teal} stopOpacity={0.05} />
+                    </radialGradient>
+                  </defs>
+                  <PolarGrid stroke={CHART_GRID_COLOR} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#888" }} />
+                  <PolarRadiusAxis angle={90} domain={[0, radarMax]} tick={false} axisLine={false} />
+                  <Radar name="Score" dataKey="value" stroke={THEME_COLORS.teal}
+                    strokeWidth={2.5} fill="url(#radarGradCom)" dot={{ r: 4, fill: THEME_COLORS.teal }} />
+                  <Tooltip content={<ChartTooltip formatter={(v) => `${v}/${radarMax}`} />} />
                 </RadarChart>
               </ResponsiveContainer>
             </CardContent>

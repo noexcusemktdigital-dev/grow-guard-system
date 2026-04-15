@@ -78,12 +78,20 @@ export function MktResumo({ result }: { result: StrategyResult }) {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Radar Marketing (6D) <InfoTip text="Avalia 6 áreas-chave do seu marketing. Nota de 0 a 10." /></CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="hsl(var(--border))" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                  <PolarRadiusAxis angle={30} domain={[0, radarMax]} tick={{ fontSize: 9 }} />
-                  <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.25} strokeWidth={2} />
+              <ResponsiveContainer width="100%" height={280}>
+                <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                  <defs>
+                    <radialGradient id="radarGrad" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor={THEME_COLORS.purple} stopOpacity={0.3} />
+                      <stop offset="100%" stopColor={THEME_COLORS.purple} stopOpacity={0.05} />
+                    </radialGradient>
+                  </defs>
+                  <PolarGrid stroke={CHART_GRID_COLOR} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#888" }} />
+                  <PolarRadiusAxis angle={90} domain={[0, radarMax]} tick={false} axisLine={false} />
+                  <Radar name="Score" dataKey="value" stroke={THEME_COLORS.purple}
+                    strokeWidth={2.5} fill="url(#radarGrad)" dot={{ r: 4, fill: THEME_COLORS.purple }} />
+                  <Tooltip content={<ChartTooltip formatter={(v) => `${v}/${radarMax}`} />} />
                 </RadarChart>
               </ResponsiveContainer>
             </CardContent>
