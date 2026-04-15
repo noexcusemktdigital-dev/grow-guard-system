@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useCrmTasks } from "@/hooks/useCrmTasks";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   CheckSquare, Plus, CheckCircle2,
@@ -39,7 +40,8 @@ const priorityConfig: Record<string, { label: string; color: string; order: numb
 const sourceConfig: Record<string, { label: string; color: string }> = {
   manual: { label: "Manual", color: "text-foreground" },
   admin: { label: "Admin", color: "text-primary" },
-  system: { label: "CRM", color: "text-amber-500" },
+  system: { label: "Checklist IA", color: "text-violet-500" },
+  crm: { label: "CRM", color: "text-amber-500" },
 };
 
 /* ─── TASK FORM DIALOG ─── */
@@ -196,14 +198,16 @@ function TaskCard({
               )}
             </div>
           </div>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(task)}>
-              <Edit2 className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onDelete(task.id)}>
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          </div>
+          {task.source !== "crm" && (
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(task)}>
+                <Edit2 className="w-3.5 h-3.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onDelete(task.id)}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -215,9 +219,35 @@ export default function ClienteChecklist() {
   const { user } = useAuth();
   const { isAdmin } = useRoleAccess();
   const qc = useQueryClient();
-  const { data: allTasks, isLoading } = useClienteTasks();
+  const { data: allTasksRaw, isLoading } = useClienteTasks();
   const { data: members } = useOrgMembers();
   const { createTask, updateTask, toggleTask, deleteTask } = useClienteTaskMutations();
+  const { data: crmTasksResult } = useCrmTasks();
+  const crmTasks = useMemo(() => {
+    return (crmTasksResult?.data ?? [])
+      .filter(t => !t.completed_at)
+      .map(t => ({
+        id: `crm-${t.id}`,
+        organization_id: t.organization_id,
+        title: t.title,
+        description: t.description || null,
+        due_date: t.due_date || null,
+        priority: t.priority || "medium",
+        source: "crm" as const,
+        status: t.completed_at ? "done" : "pending",
+        created_by: null,
+        assigned_to: t.assigned_to || null,
+        assigned_team: null,
+        completed_at: t.completed_at || null,
+        completed_by: null,
+        created_at: t.created_at,
+        updated_at: t.updated_at || t.created_at,
+      }));
+  }, [crmTasksResult]);
+  const allTasks = useMemo(() => [
+    ...(allTasksRaw ?? []),
+    ...crmTasks,
+  ], [allTasksRaw, crmTasks]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ClientTask | null>(null);
