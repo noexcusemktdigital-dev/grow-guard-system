@@ -521,6 +521,8 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
         )}
 
         <WhatsAppHowItWorks open={howItWorksOpen} onOpenChange={setHowItWorksOpen} />
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
