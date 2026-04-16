@@ -58,6 +58,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       setGoalType(editingFunnel.goal_type || "revenue");
       setWinLabel(editingFunnel.win_label || "Ganho");
       setLossLabel(editingFunnel.loss_label || "Perdido");
+      setCustomFieldsSchema((editingFunnel as any).custom_fields_schema || []);
     }
   }, [editingFunnel]);
 
