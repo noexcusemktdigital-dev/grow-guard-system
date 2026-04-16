@@ -79,6 +79,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       stage: defaultStage,
       funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
       _maxLeads: maxLeads,
     } as any);
     reset();
