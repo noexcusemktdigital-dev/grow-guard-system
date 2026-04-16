@@ -137,6 +137,7 @@ export function CrmIntegrationHub() {
   const { toast } = useToast();
   const { data: orgId } = useUserOrgId();
   const { createLead } = useCrmLeadMutations();
+  const { data: funnels } = useCrmFunnels();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
