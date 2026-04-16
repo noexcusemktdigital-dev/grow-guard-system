@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface IntegrationSource {
   id: string;
@@ -134,6 +137,7 @@ export function CrmIntegrationHub() {
   const { toast } = useToast();
   const { data: orgId } = useUserOrgId();
   const { createLead } = useCrmLeadMutations();
+  const { data: funnels } = useCrmFunnels();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
@@ -145,6 +149,16 @@ export function CrmIntegrationHub() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; errors: number } | null>(null);
   const [showCsvDialog, setShowCsvDialog] = useState(false);
+  const [metaConfig, setMetaConfig] = useState({
+    funnel_id: "",
+    default_stage: "novo",
+    field_mapping: {
+      name: "full_name",
+      email: "email",
+      phone: "phone_number",
+      company: "company_name",
+    }
+  });
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook/${orgId}` : "Carregando...";
@@ -339,6 +353,60 @@ export function CrmIntegrationHub() {
                   </Button>
                 )}
               </div>
+
+              {/* Meta Ads config */}
+              {source.id === "meta" && (
+                <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+                  <p className="text-xs font-semibold">⚙️ Configuração automática</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Funil de destino</Label>
+                      <Select value={metaConfig.funnel_id} onValueChange={v => setMetaConfig(p => ({ ...p, funnel_id: v }))}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar funil" /></SelectTrigger>
+                        <SelectContent>
+                          {(funnels || []).map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Etapa inicial</Label>
+                      <Select value={metaConfig.default_stage} onValueChange={v => setMetaConfig(p => ({ ...p, default_stage: v }))}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar etapa" /></SelectTrigger>
+                        <SelectContent>
+                          {(funnels?.find(f => f.id === metaConfig.funnel_id)?.stages as any[] || []).map((s: any) => (
+                            <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Mapeamento de campos do formulário Meta</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Cole o nome exato do campo como aparece no formulário do Meta Lead Ads
+                    </p>
+                    {[
+                      { key: "name", label: "Nome do lead", placeholder: "full_name" },
+                      { key: "email", label: "E-mail", placeholder: "email" },
+                      { key: "phone", label: "Telefone", placeholder: "phone_number" },
+                      { key: "company", label: "Empresa", placeholder: "company_name" },
+                    ].map(f => (
+                      <div key={f.key} className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-24 shrink-0">{f.label}:</span>
+                        <Input
+                          value={(metaConfig.field_mapping as any)[f.key] || ""}
+                          onChange={e => setMetaConfig(p => ({ ...p, field_mapping: { ...p.field_mapping, [f.key]: e.target.value } }))}
+                          placeholder={f.placeholder}
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    💡 Para integração direta (sem Zapier), use a URL do webhook acima nas configurações do Lead Ads no Meta Business Suite. O sistema mapeia automaticamente os campos conforme configurado acima.
+                  </p>
+                </div>
+              )}
 
               {/* Navigation */}
               <div className="flex justify-between pt-2 border-t">
