@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
+import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface IntegrationSource {
   id: string;
