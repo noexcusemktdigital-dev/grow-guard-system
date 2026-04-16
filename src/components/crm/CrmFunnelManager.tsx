@@ -32,6 +32,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [localStages, setLocalStages] = useState<FunnelStage[]>([]);
   const [funnelName, setFunnelName] = useState("");
   const [funnelDesc, setFunnelDesc] = useState("");
+  const [goalType, setGoalType] = useState("revenue");
+  const [winLabel, setWinLabel] = useState("Ganho");
+  const [lossLabel, setLossLabel] = useState("Perdido");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
 
   const isTrial = subscription?.status === "trial";
