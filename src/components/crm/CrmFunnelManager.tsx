@@ -187,6 +187,34 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
               <div><Label className="text-xs">Nome *</Label><Input value={funnelName} onChange={e => setFunnelName(e.target.value)} placeholder="Ex: Funil de Vendas" /></div>
               <div><Label className="text-xs">Descrição</Label><Input value={funnelDesc} onChange={e => setFunnelDesc(e.target.value)} placeholder="Opcional" /></div>
             </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Objetivo do funil</Label>
+              <Select value={goalType} onValueChange={setGoalType}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="revenue" className="text-xs">💰 Faturamento (vendas)</SelectItem>
+                  <SelectItem value="leads" className="text-xs">🎯 Captação de leads</SelectItem>
+                  <SelectItem value="appointments" className="text-xs">📅 Agendamentos</SelectItem>
+                  <SelectItem value="contracts" className="text-xs">📄 Contratos assinados</SelectItem>
+                  <SelectItem value="other" className="text-xs">⚙️ Outro objetivo</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">
+                Define o que representa uma conversão neste funil
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Label "Ganho"</Label>
+                <Input value={winLabel} onChange={e => setWinLabel(e.target.value)}
+                  placeholder="Ex: Venda fechada, Matriculado..." className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Label "Perdido"</Label>
+                <Input value={lossLabel} onChange={e => setLossLabel(e.target.value)}
+                  placeholder="Ex: Desistiu, Sem perfil..." className="h-8 text-xs" />
+              </div>
+            </div>
             <Label className="text-xs font-semibold">Etapas</Label>
             <div className="space-y-2">
               {localStages.map((stage, idx) => (
