@@ -77,9 +77,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const handleSave = () => {
     if (!funnelName.trim()) { toast({ title: "Informe o nome do funil", variant: "destructive" }); return; }
     if (editingFunnel) {
-      updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages });
+      updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages, goal_type: goalType, win_label: winLabel, loss_label: lossLabel });
     } else {
-      createFunnel.mutate({ name: funnelName, description: funnelDesc, stages: localStages, is_default: !funnelsData || funnelsData.length === 0 });
+      createFunnel.mutate({ name: funnelName, description: funnelDesc, stages: localStages, is_default: !funnelsData || funnelsData.length === 0, goal_type: goalType, win_label: winLabel, loss_label: lossLabel });
     }
     toast({ title: "Funil salvo" });
     setStageDialogOpen(false);
