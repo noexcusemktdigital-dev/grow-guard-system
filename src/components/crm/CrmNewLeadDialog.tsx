@@ -33,6 +33,10 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [value, setValue] = useState("");
   const [source, setSource] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [customFields, setCustomFields] = useState<Record<string, any>>({});
+
+  const selectedFunnelData = funnelsData?.find(f => f.id === funnelId);
+  const customFieldsSchema = (selectedFunnelData as any)?.custom_fields_schema || [];
 
   // Auto-fill from prefillContact
   const [prefilled, setPrefilled] = useState(false);
