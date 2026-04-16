@@ -149,6 +149,16 @@ export function CrmIntegrationHub() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; errors: number } | null>(null);
   const [showCsvDialog, setShowCsvDialog] = useState(false);
+  const [metaConfig, setMetaConfig] = useState({
+    funnel_id: "",
+    default_stage: "novo",
+    field_mapping: {
+      name: "full_name",
+      email: "email",
+      phone: "phone_number",
+      company: "company_name",
+    }
+  });
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const webhookUrl = orgId ? `https://${projectId}.supabase.co/functions/v1/crm-lead-webhook/${orgId}` : "Carregando...";
