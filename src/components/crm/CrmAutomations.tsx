@@ -593,14 +593,56 @@ export function CrmAutomations() {
                 </div>
               )}
               {actionType === "move_to_funnel" && funnels && (
-                <div>
-                  <Label className="text-xs">Funil de destino</Label>
-                  <Select value={actionConfig.target_funnel_id || ""} onValueChange={v => setActionConfig({ ...actionConfig, target_funnel_id: v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                    <SelectContent>{funnels.map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs">Funil de destino</Label>
+                    <Select value={actionConfig.target_funnel_id || ""} onValueChange={v => setActionConfig({ ...actionConfig, target_funnel_id: v, target_stage: "" })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                      <SelectContent>{funnels.map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  {actionConfig.target_funnel_id && (() => {
+                    const targetFunnel = funnels.find(f => f.id === actionConfig.target_funnel_id);
+                    const stages = (targetFunnel?.stages as any[]) || [];
+                    return (
+                      <div>
+                        <Label className="text-xs">Etapa inicial no destino</Label>
+                        <Select value={actionConfig.target_stage || ""} onValueChange={v => setActionConfig({ ...actionConfig, target_stage: v })}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Primeira etapa" /></SelectTrigger>
+                          <SelectContent>
+                            {stages.map((s: any) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })()}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">O que fazer com o lead original?</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setActionConfig({ ...actionConfig, move_mode: "transfer" })}
+                        className={`p-2.5 rounded-lg border text-xs text-left transition-all ${
+                          (actionConfig.move_mode || "transfer") === "transfer"
+                            ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <p className="font-medium">↗️ Transferir</p>
+                        <p className="text-muted-foreground text-[10px] mt-0.5">Remove do funil atual e move para o destino</p>
+                      </button>
+                      <button
+                        onClick={() => setActionConfig({ ...actionConfig, move_mode: "duplicate" })}
+                        className={`p-2.5 rounded-lg border text-xs text-left transition-all ${
+                          actionConfig.move_mode === "duplicate"
+                            ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <p className="font-medium">📋 Duplicar</p>
+                        <p className="text-muted-foreground text-[10px] mt-0.5">Mantém no funil atual e cria cópia no destino</p>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-               )}
+              )}
 
               {/* AI Agent Config */}
               {isAiAction(actionType) && (
