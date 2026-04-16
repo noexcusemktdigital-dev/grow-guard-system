@@ -7715,6 +7715,7 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      monthly_index_cleanup: { Args: never; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -7759,6 +7760,7 @@ export type Database = {
       }
       start_meta_ads_oauth: { Args: { p_org_id?: string }; Returns: Json }
       sync_team_chat_channels: { Args: { _org_id: string }; Returns: undefined }
+      weekly_db_maintenance: { Args: never; Returns: Json }
     }
     Enums: {
       app_role:
