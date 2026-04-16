@@ -32,6 +32,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [localStages, setLocalStages] = useState<FunnelStage[]>([]);
   const [funnelName, setFunnelName] = useState("");
   const [funnelDesc, setFunnelDesc] = useState("");
+  const [goalType, setGoalType] = useState("revenue");
+  const [winLabel, setWinLabel] = useState("Ganho");
+  const [lossLabel, setLossLabel] = useState("Perdido");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
 
   const isTrial = subscription?.status === "trial";
@@ -51,6 +54,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       }
       setFunnelName(editingFunnel.name);
       setFunnelDesc(editingFunnel.description || "");
+      setGoalType(editingFunnel.goal_type || "revenue");
+      setWinLabel(editingFunnel.win_label || "Ganho");
+      setLossLabel(editingFunnel.loss_label || "Perdido");
     }
   }, [editingFunnel]);
 
@@ -71,9 +77,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const handleSave = () => {
     if (!funnelName.trim()) { toast({ title: "Informe o nome do funil", variant: "destructive" }); return; }
     if (editingFunnel) {
-      updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages });
+      updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages, goal_type: goalType, win_label: winLabel, loss_label: lossLabel });
     } else {
-      createFunnel.mutate({ name: funnelName, description: funnelDesc, stages: localStages, is_default: !funnelsData || funnelsData.length === 0 });
+      createFunnel.mutate({ name: funnelName, description: funnelDesc, stages: localStages, is_default: !funnelsData || funnelsData.length === 0, goal_type: goalType, win_label: winLabel, loss_label: lossLabel });
     }
     toast({ title: "Funil salvo" });
     setStageDialogOpen(false);
@@ -180,6 +186,34 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Nome *</Label><Input value={funnelName} onChange={e => setFunnelName(e.target.value)} placeholder="Ex: Funil de Vendas" /></div>
               <div><Label className="text-xs">Descrição</Label><Input value={funnelDesc} onChange={e => setFunnelDesc(e.target.value)} placeholder="Opcional" /></div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Objetivo do funil</Label>
+              <Select value={goalType} onValueChange={setGoalType}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="revenue" className="text-xs">💰 Faturamento (vendas)</SelectItem>
+                  <SelectItem value="leads" className="text-xs">🎯 Captação de leads</SelectItem>
+                  <SelectItem value="appointments" className="text-xs">📅 Agendamentos</SelectItem>
+                  <SelectItem value="contracts" className="text-xs">📄 Contratos assinados</SelectItem>
+                  <SelectItem value="other" className="text-xs">⚙️ Outro objetivo</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">
+                Define o que representa uma conversão neste funil
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Label "Ganho"</Label>
+                <Input value={winLabel} onChange={e => setWinLabel(e.target.value)}
+                  placeholder="Ex: Venda fechada, Matriculado..." className="h-8 text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Label "Perdido"</Label>
+                <Input value={lossLabel} onChange={e => setLossLabel(e.target.value)}
+                  placeholder="Ex: Desistiu, Sem perfil..." className="h-8 text-xs" />
+              </div>
             </div>
             <Label className="text-xs font-semibold">Etapas</Label>
             <div className="space-y-2">

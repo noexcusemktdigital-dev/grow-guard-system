@@ -113,6 +113,9 @@ export function useCrmFunnelMutations() {
       description?: string;
       stages?: FunnelStage[];
       is_default?: boolean;
+      goal_type?: string;
+      win_label?: string;
+      loss_label?: string;
     }) => {
       if (funnel.is_default && orgId) {
         await supabase
