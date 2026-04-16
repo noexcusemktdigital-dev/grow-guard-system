@@ -2550,33 +2550,57 @@ export type Database = {
       crm_funnels: {
         Row: {
           created_at: string
+          custom_fields_schema: Json | null
           description: string | null
+          goal_label: string | null
+          goal_type: string | null
           id: string
           is_default: boolean
+          loss_label: string | null
           name: string
           organization_id: string
+          roulette_enabled: boolean | null
+          roulette_members: Json | null
+          roulette_stage: string | null
           stages: Json
           updated_at: string
+          win_label: string | null
         }
         Insert: {
           created_at?: string
+          custom_fields_schema?: Json | null
           description?: string | null
+          goal_label?: string | null
+          goal_type?: string | null
           id?: string
           is_default?: boolean
+          loss_label?: string | null
           name: string
           organization_id: string
+          roulette_enabled?: boolean | null
+          roulette_members?: Json | null
+          roulette_stage?: string | null
           stages?: Json
           updated_at?: string
+          win_label?: string | null
         }
         Update: {
           created_at?: string
+          custom_fields_schema?: Json | null
           description?: string | null
+          goal_label?: string | null
+          goal_type?: string | null
           id?: string
           is_default?: boolean
+          loss_label?: string | null
           name?: string
           organization_id?: string
+          roulette_enabled?: boolean | null
+          roulette_members?: Json | null
+          roulette_stage?: string | null
           stages?: Json
           updated_at?: string
+          win_label?: string | null
         }
         Relationships: [
           {
@@ -2824,6 +2848,66 @@ export type Database = {
             foreignKeyName: "crm_leads_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_meta_integrations: {
+        Row: {
+          access_token_encrypted: string | null
+          created_at: string | null
+          default_funnel_id: string | null
+          default_stage: string | null
+          field_mapping: Json | null
+          form_ids: Json | null
+          id: string
+          is_active: boolean | null
+          organization_id: string
+          page_id: string | null
+          page_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          created_at?: string | null
+          default_funnel_id?: string | null
+          default_stage?: string | null
+          field_mapping?: Json | null
+          form_ids?: Json | null
+          id?: string
+          is_active?: boolean | null
+          organization_id: string
+          page_id?: string | null
+          page_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          created_at?: string | null
+          default_funnel_id?: string | null
+          default_stage?: string | null
+          field_mapping?: Json | null
+          form_ids?: Json | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string
+          page_id?: string | null
+          page_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_meta_integrations_default_funnel_id_fkey"
+            columns: ["default_funnel_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_meta_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
