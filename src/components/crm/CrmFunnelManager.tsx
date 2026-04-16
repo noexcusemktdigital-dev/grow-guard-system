@@ -36,6 +36,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [winLabel, setWinLabel] = useState("Ganho");
   const [lossLabel, setLossLabel] = useState("Perdido");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
+  const [customFieldsSchema, setCustomFieldsSchema] = useState<any[]>([]);
 
   const isTrial = subscription?.status === "trial";
   const planId = subscription?.plan as string | null;
@@ -57,6 +58,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       setGoalType(editingFunnel.goal_type || "revenue");
       setWinLabel(editingFunnel.win_label || "Ganho");
       setLossLabel(editingFunnel.loss_label || "Perdido");
+      setCustomFieldsSchema((editingFunnel as any).custom_fields_schema || []);
     }
   }, [editingFunnel]);
 
@@ -77,9 +79,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const handleSave = () => {
     if (!funnelName.trim()) { toast({ title: "Informe o nome do funil", variant: "destructive" }); return; }
     if (editingFunnel) {
-      updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages, goal_type: goalType, win_label: winLabel, loss_label: lossLabel });
+      updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages, goal_type: goalType, win_label: winLabel, loss_label: lossLabel, custom_fields_schema: customFieldsSchema });
     } else {
-      createFunnel.mutate({ name: funnelName, description: funnelDesc, stages: localStages, is_default: !funnelsData || funnelsData.length === 0, goal_type: goalType, win_label: winLabel, loss_label: lossLabel });
+      createFunnel.mutate({ name: funnelName, description: funnelDesc, stages: localStages, is_default: !funnelsData || funnelsData.length === 0, goal_type: goalType, win_label: winLabel, loss_label: lossLabel, custom_fields_schema: customFieldsSchema });
     }
     toast({ title: "Funil salvo" });
     setStageDialogOpen(false);
@@ -237,6 +239,49 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
               ))}
             </div>
             <Button variant="outline" size="sm" className="w-full text-xs gap-1" onClick={addStage}><Plus className="w-3.5 h-3.5" /> Adicionar etapa</Button>
+
+            {/* Custom Fields */}
+            <div className="flex items-center justify-between mt-4">
+              <Label className="text-xs font-semibold">Campos adicionais do lead</Label>
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
+                const newField = { key: `field_${Date.now()}`, label: "Novo campo", type: "text", required: false, placeholder: "" };
+                setCustomFieldsSchema([...customFieldsSchema, newField]);
+              }}>
+                <Plus className="w-3 h-3" /> Adicionar campo
+              </Button>
+            </div>
+            {customFieldsSchema.length === 0 && (
+              <p className="text-[10px] text-muted-foreground">Nenhum campo adicional. Clique em "+ Adicionar campo" para criar.</p>
+            )}
+            {customFieldsSchema.map((field: any, idx: number) => (
+              <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/20">
+                <Input
+                  value={field.label}
+                  onChange={e => {
+                    const updated = [...customFieldsSchema];
+                    updated[idx] = { ...field, label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    setCustomFieldsSchema(updated);
+                  }}
+                  className="h-7 text-xs flex-1"
+                  placeholder="Nome do campo"
+                />
+                <Select value={field.type} onValueChange={v => {
+                  const updated = [...customFieldsSchema];
+                  updated[idx] = { ...field, type: v };
+                  setCustomFieldsSchema(updated);
+                }}>
+                  <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text" className="text-xs">Texto</SelectItem>
+                    <SelectItem value="number" className="text-xs">Número</SelectItem>
+                    <SelectItem value="select" className="text-xs">Seleção</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setCustomFieldsSchema(customFieldsSchema.filter((_: any, i: number) => i !== idx))}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStageDialogOpen(false)}>Cancelar</Button>

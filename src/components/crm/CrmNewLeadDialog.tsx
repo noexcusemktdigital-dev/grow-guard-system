@@ -33,6 +33,10 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [value, setValue] = useState("");
   const [source, setSource] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [customFields, setCustomFields] = useState<Record<string, any>>({});
+
+  const selectedFunnelData = funnelsData?.find(f => f.id === funnelId);
+  const customFieldsSchema = (selectedFunnelData as any)?.custom_fields_schema || [];
 
   // Auto-fill from prefillContact
   const [prefilled, setPrefilled] = useState(false);
@@ -48,7 +52,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   }
 
   const reset = () => {
-    setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput("");
+    setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput(""); setCustomFields({});
   };
 
   const handleCreate = () => {
@@ -75,6 +79,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       stage: defaultStage,
       funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
       _maxLeads: maxLeads,
     } as any);
     reset();
@@ -105,6 +110,37 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
             </div>
           </div>
           <div><Label className="text-xs">Tags (separadas por vírgula)</Label><Input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="tag1, tag2" /></div>
+
+          {customFieldsSchema.length > 0 && (
+            <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+              <Label className="text-xs font-semibold">Campos adicionais</Label>
+              {customFieldsSchema.map((field: any) => (
+                <div key={field.key}>
+                  <Label className="text-xs">{field.label}{field.required ? " *" : ""}</Label>
+                  {field.type === "select" ? (
+                    <select
+                      value={customFields[field.key] || ""}
+                      onChange={e => setCustomFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                    >
+                      <option value="">Selecionar</option>
+                      {(field.options || []).map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={customFields[field.key] || ""}
+                      onChange={e => setCustomFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder || ""}
+                      className="h-8 text-xs"
+                      type={field.type === "number" ? "number" : "text"}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
