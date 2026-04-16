@@ -484,6 +484,26 @@ export function CrmAutomations() {
                   </div>
                 </div>
               )}
+              {selectedFunnels.length === 1 && funnels && (() => {
+                const f = funnels.find(f => f.id === selectedFunnels[0]);
+                const stages = (f?.stages as any[]) || [];
+                if (stages.length === 0) return null;
+                return (
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground mb-1 block">Etapa específica (opcional)</Label>
+                    <Select
+                      value={triggerConfig.specific_stage || ""}
+                      onValueChange={v => setTriggerConfig({ ...triggerConfig, specific_stage: v || undefined })}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas as etapas" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="" className="text-xs">Todas as etapas</SelectItem>
+                        {stages.map((s: any) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              })()}
               {teams && teams.length > 0 && (
                 <div>
                   <Label className="text-[10px] text-muted-foreground mb-1 block">Times (vazio = todos)</Label>
