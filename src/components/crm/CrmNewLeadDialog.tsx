@@ -52,7 +52,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   }
 
   const reset = () => {
-    setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput("");
+    setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput(""); setCustomFields({});
   };
 
   const handleCreate = () => {
