@@ -55,17 +55,12 @@ const SOURCES: IntegrationSource[] = [
   },
   {
     id: "meta",
-    name: "Meta Ads",
+    name: "Meta Lead Ads",
     icon: <Facebook className="w-6 h-6" />,
     description: "Conecte formulários de lead do Facebook e Instagram Ads",
-    method: "Webhook ou Zapier/Make",
+    method: "Webhook nativo",
     color: "text-blue-600",
-    steps: [
-      { title: "Acesse o Meta Business Suite", content: "Vá até o Gerenciador de Anúncios do Meta (business.facebook.com). Navegue até a campanha que usa formulários de lead (Lead Ads)." },
-      { title: "Configure o webhook", content: "Em Configurações do Formulário > Integrações, selecione 'Webhook' e cole a URL abaixo. O Meta enviará os leads automaticamente.", hasWebhook: true },
-      { title: "Alternativa: use Zapier ou Make", content: "Se preferir, crie uma automação no Zapier ou Make:\n\n1. Trigger: 'Nova resposta de Lead Ad no Facebook'\n2. Ação: 'Webhook POST' para a URL acima\n3. Mapeie os campos: name, email, phone" },
-      { title: "Teste a integração", content: "Preencha o formulário de lead da sua campanha (modo de teste) ou clique abaixo para enviar um lead de teste." },
-    ],
+    steps: [], // Custom UI rendered in dialog
   },
   {
     id: "google",
