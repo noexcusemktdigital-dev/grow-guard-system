@@ -21,7 +21,8 @@ import { PostResult } from "@/components/cliente/social/PostResult";
 import { LOADING_PHRASES } from "@/components/cliente/social/constants";
 import { PublicarModal } from "@/components/social/PublicarModal";
 import { Button } from "@/components/ui/button";
-import { Share2 } from "lucide-react";
+import { Share2, Instagram, Link2, CheckCircle2 } from "lucide-react";
+import { useSocialAccounts, useConnectSocialAccount } from "@/hooks/useSocialAccounts";
 
 import { PageHeader } from "@/components/PageHeader";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
