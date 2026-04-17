@@ -449,7 +449,10 @@ export default function ClienteAgenda() {
                 <CheckCircle2 className="w-3 h-3 mr-1" /> Google conectado
               </Badge>
               <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={handleGooglePull} disabled={syncing}>
-                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} /> Sincronizar
+                {syncing
+                  ? <><RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando...</>
+                  : <><RefreshCw className="w-3 h-3" /> Importar do Google</>
+                }
               </Button>
               <Button size="sm" variant="ghost" className="gap-1 text-xs text-destructive" onClick={() => disconnectGoogle.mutate()}>
                 <Unlink className="w-3.5 h-3.5" /> Desconectar
