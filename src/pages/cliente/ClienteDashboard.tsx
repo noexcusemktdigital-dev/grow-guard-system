@@ -8,12 +8,11 @@ import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
   MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage,
-  CheckCircle2, TrendingDown, ArrowRight, AlertTriangle, GitBranch,
+  CheckCircle2, TrendingDown, ArrowRight, AlertTriangle, GitBranch, Trophy, XCircle,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useNavigate } from "react-router-dom";
-import { GitBranch, Trophy, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
