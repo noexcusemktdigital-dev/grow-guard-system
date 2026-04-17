@@ -178,6 +178,17 @@ export default function ClienteDashboard() {
     return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
   }, [lostLeads]);
 
+  const rankingByMember = useMemo(() => {
+    const map: Record<string, { won: number; total: number; revenue: number; name: string }> = {};
+    allLeads.forEach((l: any) => {
+      const key = l.assigned_to || "sem_responsavel";
+      if (!map[key]) map[key] = { won: 0, total: 0, revenue: 0, name: l.assigned_to ? String(key).slice(0, 8) : "Sem responsável" };
+      map[key].total++;
+      if (l.won_at) { map[key].won++; map[key].revenue += Number(l.value || 0); }
+    });
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  }, [allLeads]);
+
   const leadsBySource = useMemo(() => {
     const map: Record<string, number> = {};
     allLeads.forEach(l => { const s = l.source || "Sem origem"; map[s] = (map[s] || 0) + 1; });
