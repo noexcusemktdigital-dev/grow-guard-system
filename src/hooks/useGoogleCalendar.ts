@@ -67,7 +67,9 @@ export function useGoogleCalendarSync(portal?: string) {
   const resolvedPortal = portal || detectPortal();
 
   return useMutation({
-    mutationFn: async (action: "pull" | "push" | "delete", event?: Record<string, unknown>) => {
+    mutationFn: async (vars: { action: "pull" | "push" | "delete"; event?: Record<string, unknown> } | "pull" | "push" | "delete") => {
+      const action = typeof vars === "string" ? vars : vars.action;
+      const event = typeof vars === "string" ? undefined : vars.event;
       const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
         body: { action, event, portal: resolvedPortal },
       });
