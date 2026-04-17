@@ -311,6 +311,7 @@ export default function ClienteDashboard() {
               </PopoverContent>
             </Popover>
           </div>
+          </div>
         }
       />
 
