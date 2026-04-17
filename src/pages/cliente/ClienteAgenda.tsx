@@ -254,8 +254,9 @@ export default function ClienteAgenda() {
   async function handleGooglePull() {
     setSyncing(true);
     try {
-      const result = await syncGoogle.mutateAsync("pull" as unknown as string);
-      toast.success(`Sincronizado! ${(result as Record<string, unknown>)?.imported || 0} novos eventos importados.`);
+      const result = await syncGoogle.mutateAsync({ action: "pull" });
+      const imported = (result as Record<string, unknown>)?.imported || 0;
+      toast.success(`Sincronização concluída — ${imported} novo(s) evento(s) importado(s) do Google Agenda`);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
     setSyncing(false);
   }
