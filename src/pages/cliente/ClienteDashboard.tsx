@@ -8,8 +8,10 @@ import {
   BarChart3, TrendingUp, Users, DollarSign,
   ArrowUpRight, ArrowDownRight, Target, Eye,
   MessageCircle, Bot, Download, FileText, Calendar, ChevronDown, FileImage,
-  CheckCircle2, TrendingDown, ArrowRight, AlertTriangle,
+  CheckCircle2, TrendingDown, ArrowRight, AlertTriangle, GitBranch,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +60,8 @@ export default function ClienteDashboard() {
   const [period, setPeriod] = useState("30d");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
+  const { data: funnels } = useCrmFunnels();
 
   const { data: activeGoals } = useActiveGoals();
   const { data: goalProgress } = useGoalProgress(activeGoals);
@@ -84,7 +88,11 @@ export default function ClienteDashboard() {
   });
 
   const { from: dateFrom, to: dateTo } = useMemo(() => getDateRange(period, customFrom, customTo), [period, customFrom, customTo]);
-  const allLeadsRaw = leads ?? [];
+  const allLeadsRaw = useMemo(() => {
+    const list = leads ?? [];
+    if (selectedFunnelId === "all") return list;
+    return list.filter((l: any) => l.funnel_id === selectedFunnelId);
+  }, [leads, selectedFunnelId]);
   const allLeads = useMemo(() => filterByDate(allLeadsRaw, dateFrom, dateTo), [allLeadsRaw, dateFrom, dateTo]);
   const prevLeads = useMemo(() => {
     if (!dateFrom) return [];
@@ -274,8 +282,23 @@ export default function ClienteDashboard() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Relatórios" subtitle="Analise e exporte relatórios das suas frentes comerciais" icon={<BarChart3 className="w-5 h-5 text-primary" />}
+      <PageHeader title="Relatórios" subtitle={selectedFunnelId !== "all" ? `Funil: ${funnels?.find(f => f.id === selectedFunnelId)?.name}` : "Analise e exporte relatórios das suas frentes comerciais"} icon={<BarChart3 className="w-5 h-5 text-primary" />}
         actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {funnels && funnels.length > 1 && (
+              <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                <SelectTrigger className="h-8 text-xs w-44">
+                  <GitBranch className="w-3 h-3 mr-1.5 text-muted-foreground" />
+                  <SelectValue placeholder="Todos os funis" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">Todos os funis</SelectItem>
+                  {funnels.map(f => (
+                    <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border items-center flex-wrap">
             {[{ key: "7d", label: "7 dias" }, { key: "30d", label: "30 dias" }, { key: "90d", label: "90 dias" }, { key: "all", label: "Todo período" }].map(p => (
               <Button key={p.key} variant={period === p.key ? "default" : "ghost"} size="sm" className="text-xs h-7 px-3" onClick={() => setPeriod(p.key)}>{p.label}</Button>
