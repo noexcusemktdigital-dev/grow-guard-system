@@ -104,7 +104,12 @@ export default function ClienteRedesSociais() {
   const bulkDelete = useBulkDeletePosts();
   const bulkApprove = useBulkApprovePosts();
   const quota = usePostQuota();
+  const { data: socialAccounts } = useSocialAccounts();
+  const connectSocial = useConnectSocialAccount();
 
+  const metaAccount = socialAccounts?.find(
+    (a) => (a.platform === "instagram" || a.platform === "facebook") && a.status === "active",
+  );
 
   const loadContentData = async (id: string) => {
     try {
