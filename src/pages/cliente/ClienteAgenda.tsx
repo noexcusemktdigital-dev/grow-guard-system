@@ -337,11 +337,31 @@ export default function ClienteAgenda() {
     };
     if (editingEvent) {
       updateEvent.mutate({ id: editingEvent.id, ...payload }, {
-        onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); },
+        onSuccess: async (updatedEvent) => {
+          setFormOpen(false);
+          toast.success("Evento atualizado!");
+          if (isGoogleConnected && updatedEvent) {
+            try {
+              await syncGoogle.mutateAsync({ action: "push", event: updatedEvent as unknown as Record<string, unknown> });
+            } catch {
+              toast.warning("Evento atualizado no sistema, mas não foi possível sincronizar com o Google Agenda.");
+            }
+          }
+        },
       });
     } else {
       createEvent.mutate(payload, {
-        onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); },
+        onSuccess: async (newEvent) => {
+          setFormOpen(false);
+          toast.success("Evento criado!");
+          if (isGoogleConnected && newEvent) {
+            try {
+              await syncGoogle.mutateAsync({ action: "push", event: newEvent as unknown as Record<string, unknown> });
+            } catch {
+              toast.warning("Evento criado no sistema, mas não foi possível sincronizar com o Google Agenda.");
+            }
+          }
+        },
       });
     }
   }
@@ -352,8 +372,20 @@ export default function ClienteAgenda() {
 
   function executeDelete() {
     if (!deleteConfirmId) return;
+    const eventToDelete = deleteConfirmId ? (events as AgendaEvent[] | undefined)?.find(e => (e as Record<string, unknown>).id === deleteConfirmId) : null;
     deleteEvent.mutate(deleteConfirmId, {
-      onSuccess: () => { setDetailEvent(null); setDeleteConfirmId(null); toast.success("Evento excluído!"); },
+      onSuccess: async () => {
+        setDetailEvent(null);
+        setDeleteConfirmId(null);
+        toast.success("Evento excluído!");
+        if (isGoogleConnected && (eventToDelete as Record<string, unknown> | null | undefined)?.google_event_id) {
+          try {
+            await syncGoogle.mutateAsync({ action: "delete", event: eventToDelete as unknown as Record<string, unknown> });
+          } catch {
+            // silencioso - evento já foi deletado localmente
+          }
+        }
+      },
     });
   }
 
