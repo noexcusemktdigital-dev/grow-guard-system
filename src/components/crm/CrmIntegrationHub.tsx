@@ -297,6 +297,95 @@ export function CrmIntegrationHub() {
             <DialogDescription>{source?.description}</DialogDescription>
           </DialogHeader>
 
+          {source?.id === "meta" && (
+            <div className="space-y-4">
+              {/* Passo 1 — URL do Webhook */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">1</Badge>
+                  <span className="text-sm font-medium">URL do Webhook</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input value={webhookUrl} readOnly className="text-xs font-mono" />
+                  <Button size="sm" variant="outline" onClick={copyUrl} aria-label="Copiar"><Copy className="w-3.5 h-3.5" /></Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Cole esta URL em <strong>Meta Business Suite → Gerenciador de Anúncios → Formulários de Lead → Integrações → Webhook</strong>.
+                </p>
+              </div>
+
+              {/* Passo 2 — Mapear campos */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">2</Badge>
+                  <span className="text-sm font-medium">Mapeie os campos do formulário</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">O webhook aceita os seguintes campos JSON:</p>
+                <div className="space-y-1">
+                  {[
+                    ["name", "Nome completo", true],
+                    ["email", "E-mail", false],
+                    ["phone", "Telefone", false],
+                    ["company", "Empresa", false],
+                    ["source", "Origem (ex: Meta Ads)", false],
+                    ["funnel_id", "ID do funil de destino", false],
+                  ].map(([key, desc, req]) => (
+                    <div key={key as string} className="flex items-center gap-2 text-[11px]">
+                      <code className="font-mono bg-muted px-1.5 py-0.5 rounded shrink-0">{key as string}</code>
+                      <span className="text-muted-foreground flex-1">{desc as string}</span>
+                      {req && <Badge variant="destructive" className="text-[9px] h-4 px-1.5">obrigatório</Badge>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Passo 3 — Funil destino opcional */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">3</Badge>
+                  <span className="text-sm font-medium">Funil de destino (opcional)</span>
+                </div>
+                <Select value={metaConfig.funnel_id} onValueChange={v => setMetaConfig(p => ({ ...p, funnel_id: v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Padrão (funil principal)" /></SelectTrigger>
+                  <SelectContent>
+                    {(funnels || []).map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {metaConfig.funnel_id && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Adicione <code className="font-mono">funnel_id: "{metaConfig.funnel_id}"</code> no payload para direcionar leads a este funil.
+                  </p>
+                )}
+              </div>
+
+              {/* Passo 4 — Testar */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">4</Badge>
+                  <span className="text-sm font-medium">Enviar lead de teste</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button size="sm" onClick={sendTestLead} disabled={sendingTest} className="gap-1.5">
+                    {sendingTest && <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                    <Send className="w-3.5 h-3.5" /> Enviar lead de teste
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Cria um lead de teste no CRM para validar a integração.</p>
+              </div>
+
+              {/* Alternativa Zapier/Make */}
+              <div className="p-3 rounded-lg border border-dashed bg-muted/10">
+                <p className="text-[11px] text-muted-foreground">
+                  💡 Prefere usar <strong>Zapier</strong> ou <strong>Make</strong>? Use a mesma URL acima como destino do webhook no seu cenário.
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t">
+                <Button size="sm" variant="outline" onClick={closeSource}>Concluir</Button>
+              </div>
+            </div>
+          )}
+
           {source && source.steps.length > 0 && (
             <div className="space-y-4">
               {/* Step indicator */}
