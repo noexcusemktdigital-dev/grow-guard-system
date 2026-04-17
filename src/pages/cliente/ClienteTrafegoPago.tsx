@@ -56,6 +56,10 @@ export default function ClienteTrafegoPago() {
   const approveMutation = useApproveTrafficStrategy();
   const createCampaignMutation = useCreateClientCampaign();
 
+  const { data: adConnections } = useAdConnections();
+  const metaConnection = adConnections?.find((c) => c.platform === "meta_ads" && c.status === "active");
+  const googleConnection = adConnections?.find((c) => c.platform === "google_ads" && c.status === "active");
+
   const [activeTab, setActiveTab] = useState("estrategia");
   const [step, setStep] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
