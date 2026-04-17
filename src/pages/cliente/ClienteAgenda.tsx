@@ -254,8 +254,9 @@ export default function ClienteAgenda() {
   async function handleGooglePull() {
     setSyncing(true);
     try {
-      const result = await syncGoogle.mutateAsync("pull" as unknown as string);
-      toast.success(`Sincronizado! ${(result as Record<string, unknown>)?.imported || 0} novos eventos importados.`);
+      const result = await syncGoogle.mutateAsync({ action: "pull" });
+      const imported = (result as Record<string, unknown>)?.imported || 0;
+      toast.success(`Sincronização concluída — ${imported} novo(s) evento(s) importado(s) do Google Agenda`);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
     setSyncing(false);
   }
@@ -336,11 +337,31 @@ export default function ClienteAgenda() {
     };
     if (editingEvent) {
       updateEvent.mutate({ id: editingEvent.id, ...payload }, {
-        onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); },
+        onSuccess: async (updatedEvent) => {
+          setFormOpen(false);
+          toast.success("Evento atualizado!");
+          if (isGoogleConnected && updatedEvent) {
+            try {
+              await syncGoogle.mutateAsync({ action: "push", event: updatedEvent as unknown as Record<string, unknown> });
+            } catch {
+              toast.warning("Evento atualizado no sistema, mas não foi possível sincronizar com o Google Agenda.");
+            }
+          }
+        },
       });
     } else {
       createEvent.mutate(payload, {
-        onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); },
+        onSuccess: async (newEvent) => {
+          setFormOpen(false);
+          toast.success("Evento criado!");
+          if (isGoogleConnected && newEvent) {
+            try {
+              await syncGoogle.mutateAsync({ action: "push", event: newEvent as unknown as Record<string, unknown> });
+            } catch {
+              toast.warning("Evento criado no sistema, mas não foi possível sincronizar com o Google Agenda.");
+            }
+          }
+        },
       });
     }
   }
@@ -351,8 +372,20 @@ export default function ClienteAgenda() {
 
   function executeDelete() {
     if (!deleteConfirmId) return;
+    const eventToDelete = deleteConfirmId ? (events as AgendaEvent[] | undefined)?.find(e => (e as Record<string, unknown>).id === deleteConfirmId) : null;
     deleteEvent.mutate(deleteConfirmId, {
-      onSuccess: () => { setDetailEvent(null); setDeleteConfirmId(null); toast.success("Evento excluído!"); },
+      onSuccess: async () => {
+        setDetailEvent(null);
+        setDeleteConfirmId(null);
+        toast.success("Evento excluído!");
+        if (isGoogleConnected && (eventToDelete as Record<string, unknown> | null | undefined)?.google_event_id) {
+          try {
+            await syncGoogle.mutateAsync({ action: "delete", event: eventToDelete as unknown as Record<string, unknown> });
+          } catch {
+            // silencioso - evento já foi deletado localmente
+          }
+        }
+      },
     });
   }
 
@@ -416,7 +449,10 @@ export default function ClienteAgenda() {
                 <CheckCircle2 className="w-3 h-3 mr-1" /> Google conectado
               </Badge>
               <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={handleGooglePull} disabled={syncing}>
-                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} /> Sincronizar
+                {syncing
+                  ? <><RefreshCw className="w-3 h-3 animate-spin" /> Sincronizando...</>
+                  : <><RefreshCw className="w-3 h-3" /> Importar do Google</>
+                }
               </Button>
               <Button size="sm" variant="ghost" className="gap-1 text-xs text-destructive" onClick={() => disconnectGoogle.mutate()}>
                 <Unlink className="w-3.5 h-3.5" /> Desconectar
