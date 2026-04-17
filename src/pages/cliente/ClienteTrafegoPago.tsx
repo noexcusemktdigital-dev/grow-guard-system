@@ -7,6 +7,8 @@ import {
   ArrowLeft, ArrowRight, ChevronRight, BarChart2,
 } from "lucide-react";
 import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
+import { useAdConnections } from "@/hooks/useAdPlatforms";
+import { Facebook, Search, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
 import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
 import { PageHeader } from "@/components/PageHeader";
