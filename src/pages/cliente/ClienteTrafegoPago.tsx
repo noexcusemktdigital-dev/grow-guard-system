@@ -7,6 +7,8 @@ import {
   ArrowLeft, ArrowRight, ChevronRight, BarChart2,
 } from "lucide-react";
 import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
+import { useAdConnections } from "@/hooks/useAdPlatforms";
+import { Facebook, Search, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
 import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
 import { PageHeader } from "@/components/PageHeader";
@@ -53,6 +55,10 @@ export default function ClienteTrafegoPago() {
   const generateMutation = useGenerateTrafficStrategy();
   const approveMutation = useApproveTrafficStrategy();
   const createCampaignMutation = useCreateClientCampaign();
+
+  const { data: adConnections } = useAdConnections();
+  const metaConnection = adConnections?.find((c) => c.platform === "meta_ads" && c.status === "active");
+  const googleConnection = adConnections?.find((c) => c.platform === "google_ads" && c.status === "active");
 
   const [activeTab, setActiveTab] = useState("estrategia");
   const [step, setStep] = useState(0);
@@ -207,6 +213,51 @@ export default function ClienteTrafegoPago() {
       />
 
       <StrategyBanner toolName="o tráfego pago" dataUsed="Canais prioritários, funil e público-alvo" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[
+          { conn: metaConnection, label: "Meta Ads", Icon: Facebook, iconColor: "text-blue-500", iconBg: "bg-blue-500/10" },
+          { conn: googleConnection, label: "Google Ads", Icon: Search, iconColor: "text-amber-500", iconBg: "bg-amber-500/10" },
+        ].map(({ conn, label, Icon, iconColor, iconBg }) => (
+          <Card key={label}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-5 h-5 ${iconColor}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{label}</p>
+                {conn ? (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                    {conn.account_name || "Conectado"}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Não conectado</p>
+                )}
+              </div>
+              {conn ? (
+                <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Ativo</Badge>
+              ) : (
+                <Button size="sm" variant="outline" className="text-xs h-7 gap-1.5" onClick={() => setActiveTab("anuncios")}>
+                  <Link2 className="w-3 h-3" /> Conectar
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {!metaConnection && !googleConnection && (
+        <Card className="border-dashed">
+          <CardContent className="p-6 text-center space-y-2">
+            <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
+            <p className="text-sm font-semibold">Conecte suas plataformas de anúncios</p>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Conecte Meta Ads ou Google Ads acima para visualizar métricas de campanhas, CPL, ROAS e performance em tempo real.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
