@@ -55,17 +55,12 @@ const SOURCES: IntegrationSource[] = [
   },
   {
     id: "meta",
-    name: "Meta Ads",
+    name: "Meta Lead Ads",
     icon: <Facebook className="w-6 h-6" />,
     description: "Conecte formulários de lead do Facebook e Instagram Ads",
-    method: "Webhook ou Zapier/Make",
+    method: "Webhook nativo",
     color: "text-blue-600",
-    steps: [
-      { title: "Acesse o Meta Business Suite", content: "Vá até o Gerenciador de Anúncios do Meta (business.facebook.com). Navegue até a campanha que usa formulários de lead (Lead Ads)." },
-      { title: "Configure o webhook", content: "Em Configurações do Formulário > Integrações, selecione 'Webhook' e cole a URL abaixo. O Meta enviará os leads automaticamente.", hasWebhook: true },
-      { title: "Alternativa: use Zapier ou Make", content: "Se preferir, crie uma automação no Zapier ou Make:\n\n1. Trigger: 'Nova resposta de Lead Ad no Facebook'\n2. Ação: 'Webhook POST' para a URL acima\n3. Mapeie os campos: name, email, phone" },
-      { title: "Teste a integração", content: "Preencha o formulário de lead da sua campanha (modo de teste) ou clique abaixo para enviar um lead de teste." },
-    ],
+    steps: [], // Custom UI rendered in dialog
   },
   {
     id: "google",
@@ -293,7 +288,7 @@ export function CrmIntegrationHub() {
 
       {/* Tutorial Dialog */}
       <Dialog open={!!selectedSource} onOpenChange={(open) => !open && closeSource()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
               {source && <span className={source.color}>{source.icon}</span>}
@@ -301,6 +296,95 @@ export function CrmIntegrationHub() {
             </DialogTitle>
             <DialogDescription>{source?.description}</DialogDescription>
           </DialogHeader>
+
+          {source?.id === "meta" && (
+            <div className="space-y-4">
+              {/* Passo 1 — URL do Webhook */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">1</Badge>
+                  <span className="text-sm font-medium">URL do Webhook</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input value={webhookUrl} readOnly className="text-xs font-mono" />
+                  <Button size="sm" variant="outline" onClick={copyUrl} aria-label="Copiar"><Copy className="w-3.5 h-3.5" /></Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Cole esta URL em <strong>Meta Business Suite → Gerenciador de Anúncios → Formulários de Lead → Integrações → Webhook</strong>.
+                </p>
+              </div>
+
+              {/* Passo 2 — Mapear campos */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">2</Badge>
+                  <span className="text-sm font-medium">Mapeie os campos do formulário</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">O webhook aceita os seguintes campos JSON:</p>
+                <div className="space-y-1">
+                  {[
+                    ["name", "Nome completo", true],
+                    ["email", "E-mail", false],
+                    ["phone", "Telefone", false],
+                    ["company", "Empresa", false],
+                    ["source", "Origem (ex: Meta Ads)", false],
+                    ["funnel_id", "ID do funil de destino", false],
+                  ].map(([key, desc, req]) => (
+                    <div key={key as string} className="flex items-center gap-2 text-[11px]">
+                      <code className="font-mono bg-muted px-1.5 py-0.5 rounded shrink-0">{key as string}</code>
+                      <span className="text-muted-foreground flex-1">{desc as string}</span>
+                      {req && <Badge variant="destructive" className="text-[9px] h-4 px-1.5">obrigatório</Badge>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Passo 3 — Funil destino opcional */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">3</Badge>
+                  <span className="text-sm font-medium">Funil de destino (opcional)</span>
+                </div>
+                <Select value={metaConfig.funnel_id} onValueChange={v => setMetaConfig(p => ({ ...p, funnel_id: v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Padrão (funil principal)" /></SelectTrigger>
+                  <SelectContent>
+                    {(funnels || []).map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {metaConfig.funnel_id && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Adicione <code className="font-mono">funnel_id: "{metaConfig.funnel_id}"</code> no payload para direcionar leads a este funil.
+                  </p>
+                )}
+              </div>
+
+              {/* Passo 4 — Testar */}
+              <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Badge className="text-[10px] h-5">4</Badge>
+                  <span className="text-sm font-medium">Enviar lead de teste</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button size="sm" onClick={sendTestLead} disabled={sendingTest} className="gap-1.5">
+                    {sendingTest && <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                    <Send className="w-3.5 h-3.5" /> Enviar lead de teste
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Cria um lead de teste no CRM para validar a integração.</p>
+              </div>
+
+              {/* Alternativa Zapier/Make */}
+              <div className="p-3 rounded-lg border border-dashed bg-muted/10">
+                <p className="text-[11px] text-muted-foreground">
+                  💡 Prefere usar <strong>Zapier</strong> ou <strong>Make</strong>? Use a mesma URL acima como destino do webhook no seu cenário.
+                </p>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t">
+                <Button size="sm" variant="outline" onClick={closeSource}>Concluir</Button>
+              </div>
+            </div>
+          )}
 
           {source && source.steps.length > 0 && (
             <div className="space-y-4">
@@ -353,60 +437,6 @@ export function CrmIntegrationHub() {
                   </Button>
                 )}
               </div>
-
-              {/* Meta Ads config */}
-              {source.id === "meta" && (
-                <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                  <p className="text-xs font-semibold">⚙️ Configuração automática</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Funil de destino</Label>
-                      <Select value={metaConfig.funnel_id} onValueChange={v => setMetaConfig(p => ({ ...p, funnel_id: v }))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar funil" /></SelectTrigger>
-                        <SelectContent>
-                          {(funnels || []).map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Etapa inicial</Label>
-                      <Select value={metaConfig.default_stage} onValueChange={v => setMetaConfig(p => ({ ...p, default_stage: v }))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar etapa" /></SelectTrigger>
-                        <SelectContent>
-                          {(funnels?.find(f => f.id === metaConfig.funnel_id)?.stages as any[] || []).map((s: any) => (
-                            <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium">Mapeamento de campos do formulário Meta</Label>
-                    <p className="text-[10px] text-muted-foreground">
-                      Cole o nome exato do campo como aparece no formulário do Meta Lead Ads
-                    </p>
-                    {[
-                      { key: "name", label: "Nome do lead", placeholder: "full_name" },
-                      { key: "email", label: "E-mail", placeholder: "email" },
-                      { key: "phone", label: "Telefone", placeholder: "phone_number" },
-                      { key: "company", label: "Empresa", placeholder: "company_name" },
-                    ].map(f => (
-                      <div key={f.key} className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-24 shrink-0">{f.label}:</span>
-                        <Input
-                          value={(metaConfig.field_mapping as any)[f.key] || ""}
-                          onChange={e => setMetaConfig(p => ({ ...p, field_mapping: { ...p.field_mapping, [f.key]: e.target.value } }))}
-                          placeholder={f.placeholder}
-                          className="h-7 text-xs"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    💡 Para integração direta (sem Zapier), use a URL do webhook acima nas configurações do Lead Ads no Meta Business Suite. O sistema mapeia automaticamente os campos conforme configurado acima.
-                  </p>
-                </div>
-              )}
 
               {/* Navigation */}
               <div className="flex justify-between pt-2 border-t">
