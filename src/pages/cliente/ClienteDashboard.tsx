@@ -413,8 +413,50 @@ export default function ClienteDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads Criados por Semana</CardTitle></CardHeader><CardContent>{leadsPerWeek.some(w => w.value > 0) ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><LineChart data={leadsPerWeek}><CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><ReTooltip content={<ChartTooltip />} /><Line type="monotone" dataKey="value" stroke={CHART_COLORS.purple} strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: CHART_COLORS.purple, strokeWidth: 2 }} activeDot={{ r: 6 }} />{leadsGoal && leadsGoal.target_value && <ReferenceLine y={Math.round(leadsGoal.target_value / 4)} stroke={CHART_COLORS.amber} strokeDasharray="6 3" label={{ value: "Meta/sem", position: "right", fontSize: 10, fill: CHART_COLORS.amber }} />}</LineChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Motivos de Perda</CardTitle></CardHeader><CardContent>{lostReasons.length > 0 ? <div className="space-y-2">{lostReasons.map((r, i) => <div key={r.name} className="flex items-center justify-between"><div className="flex items-center gap-2 flex-1 min-w-0"><div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} /><span className="text-xs text-muted-foreground truncate">{r.name}</span></div><Badge variant="secondary" className="text-[10px]">{r.value}</Badge></div>)}</div> : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido no período</p>}</CardContent></Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><XCircle className="w-4 h-4 text-destructive" /> Motivos de Perda</CardTitle></CardHeader>
+              <CardContent>
+                {lostReasons.length > 0 ? (
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={lostReasons} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={100} />
+                        <ReTooltip content={<ChartTooltip />} />
+                        <Bar dataKey="value" name="Leads" radius={[0, 6, 6, 0]} fill="hsl(0 84% 60% / 0.7)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : <p className="text-xs text-muted-foreground text-center py-8">Nenhum lead perdido no período</p>}
+              </CardContent>
+            </Card>
           </div>
+
+          {rankingByMember.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /> Ranking por Responsável</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {rankingByMember.map((m, i) => (
+                  <div key={m.name + i} className="flex items-center gap-3">
+                    <span className={`text-xs font-bold w-5 text-center ${i === 0 ? "text-amber-500" : "text-muted-foreground"}`}>{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium truncate">{m.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0 ml-2">{m.won} vendas</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${rankingByMember[0].revenue > 0 ? (m.revenue / rankingByMember[0].revenue) * 100 : 0}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold shrink-0">R$ {m.revenue.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* ===== CHAT TAB ===== */}
