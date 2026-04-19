@@ -4673,6 +4673,170 @@ export type Database = {
           },
         ]
       }
+      meta_leadgen_events: {
+        Row: {
+          created_at: string | null
+          crm_lead_id: string | null
+          error_message: string | null
+          form_id: string
+          id: string
+          lead_data: Json | null
+          leadgen_id: string
+          organization_id: string | null
+          page_id: string
+          processed_at: string | null
+          raw_payload: Json | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crm_lead_id?: string | null
+          error_message?: string | null
+          form_id: string
+          id?: string
+          lead_data?: Json | null
+          leadgen_id: string
+          organization_id?: string | null
+          page_id: string
+          processed_at?: string | null
+          raw_payload?: Json | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crm_lead_id?: string | null
+          error_message?: string | null
+          form_id?: string
+          id?: string
+          lead_data?: Json | null
+          leadgen_id?: string
+          organization_id?: string | null
+          page_id?: string
+          processed_at?: string | null
+          raw_payload?: Json | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_leadgen_events_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leadgen_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_leadgen_form_mappings: {
+        Row: {
+          active: boolean | null
+          assigned_to: string | null
+          created_at: string | null
+          form_id: string | null
+          form_name: string | null
+          funnel_id: string | null
+          id: string
+          is_default: boolean | null
+          organization_id: string
+          page_id: string
+          page_name: string | null
+          stage: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          assigned_to?: string | null
+          created_at?: string | null
+          form_id?: string | null
+          form_name?: string | null
+          funnel_id?: string | null
+          id?: string
+          is_default?: boolean | null
+          organization_id: string
+          page_id: string
+          page_name?: string | null
+          stage?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          assigned_to?: string | null
+          created_at?: string | null
+          form_id?: string | null
+          form_name?: string | null
+          funnel_id?: string | null
+          id?: string
+          is_default?: boolean | null
+          organization_id?: string
+          page_id?: string
+          page_name?: string | null
+          stage?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_leadgen_form_mappings_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leadgen_form_mappings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_leadgen_subscribed_pages: {
+        Row: {
+          active: boolean | null
+          id: string
+          last_lead_at: string | null
+          organization_id: string
+          page_access_token: string
+          page_id: string
+          page_name: string | null
+          subscribed_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          id?: string
+          last_lead_at?: string | null
+          organization_id: string
+          page_access_token: string
+          page_id: string
+          page_name?: string | null
+          subscribed_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          id?: string
+          last_lead_at?: string | null
+          organization_id?: string
+          page_access_token?: string
+          page_id?: string
+          page_name?: string | null
+          subscribed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_leadgen_subscribed_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_create: boolean | null
