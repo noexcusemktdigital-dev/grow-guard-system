@@ -202,8 +202,9 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   let accountId = connection.account_id;
   if (!accountId) throw new Error("No Meta ad account ID");
 
-  // Ensure account_id does NOT already have act_ prefix — the API call adds it
-  accountId = accountId.replace(/^act_/, "");
+  // Normalize: remove act_ prefix, strip non-numeric chars for safety
+  accountId = accountId.replace(/^act_/, "").replace(/\D/g, "") || accountId.replace(/^act_/, "");
+  if (!accountId) throw new Error("Invalid Meta ad account ID format");
 
   const today = new Date();
   const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
