@@ -49,8 +49,8 @@ serve(async (req) => {
       });
     }
 
-    // Fail-closed: require all secrets. Accept META_APP_ID as fallback (must be numeric).
-    const rawClientId = Deno.env.get("META_CLIENT_ID") || Deno.env.get("META_APP_ID");
+    // App Meta unificado: usa META_APP_ID como fonte única (META_CLIENT_ID mantido como fallback retrocompat)
+    const rawClientId = Deno.env.get("META_APP_ID") || Deno.env.get("META_CLIENT_ID");
     const clientId = rawClientId?.trim();
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://grow-guard-system.lovable.app";
     const stateSecret = Deno.env.get("OAUTH_STATE_SECRET");
