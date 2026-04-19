@@ -189,6 +189,7 @@ function App() {
                   <Route path="unidades" element={<Unidades />} />
                   <Route path="crm" element={<PageBoundary><FranqueadoCRM /></PageBoundary>} />
                   <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
+                  <Route path="crm/integracoes/meta-lead-ads" element={<PageBoundary><CrmMetaLeadAdsPage /></PageBoundary>} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="atendimento" element={<Atendimento />} />
                   <Route path="comunicados" element={<Comunicados />} />
@@ -222,6 +223,7 @@ function App() {
                   <Route path="acompanhamento" element={<PageBoundary><FranqueadoAcompanhamento /></PageBoundary>} />
                   <Route path="crm" element={<FranqueadoCRM />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
+                  <Route path="crm/integracoes/meta-lead-ads" element={<CrmMetaLeadAdsPage />} />
                   <Route path="materiais" element={<FranqueadoMateriais />} />
                   <Route path="academy" element={<FranqueadoAcademy />} />
                   <Route path="financeiro" element={<FranqueadoFinanceiro />} />
