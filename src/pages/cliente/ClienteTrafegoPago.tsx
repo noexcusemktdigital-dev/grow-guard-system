@@ -59,6 +59,9 @@ export default function ClienteTrafegoPago() {
   const { data: adConnections } = useAdConnections();
   const metaConnection = adConnections?.find((c) => c.platform === "meta_ads" && c.status === "active");
   const googleConnection = adConnections?.find((c) => c.platform === "google_ads" && c.status === "active");
+  const { data: adMetrics } = useAdMetrics(30);
+  const adSummary = useAdMetricsSummary(adMetrics);
+  const hasMetrics = (adMetrics?.length ?? 0) > 0;
 
   const [activeTab, setActiveTab] = useState("estrategia");
   const [step, setStep] = useState(0);
