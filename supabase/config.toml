@@ -195,7 +195,8 @@ project_id = "gxrhdpbbxfipeopdyygn"
     # Returns OAuth client IDs for frontend use — no sensitive data
     verify_jwt = false
   [functions.ads-select-account]
-    verify_jwt = true
+    # Validates JWT manually in code to return CORS-friendly 401
+    verify_jwt = false
   [functions.ads-sync-metrics]
     verify_jwt = false
   [functions.ads-disconnect]
