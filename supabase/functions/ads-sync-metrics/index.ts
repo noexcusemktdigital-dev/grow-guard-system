@@ -222,10 +222,19 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   console.log(`[Meta] API response status: ${res.status}, body length: ${bodyText.length}, preview: ${bodyText.substring(0, 500)}`);
 
   if (!res.ok) {
-    if (res.status === 190 || res.status === 401) {
+    const errBody = bodyText.substring(0, 500);
+    console.error(`[Meta] Sync failed for account ${accountId}:`, errBody);
+    if (res.status === 190 || res.status === 401 || bodyText.includes('"code":190') || bodyText.includes('"code":102')) {
       await supabase.from("ad_platform_connections").update({ status: "expired" }).eq("id", connection.id);
+      throw new Error("Token Meta expirado. Reconecte a conta de anúncios.");
     }
-    throw new Error(`Meta Ads API error: ${res.status} — ${bodyText.substring(0, 300)}`);
+    if (bodyText.includes('"code":100') || bodyText.includes("Invalid parameter")) {
+      throw new Error("ID da conta de anúncios inválido. Tente reconectar e selecionar outra conta.");
+    }
+    if (bodyText.includes('"code":200') || bodyText.includes("Permission")) {
+      throw new Error("Sem permissão para acessar esta conta de anúncios. Verifique se o usuário tem acesso à conta NOE FRANQUIA.");
+    }
+    throw new Error(`Meta Ads API error: ${res.status} — ${errBody}`);
   }
 
   const data = JSON.parse(bodyText);
