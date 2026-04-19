@@ -7,11 +7,32 @@ serve(async (req) => {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
 
-  const clientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID") || "";
+  const googleClientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID") || "";
   const metaAppId = Deno.env.get("META_APP_ID") || "";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+
+  // Redirect URIs unificados — todos os fluxos usam o mesmo app Meta
+  const adsRedirectUri = `${supabaseUrl}/functions/v1/ads-oauth-callback`;
+  const socialRedirectUri = `${supabaseUrl}/functions/v1/social-oauth-callback`;
 
   return new Response(
-    JSON.stringify({ google_client_id: clientId, meta_app_id: metaAppId }),
+    JSON.stringify({
+      // Compat: chaves planas usadas por hooks legados
+      google_client_id: googleClientId,
+      meta_app_id: metaAppId,
+      app_id: metaAppId,
+      redirect_uri: adsRedirectUri,
+      // Estrutura nova organizada por fluxo
+      meta: {
+        app_id: metaAppId,
+        ads_redirect_uri: adsRedirectUri,
+        social_redirect_uri: socialRedirectUri,
+        redirect_uri: adsRedirectUri,
+      },
+      google: {
+        client_id: googleClientId,
+      },
+    }),
     { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
   );
 });
