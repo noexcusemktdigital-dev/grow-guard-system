@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, ChevronRight, BarChart2,
 } from "lucide-react";
 import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
-import { useAdConnections } from "@/hooks/useAdPlatforms";
+import { useAdConnections, useAdMetrics, useAdMetricsSummary } from "@/hooks/useAdPlatforms";
 import { Facebook, Search, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
 import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
@@ -59,6 +59,9 @@ export default function ClienteTrafegoPago() {
   const { data: adConnections } = useAdConnections();
   const metaConnection = adConnections?.find((c) => c.platform === "meta_ads" && c.status === "active");
   const googleConnection = adConnections?.find((c) => c.platform === "google_ads" && c.status === "active");
+  const { data: adMetrics } = useAdMetrics(30);
+  const adSummary = useAdMetricsSummary(adMetrics);
+  const hasMetrics = (adMetrics?.length ?? 0) > 0;
 
   const [activeTab, setActiveTab] = useState("estrategia");
   const [step, setStep] = useState(0);
@@ -214,38 +217,78 @@ export default function ClienteTrafegoPago() {
 
       <StrategyBanner toolName="o tráfego pago" dataUsed="Canais prioritários, funil e público-alvo" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[
-          { conn: metaConnection, label: "Meta Ads", Icon: Facebook, iconColor: "text-blue-500", iconBg: "bg-blue-500/10" },
-          { conn: googleConnection, label: "Google Ads", Icon: Search, iconColor: "text-amber-500", iconBg: "bg-amber-500/10" },
-        ].map(({ conn, label, Icon, iconColor, iconBg }) => (
-          <Card key={label}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
-                <Icon className={`w-5 h-5 ${iconColor}`} />
+      {/* Plataformas conectadas (sempre visível no topo) */}
+      <Card>
+        <CardContent className="py-5 space-y-4">
+          <div>
+            <p className="text-sm font-semibold">Plataformas conectadas</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Conecte suas contas para visualizar métricas em tempo real
+            </p>
+          </div>
+          <AdConnectionCards />
+        </CardContent>
+      </Card>
+
+      {/* Resumo Meta Ads (últimos 30 dias) — quando há métricas */}
+      {metaConnection && hasMetrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <DollarSign className="w-3.5 h-3.5 text-primary" />
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase">Total gasto (30d)</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold">{label}</p>
-                {conn ? (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-                    {conn.account_name || "Conectado"}
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Não conectado</p>
-                )}
-              </div>
-              {conn ? (
-                <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Ativo</Badge>
-              ) : (
-                <Button size="sm" variant="outline" className="text-xs h-7 gap-1.5" onClick={() => setActiveTab("anuncios")}>
-                  <Link2 className="w-3 h-3" /> Conectar
-                </Button>
-              )}
+              <p className="text-lg font-bold">
+                {adSummary.totalSpend.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </p>
             </CardContent>
           </Card>
-        ))}
-      </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <MousePointer className="w-3.5 h-3.5 text-blue-500" />
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase">Cliques</p>
+              </div>
+              <p className="text-lg font-bold">{adSummary.totalClicks.toLocaleString("pt-BR")}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Eye className="w-3.5 h-3.5 text-purple-500" />
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase">Impressões</p>
+              </div>
+              <p className="text-lg font-bold">{adSummary.totalImpressions.toLocaleString("pt-BR")}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase">CPL médio</p>
+              </div>
+              <p className="text-lg font-bold">
+                {adSummary.avgCpl.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Conta conectada mas sem métricas */}
+      {metaConnection && !hasMetrics && (
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center space-y-2">
+            <BarChart2 className="w-8 h-8 text-muted-foreground/40 mx-auto" />
+            <p className="text-sm font-semibold">Nenhuma campanha encontrada</p>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Clique em <span className="font-medium">"Sincronizar"</span> para buscar dados da sua conta Meta Ads.
+              Certifique-se de que há campanhas ativas na conta selecionada.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {!metaConnection && !googleConnection && (
         <Card className="border-dashed">
@@ -578,7 +621,6 @@ export default function ClienteTrafegoPago() {
 
         {/* ═══ ANÚNCIOS (META ADS + GOOGLE ADS) ═══ */}
         <TabsContent value="anuncios" className="space-y-6 mt-4">
-          <AdConnectionCards />
           <AdMetricsDashboard period={30} />
           <AdAIAnalysis />
         </TabsContent>
