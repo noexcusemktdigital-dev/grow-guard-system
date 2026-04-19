@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const platformConfig = {
   google_ads: {
