@@ -239,3 +239,14 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.social-publish]
     # Publishes a post to Meta (Instagram/Facebook) or LinkedIn — requires authenticated user
     verify_jwt = true
+
+  # --- Meta Lead Ads (instant forms → CRM) ---
+  [functions.meta-leadgen-webhook]
+    # Public webhook called by Meta when a new lead is submitted on an instant form
+    verify_jwt = false
+  [functions.meta-leadgen-pages]
+    # Lists Facebook Pages and lead forms — requires authenticated user
+    verify_jwt = false
+  [functions.meta-leadgen-subscribe]
+    # Subscribes/unsubscribes a Facebook Page to leadgen webhook — requires authenticated user
+    verify_jwt = false
