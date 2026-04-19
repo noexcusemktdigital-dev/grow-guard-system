@@ -492,12 +492,12 @@ export function CrmAutomations() {
                   <div>
                     <Label className="text-[10px] text-muted-foreground mb-1 block">Etapa específica (opcional)</Label>
                     <Select
-                      value={triggerConfig.specific_stage || ""}
-                      onValueChange={v => setTriggerConfig({ ...triggerConfig, specific_stage: v || undefined })}
+                      value={triggerConfig.specific_stage || "__all__"}
+                      onValueChange={v => setTriggerConfig({ ...triggerConfig, specific_stage: v === "__all__" ? undefined : v })}
                     >
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas as etapas" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="" className="text-xs">Todas as etapas</SelectItem>
+                        <SelectItem value="__all__" className="text-xs">Todas as etapas</SelectItem>
                         {stages.map((s: any) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -564,12 +564,12 @@ export function CrmAutomations() {
                   <div>
                     <Label className="text-xs">Funil de destino</Label>
                     <Select
-                      value={actionConfig.target_funnel_id || (selectedFunnels[0] || "")}
-                      onValueChange={v => setActionConfig({ ...actionConfig, target_funnel_id: v, target_stage: "" })}
+                      value={actionConfig.target_funnel_id || (selectedFunnels[0] || "__current__")}
+                      onValueChange={v => setActionConfig({ ...actionConfig, target_funnel_id: v === "__current__" ? "" : v, target_stage: "" })}
                     >
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Funil atual" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="" className="text-xs">Funil atual</SelectItem>
+                        <SelectItem value="__current__" className="text-xs">Funil atual</SelectItem>
                         {funnels.map(f => <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
