@@ -252,7 +252,7 @@ function App() {
                   <Route path="gps-negocio" element={<PageBoundary><ClienteGPSNegocio /></PageBoundary>} />
                   <Route path="crm" element={<PageBoundary><ClienteCRM /></PageBoundary>} />
                   <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
-                  <Route path="agentes-ia" element={<PageBoundary><ClienteAgentesIA /></PageBoundary>} />
+                  <Route path="crm/integracoes/meta-lead-ads" element={<PageBoundary><CrmMetaLeadAdsPage /></PageBoundary>} />
                   <Route path="scripts" element={<PageBoundary><ClienteScripts /></PageBoundary>} />
                   <Route path="disparos" element={<AdminOnlyRoute><PageBoundary><ClienteDisparos /></PageBoundary></AdminOnlyRoute>} />
                   <Route path="dashboard" element={<AdminOnlyRoute><PageBoundary><ClienteDashboard /></PageBoundary></AdminOnlyRoute>} />
