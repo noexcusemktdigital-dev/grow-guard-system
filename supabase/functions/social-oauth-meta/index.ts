@@ -49,14 +49,25 @@ serve(async (req) => {
       });
     }
 
-    // Fail-closed: require all secrets
-    const clientId = Deno.env.get("META_CLIENT_ID");
+    // Fail-closed: require all secrets. Accept META_APP_ID as fallback (must be numeric).
+    const rawClientId = Deno.env.get("META_CLIENT_ID") || Deno.env.get("META_APP_ID");
+    const clientId = rawClientId?.trim();
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://grow-guard-system.lovable.app";
     const stateSecret = Deno.env.get("OAUTH_STATE_SECRET");
 
     if (!clientId) {
-      console.error("social-oauth-meta: META_CLIENT_ID not set");
+      console.error("social-oauth-meta: META_CLIENT_ID/META_APP_ID not set");
       return new Response(JSON.stringify({ error: "OAuth not configured" }), {
+        status: 500,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    if (!/^\d{10,20}$/.test(clientId)) {
+      console.error("social-oauth-meta: META_CLIENT_ID is not a valid numeric Meta App ID. Got length:", clientId.length);
+      return new Response(JSON.stringify({
+        error: "Invalid Meta App ID",
+        hint: "META_CLIENT_ID deve ser o App ID numérico do Meta (ex: 1234567890123456), não o App Secret nem outro valor.",
+      }), {
         status: 500,
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
