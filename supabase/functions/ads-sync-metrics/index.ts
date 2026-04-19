@@ -302,8 +302,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
         platform: "meta_ads",
         campaign_id: row.campaign_id,
         campaign_name: row.campaign_name || "Unknown",
-        // DATA-ADS-001: usar effective_status real da campanha (não hardcoded)
-        campaign_status: row.effective_status || row.status || "UNKNOWN",
+        // DATA-ADS-001: usar status do statusMap (fetched de /campaigns)
+        campaign_status: statusMap[row.campaign_id] || "UNKNOWN",
         date: row.date_start,
         impressions: parseInt(row.impressions || "0"),
         clicks: parseInt(row.clicks || "0"),
