@@ -83,6 +83,7 @@ const ClienteChat = lazy(() => import("./pages/cliente/ClienteChat"));
 const ClienteGPSNegocio = lazy(() => import("./pages/cliente/ClienteGPSNegocio"));
 const ClienteCRM = lazy(() => import("./pages/cliente/ClienteCRM"));
 const CrmConfigPage = lazy(() => import("./components/crm/CrmConfigPage"));
+const CrmMetaLeadAdsPage = lazy(() => import("./components/crm/CrmMetaLeadAdsPage"));
 const ClienteAgentesIA = lazy(() => import("./pages/cliente/ClienteAgentesIA"));
 const ClienteScripts = lazy(() => import("./pages/cliente/ClienteScripts"));
 const ClienteDisparos = lazy(() => import("./pages/cliente/ClienteDisparos"));
