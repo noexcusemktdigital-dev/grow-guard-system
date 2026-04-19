@@ -197,7 +197,22 @@ export function AdConnectionCards() {
                         variant="outline"
                         size="sm"
                         className="flex-1 text-xs gap-1.5"
-                        onClick={() => syncMutation.mutate(conn.id)}
+                        onClick={() =>
+                          syncMutation.mutate(conn.id, {
+                            onError: (err: unknown) => {
+                              const msg = err instanceof Error ? err.message : String(err);
+                              if (/permiss[ãa]o|permission|code":200/i.test(msg)) {
+                                toast({
+                                  title: "Sem permissão para esta conta",
+                                  description: 'Clique em "Trocar" para selecionar outra conta de anúncios.',
+                                  variant: "destructive",
+                                });
+                              } else {
+                                toast({ title: "Erro ao sincronizar", description: msg, variant: "destructive" });
+                              }
+                            },
+                          })
+                        }
                         disabled={syncMutation.isPending}
                       >
                         {syncMutation.isPending ? (
