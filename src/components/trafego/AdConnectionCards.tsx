@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const platformConfig = {
   google_ads: {
@@ -120,14 +121,33 @@ export function AdConnectionCards() {
 
   const handleSelectAccount = async (account: AdAccountOption) => {
     if (!pickerConnectionId) return;
-    await selectAccountMutation.mutateAsync({
-      connection_id: pickerConnectionId,
-      account_id: account.account_id,
-      account_name: account.name,
-    });
-    setPickerOpen(false);
-    setPickerConnectionId(null);
-    setPickerAccounts([]);
+    try {
+      // pickerConnectionId pode ser org_id (novo fluxo) ou connection_id (legado)
+      const { data: conn } = await supabase
+        .from("ad_platform_connections")
+        .select("id, status")
+        .eq("organization_id", pickerConnectionId)
+        .eq("platform", "meta_ads")
+        .eq("status", "pending")
+        .maybeSingle();
+
+      const connectionId = conn?.id || pickerConnectionId;
+
+      await selectAccountMutation.mutateAsync({
+        connection_id: connectionId,
+        account_id: account.account_id,
+        account_name: account.name,
+      });
+      setPickerOpen(false);
+      setPickerConnectionId(null);
+      setPickerAccounts([]);
+    } catch (err) {
+      toast({
+        title: "Erro ao selecionar conta",
+        description: err instanceof Error ? err.message : "Tente novamente",
+        variant: "destructive",
+      });
+    }
   };
 
   const getConnection = (platform: string): AdConnection | undefined =>
