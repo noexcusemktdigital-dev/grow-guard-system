@@ -1,0 +1,123 @@
+// @ts-nocheck
+// Assina/cancela uma página do Facebook ao webhook leadgen do app Meta.
+// Salva o page_access_token na tabela meta_leadgen_subscribed_pages.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
+
+  const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "POST only" }), { status: 405, headers });
+  }
+
+  try {
+    const auth = req.headers.get("Authorization");
+    if (!auth) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { global: { headers: { Authorization: auth } } },
+    );
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers });
+    }
+
+    const body = await req.json();
+    const { org_id, page_id, action } = body;
+    if (!org_id || !page_id || !action) {
+      return new Response(JSON.stringify({ error: "org_id, page_id, action required" }), {
+        status: 400,
+        headers,
+      });
+    }
+
+    // Verifica que o usuário pertence à org
+    const { data: isMember } = await supabase
+      .from("organization_memberships")
+      .select("user_id")
+      .eq("organization_id", org_id)
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    if (!isMember) {
+      return new Response(JSON.stringify({ error: "Not a member" }), { status: 403, headers });
+    }
+
+    // Busca user token
+    const { data: conn } = await supabase
+      .from("ads_connections")
+      .select("access_token")
+      .eq("org_id", org_id)
+      .eq("provider", "meta")
+      .eq("status", "active")
+      .order("connected_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!conn?.access_token) {
+      return new Response(JSON.stringify({ error: "Sem conexão Meta ativa" }), { status: 400, headers });
+    }
+
+    // Pega page_access_token
+    const accountsRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=200&access_token=${conn.access_token}`,
+    );
+    const accountsJson = await accountsRes.json();
+    const page = (accountsJson.data ?? []).find((p: any) => p.id === page_id);
+    if (!page?.access_token) {
+      return new Response(JSON.stringify({ error: "Página não acessível pelo usuário" }), {
+        status: 403,
+        headers,
+      });
+    }
+
+    if (action === "subscribe") {
+      // Subscribe page to leadgen field
+      const subRes = await fetch(
+        `https://graph.facebook.com/v21.0/${page_id}/subscribed_apps?subscribed_fields=leadgen&access_token=${page.access_token}`,
+        { method: "POST" },
+      );
+      const subJson = await subRes.json();
+      if (subJson.error) {
+        return new Response(JSON.stringify({ error: subJson.error.message }), { status: 400, headers });
+      }
+
+      await supabase.from("meta_leadgen_subscribed_pages").upsert(
+        {
+          organization_id: org_id,
+          page_id,
+          page_name: page.name,
+          page_access_token: page.access_token,
+          active: true,
+          subscribed_at: new Date().toISOString(),
+        },
+        { onConflict: "organization_id,page_id" },
+      );
+
+      return new Response(JSON.stringify({ ok: true, subscribed: true }), { status: 200, headers });
+    }
+
+    if (action === "unsubscribe") {
+      await fetch(
+        `https://graph.facebook.com/v21.0/${page_id}/subscribed_apps?access_token=${page.access_token}`,
+        { method: "DELETE" },
+      );
+      await supabase
+        .from("meta_leadgen_subscribed_pages")
+        .update({ active: false })
+        .eq("organization_id", org_id)
+        .eq("page_id", page_id);
+      return new Response(JSON.stringify({ ok: true, subscribed: false }), { status: 200, headers });
+    }
+
+    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers });
+  } catch (e) {
+    console.error("[meta-leadgen-subscribe]", e);
+    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers });
+  }
+});

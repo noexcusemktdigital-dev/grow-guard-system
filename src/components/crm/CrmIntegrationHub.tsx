@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +131,7 @@ const SOURCES: IntegrationSource[] = [
 
 export function CrmIntegrationHub() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { data: orgId } = useUserOrgId();
   const { createLead } = useCrmLeadMutations();
   const { data: funnels } = useCrmFunnels();
@@ -234,6 +236,15 @@ export function CrmIntegrationHub() {
   const openSource = (id: string) => {
     if (id === "csv") {
       setShowCsvDialog(true);
+      return;
+    }
+    if (id === "meta") {
+      // Detectar contexto de portal e navegar para a página dedicada
+      const path = window.location.pathname;
+      const base = path.startsWith("/franqueadora") ? "/franqueadora"
+        : path.startsWith("/franqueado") ? "/franqueado"
+        : "/cliente";
+      navigate(`${base}/crm/integracoes/meta-lead-ads`);
       return;
     }
     setSelectedSource(id);

@@ -83,6 +83,7 @@ const ClienteChat = lazy(() => import("./pages/cliente/ClienteChat"));
 const ClienteGPSNegocio = lazy(() => import("./pages/cliente/ClienteGPSNegocio"));
 const ClienteCRM = lazy(() => import("./pages/cliente/ClienteCRM"));
 const CrmConfigPage = lazy(() => import("./components/crm/CrmConfigPage"));
+const CrmMetaLeadAdsPage = lazy(() => import("./components/crm/CrmMetaLeadAdsPage"));
 const ClienteAgentesIA = lazy(() => import("./pages/cliente/ClienteAgentesIA"));
 const ClienteScripts = lazy(() => import("./pages/cliente/ClienteScripts"));
 const ClienteDisparos = lazy(() => import("./pages/cliente/ClienteDisparos"));
@@ -188,6 +189,7 @@ function App() {
                   <Route path="unidades" element={<Unidades />} />
                   <Route path="crm" element={<PageBoundary><FranqueadoCRM /></PageBoundary>} />
                   <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
+                  <Route path="crm/integracoes/meta-lead-ads" element={<PageBoundary><CrmMetaLeadAdsPage /></PageBoundary>} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="atendimento" element={<Atendimento />} />
                   <Route path="comunicados" element={<Comunicados />} />
@@ -221,6 +223,7 @@ function App() {
                   <Route path="acompanhamento" element={<PageBoundary><FranqueadoAcompanhamento /></PageBoundary>} />
                   <Route path="crm" element={<FranqueadoCRM />} />
                   <Route path="crm/config" element={<CrmConfigPage />} />
+                  <Route path="crm/integracoes/meta-lead-ads" element={<CrmMetaLeadAdsPage />} />
                   <Route path="materiais" element={<FranqueadoMateriais />} />
                   <Route path="academy" element={<FranqueadoAcademy />} />
                   <Route path="financeiro" element={<FranqueadoFinanceiro />} />
@@ -251,7 +254,7 @@ function App() {
                   <Route path="gps-negocio" element={<PageBoundary><ClienteGPSNegocio /></PageBoundary>} />
                   <Route path="crm" element={<PageBoundary><ClienteCRM /></PageBoundary>} />
                   <Route path="crm/config" element={<PageBoundary><CrmConfigPage /></PageBoundary>} />
-                  <Route path="agentes-ia" element={<PageBoundary><ClienteAgentesIA /></PageBoundary>} />
+                  <Route path="crm/integracoes/meta-lead-ads" element={<PageBoundary><CrmMetaLeadAdsPage /></PageBoundary>} />
                   <Route path="scripts" element={<PageBoundary><ClienteScripts /></PageBoundary>} />
                   <Route path="disparos" element={<AdminOnlyRoute><PageBoundary><ClienteDisparos /></PageBoundary></AdminOnlyRoute>} />
                   <Route path="dashboard" element={<AdminOnlyRoute><PageBoundary><ClienteDashboard /></PageBoundary></AdminOnlyRoute>} />
