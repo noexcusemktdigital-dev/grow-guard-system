@@ -621,7 +621,6 @@ export default function ClienteTrafegoPago() {
 
         {/* ═══ ANÚNCIOS (META ADS + GOOGLE ADS) ═══ */}
         <TabsContent value="anuncios" className="space-y-6 mt-4">
-          <AdConnectionCards />
           <AdMetricsDashboard period={30} />
           <AdAIAnalysis />
         </TabsContent>
