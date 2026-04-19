@@ -211,10 +211,25 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   const since = thirtyDaysAgo.toISOString().split("T")[0];
   const until = today.toISOString().split("T")[0];
 
-  // DATA-ADS-001: inclui effective_status para usar o status real da campanha (não hardcoded)
-  const insightsUrl = `https://graph.facebook.com/v19.0/act_${accountId}/insights?fields=campaign_id,campaign_name,effective_status,impressions,clicks,spend,actions,ctr,cpc&time_range={"since":"${since}","until":"${until}"}&time_increment=1&level=campaign&limit=500&access_token=${accessToken}`;
+  // DATA-ADS-001: effective_status NÃO é válido em /insights — buscar via /campaigns separadamente
+  const insightsUrl = `https://graph.facebook.com/v19.0/act_${accountId}/insights?fields=campaign_id,campaign_name,impressions,clicks,spend,actions,ctr,cpc&time_range={"since":"${since}","until":"${until}"}&time_increment=1&level=campaign&limit=500&access_token=${accessToken}`;
 
   console.log(`[Meta] Syncing account act_${accountId}, period ${since} to ${until}`);
+
+  // Buscar status real das campanhas em paralelo (endpoint separado)
+  const campaignsStatusUrl = `https://graph.facebook.com/v19.0/act_${accountId}/campaigns?fields=id,effective_status,status&limit=500&access_token=${accessToken}`;
+  const statusMap: Record<string, string> = {};
+  try {
+    const campRes = await fetch(campaignsStatusUrl);
+    if (campRes.ok) {
+      const campJson = await campRes.json();
+      for (const c of campJson.data || []) {
+        statusMap[c.id] = c.effective_status || c.status || "UNKNOWN";
+      }
+    }
+  } catch (e) {
+    console.warn("[Meta] Failed to fetch campaign statuses:", e);
+  }
 
   const res = await fetchWithBackoff(insightsUrl);
   checkMetaRateLimit(res.headers, accountId);
@@ -252,8 +267,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
       platform: "meta_ads",
       campaign_id: row.campaign_id,
       campaign_name: row.campaign_name || "Unknown",
-      // DATA-ADS-001: usar effective_status real da campanha (não hardcoded)
-      campaign_status: row.effective_status || row.status || "UNKNOWN",
+      // DATA-ADS-001: usar status do statusMap (fetched de /campaigns)
+      campaign_status: statusMap[row.campaign_id] || "UNKNOWN",
       date: row.date_start,
       impressions: parseInt(row.impressions || "0"),
       clicks: parseInt(row.clicks || "0"),
@@ -287,8 +302,8 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
         platform: "meta_ads",
         campaign_id: row.campaign_id,
         campaign_name: row.campaign_name || "Unknown",
-        // DATA-ADS-001: usar effective_status real da campanha (não hardcoded)
-        campaign_status: row.effective_status || row.status || "UNKNOWN",
+        // DATA-ADS-001: usar status do statusMap (fetched de /campaigns)
+        campaign_status: statusMap[row.campaign_id] || "UNKNOWN",
         date: row.date_start,
         impressions: parseInt(row.impressions || "0"),
         clicks: parseInt(row.clicks || "0"),
