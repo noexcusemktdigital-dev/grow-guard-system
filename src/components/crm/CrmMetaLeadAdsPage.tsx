@@ -74,6 +74,39 @@ export default function CrmMetaLeadAdsPage() {
     is_default: boolean;
   } | null>(null);
 
+  // Mapeamentos página → funil/etapa
+  const { data: mappings } = useQuery({
+    queryKey: ["meta-leadgen-mappings", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("meta_leadgen_form_mappings")
+        .select("*, crm_funnels(name)")
+        .eq("organization_id", orgId)
+        .eq("active", true);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!orgId,
+  });
+
+  // Eventos recentes recebidos
+  const { data: recentEvents } = useQuery({
+    queryKey: ["meta-leadgen-events", orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const { data, error } = await supabase
+        .from("meta_leadgen_events")
+        .select("id, page_id, form_id, status, created_at")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) return [];
+      return data ?? [];
+    },
+    enabled: !!orgId,
+  });
+
   // Páginas assinadas (do banco)
   const { data: subscribedPages, isLoading: pagesLoading } = useQuery({
     queryKey: ["meta-leadgen-subscribed-pages", orgId],
