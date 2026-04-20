@@ -13,6 +13,7 @@ interface InsightPayload {
     reach_30d: number;
     impressions_30d: number;
     avg_engagement: number;
+    avg_engagement_rate: number;
   };
   recent_posts: Array<{
     id: string;
@@ -24,7 +25,75 @@ interface InsightPayload {
     comments: number;
     reach: number;
     impressions: number;
+    engagement_rate: number;
   }>;
+  best_day_to_post: string;
+  followers_growth_hint: string;
+}
+
+const WEEKDAYS_PT = [
+  "domingo",
+  "segunda-feira",
+  "terça-feira",
+  "quarta-feira",
+  "quinta-feira",
+  "sexta-feira",
+  "sábado",
+];
+
+function enrichPayload(base: Omit<InsightPayload, "best_day_to_post" | "followers_growth_hint">): InsightPayload {
+  const followers = Math.max(base.account.followers, 1);
+
+  // engagement_rate por post
+  const enrichedPosts = base.recent_posts.map((p) => ({
+    ...p,
+    engagement_rate: Number((((p.likes + p.comments) / followers) * 100).toFixed(2)),
+  }));
+
+  // taxa de engajamento média
+  const avgER =
+    enrichedPosts.length > 0
+      ? Number(
+          (enrichedPosts.reduce((s, p) => s + p.engagement_rate, 0) / enrichedPosts.length).toFixed(2),
+        )
+      : 0;
+
+  // melhor dia para postar
+  const byDay = new Map<number, { total: number; count: number }>();
+  for (const p of enrichedPosts) {
+    const d = new Date(p.created_at);
+    if (isNaN(d.getTime())) continue;
+    const day = d.getDay();
+    const eng = p.likes + p.comments;
+    const cur = byDay.get(day) ?? { total: 0, count: 0 };
+    cur.total += eng;
+    cur.count += 1;
+    byDay.set(day, cur);
+  }
+  let bestDay = "—";
+  let bestAvg = -1;
+  for (const [day, { total, count }] of byDay.entries()) {
+    const avg = count > 0 ? total / count : 0;
+    if (avg > bestAvg) {
+      bestAvg = avg;
+      bestDay = WEEKDAYS_PT[day];
+    }
+  }
+
+  // hint de crescimento (placeholder simples baseado no engajamento médio)
+  const growthHint =
+    avgER >= 3
+      ? "Engajamento acima da média do mercado — continue postando neste ritmo."
+      : avgER >= 1
+        ? "Engajamento dentro da média. Teste novos formatos para crescer mais rápido."
+        : "Engajamento abaixo da média. Foque em conteúdos com pergunta e CTA claros.";
+
+  return {
+    account: { ...base.account, avg_engagement_rate: avgER },
+    recent_posts: enrichedPosts,
+    best_day_to_post: bestDay,
+    followers_growth_hint: growthHint,
+  };
 }
 
 async function gget(url: string): Promise<any> {
