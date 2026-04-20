@@ -89,8 +89,6 @@ export default function CrmMetaLeadAdsPage() {
       return data ?? [];
     },
     enabled: !!orgId,
-  });
-...
   // Listar páginas do FB
   const listPagesMutation = useMutation({
     mutationFn: async () => {
@@ -111,8 +109,6 @@ export default function CrmMetaLeadAdsPage() {
       if (!res.ok) throw new Error(json?.error ?? `Erro ${res.status}`);
       return (json?.pages ?? []) as MetaPage[];
     },
-  });
-...
   const unsubscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
       const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
@@ -593,7 +589,9 @@ function FormSelector({
       {isLoading ? (
         <p className="text-[11px] text-muted-foreground py-2">Carregando formulários...</p>
       ) : isError ? (
-        <p className="text-[11px] text-destructive py-2">Erro ao carregar formulários</p>
+        <p className="text-[11px] text-destructive py-2">
+          {(queryError as Error)?.message ?? "Erro ao carregar formulários"}
+        </p>
       ) : (
         <Select
           value={value}
