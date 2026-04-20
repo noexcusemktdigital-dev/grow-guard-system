@@ -15,24 +15,26 @@ Deno.serve(async (req) => {
     const MAX_RETRIES = 3;
     const RETRY_DELAY_MS = 5 * 60 * 1000; // 5min between retries
 
-    // PERF: hard time budget. Edge function was running 125s and blowing 500/timeout,
-    // saturating the worker pool and slowing every other request. Cap it to 25s.
+    // PERF: hard time budget. Edge function was running 91-125s and returning 500/502/503,
+    // saturating the worker pool and indirectly causing auth token refresh failures
+    // (which manifest as random logouts for end users).
+    // Tightened: 25s → 12s budget, batch 15 → 8.
     const startedAt = Date.now();
-    const TIME_BUDGET_MS = 25_000;
+    const TIME_BUDGET_MS = 12_000;
     const timeLeft = () => Date.now() - startedAt < TIME_BUDGET_MS;
 
     // ── Detect lead_stuck & no_contact_sla (periodic scan) ──
     if (timeLeft()) await detectStuckLeads(admin);
     if (timeLeft()) await detectNoContactSla(admin);
 
-    // PERF: reduce batch size 50 → 15 so one slow event can't starve the whole queue.
+    // PERF: reduce batch size to 8 so one slow event can't starve the whole queue.
     const { data: events, error: evErr } = await admin
       .from("crm_automation_queue")
       .select("*")
       .eq("processed", false)
       .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
       .order("created_at")
-      .limit(15);
+      .limit(8);
 
     if (evErr) throw evErr;
     if (!events || events.length === 0) {
