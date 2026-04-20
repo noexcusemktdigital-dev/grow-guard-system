@@ -71,16 +71,16 @@ Deno.serve(async (req) => {
         .eq("status", "active")
         .order("last_synced_at", { ascending: false });
 
-      const userTokenRow = (socialConns ?? []).find(
-        (r: any) => r?.metadata?.user_token === true || r?.metadata?.user_access_token,
+      const withUserToken = (socialConns ?? []).find(
+        (r: any) => typeof r?.metadata?.user_token === "string" && r.metadata.user_token.length > 0,
       );
-      if (userTokenRow) {
-        accessToken =
-          (userTokenRow as any).metadata?.user_access_token ??
-          (userTokenRow as any).access_token ??
-          null;
+      if (withUserToken) {
+        accessToken = (withUserToken as any).metadata.user_token;
       } else {
-        accessToken = (socialConns?.[0] as any)?.access_token ?? null;
+        const socialConn = (socialConns ?? [])[0];
+        const rawToken = (socialConn as any)?.access_token ?? null;
+        const meta = (socialConn as any)?.metadata ?? {};
+        accessToken = meta.user_token || rawToken;
       }
     }
 
