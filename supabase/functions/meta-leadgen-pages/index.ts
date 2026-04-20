@@ -5,13 +5,23 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: getCorsHeaders(req) });
+  }
 
-  const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
+  const headers = {
+    ...getCorsHeaders(req),
+    "Content-Type": "application/json",
+  };
 
   try {
     const auth = req.headers.get("Authorization");
-    if (!auth) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers });
+    if (!auth) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers,
+      });
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -21,7 +31,10 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers });
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers,
+      });
     }
 
     const url = new URL(req.url);
@@ -30,7 +43,10 @@ Deno.serve(async (req) => {
     const pageId = url.searchParams.get("page_id");
 
     if (!orgId) {
-      return new Response(JSON.stringify({ error: "org_id required" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "org_id required" }), {
+        status: 400,
+        headers,
+      });
     }
 
     const { data: socialConns } = await supabase
@@ -41,9 +57,13 @@ Deno.serve(async (req) => {
       .eq("status", "active")
       .order("last_synced_at", { ascending: false });
 
-    const pageRows = (socialConns ?? []).filter((row: any) => row?.account_id && row?.access_token);
+    const pageRows = (socialConns ?? []).filter((row: any) =>
+      row?.account_id && row?.access_token
+    );
     const userTokenRow = (socialConns ?? []).find(
-      (row: any) => typeof row?.metadata?.user_token === "string" && row.metadata.user_token.length > 0,
+      (row: any) =>
+        typeof row?.metadata?.user_token === "string" &&
+        row.metadata.user_token.length > 0,
     );
 
     // Busca token: tenta social_accounts.user_token primeiro, depois ads_connections
@@ -64,7 +84,9 @@ Deno.serve(async (req) => {
 
     if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: "Conecte o Facebook em Redes Sociais ou Meta Ads primeiro." }),
+        JSON.stringify({
+          error: "Conecte o Facebook em Redes Sociais ou Meta Ads primeiro.",
+        }),
         { status: 400, headers },
       );
     }
@@ -80,15 +102,20 @@ Deno.serve(async (req) => {
             id: p.id,
             name: p.name,
             access_token: p.access_token,
-            can_manage: (p.tasks ?? []).includes("MANAGE") || (p.tasks ?? []).includes("ADVERTISE"),
+            can_manage: (p.tasks ?? []).includes("MANAGE") ||
+              (p.tasks ?? []).includes("ADVERTISE"),
           }));
-          return new Response(JSON.stringify({ pages }), { status: 200, headers });
+          return new Response(JSON.stringify({ pages }), {
+            status: 200,
+            headers,
+          });
         }
       }
 
       const pages = pageRows.map((row: any) => ({
         id: row.account_id,
-        name: row.account_name ?? row.metadata?.page_name ?? "Página do Facebook",
+        name: row.account_name ?? row.metadata?.page_name ??
+          "Página do Facebook",
         access_token: row.access_token,
         can_manage: true,
       }));
@@ -97,37 +124,67 @@ Deno.serve(async (req) => {
 
     if (action === "list_forms") {
       if (!pageId) {
-        return new Response(JSON.stringify({ error: "page_id required" }), { status: 400, headers });
+        return new Response(JSON.stringify({ error: "page_id required" }), {
+          status: 400,
+          headers,
+        });
       }
-      const pageRow = pageRows.find((row: any) => row.account_id === pageId);
-      let pageAccessToken: string | null = pageRow?.metadata?.page_access_token ?? null;
 
-      // Sempre tentar derivar via Graph com o USER token, pois access_token salvo
-      // pode ser o user token (não funciona para listar leadgen_forms).
-      if (accessToken) {
-        const pageRes = await fetch(
-          `https://graph.facebook.com/v21.0/${pageId}?fields=access_token&access_token=${accessToken}`,
-        );
-        const pageJson = await pageRes.json();
-        if (pageJson?.access_token) pageAccessToken = pageJson.access_token;
+      const pageRow = pageRows.find((row: any) => row.account_id === pageId);
+      let pageAccessToken: string | null =
+        pageRow?.metadata?.page_access_token ?? null;
+      let pageName: string | null = pageRow?.account_name ??
+        pageRow?.metadata?.page_name ?? null;
+
+      const accountsRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=100&access_token=${accessToken}`,
+      );
+      const accountsJson = await accountsRes.json();
+      const pageEntry = (accountsJson.data ?? []).find((p: any) =>
+        p.id === pageId
+      );
+
+      if (pageEntry?.access_token) {
+        pageAccessToken = pageEntry.access_token;
+        pageName = pageEntry.name ?? pageName;
       }
 
       if (!pageAccessToken) {
-        return new Response(JSON.stringify({ error: "Página não acessível" }), { status: 403, headers });
+        return new Response(
+          JSON.stringify({
+            error:
+              "Página não encontrada ou sem acesso. Verifique se você é administrador da página.",
+            page_name: pageName,
+          }),
+          { status: 403, headers },
+        );
       }
+
       const r = await fetch(
         `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${pageAccessToken}`,
       );
       const j = await r.json();
       if (j.error) {
-        return new Response(JSON.stringify({ error: j.error.message }), { status: 400, headers });
+        return new Response(
+          JSON.stringify({ error: j.error.message, page_name: pageName }),
+          { status: 400, headers },
+        );
       }
-      return new Response(JSON.stringify({ forms: j.data ?? [] }), { status: 200, headers });
+      return new Response(
+        JSON.stringify({ forms: j.data ?? [], page_name: pageName }),
+        { status: 200, headers },
+      );
     }
 
-    return new Response(JSON.stringify({ error: "Unknown action" }), { status: 400, headers });
+    return new Response(JSON.stringify({ error: "Unknown action" }), {
+      status: 400,
+      headers,
+    });
   } catch (e) {
     console.error("[meta-leadgen-pages]", e);
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers });
+    return new Response(JSON.stringify({ error: String(e) }), {
+      status: 500,
+      headers,
+    });
   }
 });
