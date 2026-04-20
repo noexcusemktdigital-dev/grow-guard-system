@@ -5862,6 +5862,51 @@ export type Database = {
           },
         ]
       }
+      social_account_insights_cache: {
+        Row: {
+          expires_at: string
+          fetched_at: string
+          id: string
+          organization_id: string
+          payload: Json
+          period: string
+          social_account_id: string
+        }
+        Insert: {
+          expires_at: string
+          fetched_at?: string
+          id?: string
+          organization_id: string
+          payload: Json
+          period: string
+          social_account_id: string
+        }
+        Update: {
+          expires_at?: string
+          fetched_at?: string
+          id?: string
+          organization_id?: string
+          payload?: Json
+          period?: string
+          social_account_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_account_insights_cache_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_account_insights_cache_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_accounts: {
         Row: {
           access_token: string
@@ -6181,6 +6226,75 @@ export type Database = {
           },
           {
             foreignKeyName: "social_posts_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_scheduled_posts: {
+        Row: {
+          attempts: number
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          image_url: string | null
+          organization_id: string
+          platform: string
+          platform_post_id: string | null
+          published_at: string | null
+          scheduled_for: string
+          social_account_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          image_url?: string | null
+          organization_id: string
+          platform: string
+          platform_post_id?: string | null
+          published_at?: string | null
+          scheduled_for: string
+          social_account_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          image_url?: string | null
+          organization_id?: string
+          platform?: string
+          platform_post_id?: string | null
+          published_at?: string | null
+          scheduled_for?: string
+          social_account_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_scheduled_posts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_scheduled_posts_social_account_id_fkey"
             columns: ["social_account_id"]
             isOneToOne: false
             referencedRelation: "social_accounts"
