@@ -12,10 +12,12 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBRL } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
+
+const fmtPct = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const chartConfig: ChartConfig = {
   spend: { label: "Investimento", color: "hsl(var(--primary))" },
@@ -78,8 +80,8 @@ export function TrafficOverview({ metaConnection }: Props) {
   }, [metrics]);
 
   const lastSync = metaConnection?.last_synced_at
-    ? format(new Date(metaConnection.last_synced_at), "dd/MM 'às' HH:mm", { locale: ptBR })
-    : "nunca";
+    ? `Sincronizado há ${formatDistanceToNow(new Date(metaConnection.last_synced_at), { locale: ptBR })}`
+    : "Nunca sincronizado";
 
   if (!metaConnection) {
     return (
@@ -132,8 +134,9 @@ export function TrafficOverview({ metaConnection }: Props) {
     <div className="space-y-4">
       {/* Sync bar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-muted-foreground">
-          Última sincronização: <span className="font-medium text-foreground">{lastSync}</span>
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-medium text-foreground">{lastSync}</span>
         </p>
         <Button
           size="sm"
