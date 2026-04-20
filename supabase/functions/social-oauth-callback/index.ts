@@ -213,21 +213,35 @@ serve(async (req) => {
         ? new Date(Date.now() + longData.expires_in * 1000).toISOString()
         : null;
 
-      // Step 3: Get user info
+      // Step 3: Get user info — campo `username` removido (só existe em IG Business e quebra a query pra contas FB)
       let accountId = "";
       let accountName = "Meta Account";
-      let accountUsername: string | null = null;
+      const accountUsername: string | null = null;
 
       try {
         const meRes = await fetch(
-          `https://graph.facebook.com/v25.0/me?fields=id,name,username&access_token=${encodeURIComponent(accessToken)}`,
+          `https://graph.facebook.com/v25.0/me?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
         );
         const meData = await meRes.json();
+        console.log("Meta /me response:", JSON.stringify(meData));
         if (meData.id) accountId = meData.id;
         if (meData.name) accountName = meData.name;
-        if (meData.username) accountUsername = meData.username;
       } catch (e) {
         console.warn("Meta /me fetch failed:", e);
+      }
+
+      // Fallback: tenta debug_token pra recuperar user_id mesmo se /me falhar
+      if (!accountId) {
+        try {
+          const dbgRes = await fetch(
+            `https://graph.facebook.com/v25.0/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(`${clientId}|${clientSecret}`)}`,
+          );
+          const dbgData = await dbgRes.json();
+          console.log("Meta debug_token response:", JSON.stringify(dbgData));
+          if (dbgData?.data?.user_id) accountId = String(dbgData.data.user_id);
+        } catch (e) {
+          console.warn("Meta debug_token fetch failed:", e);
+        }
       }
 
       if (!accountId) {
