@@ -7508,6 +7508,7 @@ export type Database = {
         Returns: undefined
       }
       cleanup_ads_oauth_states: { Args: never; Returns: undefined }
+      cleanup_old_logs: { Args: never; Returns: Json }
       cleanup_send_recipients: { Args: never; Returns: undefined }
       collect_meta_noe_insights: {
         Args: {
