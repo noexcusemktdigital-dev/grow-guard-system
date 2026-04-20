@@ -85,20 +85,29 @@ Deno.serve(async (req) => {
     }
 
     const pageRow = pageRows.find((row: any) => row.account_id === page_id);
-    let page = pageRow
+    let page: { id: string; name: string; access_token: string } | null = pageRow
       ? {
           id: pageRow.account_id,
           name: pageRow.account_name ?? pageRow.metadata?.page_name ?? "Página do Facebook",
-          access_token: pageRow.access_token,
+          access_token: pageRow.metadata?.page_access_token ?? "",
         }
       : null;
 
-    if (!page && accessToken) {
-      const accountsRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=200&access_token=${accessToken}`,
+    // Sempre derivar o PAGE access token via Graph usando o USER token.
+    // O access_token salvo em social_accounts pode ser o user token (não funciona em /subscribed_apps).
+    if (accessToken) {
+      const pageRes = await fetch(
+        `https://graph.facebook.com/v21.0/${page_id}?fields=id,name,access_token&access_token=${accessToken}`,
       );
-      const accountsJson = await accountsRes.json();
-      page = (accountsJson.data ?? []).find((p: any) => p.id === page_id) ?? null;
+      const pageJson = await pageRes.json();
+      console.log("[meta-leadgen-subscribe] page lookup:", JSON.stringify(pageJson));
+      if (pageJson?.access_token) {
+        page = {
+          id: pageJson.id,
+          name: pageJson.name ?? page?.name ?? "Página do Facebook",
+          access_token: pageJson.access_token,
+        };
+      }
     }
 
     if (!page?.access_token) {
