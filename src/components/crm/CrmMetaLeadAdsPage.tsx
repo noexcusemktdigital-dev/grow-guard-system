@@ -248,13 +248,17 @@ export default function CrmMetaLeadAdsPage() {
   };
 
   const openNewMapping = (pageId: string, pageName: string, isDefault = false) => {
+    const defaultFunnel = funnels?.find((f: any) => f.is_default) ?? funnels?.[0];
+    const firstStage = defaultFunnel?.stages?.[0];
+    const firstStageKey =
+      typeof firstStage === "string" ? firstStage : firstStage?.label ?? firstStage?.key ?? "Novo Lead";
     setMappingForm({
       page_id: pageId,
       page_name: pageName,
       form_id: null,
       form_name: "",
-      funnel_id: funnels?.[0]?.id ?? "",
-      stage: "Novo Lead",
+      funnel_id: defaultFunnel?.id ?? "",
+      stage: firstStageKey,
       is_default: isDefault,
     });
     setMappingDialogOpen(true);
@@ -548,9 +552,20 @@ export default function CrmMetaLeadAdsPage() {
                 >
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(funnels?.find((f: any) => f.id === mappingForm.funnel_id)?.stages ?? ["Novo Lead"]).map((s: string) => (
-                      <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                    ))}
+                    {(() => {
+                      const stages =
+                        funnels?.find((f: any) => f.id === mappingForm.funnel_id)?.stages ?? [];
+                      const list = stages.length > 0 ? stages : [{ key: "novo", label: "Novo Lead" }];
+                      return list.map((s: any, idx: number) => {
+                        const label = typeof s === "string" ? s : s?.label ?? s?.key ?? `Etapa ${idx + 1}`;
+                        const value = label;
+                        return (
+                          <SelectItem key={`${value}-${idx}`} value={value} className="text-xs">
+                            {label}
+                          </SelectItem>
+                        );
+                      });
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
