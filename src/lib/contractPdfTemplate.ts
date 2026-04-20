@@ -77,12 +77,19 @@ export function formatContractHtml(content: string, logoBase64: string, title?: 
 
 interface ContractForPdf { content?: string; contract_type?: string; title?: string; }
 export async function downloadContractPdf(contract: ContractForPdf) {
+  if (!contract.content || contract.content.trim().length < 50) {
+    const { toast } = await import("sonner");
+    toast.error("Este contrato não possui conteúdo gerado.", {
+      description: "Edite o contrato e gere o conteúdo antes de baixar o PDF.",
+    });
+    return;
+  }
   const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
     import("jspdf"),
     import("html2canvas"),
   ]);
   const logoBase64 = await getLogoBase64();
-  const content = contract.content || "Conteúdo do contrato não disponível.";
+  const content = contract.content;
   const pdfTitle = contract.contract_type === "franquia"
     ? "CONTRATO DE FRANQUIA EMPRESARIAL"
     : "CONTRATO DE PRESTAÇÃO DE SERVIÇO";
