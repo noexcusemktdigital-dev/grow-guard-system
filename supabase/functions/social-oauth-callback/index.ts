@@ -365,7 +365,7 @@ serve(async (req) => {
           page_name: page.name,
           picture: page.picture_url ?? null,
           user_id: userId,
-          user_access_token: accessToken,
+          user_token: accessToken,
         };
 
         const { error: fbErr } = await supabase.from("social_accounts").upsert(
