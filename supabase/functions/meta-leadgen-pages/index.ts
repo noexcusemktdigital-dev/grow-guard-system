@@ -160,13 +160,37 @@ Deno.serve(async (req) => {
         );
       }
 
-      const r = await fetch(
+      // Tenta com page access token primeiro
+      let r = await fetch(
         `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${pageAccessToken}`,
       );
-      const j = await r.json();
+      let j = await r.json();
+      console.log("[meta-leadgen-pages] leadgen_forms (page token):", JSON.stringify(j));
+
+      // Fallback: tenta com user token se page token falhar por permissão
       if (j.error) {
+        console.log("[meta-leadgen-pages] retry with user token");
+        r = await fetch(
+          `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${accessToken}`,
+        );
+        j = await r.json();
+        console.log("[meta-leadgen-pages] leadgen_forms (user token):", JSON.stringify(j));
+      }
+
+      if (j.error) {
+        const msg = j.error.message ?? "";
+        const isPermErr = msg.includes("pages_manage_ads") ||
+          msg.includes("permission") ||
+          j.error.code === 200 ||
+          j.error.code === 190;
         return new Response(
-          JSON.stringify({ error: j.error.message, page_name: pageName }),
+          JSON.stringify({
+            error: isPermErr
+              ? "Token sem permissões necessárias. Vá em Redes Sociais, DESCONECTE o Facebook e reconecte autorizando TODAS as permissões solicitadas (incluindo gerenciar anúncios das páginas)."
+              : msg,
+            page_name: pageName,
+            fb_code: j.error.code,
+          }),
           { status: 400, headers },
         );
       }
