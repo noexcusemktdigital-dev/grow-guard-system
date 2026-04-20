@@ -354,14 +354,16 @@ Deno.serve(async (req) => {
 
     const effectiveToken = pageToken ?? userToken!;
 
-    let payload: InsightPayload;
+    let basePayload: Omit<InsightPayload, "best_day_to_post" | "followers_growth_hint">;
     if (account.platform === "facebook") {
-      payload = await fetchFacebook(account.account_id, effectiveToken);
+      basePayload = await fetchFacebook(account.account_id, effectiveToken);
     } else if (account.platform === "instagram") {
-      payload = await fetchInstagram(account.account_id, effectiveToken);
+      basePayload = await fetchInstagram(account.account_id, effectiveToken);
     } else {
       return new Response(JSON.stringify({ error: "Unsupported platform" }), { status: 400, headers: cors });
     }
+
+    const payload: InsightPayload = enrichPayload(basePayload);
 
     // Save cache (1h)
     await admin.from("social_account_insights_cache").upsert(
