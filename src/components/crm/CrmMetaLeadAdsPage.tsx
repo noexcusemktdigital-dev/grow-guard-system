@@ -150,26 +150,25 @@ export default function CrmMetaLeadAdsPage() {
 
   const subscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      const page = (listPagesMutation.data ?? []).find((p: MetaPage) => p.id === pageId);
       const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
-        body: {
-          org_id: orgId,
-          page_id: pageId,
-          page_name: page?.name ?? "",
-          page_access_token: page?.access_token ?? "",
-          action: "subscribe",
-        },
+        body: { org_id: orgId, page_id: pageId, action: "subscribe" },
       });
       if (error) throw await extractEdgeFunctionError(error);
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => {
-      toast({ title: "Página conectada!", description: "Leads desta página agora chegam ao CRM." });
-      qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
+      toast({ title: "Página conectada!", description: "Os leads deste formulário chegarão ao seu CRM automaticamente." });
       setPageDialogOpen(false);
+      qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
+      qc.invalidateQueries({ queryKey: ["meta-leadgen-mappings"] });
     },
     onError: (err: any) => {
-      toast({ title: "Erro ao conectar página", description: err.message, variant: "destructive" });
+      toast({
+        title: "Erro ao conectar página",
+        description: err.message,
+        variant: "destructive",
+      });
     },
   });
 
