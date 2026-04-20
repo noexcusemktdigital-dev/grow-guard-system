@@ -11,6 +11,9 @@ import { useAdConnections, useAdMetrics, useAdMetricsSummary } from "@/hooks/use
 import { Facebook, Search, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
 import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
+import { TrafficKPICards } from "@/components/trafego/TrafficKPICards";
+import { TrafficSmartAlerts } from "@/components/trafego/TrafficSmartAlerts";
+import { TrafficOverview } from "@/components/trafego/TrafficOverview";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
