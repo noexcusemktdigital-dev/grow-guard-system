@@ -35,13 +35,13 @@ function Trend({ delta, invert }: { delta: number | null; invert?: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[10px] font-semibold",
+        "inline-flex items-center gap-1 text-[10px] font-semibold tabular-nums",
         isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
       )}
     >
       <Icon className="w-3 h-3" />
       {isUp ? "+" : ""}
-      {delta.toFixed(1)}% vs período anterior
+      {delta.toFixed(2).replace(".", ",")}% vs período anterior
     </span>
   );
 }
@@ -86,7 +86,7 @@ export function TrafficKPICards() {
     },
     {
       label: "CTR médio",
-      value: `${summaryCurrent.avgCtr.toFixed(2)}%`,
+      value: `${summaryCurrent.avgCtr.toFixed(2).replace(".", ",")}%`,
       icon: Percent,
       delta: pctDelta(summaryCurrent.avgCtr, summaryPrevious.avgCtr),
     },
@@ -95,7 +95,7 @@ export function TrafficKPICards() {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {kpis.map((k) => (
-        <Card key={k.label} className="hover:shadow-md transition-shadow">
+        <Card key={k.label} className="shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 rounded-lg bg-primary/10">
@@ -105,7 +105,7 @@ export function TrafficKPICards() {
                 {k.label}
               </p>
             </div>
-            <p className="text-2xl font-bold leading-tight">{k.value}</p>
+            <p className="text-2xl font-bold leading-tight tabular-nums">{k.value}</p>
             <div className="mt-1.5">
               <Trend delta={k.delta} invert={k.invert} />
             </div>

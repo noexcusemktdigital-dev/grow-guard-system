@@ -12,10 +12,12 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBRL } from "@/lib/formatting";
 import { cn } from "@/lib/utils";
+
+const fmtPct = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const chartConfig: ChartConfig = {
   spend: { label: "Investimento", color: "hsl(var(--primary))" },
@@ -78,8 +80,8 @@ export function TrafficOverview({ metaConnection }: Props) {
   }, [metrics]);
 
   const lastSync = metaConnection?.last_synced_at
-    ? format(new Date(metaConnection.last_synced_at), "dd/MM 'às' HH:mm", { locale: ptBR })
-    : "nunca";
+    ? `Sincronizado há ${formatDistanceToNow(new Date(metaConnection.last_synced_at), { locale: ptBR })}`
+    : "Nunca sincronizado";
 
   if (!metaConnection) {
     return (
@@ -132,8 +134,9 @@ export function TrafficOverview({ metaConnection }: Props) {
     <div className="space-y-4">
       {/* Sync bar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-muted-foreground">
-          Última sincronização: <span className="font-medium text-foreground">{lastSync}</span>
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-medium text-foreground">{lastSync}</span>
         </p>
         <Button
           size="sm"
@@ -195,32 +198,38 @@ export function TrafficOverview({ metaConnection }: Props) {
           <CardTitle className="text-sm">Campanhas no período</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-md border">
             <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-2 font-medium text-muted-foreground">Nome</th>
-                  <th className="text-left py-2 px-2 font-medium text-muted-foreground">Status</th>
-                  <th className="text-right py-2 px-2 font-medium text-muted-foreground">Investido</th>
-                  <th className="text-right py-2 px-2 font-medium text-muted-foreground">Cliques</th>
-                  <th className="text-right py-2 px-2 font-medium text-muted-foreground">Leads</th>
-                  <th className="text-right py-2 px-2 font-medium text-muted-foreground">CPL</th>
-                  <th className="text-right py-2 px-2 font-medium text-muted-foreground">CTR</th>
+              <thead className="bg-muted/40">
+                <tr>
+                  <th className="text-left py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Nome</th>
+                  <th className="text-left py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Status</th>
+                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Investido</th>
+                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Cliques</th>
+                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Leads</th>
+                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">CPL</th>
+                  <th className="text-right py-2.5 px-3 font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">CTR</th>
                 </tr>
               </thead>
               <tbody>
-                {campaigns.map((c) => {
+                {campaigns.map((c, idx) => {
                   const ctr = c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0;
                   const cpl = c.conversions > 0 ? c.spend / c.conversions : 0;
                   return (
-                    <tr key={c.id} className="border-b border-muted/50 hover:bg-muted/20">
-                      <td className="py-2 px-2 font-medium max-w-[260px] truncate">{c.name}</td>
-                      <td className="py-2 px-2">{statusBadge(c.status)}</td>
-                      <td className="py-2 px-2 text-right">{formatBRL(c.spend)}</td>
-                      <td className="py-2 px-2 text-right">{c.clicks.toLocaleString("pt-BR")}</td>
-                      <td className="py-2 px-2 text-right">{c.conversions}</td>
-                      <td className="py-2 px-2 text-right">{c.conversions > 0 ? formatBRL(cpl) : "—"}</td>
-                      <td className="py-2 px-2 text-right">{ctr.toFixed(2)}%</td>
+                    <tr
+                      key={c.id}
+                      className={cn(
+                        "border-t border-muted/50 transition-colors hover:bg-muted/40",
+                        idx % 2 === 1 && "bg-muted/15"
+                      )}
+                    >
+                      <td className="py-2.5 px-3 font-medium max-w-[260px] truncate">{c.name}</td>
+                      <td className="py-2.5 px-3">{statusBadge(c.status)}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{formatBRL(c.spend)}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{c.clicks.toLocaleString("pt-BR")}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums font-semibold">{c.conversions}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{c.conversions > 0 ? formatBRL(cpl) : "—"}</td>
+                      <td className="py-2.5 px-3 text-right tabular-nums">{fmtPct(ctr)}</td>
                     </tr>
                   );
                 })}
