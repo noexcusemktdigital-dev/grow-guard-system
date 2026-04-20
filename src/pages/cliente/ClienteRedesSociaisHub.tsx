@@ -21,13 +21,21 @@ export default function ClienteRedesSociaisHub() {
   useEffect(() => {
     const connected = searchParams.get("connected");
     const platform = searchParams.get("platform");
+    const warning = searchParams.get("warning");
     const error = searchParams.get("error");
     if (connected === "true" && platform) {
       const platformLabel = PLATFORMS.find((p) => p.key === platform)?.label ?? platform;
-      toast.success(`${platformLabel} conectado com sucesso!`);
+      if (warning === "no_pages") {
+        toast.warning(
+          `Login Meta concluído, mas nenhuma Página do Facebook foi encontrada nesta conta. Crie/selecione uma Página com Instagram Business vinculado e reconecte.`,
+        );
+      } else {
+        toast.success(`${platformLabel} conectado com sucesso!`);
+      }
       const params = new URLSearchParams(searchParams);
       params.delete("connected");
       params.delete("platform");
+      params.delete("warning");
       setSearchParams(params, { replace: true });
     } else if (error) {
       const errorMessages: Record<string, string> = {
