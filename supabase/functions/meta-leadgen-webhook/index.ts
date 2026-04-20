@@ -111,6 +111,39 @@ Deno.serve(async (req) => {
       const leadEmail = fields.email || fields["e-mail"] || null;
       const leadPhone = fields.phone_number || fields.phone || fields["telefone"] || null;
 
+      // Resolve stage: usar primeira etapa do funil se não houver mapping
+      let resolvedStage = mapping?.stage ?? null;
+      if (!resolvedStage && mapping?.funnel_id) {
+        const { data: f } = await supabase
+          .from("crm_funnels")
+          .select("stages")
+          .eq("id", mapping.funnel_id)
+          .maybeSingle();
+        if (f?.stages && Array.isArray(f.stages) && f.stages.length > 0) {
+          resolvedStage = (f.stages as { key: string }[])[0].key;
+        }
+      }
+      if (!resolvedStage) {
+        const { data: defF } = await supabase
+          .from("crm_funnels")
+          .select("id, stages")
+          .eq("organization_id", page.organization_id)
+          .eq("is_default", true)
+          .maybeSingle();
+        if (defF?.stages && Array.isArray(defF.stages) && defF.stages.length > 0) {
+          resolvedStage = (defF.stages as { key: string }[])[0].key;
+        }
+      }
+
+      const enrichedFields = {
+        ...fields,
+        _meta_form_name: leadDetail?.form_name ?? evt.formId,
+        _meta_page_name: page.page_name ?? evt.pageId,
+        _meta_form_id: evt.formId,
+        _meta_page_id: evt.pageId,
+        _meta_leadgen_id: evt.leadgenId,
+      };
+
       const { data: newLead, error: leadErr } = await supabase
         .from("crm_leads")
         .insert({
@@ -120,13 +153,16 @@ Deno.serve(async (req) => {
           phone: leadPhone,
           source: "Meta Lead Ads",
           funnel_id: mapping?.funnel_id ?? null,
-          stage: mapping?.stage ?? "Novo Lead",
+          stage: resolvedStage ?? "novo",
           assigned_to: mapping?.assigned_to ?? null,
-          notes: `Formulário: ${leadDetail?.form_name ?? evt.formId}\nPágina: ${page.page_name ?? evt.pageId}\n\nCampos:\n${Object.entries(fields).map(([k, v]) => `• ${k}: ${v}`).join("\n")}`,
-          custom_fields: fields,
+          custom_fields: enrichedFields,
         })
         .select("id")
         .single();
+
+      if (leadErr) {
+        console.error("[meta-leadgen-webhook] insert error:", leadErr);
+      }
 
       await supabase.from("meta_leadgen_events").insert({
         organization_id: page.organization_id,
