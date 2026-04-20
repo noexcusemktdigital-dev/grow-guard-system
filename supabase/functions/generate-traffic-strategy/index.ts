@@ -112,6 +112,47 @@ Deno.serve(async (req) => {
       .eq("status", "done")
       .limit(10);
 
+    // Busca métricas reais do Meta Ads (últimos 30 dias)
+    const { data: adMetrics } = await adminClient
+      .from("ad_campaign_metrics")
+      .select("campaign_name, campaign_status, impressions, clicks, spend, conversions, ctr, cpc, date")
+      .eq("organization_id", organization_id)
+      .gte("date", new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0])
+      .order("spend", { ascending: false })
+      .limit(20);
+
+    // Busca conexão ativa de Meta Ads
+    const { data: adConnection } = await adminClient
+      .from("ad_platform_connections")
+      .select("account_name, last_synced_at")
+      .eq("organization_id", organization_id)
+      .eq("platform", "meta_ads")
+      .eq("status", "active")
+      .maybeSingle();
+
+    let metricsContext = "Sem dados de campanhas ativas ainda.";
+    if (adMetrics && adMetrics.length > 0) {
+      const totalSpend = adMetrics.reduce((s: number, m: any) => s + (m.spend || 0), 0);
+      const totalClicks = adMetrics.reduce((s: number, m: any) => s + (m.clicks || 0), 0);
+      const totalConversions = adMetrics.reduce((s: number, m: any) => s + (m.conversions || 0), 0);
+      const avgCPL = totalConversions > 0 ? (totalSpend / totalConversions).toFixed(2) : "N/A";
+      const avgCTR = adMetrics.reduce((s: number, m: any) => s + (m.ctr || 0), 0) / adMetrics.length;
+
+      const topCampaigns = adMetrics.slice(0, 5).map((m: any) =>
+        `${m.campaign_name}: R$${m.spend?.toFixed(2)} investido, ${m.clicks} cliques, ${m.conversions} conversões, CPL R$${m.conversions > 0 ? (m.spend / m.conversions).toFixed(2) : "N/A"}, CTR ${m.ctr?.toFixed(2)}%`
+      ).join("\n");
+
+      metricsContext = `Conta: ${adConnection?.account_name || "Meta Ads"}
+Total investido (30d): R$${totalSpend.toFixed(2)}
+Total cliques: ${totalClicks}
+Total conversões/leads: ${totalConversions}
+CPL médio real: R$${avgCPL}
+CTR médio: ${avgCTR.toFixed(2)}%
+
+TOP CAMPANHAS:
+${topCampaigns}`;
+    }
+
     // Fetch sales plan
     const { data: salesPlan } = await adminClient
       .from("sales_plans")
@@ -175,6 +216,16 @@ ${sitesContext}
 CRIATIVOS DISPONÍVEIS:
 ${postsContext}
 ${salesPlanContext}
+
+DADOS REAIS DAS CAMPANHAS ATIVAS (Meta Ads - últimos 30 dias):
+${metricsContext}
+
+IMPORTANTE: Use os dados reais acima para:
+1. Calibrar as estimativas de CPL, CPC e CTR com base na performance histórica real
+2. Identificar o que já está funcionando e amplificar
+3. Identificar o que não está funcionando e sugerir mudanças
+4. Propor orçamento baseado no CPL real, não em médias de mercado
+5. Se o CPL real for alto, diagnosticar causas e propor soluções específicas
 
 - platform: nome da plataforma
 - objective: objetivo específico da campanha nessa plataforma
