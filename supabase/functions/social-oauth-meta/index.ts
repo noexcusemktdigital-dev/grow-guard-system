@@ -41,6 +41,7 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const orgId = url.searchParams.get("org_id");
+    const redirectTo = url.searchParams.get("redirect_to");
 
     if (!orgId) {
       return new Response(JSON.stringify({ error: "Missing required parameter: org_id" }), {
@@ -84,6 +85,7 @@ serve(async (req) => {
     const statePayload = {
       org_id: orgId,
       platform: "meta",
+      redirect_to: redirectTo ?? null,
       ts: Date.now(),
       nonce: crypto.randomUUID(),
     };

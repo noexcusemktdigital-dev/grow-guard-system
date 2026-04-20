@@ -342,11 +342,14 @@ serve(async (req) => {
             headers: { Location: `${errorBase}?error=save_failed` },
           });
         }
+        const redirectTo = (payload as any).redirect_to as string | null | undefined;
+        const fallbackLocation =
+          redirectTo === "crm-leads"
+            ? `${siteUrl}/cliente/crm/integracoes/meta-lead-ads?connected=true&warning=no_pages`
+            : `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook&warning=no_pages`;
         return new Response(null, {
           status: 302,
-          headers: {
-            Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook&warning=no_pages`,
-          },
+          headers: { Location: fallbackLocation },
         });
       }
 
@@ -437,12 +440,15 @@ serve(async (req) => {
         }
       }
 
+      const redirectTo = (payload as any).redirect_to as string | null | undefined;
       const successPlatform = igConnected ? "instagram" : "facebook";
+      const successLocation =
+        redirectTo === "crm-leads"
+          ? `${siteUrl}/cliente/crm/integracoes/meta-lead-ads?connected=true`
+          : `${siteUrl}/cliente/redes-sociais?connected=true&platform=${successPlatform}`;
       return new Response(null, {
         status: 302,
-        headers: {
-          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=${successPlatform}`,
-        },
+        headers: { Location: successLocation },
       });
     }
 
