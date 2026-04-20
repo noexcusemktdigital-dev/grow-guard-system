@@ -100,15 +100,16 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "page_id required" }), { status: 400, headers });
       }
       const pageRow = pageRows.find((row: any) => row.account_id === pageId);
-      let pageAccessToken = pageRow?.access_token ?? null;
+      let pageAccessToken: string | null = pageRow?.metadata?.page_access_token ?? null;
 
-      if (!pageAccessToken && accessToken) {
-        const accountsRes = await fetch(
-          `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${accessToken}`,
+      // Sempre tentar derivar via Graph com o USER token, pois access_token salvo
+      // pode ser o user token (não funciona para listar leadgen_forms).
+      if (accessToken) {
+        const pageRes = await fetch(
+          `https://graph.facebook.com/v21.0/${pageId}?fields=access_token&access_token=${accessToken}`,
         );
-        const accountsJson = await accountsRes.json();
-        const page = (accountsJson.data ?? []).find((p: any) => p.id === pageId);
-        pageAccessToken = page?.access_token ?? null;
+        const pageJson = await pageRes.json();
+        if (pageJson?.access_token) pageAccessToken = pageJson.access_token;
       }
 
       if (!pageAccessToken) {
