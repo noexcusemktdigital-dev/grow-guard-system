@@ -284,17 +284,23 @@ export default function CrmMetaLeadAdsPage() {
 
       {/* Status da conexão Meta */}
       {!hasMetaConnection ? (
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">Conecte o Facebook em Redes Sociais para continuar</p>
-              <p className="text-xs text-muted-foreground">
-                É necessário autorizar o acesso às suas Páginas e formulários de Lead Ads.
+        <Card className="border-primary/20">
+          <CardContent className="p-10 flex flex-col items-center text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-[#1877F2]/10 flex items-center justify-center">
+              <Facebook className="w-8 h-8 text-[#1877F2]" />
+            </div>
+            <div className="space-y-1.5 max-w-md">
+              <h2 className="text-base font-semibold">Conecte seu Facebook para importar leads</h2>
+              <p className="text-sm text-muted-foreground">
+                Conecte sua conta para que o sistema puxe automaticamente os leads dos seus formulários de anúncio.
               </p>
             </div>
-            <Button size="sm" onClick={handleConnectMeta} className="gap-1.5">
-              <Facebook className="w-4 h-4" /> Ir para Redes Sociais
+            <Button
+              onClick={handleConnectMeta}
+              className="gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
+              size="lg"
+            >
+              <Facebook className="w-4 h-4" /> Conectar com Facebook
             </Button>
           </CardContent>
         </Card>
