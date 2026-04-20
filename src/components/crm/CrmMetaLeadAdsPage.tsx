@@ -599,15 +599,26 @@ function FormSelector({
   value: string;
   onChange: (id: string, name: string) => void;
 }) {
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error: queryError } = useQuery({
     queryKey: ["meta-leadgen-forms", pageId, orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke(
-        `meta-leadgen-pages?action=list_forms&org_id=${orgId}&page_id=${pageId}`,
-        { method: "GET" }
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+      const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/meta-leadgen-pages?action=list_forms&org_id=${orgId}&page_id=${pageId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: ANON,
+          },
+        },
       );
-      if (error) throw await extractEdgeFunctionError(error);
-      return (data?.forms ?? []) as MetaForm[];
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? `Erro ${res.status}`);
+      return (json?.forms ?? []) as MetaForm[];
     },
     enabled: !!pageId && !!orgId,
   });
