@@ -213,38 +213,35 @@ serve(async (req) => {
         ? new Date(Date.now() + longData.expires_in * 1000).toISOString()
         : null;
 
-      // Step 3: Get user info — campo `username` removido (só existe em IG Business e quebra a query pra contas FB)
-      let accountId = "";
-      let accountName = "Meta Account";
-      const accountUsername: string | null = null;
-
+      // Step 3: Get user info
+      let userId = "";
+      let userName = "Meta Account";
       try {
         const meRes = await fetch(
           `https://graph.facebook.com/v25.0/me?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
         );
         const meData = await meRes.json();
         console.log("Meta /me response:", JSON.stringify(meData));
-        if (meData.id) accountId = meData.id;
-        if (meData.name) accountName = meData.name;
+        if (meData.id) userId = meData.id;
+        if (meData.name) userName = meData.name;
       } catch (e) {
         console.warn("Meta /me fetch failed:", e);
       }
 
-      // Fallback: tenta debug_token pra recuperar user_id mesmo se /me falhar
-      if (!accountId) {
+      if (!userId) {
         try {
           const dbgRes = await fetch(
             `https://graph.facebook.com/v25.0/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(`${clientId}|${clientSecret}`)}`,
           );
           const dbgData = await dbgRes.json();
           console.log("Meta debug_token response:", JSON.stringify(dbgData));
-          if (dbgData?.data?.user_id) accountId = String(dbgData.data.user_id);
+          if (dbgData?.data?.user_id) userId = String(dbgData.data.user_id);
         } catch (e) {
           console.warn("Meta debug_token fetch failed:", e);
         }
       }
 
-      if (!accountId) {
+      if (!userId) {
         console.error("social-oauth-callback: could not get Meta account ID");
         return new Response(null, {
           status: 302,
@@ -252,46 +249,169 @@ serve(async (req) => {
         });
       }
 
-      // Step 4: Upsert into social_accounts
-      const { error: dbError } = await supabase.from("social_accounts").upsert(
-        {
-          organization_id: orgId,
-          platform: "facebook",
-          account_id: accountId,
-          account_name: accountName,
-          account_username: accountUsername,
-          access_token: accessToken,
-          refresh_token: null,
-          token_expires_at: expiresAt,
-          scopes: [
-            "instagram_basic",
-            "instagram_content_publish",
-            "instagram_manage_insights",
-            "pages_show_list",
-            "pages_read_engagement",
-            "pages_manage_posts",
-            "ads_read",
-          ],
-          status: "active",
-          metadata: { source: "oauth", long_lived: true },
-          last_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "organization_id,platform,account_id" },
-      );
+      // Step 4: Buscar Pages do usuário (com page_access_token e instagram_business_account)
+      const scopes = [
+        "instagram_basic",
+        "instagram_content_publish",
+        "instagram_manage_insights",
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_posts",
+        "ads_read",
+      ];
 
-      if (dbError) {
-        console.error("social_accounts upsert error (meta):", dbError);
+      let pages: Array<{
+        id: string;
+        name: string;
+        access_token: string;
+        picture_url?: string;
+        instagram_business_account?: { id: string };
+      }> = [];
+
+      try {
+        const pagesRes = await fetch(
+          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
+        );
+        const pagesData = await pagesRes.json();
+        console.log("Meta /me/accounts response:", JSON.stringify(pagesData));
+        pages = (pagesData?.data ?? []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          access_token: p.access_token,
+          picture_url: p.picture?.data?.url,
+          instagram_business_account: p.instagram_business_account,
+        }));
+      } catch (e) {
+        console.warn("Meta /me/accounts fetch failed:", e);
+      }
+
+      // Se não tem nenhuma Page, salva apenas a conexão de usuário (fallback)
+      if (pages.length === 0) {
+        const { error: dbError } = await supabase.from("social_accounts").upsert(
+          {
+            organization_id: orgId,
+            platform: "facebook",
+            account_id: userId,
+            account_name: userName,
+            account_username: null,
+            access_token: accessToken,
+            refresh_token: null,
+            token_expires_at: expiresAt,
+            scopes,
+            status: "active",
+            metadata: { source: "oauth", long_lived: true, access_token: accessToken, user_token: true },
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "organization_id,platform,account_id" },
+        );
+        if (dbError) {
+          console.error("social_accounts upsert error (meta user fallback):", dbError);
+          return new Response(null, {
+            status: 302,
+            headers: { Location: `${errorBase}?error=save_failed` },
+          });
+        }
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=save_failed` },
+          headers: {
+            Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook&warning=no_pages`,
+          },
         });
       }
 
+      // Salva uma conexão Facebook (Page) e, se houver, uma conexão Instagram para cada Page
+      let igConnected = false;
+      for (const page of pages) {
+        const pageMetadata: Record<string, any> = {
+          source: "oauth",
+          long_lived: true,
+          // page tokens não expiram quando derivados de long-lived user token
+          access_token: page.access_token,
+          page_id: page.id,
+          page_name: page.name,
+          picture: page.picture_url ?? null,
+          user_id: userId,
+          user_access_token: accessToken,
+        };
+
+        const { error: fbErr } = await supabase.from("social_accounts").upsert(
+          {
+            organization_id: orgId,
+            platform: "facebook",
+            account_id: page.id,
+            account_name: page.name,
+            account_username: null,
+            access_token: page.access_token,
+            refresh_token: null,
+            token_expires_at: null,
+            scopes,
+            status: "active",
+            metadata: pageMetadata,
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "organization_id,platform,account_id" },
+        );
+        if (fbErr) console.error("social_accounts upsert error (fb page):", fbErr);
+
+        // Se a Page tem Instagram Business vinculado, salva também a conexão instagram
+        if (page.instagram_business_account?.id) {
+          const igId = page.instagram_business_account.id;
+          let igName: string | null = null;
+          let igUsername: string | null = null;
+          let igPicture: string | null = null;
+          try {
+            const igRes = await fetch(
+              `https://graph.facebook.com/v25.0/${igId}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(page.access_token)}`,
+            );
+            const igData = await igRes.json();
+            console.log("IG account info:", JSON.stringify(igData));
+            igName = igData?.name ?? null;
+            igUsername = igData?.username ?? null;
+            igPicture = igData?.profile_picture_url ?? null;
+          } catch (e) {
+            console.warn("IG info fetch failed:", e);
+          }
+
+          const { error: igErr } = await supabase.from("social_accounts").upsert(
+            {
+              organization_id: orgId,
+              platform: "instagram",
+              account_id: igId,
+              account_name: igName ?? page.name,
+              account_username: igUsername,
+              access_token: page.access_token,
+              refresh_token: null,
+              token_expires_at: null,
+              scopes,
+              status: "active",
+              metadata: {
+                source: "oauth",
+                long_lived: true,
+                access_token: page.access_token,
+                page_id: page.id,
+                page_name: page.name,
+                ig_user_id: igId,
+                picture: igPicture,
+                profile_picture_url: igPicture,
+                user_id: userId,
+              },
+              last_synced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "organization_id,platform,account_id" },
+          );
+          if (igErr) console.error("social_accounts upsert error (ig):", igErr);
+          else igConnected = true;
+        }
+      }
+
+      const successPlatform = igConnected ? "instagram" : "facebook";
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook`,
+          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=${successPlatform}`,
         },
       });
     }
