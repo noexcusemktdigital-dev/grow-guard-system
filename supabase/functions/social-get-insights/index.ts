@@ -178,11 +178,11 @@ Deno.serve(async (req) => {
     const userClient = createClient(supaUrl, anon, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: cErr } = await userClient.auth.getClaims(token);
-    if (cErr || !claims?.claims) {
+    const { data: userData, error: cErr } = await userClient.auth.getUser();
+    if (cErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: cors });
     }
+    const userId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
     const social_account_id: string | undefined = body.social_account_id;
@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: isMember } = await admin.rpc("is_member_of_org", {
-      _user_id: claims.claims.sub,
+      _user_id: userId,
       _org_id: account.organization_id,
     });
     if (!isMember) {
