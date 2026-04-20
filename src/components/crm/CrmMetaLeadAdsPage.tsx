@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
-import { useAdsConnectionStatus, useInitiateMetaOAuth } from "@/hooks/use-ads-connections";
+
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,8 +41,25 @@ export default function CrmMetaLeadAdsPage() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
   const { data: funnels } = useCrmFunnels();
-  const { data: adsStatus } = useAdsConnectionStatus();
-  const initiateOAuth = useInitiateMetaOAuth();
+
+  // Verifica conexão Facebook diretamente em social_accounts
+  const { data: fbAccount } = useQuery({
+    queryKey: ["social_facebook_account", orgId],
+    queryFn: async () => {
+      if (!orgId) return null;
+      const { data } = await supabase
+        .from("social_accounts")
+        .select("account_name, account_id, status")
+        .eq("organization_id", orgId)
+        .eq("platform", "facebook")
+        .eq("status", "active")
+        .order("last_synced_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!orgId,
+  });
 
   const [pageDialogOpen, setPageDialogOpen] = useState(false);
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
@@ -196,13 +213,8 @@ export default function CrmMetaLeadAdsPage() {
     },
   });
 
-  const handleConnectMeta = async () => {
-    try {
-      const url = await initiateOAuth.mutateAsync();
-      window.location.href = url;
-    } catch (err: any) {
-      toast({ title: "Erro ao iniciar conexão", description: err.message, variant: "destructive" });
-    }
+  const handleConnectMeta = () => {
+    navigate("/cliente/redes-sociais");
   };
 
   const openPageSelector = async () => {
@@ -223,7 +235,7 @@ export default function CrmMetaLeadAdsPage() {
     setMappingDialogOpen(true);
   };
 
-  const hasMetaConnection = adsStatus?.hasActiveConnection;
+  const hasMetaConnection = !!fbAccount;
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -247,13 +259,13 @@ export default function CrmMetaLeadAdsPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Conecte sua conta Meta primeiro</p>
+              <p className="text-sm font-medium">Conecte o Facebook em Redes Sociais para continuar</p>
               <p className="text-xs text-muted-foreground">
                 É necessário autorizar o acesso às suas Páginas e formulários de Lead Ads.
               </p>
             </div>
-            <Button size="sm" onClick={handleConnectMeta} disabled={initiateOAuth.isPending} className="gap-1.5">
-              <Facebook className="w-4 h-4" /> Conectar Meta
+            <Button size="sm" onClick={handleConnectMeta} className="gap-1.5">
+              <Facebook className="w-4 h-4" /> Ir para Redes Sociais
             </Button>
           </CardContent>
         </Card>
@@ -262,7 +274,7 @@ export default function CrmMetaLeadAdsPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium">Meta conectado: {adsStatus.accountName}</p>
+              <p className="text-sm font-medium">Facebook conectado: {fbAccount?.account_name}</p>
               <p className="text-xs text-muted-foreground">
                 Agora adicione as Páginas que receberão leads.
               </p>
