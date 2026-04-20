@@ -271,10 +271,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (_event === "SIGNED_IN" && newSession.user.email) {
             const userEmail = newSession.user.email;
             supabase
-              .from("organization_invitations")
+              .from("pending_invitations")
               .select("id")
               .eq("email", userEmail)
-              .eq("status", "pending")
+              .is("accepted_at", null)
               .limit(1)
               .maybeSingle()
               .then(({ data }) => {
