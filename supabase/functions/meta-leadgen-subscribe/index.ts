@@ -48,8 +48,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Not a member" }), { status: 403, headers });
     }
 
-    // Busca user token
-    const { data: conn } = await supabase
+    // Busca token: tenta ads_connections primeiro, depois social_accounts
+    let accessToken: string | null = null;
+    const { data: adsConn } = await supabase
       .from("ads_connections")
       .select("access_token")
       .eq("org_id", org_id)
@@ -59,13 +60,31 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (!conn?.access_token) {
-      return new Response(JSON.stringify({ error: "Sem conexão Meta ativa" }), { status: 400, headers });
+    if (adsConn?.access_token) {
+      accessToken = adsConn.access_token;
+    } else {
+      const { data: socialConn } = await supabase
+        .from("social_accounts")
+        .select("access_token")
+        .eq("organization_id", org_id)
+        .eq("platform", "facebook")
+        .eq("status", "active")
+        .order("last_synced_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      accessToken = (socialConn as any)?.access_token ?? null;
+    }
+
+    if (!accessToken) {
+      return new Response(
+        JSON.stringify({ error: "Conecte o Facebook em Redes Sociais ou Meta Ads primeiro." }),
+        { status: 400, headers },
+      );
     }
 
     // Pega page_access_token
     const accountsRes = await fetch(
-      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=200&access_token=${conn.access_token}`,
+      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=200&access_token=${accessToken}`,
     );
     const accountsJson = await accountsRes.json();
     const page = (accountsJson.data ?? []).find((p: any) => p.id === page_id);

@@ -33,8 +33,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "org_id required" }), { status: 400, headers });
     }
 
-    // Busca user access token do meta
-    const { data: conn } = await supabase
+    // Busca token: tenta ads_connections primeiro, depois social_accounts
+    let accessToken: string | null = null;
+    const { data: adsConn } = await supabase
       .from("ads_connections")
       .select("access_token")
       .eq("org_id", orgId)
@@ -44,9 +45,24 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (!conn?.access_token) {
+    if (adsConn?.access_token) {
+      accessToken = adsConn.access_token;
+    } else {
+      const { data: socialConn } = await supabase
+        .from("social_accounts")
+        .select("access_token")
+        .eq("organization_id", orgId)
+        .eq("platform", "facebook")
+        .eq("status", "active")
+        .order("last_synced_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      accessToken = (socialConn as any)?.access_token ?? null;
+    }
+
+    if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: "Nenhuma conexão Meta ativa. Conecte primeiro em Tráfego Pago." }),
+        JSON.stringify({ error: "Conecte o Facebook em Redes Sociais ou Meta Ads primeiro." }),
         { status: 400, headers },
       );
     }
@@ -54,7 +70,7 @@ Deno.serve(async (req) => {
     if (action === "list_pages") {
       // Lista páginas que o usuário administra
       const r = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,tasks&limit=100&access_token=${conn.access_token}`,
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,tasks&limit=100&access_token=${accessToken}`,
       );
       const j = await r.json();
       if (j.error) {
@@ -75,7 +91,7 @@ Deno.serve(async (req) => {
       }
       // Pegamos o page access token via /me/accounts (mais seguro que confiar no front)
       const accountsRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${conn.access_token}`,
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${accessToken}`,
       );
       const accountsJson = await accountsRes.json();
       const page = (accountsJson.data ?? []).find((p: any) => p.id === pageId);
