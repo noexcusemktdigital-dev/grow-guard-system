@@ -48,79 +48,75 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Not a member" }), { status: 403, headers });
     }
 
-    const { data: socialConns } = await supabase
-      .from("social_accounts")
-      .select("account_id, account_name, access_token, metadata")
-      .eq("organization_id", org_id)
-      .eq("platform", "facebook")
+    // Busca USER token: tenta ads_connections, depois social_accounts (user_token nos metadados)
+    let accessToken: string | null = null;
+    const { data: adsConn } = await supabase
+      .from("ads_connections")
+      .select("access_token")
+      .eq("org_id", org_id)
+      .eq("provider", "meta")
       .eq("status", "active")
-      .order("last_synced_at", { ascending: false });
+      .order("connected_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const pageRows = (socialConns ?? []).filter((row: any) => row?.account_id && row?.access_token);
-    const userTokenRow = (socialConns ?? []).find(
-      (row: any) => typeof row?.metadata?.user_token === "string" && row.metadata.user_token.length > 0,
-    );
-
-    // Busca token: tenta social_accounts.user_token primeiro, depois ads_connections
-    let accessToken: string | null = userTokenRow?.metadata?.user_token ?? null;
-
-    if (!accessToken) {
-      const { data: adsConn } = await supabase
-        .from("ads_connections")
-        .select("access_token")
-        .eq("org_id", org_id)
-        .eq("provider", "meta")
+    if (adsConn?.access_token) {
+      accessToken = adsConn.access_token;
+    } else {
+      const { data: socialConns } = await supabase
+        .from("social_accounts")
+        .select("access_token, metadata")
+        .eq("organization_id", org_id)
+        .eq("platform", "facebook")
         .eq("status", "active")
-        .order("connected_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      accessToken = adsConn?.access_token ?? null;
+        .order("last_synced_at", { ascending: false });
+
+      const withUserToken = (socialConns ?? []).find(
+        (r: any) => typeof r?.metadata?.user_token === "string" && r.metadata.user_token.length > 0,
+      );
+
+      if (withUserToken) {
+        accessToken = (withUserToken as any).metadata.user_token;
+      } else {
+        const first = (socialConns ?? [])[0];
+        const meta = (first as any)?.metadata ?? {};
+        accessToken = meta.user_token || (first as any)?.access_token || null;
+      }
     }
 
     if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: "Conecte o Facebook em Redes Sociais ou Meta Ads primeiro." }),
+        JSON.stringify({ error: "Conecte o Facebook em Redes Sociais primeiro." }),
         { status: 400, headers },
       );
     }
 
-    const pageRow = pageRows.find((row: any) => row.account_id === page_id);
-    let page: { id: string; name: string; access_token: string } | null = pageRow
-      ? {
-          id: pageRow.account_id,
-          name: pageRow.account_name ?? pageRow.metadata?.page_name ?? "Página do Facebook",
-          access_token: pageRow.metadata?.page_access_token ?? "",
-        }
-      : null;
+    // Buscar page access token via /me/accounts usando o user token
+    const accountsRes = await fetch(
+      `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=100&access_token=${accessToken}`,
+    );
+    const accountsJson = await accountsRes.json();
+    console.log("[meta-leadgen-subscribe] /me/accounts:", JSON.stringify(accountsJson));
 
-    // Sempre derivar o PAGE access token via Graph usando o USER token.
-    // O access_token salvo em social_accounts pode ser o user token (não funciona em /subscribed_apps).
-    if (accessToken) {
-      const pageRes = await fetch(
-        `https://graph.facebook.com/v21.0/${page_id}?fields=id,name,access_token&access_token=${accessToken}`,
+    const pageEntry = (accountsJson.data ?? []).find((p: any) => p.id === page_id);
+
+    if (!pageEntry?.access_token) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Página não encontrada ou sem acesso. Verifique se você é administrador da página.",
+        }),
+        { status: 403, headers },
       );
-      const pageJson = await pageRes.json();
-      console.log("[meta-leadgen-subscribe] page lookup:", JSON.stringify(pageJson));
-      if (pageJson?.access_token) {
-        page = {
-          id: pageJson.id,
-          name: pageJson.name ?? page?.name ?? "Página do Facebook",
-          access_token: pageJson.access_token,
-        };
-      }
     }
 
-    if (!page?.access_token) {
-      return new Response(JSON.stringify({ error: "Página não acessível pelo usuário" }), {
-        status: 403,
-        headers,
-      });
-    }
+    const pageAccessToken: string = pageEntry.access_token;
+    const pageName: string = pageEntry.name ?? "Página do Facebook";
 
     if (action === "subscribe") {
       // Subscribe page to leadgen field
       const subRes = await fetch(
-        `https://graph.facebook.com/v21.0/${page_id}/subscribed_apps?subscribed_fields=leadgen&access_token=${page.access_token}`,
+        `https://graph.facebook.com/v21.0/${page_id}/subscribed_apps?subscribed_fields=leadgen&access_token=${pageAccessToken}`,
         { method: "POST" },
       );
       const subJson = await subRes.json();
@@ -132,8 +128,8 @@ Deno.serve(async (req) => {
         {
           organization_id: org_id,
           page_id,
-          page_name: page.name,
-          page_access_token: page.access_token,
+          page_name: pageName,
+          page_access_token: pageAccessToken,
           active: true,
           subscribed_at: new Date().toISOString(),
         },
@@ -145,7 +141,7 @@ Deno.serve(async (req) => {
 
     if (action === "unsubscribe") {
       await fetch(
-        `https://graph.facebook.com/v21.0/${page_id}/subscribed_apps?access_token=${page.access_token}`,
+        `https://graph.facebook.com/v21.0/${page_id}/subscribed_apps?access_token=${pageAccessToken}`,
         { method: "DELETE" },
       );
       await supabase
