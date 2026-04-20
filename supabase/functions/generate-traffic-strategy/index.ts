@@ -217,6 +217,16 @@ CRIATIVOS DISPONÍVEIS:
 ${postsContext}
 ${salesPlanContext}
 
+DADOS REAIS DAS CAMPANHAS ATIVAS (Meta Ads - últimos 30 dias):
+${metricsContext}
+
+IMPORTANTE: Use os dados reais acima para:
+1. Calibrar as estimativas de CPL, CPC e CTR com base na performance histórica real
+2. Identificar o que já está funcionando e amplificar
+3. Identificar o que não está funcionando e sugerir mudanças
+4. Propor orçamento baseado no CPL real, não em médias de mercado
+5. Se o CPL real for alto, diagnosticar causas e propor soluções específicas
+
 - platform: nome da plataforma
 - objective: objetivo específico da campanha nessa plataforma
 - audience: público-alvo detalhado (idade, interesses, comportamentos, localização)
