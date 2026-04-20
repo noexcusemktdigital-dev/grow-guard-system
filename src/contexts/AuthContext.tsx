@@ -244,17 +244,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setSession(newSession);
               setUser(newSession.user);
             }
+            // SEC-FIX: never clear session on TOKEN_REFRESHED with null — it's a transient
+            // refresh failure (network blip, slow DB). Keep current session, Supabase will retry.
             return;
           }
 
-          // SIGNED_OUT
-          if (!newSession) {
+          // SIGNED_OUT — only act when explicitly signed out (user clicked logout)
+          if (_event === "SIGNED_OUT") {
             setSession(null);
             setUser(null);
             setProfile(null);
             setRole(null);
+            lastFetchedUserRef.current = null;
             return;
           }
+
+          // Any other event with no session — ignore to prevent spurious logouts
+          if (!newSession) return;
 
           // SIGNED_IN (new login, not initial)
           setSession(newSession);
