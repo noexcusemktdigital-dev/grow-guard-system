@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Share2, BarChart3, Send, Link2 } from "lucide-react";
+import { Share2, LayoutDashboard, Send, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useSocialAccounts } from "@/hooks/useSocialAccounts";
 import { SocialAccountsTab, PLATFORMS } from "@/components/social/SocialAccountsTab";
-import { SocialAnalyticsTab } from "@/components/social/SocialAnalyticsTab";
+import { SocialOverviewTab } from "@/components/social/SocialOverviewTab";
 import { SocialPublishTab } from "@/components/social/SocialPublishTab";
 
 export default function ContasSociais() {
@@ -34,13 +34,13 @@ export default function ContasSociais() {
     }
   }, [searchParams, setSearchParams]);
 
-  const tab = searchParams.get("tab") ?? "accounts";
+  const tab = searchParams.get("tab") ?? "overview";
 
   return (
     <div className="w-full space-y-6">
       <PageHeader
         title="Redes Sociais"
-        subtitle="Conecte, analise e publique nas suas redes em um só lugar"
+        subtitle="Acompanhe sua performance, publique conteúdo e gere insights para o resto do seu marketing"
         icon={<Share2 className="w-5 h-5 text-primary" />}
       />
 
@@ -53,10 +53,18 @@ export default function ContasSociais() {
         }}
       >
         <TabsList>
+          <TabsTrigger value="overview" className="gap-1.5"><LayoutDashboard className="w-3.5 h-3.5" /> Visão Geral</TabsTrigger>
+          <TabsTrigger value="publish" className="gap-1.5"><Send className="w-3.5 h-3.5" /> Publicar</TabsTrigger>
           <TabsTrigger value="accounts" className="gap-1.5"><Link2 className="w-3.5 h-3.5" /> Contas</TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" /> Analytics</TabsTrigger>
-          <TabsTrigger value="publish" className="gap-1.5"><Send className="w-3.5 h-3.5" /> Publicações</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="mt-4">
+          <SocialOverviewTab accounts={accounts ?? []} />
+        </TabsContent>
+
+        <TabsContent value="publish" className="mt-4">
+          <SocialPublishTab accounts={accounts ?? []} />
+        </TabsContent>
 
         <TabsContent value="accounts" className="mt-4 space-y-4">
           <SocialAccountsTab accounts={accounts ?? []} isLoading={isLoading} isError={isError} />
@@ -64,15 +72,8 @@ export default function ContasSociais() {
             As conexões com redes sociais permitem publicar conteúdo diretamente e visualizar métricas de engajamento. Google Ads e TikTok estarão disponíveis em breve.
           </p>
         </TabsContent>
-
-        <TabsContent value="analytics" className="mt-4">
-          <SocialAnalyticsTab accounts={accounts ?? []} />
-        </TabsContent>
-
-        <TabsContent value="publish" className="mt-4">
-          <SocialPublishTab accounts={accounts ?? []} />
-        </TabsContent>
       </Tabs>
     </div>
   );
 }
+

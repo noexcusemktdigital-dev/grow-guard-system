@@ -13,6 +13,7 @@ export interface SocialInsights {
     reach_30d: number;
     impressions_30d: number;
     avg_engagement: number;
+    avg_engagement_rate: number;
   };
   recent_posts: Array<{
     id: string;
@@ -24,7 +25,10 @@ export interface SocialInsights {
     comments: number;
     reach: number;
     impressions: number;
+    engagement_rate: number;
   }>;
+  best_day_to_post: string;
+  followers_growth_hint: string;
 }
 
 export function useSocialInsights(socialAccountId: string | null | undefined) {
