@@ -291,7 +291,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${siteUrl}/cliente/contas-sociais?connected=true&platform=facebook`,
+          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook`,
         },
       });
     }
@@ -405,7 +405,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${siteUrl}/cliente/contas-sociais?connected=true&platform=linkedin`,
+          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=linkedin`,
         },
       });
     }
@@ -420,7 +420,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        Location: `${siteUrl}/cliente/contas-sociais?error=unexpected_error`,
+        Location: `${siteUrl}/cliente/redes-sociais?error=unexpected_error`,
       },
     });
   }
