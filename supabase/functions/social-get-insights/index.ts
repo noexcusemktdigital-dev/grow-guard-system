@@ -1,0 +1,276 @@
+// social-get-insights — busca métricas de conta + posts recentes via Graph API
+// Suporta plataforma 'facebook' (Page) e 'instagram' (IG Business via Page)
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getCorsHeaders } from "../_shared/cors.ts";
+
+const GRAPH = "https://graph.facebook.com/v21.0";
+
+interface InsightPayload {
+  account: {
+    name: string | null;
+    picture: string | null;
+    followers: number;
+    reach_30d: number;
+    impressions_30d: number;
+    avg_engagement: number;
+  };
+  recent_posts: Array<{
+    id: string;
+    message: string;
+    created_at: string;
+    permalink: string | null;
+    image_url: string | null;
+    likes: number;
+    comments: number;
+    reach: number;
+    impressions: number;
+  }>;
+}
+
+async function gget(url: string): Promise<any> {
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!r.ok) {
+    console.error("[graph] error", j);
+    throw new Error(j?.error?.message ?? `Graph API ${r.status}`);
+  }
+  return j;
+}
+
+function sumActions(_actions: unknown): number {
+  return 0;
+}
+
+async function fetchFacebook(accountId: string, accessToken: string): Promise<InsightPayload> {
+  // Page metadata
+  const meta = await gget(
+    `${GRAPH}/${accountId}?fields=name,picture{url},fan_count,followers_count&access_token=${accessToken}`,
+  );
+  const followers = meta.followers_count ?? meta.fan_count ?? 0;
+
+  // Page insights (last 30 days)
+  let reach_30d = 0;
+  let impressions_30d = 0;
+  try {
+    const insights = await gget(
+      `${GRAPH}/${accountId}/insights?metric=page_impressions,page_impressions_unique&period=days_28&access_token=${accessToken}`,
+    );
+    for (const m of insights.data ?? []) {
+      const v = m.values?.[m.values.length - 1]?.value ?? 0;
+      if (m.name === "page_impressions") impressions_30d = Number(v) || 0;
+      if (m.name === "page_impressions_unique") reach_30d = Number(v) || 0;
+    }
+  } catch (e) {
+    console.warn("[fb] insights failed", e);
+  }
+
+  // Recent posts
+  const posts = await gget(
+    `${GRAPH}/${accountId}/posts?fields=id,message,created_time,permalink_url,full_picture,likes.summary(true),comments.summary(true),insights.metric(post_impressions,post_impressions_unique)&limit=10&access_token=${accessToken}`,
+  );
+
+  const recent_posts = (posts.data ?? []).map((p: any) => {
+    const ins = p.insights?.data ?? [];
+    const impressions = ins.find((x: any) => x.name === "post_impressions")?.values?.[0]?.value ?? 0;
+    const reach = ins.find((x: any) => x.name === "post_impressions_unique")?.values?.[0]?.value ?? 0;
+    return {
+      id: p.id,
+      message: p.message ?? "",
+      created_at: p.created_time,
+      permalink: p.permalink_url ?? null,
+      image_url: p.full_picture ?? null,
+      likes: p.likes?.summary?.total_count ?? 0,
+      comments: p.comments?.summary?.total_count ?? 0,
+      reach: Number(reach) || 0,
+      impressions: Number(impressions) || 0,
+    };
+  });
+
+  const avg_engagement = recent_posts.length
+    ? recent_posts.reduce((s: number, p: any) => s + p.likes + p.comments, 0) / recent_posts.length
+    : 0;
+
+  return {
+    account: {
+      name: meta.name ?? null,
+      picture: meta.picture?.data?.url ?? null,
+      followers,
+      reach_30d,
+      impressions_30d,
+      avg_engagement,
+    },
+    recent_posts,
+  };
+}
+
+async function fetchInstagram(igUserId: string, accessToken: string): Promise<InsightPayload> {
+  const meta = await gget(
+    `${GRAPH}/${igUserId}?fields=name,username,profile_picture_url,followers_count,media_count&access_token=${accessToken}`,
+  );
+
+  let reach_30d = 0;
+  let impressions_30d = 0;
+  try {
+    const insights = await gget(
+      `${GRAPH}/${igUserId}/insights?metric=reach,impressions&period=days_28&access_token=${accessToken}`,
+    );
+    for (const m of insights.data ?? []) {
+      const v = m.values?.[m.values.length - 1]?.value ?? 0;
+      if (m.name === "reach") reach_30d = Number(v) || 0;
+      if (m.name === "impressions") impressions_30d = Number(v) || 0;
+    }
+  } catch (e) {
+    console.warn("[ig] insights failed", e);
+  }
+
+  const media = await gget(
+    `${GRAPH}/${igUserId}/media?fields=id,caption,timestamp,permalink,media_url,thumbnail_url,like_count,comments_count,insights.metric(reach,impressions)&limit=10&access_token=${accessToken}`,
+  );
+
+  const recent_posts = (media.data ?? []).map((p: any) => {
+    const ins = p.insights?.data ?? [];
+    const impressions = ins.find((x: any) => x.name === "impressions")?.values?.[0]?.value ?? 0;
+    const reach = ins.find((x: any) => x.name === "reach")?.values?.[0]?.value ?? 0;
+    return {
+      id: p.id,
+      message: p.caption ?? "",
+      created_at: p.timestamp,
+      permalink: p.permalink ?? null,
+      image_url: p.media_url ?? p.thumbnail_url ?? null,
+      likes: p.like_count ?? 0,
+      comments: p.comments_count ?? 0,
+      reach: Number(reach) || 0,
+      impressions: Number(impressions) || 0,
+    };
+  });
+
+  const avg_engagement = recent_posts.length
+    ? recent_posts.reduce((s: number, p: any) => s + p.likes + p.comments, 0) / recent_posts.length
+    : 0;
+
+  return {
+    account: {
+      name: meta.name ?? meta.username ?? null,
+      picture: meta.profile_picture_url ?? null,
+      followers: meta.followers_count ?? 0,
+      reach_30d,
+      impressions_30d,
+      avg_engagement,
+    },
+    recent_posts,
+  };
+}
+
+Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: cors });
+    }
+
+    const supaUrl = Deno.env.get("SUPABASE_URL")!;
+    const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supaUrl, anon, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claims, error: cErr } = await userClient.auth.getClaims(token);
+    if (cErr || !claims?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: cors });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const social_account_id: string | undefined = body.social_account_id;
+    if (!social_account_id) {
+      return new Response(JSON.stringify({ error: "social_account_id required" }), { status: 400, headers: cors });
+    }
+
+    const admin = createClient(supaUrl, service);
+
+    // Buscar conta + verificar membership
+    const { data: account, error: accErr } = await admin
+      .from("social_accounts")
+      .select("*")
+      .eq("id", social_account_id)
+      .maybeSingle();
+
+    if (accErr || !account) {
+      return new Response(JSON.stringify({ error: "Account not found" }), { status: 404, headers: cors });
+    }
+
+    const { data: isMember } = await admin.rpc("is_member_of_org", {
+      _user_id: claims.claims.sub,
+      _org_id: account.organization_id,
+    });
+    if (!isMember) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: cors });
+    }
+
+    // Cache check (1h)
+    const period = body.period ?? "30d";
+    const { data: cached } = await admin
+      .from("social_account_insights_cache")
+      .select("payload, expires_at")
+      .eq("social_account_id", social_account_id)
+      .eq("period", period)
+      .maybeSingle();
+
+    if (cached && new Date(cached.expires_at) > new Date()) {
+      return new Response(JSON.stringify({ data: cached.payload, cached: true }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    const meta = (account.metadata ?? {}) as Record<string, any>;
+    const accessToken: string | undefined = meta.access_token ?? meta.page_access_token;
+    if (!accessToken) {
+      return new Response(JSON.stringify({ error: "Missing access token in account metadata" }), {
+        status: 400,
+        headers: cors,
+      });
+    }
+
+    let payload: InsightPayload;
+    if (account.platform === "facebook") {
+      payload = await fetchFacebook(account.account_id, accessToken);
+    } else if (account.platform === "instagram") {
+      payload = await fetchInstagram(account.account_id, accessToken);
+    } else {
+      return new Response(JSON.stringify({ error: "Unsupported platform" }), { status: 400, headers: cors });
+    }
+
+    // Save cache (1h)
+    await admin.from("social_account_insights_cache").upsert(
+      {
+        organization_id: account.organization_id,
+        social_account_id,
+        period,
+        payload: payload as unknown as Record<string, unknown>,
+        fetched_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+      { onConflict: "social_account_id,period" },
+    );
+
+    // Update last_synced_at
+    await admin
+      .from("social_accounts")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("id", social_account_id);
+
+    return new Response(JSON.stringify({ data: payload, cached: false }), {
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("[social-get-insights] error", e);
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
+    );
+  }
+});

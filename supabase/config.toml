@@ -239,6 +239,15 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.social-publish]
     # Publishes a post to Meta (Instagram/Facebook) or LinkedIn — requires authenticated user
     verify_jwt = true
+  [functions.social-get-insights]
+    # Fetches account + post metrics from Graph API — validates JWT manually
+    verify_jwt = false
+  [functions.social-publish-post]
+    # Publishes immediately or schedules a post — validates JWT manually
+    verify_jwt = false
+  [functions.social-process-scheduled]
+    # Cron worker that publishes due scheduled posts — called by pg_cron
+    verify_jwt = false
 
   # --- Meta Lead Ads (instant forms → CRM) ---
   [functions.meta-leadgen-webhook]
