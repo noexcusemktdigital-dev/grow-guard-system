@@ -89,6 +89,8 @@ export default function CrmMetaLeadAdsPage() {
       return data ?? [];
     },
     enabled: !!orgId,
+  });
+
   // Listar páginas do FB
   const listPagesMutation = useMutation({
     mutationFn: async () => {
@@ -109,6 +111,8 @@ export default function CrmMetaLeadAdsPage() {
       if (!res.ok) throw new Error(json?.error ?? `Erro ${res.status}`);
       return (json?.pages ?? []) as MetaPage[];
     },
+  });
+
   const unsubscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
       const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
