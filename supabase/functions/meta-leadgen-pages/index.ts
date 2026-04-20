@@ -33,43 +33,33 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "org_id required" }), { status: 400, headers });
     }
 
-    // Busca token: tenta ads_connections primeiro, depois social_accounts
-    // IMPORTANTE: precisamos do USER access token (não page token) para chamar /me/accounts
-    let accessToken: string | null = null;
-    const { data: adsConn } = await supabase
-      .from("ads_connections")
-      .select("access_token")
-      .eq("org_id", orgId)
-      .eq("provider", "meta")
+    const { data: socialConns } = await supabase
+      .from("social_accounts")
+      .select("account_id, account_name, access_token, metadata")
+      .eq("organization_id", orgId)
+      .eq("platform", "facebook")
       .eq("status", "active")
-      .order("connected_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("last_synced_at", { ascending: false });
 
-    if (adsConn?.access_token) {
-      accessToken = adsConn.access_token;
-    } else {
-      // Buscar contas Facebook ativas — preferir user_token dos metadados
-      const { data: socialConns } = await supabase
-        .from("social_accounts")
-        .select("access_token, metadata")
-        .eq("organization_id", orgId)
-        .eq("platform", "facebook")
+    const pageRows = (socialConns ?? []).filter((row: any) => row?.account_id && row?.access_token);
+    const userTokenRow = (socialConns ?? []).find(
+      (row: any) => typeof row?.metadata?.user_token === "string" && row.metadata.user_token.length > 0,
+    );
+
+    // Busca token: tenta social_accounts.user_token primeiro, depois ads_connections
+    let accessToken: string | null = userTokenRow?.metadata?.user_token ?? null;
+
+    if (!accessToken) {
+      const { data: adsConn } = await supabase
+        .from("ads_connections")
+        .select("access_token")
+        .eq("org_id", orgId)
+        .eq("provider", "meta")
         .eq("status", "active")
-        .order("last_synced_at", { ascending: false });
-
-      // Prioriza qualquer registro que tenha metadata.user_token (string)
-      const withUserToken = (socialConns ?? []).find(
-        (r: any) => typeof r?.metadata?.user_token === "string" && r.metadata.user_token.length > 0,
-      );
-      if (withUserToken) {
-        accessToken = (withUserToken as any).metadata.user_token;
-      } else {
-        const socialConn = (socialConns ?? [])[0];
-        const rawToken = (socialConn as any)?.access_token ?? null;
-        const meta = (socialConn as any)?.metadata ?? {};
-        accessToken = meta.user_token || rawToken;
-      }
+        .order("connected_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      accessToken = adsConn?.access_token ?? null;
     }
 
     if (!accessToken) {
@@ -80,19 +70,27 @@ Deno.serve(async (req) => {
     }
 
     if (action === "list_pages") {
-      // Lista páginas que o usuário administra
-      const r = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,tasks&limit=100&access_token=${accessToken}`,
-      );
-      const j = await r.json();
-      if (j.error) {
-        return new Response(JSON.stringify({ error: j.error.message }), { status: 400, headers });
+      if (accessToken) {
+        const r = await fetch(
+          `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,tasks&limit=100&access_token=${accessToken}`,
+        );
+        const j = await r.json();
+        if (!j.error) {
+          const pages = (j.data ?? []).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            access_token: p.access_token,
+            can_manage: (p.tasks ?? []).includes("MANAGE") || (p.tasks ?? []).includes("ADVERTISE"),
+          }));
+          return new Response(JSON.stringify({ pages }), { status: 200, headers });
+        }
       }
-      const pages = (j.data ?? []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        access_token: p.access_token,
-        can_manage: (p.tasks ?? []).includes("MANAGE") || (p.tasks ?? []).includes("ADVERTISE"),
+
+      const pages = pageRows.map((row: any) => ({
+        id: row.account_id,
+        name: row.account_name ?? row.metadata?.page_name ?? "Página do Facebook",
+        access_token: row.access_token,
+        can_manage: true,
       }));
       return new Response(JSON.stringify({ pages }), { status: 200, headers });
     }
@@ -101,17 +99,23 @@ Deno.serve(async (req) => {
       if (!pageId) {
         return new Response(JSON.stringify({ error: "page_id required" }), { status: 400, headers });
       }
-      // Pegamos o page access token via /me/accounts (mais seguro que confiar no front)
-      const accountsRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${accessToken}`,
-      );
-      const accountsJson = await accountsRes.json();
-      const page = (accountsJson.data ?? []).find((p: any) => p.id === pageId);
-      if (!page?.access_token) {
+      const pageRow = pageRows.find((row: any) => row.account_id === pageId);
+      let pageAccessToken = pageRow?.access_token ?? null;
+
+      if (!pageAccessToken && accessToken) {
+        const accountsRes = await fetch(
+          `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${accessToken}`,
+        );
+        const accountsJson = await accountsRes.json();
+        const page = (accountsJson.data ?? []).find((p: any) => p.id === pageId);
+        pageAccessToken = page?.access_token ?? null;
+      }
+
+      if (!pageAccessToken) {
         return new Response(JSON.stringify({ error: "Página não acessível" }), { status: 403, headers });
       }
       const r = await fetch(
-        `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${page.access_token}`,
+        `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${pageAccessToken}`,
       );
       const j = await r.json();
       if (j.error) {

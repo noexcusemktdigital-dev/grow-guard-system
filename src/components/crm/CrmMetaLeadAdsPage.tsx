@@ -125,10 +125,6 @@ export default function CrmMetaLeadAdsPage() {
   // Listar páginas do FB
   const listPagesMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("meta-leadgen-pages", {
-        body: null,
-      });
-      // GET com query string via supabase functions invoke
       const { data: result, error: e2 } = await supabase.functions.invoke(
         `meta-leadgen-pages?action=list_pages&org_id=${orgId}`,
         { method: "GET" }
