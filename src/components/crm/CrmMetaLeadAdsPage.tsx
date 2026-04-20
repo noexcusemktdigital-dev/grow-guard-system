@@ -148,6 +148,31 @@ export default function CrmMetaLeadAdsPage() {
     },
   });
 
+  const subscribeMutation = useMutation({
+    mutationFn: async (pageId: string) => {
+      const page = (listPagesMutation.data ?? []).find((p: MetaPage) => p.id === pageId);
+      const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
+        body: {
+          org_id: orgId,
+          page_id: pageId,
+          page_name: page?.name ?? "",
+          page_access_token: page?.access_token ?? "",
+          action: "subscribe",
+        },
+      });
+      if (error) throw await extractEdgeFunctionError(error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: "Página conectada!", description: "Leads desta página agora chegam ao CRM." });
+      qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
+      setPageDialogOpen(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao conectar página", description: err.message, variant: "destructive" });
+    },
+  });
+
   const unsubscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
       const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
