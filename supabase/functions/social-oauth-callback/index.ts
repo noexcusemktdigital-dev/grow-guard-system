@@ -356,11 +356,15 @@ serve(async (req) => {
       // Salva uma conexão Facebook (Page) e, se houver, uma conexão Instagram para cada Page
       let igConnected = false;
       for (const page of pages) {
+        // pageAccessToken = token de página (usado p/ publicar / ler IG).
+        // accessToken     = USER token long-lived (60d) — único capaz de chamar /me/accounts.
+        const pageAccessToken: string = page.access_token || accessToken;
+
         const pageMetadata: Record<string, any> = {
           source: "oauth",
           long_lived: true,
           // page tokens não expiram quando derivados de long-lived user token
-          access_token: page.access_token,
+          page_access_token: pageAccessToken,
           page_id: page.id,
           page_name: page.name,
           picture: page.picture_url ?? null,
@@ -375,9 +379,11 @@ serve(async (req) => {
             account_id: page.id,
             account_name: page.name,
             account_username: null,
-            access_token: page.access_token,
+            // IMPORTANTE: salvamos o USER token long-lived na coluna principal
+            // para que /me/accounts continue funcionando após o callback.
+            access_token: accessToken,
             refresh_token: null,
-            token_expires_at: null,
+            token_expires_at: expiresAt,
             scopes,
             status: "active",
             metadata: pageMetadata,
@@ -396,7 +402,7 @@ serve(async (req) => {
           let igPicture: string | null = null;
           try {
             const igRes = await fetch(
-              `https://graph.facebook.com/v25.0/${igId}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(page.access_token)}`,
+              `https://graph.facebook.com/v25.0/${igId}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(pageAccessToken)}`,
             );
             const igData = await igRes.json();
             console.log("IG account info:", JSON.stringify(igData));
@@ -414,7 +420,8 @@ serve(async (req) => {
               account_id: igId,
               account_name: igName ?? page.name,
               account_username: igUsername,
-              access_token: page.access_token,
+              // Para publicar no IG é necessário o page access token.
+              access_token: pageAccessToken,
               refresh_token: null,
               token_expires_at: null,
               scopes,
@@ -422,13 +429,14 @@ serve(async (req) => {
               metadata: {
                 source: "oauth",
                 long_lived: true,
-                access_token: page.access_token,
+                page_access_token: pageAccessToken,
                 page_id: page.id,
                 page_name: page.name,
                 ig_user_id: igId,
                 picture: igPicture,
                 profile_picture_url: igPicture,
                 user_id: userId,
+                user_token: accessToken,
               },
               last_synced_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
