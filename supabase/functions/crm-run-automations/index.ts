@@ -15,18 +15,24 @@ Deno.serve(async (req) => {
     const MAX_RETRIES = 3;
     const RETRY_DELAY_MS = 5 * 60 * 1000; // 5min between retries
 
-    // ── Detect lead_stuck & no_contact_sla (periodic scan) ──
-    await detectStuckLeads(admin);
-    await detectNoContactSla(admin);
+    // PERF: hard time budget. Edge function was running 125s and blowing 500/timeout,
+    // saturating the worker pool and slowing every other request. Cap it to 25s.
+    const startedAt = Date.now();
+    const TIME_BUDGET_MS = 25_000;
+    const timeLeft = () => Date.now() - startedAt < TIME_BUDGET_MS;
 
-    // Fetch unprocessed queue events — include retryable failed events (API-005)
+    // ── Detect lead_stuck & no_contact_sla (periodic scan) ──
+    if (timeLeft()) await detectStuckLeads(admin);
+    if (timeLeft()) await detectNoContactSla(admin);
+
+    // PERF: reduce batch size 50 → 15 so one slow event can't starve the whole queue.
     const { data: events, error: evErr } = await admin
       .from("crm_automation_queue")
       .select("*")
       .eq("processed", false)
       .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
       .order("created_at")
-      .limit(50);
+      .limit(15);
 
     if (evErr) throw evErr;
     if (!events || events.length === 0) {
@@ -38,6 +44,7 @@ Deno.serve(async (req) => {
     let processedCount = 0;
 
     for (const event of events) {
+      if (!timeLeft()) break; // graceful stop — remaining events stay in queue for next run
       try {
         // Find matching active automations for this org + trigger
         const { data: automations } = await admin
