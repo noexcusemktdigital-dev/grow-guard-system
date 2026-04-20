@@ -199,6 +199,6 @@ export function useAgentStats(agentId: string | null) {
       };
     },
     enabled: !!agentId && !!orgId,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // PERF: 30s → 2min
   });
 }

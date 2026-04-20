@@ -266,11 +266,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logger.error("[Auth] fetchProfileAndRole in listener failed:", e)
           );
 
-          // Accept pending invitations on new sign-in
+          // PERF: only invoke accept_invitation if a pending invite actually exists for this email.
+          // Previously called on every SIGNED_IN, hammering the edge function (7-13s each call).
           if (_event === "SIGNED_IN" && newSession.user.email) {
-            supabase.functions.invoke("manage-member", {
-              body: { action: "accept_invitation", email: newSession.user.email },
-            }).catch((e: unknown) => logger.warn("[Auth] accept_invitation fallback error:", e));
+            const userEmail = newSession.user.email;
+            supabase
+              .from("pending_invitations")
+              .select("id")
+              .eq("email", userEmail)
+              .is("accepted_at", null)
+              .limit(1)
+              .maybeSingle()
+              .then(({ data }) => {
+                if (data) {
+                  supabase.functions.invoke("manage-member", {
+                    body: { action: "accept_invitation", email: userEmail },
+                  }).catch((e: unknown) => logger.warn("[Auth] accept_invitation fallback error:", e));
+                }
+              });
           }
         }
       );

@@ -162,7 +162,7 @@ export function useTeamChat() {
       return result;
     },
     enabled: !!orgId && !!user && (channelsQuery.data?.length ?? 0) > 0 && (channelMembersQuery.data?.length ?? 0) > 0,
-    refetchInterval: 30000,
+    refetchInterval: 120000, // PERF: 30s → 2min (realtime cobre updates ao vivo)
   });
 
   // Unread counts map

@@ -195,6 +195,6 @@ export function useGoalProgress(goals: GoalInput[] | undefined) {
       return results;
     },
     enabled: !!orgId && !!goals?.length,
-    refetchInterval: 60000,
+    refetchInterval: 300000, // PERF: 60s → 5min
   });
 }
