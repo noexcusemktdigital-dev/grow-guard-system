@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Facebook, RefreshCw, CheckCircle2, XCircle, Settings, Plus, ExternalLink, AlertCircle, Trash2 } from "lucide-react";
@@ -213,9 +213,38 @@ export default function CrmMetaLeadAdsPage() {
     },
   });
 
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
   const handleConnectMeta = () => {
-    navigate("/cliente/redes-sociais");
+    if (!orgId) {
+      toast({ title: "Organização não identificada", variant: "destructive" });
+      return;
+    }
+    window.location.href = `${SUPABASE_URL}/functions/v1/social-oauth-meta?org_id=${orgId}&redirect_to=crm-leads`;
   };
+
+  // Detectar retorno do OAuth: ?connected=true
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "true") {
+      toast({
+        title: "Facebook conectado!",
+        description: "Carregando suas páginas...",
+      });
+      // Limpar query da URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+      // Recarregar conexão e abrir seletor de páginas
+      qc.invalidateQueries({ queryKey: ["social_facebook_account", orgId] });
+      qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages", orgId] });
+      // Após um pequeno delay, abrir o seletor
+      setTimeout(() => {
+        setPageDialogOpen(true);
+        listPagesMutation.mutate();
+      }, 800);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
 
   const openPageSelector = async () => {
     setPageDialogOpen(true);
