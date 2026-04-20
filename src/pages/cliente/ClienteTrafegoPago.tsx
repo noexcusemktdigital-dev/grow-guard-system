@@ -11,6 +11,9 @@ import { useAdConnections, useAdMetrics, useAdMetricsSummary } from "@/hooks/use
 import { Facebook, Search, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
 import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
+import { TrafficKPICards } from "@/components/trafego/TrafficKPICards";
+import { TrafficSmartAlerts } from "@/components/trafego/TrafficSmartAlerts";
+import { TrafficOverview } from "@/components/trafego/TrafficOverview";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +66,7 @@ export default function ClienteTrafegoPago() {
   const adSummary = useAdMetricsSummary(adMetrics);
   const hasMetrics = (adMetrics?.length ?? 0) > 0;
 
-  const [activeTab, setActiveTab] = useState("estrategia");
+  const [activeTab, setActiveTab] = useState("anuncios");
   const [step, setStep] = useState(0);
   const [showWizard, setShowWizard] = useState(false);
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
@@ -230,51 +233,8 @@ export default function ClienteTrafegoPago() {
         </CardContent>
       </Card>
 
-      {/* Resumo Meta Ads (últimos 30 dias) — quando há métricas */}
-      {metaConnection && hasMetrics && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="w-3.5 h-3.5 text-primary" />
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase">Total gasto (30d)</p>
-              </div>
-              <p className="text-lg font-bold">
-                {adSummary.totalSpend.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <MousePointer className="w-3.5 h-3.5 text-blue-500" />
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase">Cliques</p>
-              </div>
-              <p className="text-lg font-bold">{adSummary.totalClicks.toLocaleString("pt-BR")}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Eye className="w-3.5 h-3.5 text-purple-500" />
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase">Impressões</p>
-              </div>
-              <p className="text-lg font-bold">{adSummary.totalImpressions.toLocaleString("pt-BR")}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase">CPL médio</p>
-              </div>
-              <p className="text-lg font-bold">
-                {adSummary.avgCpl.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* KPIs principais (Meta Ads conectado + dados disponíveis) */}
+      {metaConnection && hasMetrics && <TrafficKPICards />}
 
       {/* Conta conectada mas sem métricas */}
       {metaConnection && !hasMetrics && (
@@ -283,30 +243,37 @@ export default function ClienteTrafegoPago() {
             <BarChart2 className="w-8 h-8 text-muted-foreground/40 mx-auto" />
             <p className="text-sm font-semibold">Nenhuma campanha encontrada</p>
             <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Clique em <span className="font-medium">"Sincronizar"</span> para buscar dados da sua conta Meta Ads.
-              Certifique-se de que há campanhas ativas na conta selecionada.
+              Clique em <span className="font-medium">"Sincronizar"</span> na aba Visão Geral para buscar dados da sua conta Meta Ads.
             </p>
           </CardContent>
         </Card>
       )}
 
       {!metaConnection && !googleConnection && (
-        <Card className="border-dashed">
-          <CardContent className="p-6 text-center space-y-2">
-            <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
-            <p className="text-sm font-semibold">Conecte suas plataformas de anúncios</p>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Conecte Meta Ads ou Google Ads acima para visualizar métricas de campanhas, CPL, ROAS e performance em tempo real.
-            </p>
+        <Card className="border-dashed border-primary/30 bg-primary/5">
+          <CardContent className="p-6 text-center space-y-3">
+            <div className="inline-flex p-3 rounded-full bg-primary/10">
+              <Link2 className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-base font-bold">Conecte sua conta de anúncios</p>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
+                Conecte Meta Ads ou Google Ads acima para entender se seu investimento está gerando resultado:
+                CPL, leads, CTR, performance por campanha — tudo em tempo real.
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Alertas inteligentes (Meta Ads conectado) */}
+      {metaConnection && <TrafficSmartAlerts metaConnection={metaConnection} />}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
+          <TabsTrigger value="anuncios" className="text-xs gap-1.5"><BarChart2 className="w-3.5 h-3.5" /> Visão Geral</TabsTrigger>
           <TabsTrigger value="campanhas" className="text-xs gap-1.5"><Folder className="w-3.5 h-3.5" /> Campanhas</TabsTrigger>
-          <TabsTrigger value="anuncios" className="text-xs gap-1.5"><BarChart2 className="w-3.5 h-3.5" /> Anúncios</TabsTrigger>
+          <TabsTrigger value="estrategia" className="text-xs gap-1.5"><Target className="w-3.5 h-3.5" /> Estratégia</TabsTrigger>
           <TabsTrigger value="historico" className="text-xs gap-1.5"><History className="w-3.5 h-3.5" /> Histórico</TabsTrigger>
         </TabsList>
 
@@ -385,14 +352,20 @@ export default function ClienteTrafegoPago() {
             </Card>
           ) : (
             <>
-              <Card className="border-primary/20 bg-primary/5">
+              <Card className={activeStrategy ? "border-primary/20 bg-primary/5" : "border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5"}>
                 <CardContent className="py-5">
                   <div className="flex items-start gap-3 mb-4">
-                    <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <div className="p-2 rounded-xl bg-primary/15">
+                      <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold">Estratégia de Tráfego com IA</p>
+                      <p className="text-sm font-bold">
+                        {activeStrategy ? "Estratégia de Tráfego com IA" : "Crie sua estratégia de tráfego com IA"}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Wizard guiado de 8 etapas que gera estratégia completa por plataforma.
+                        {activeStrategy
+                          ? "Gere uma nova versão a qualquer momento."
+                          : "Wizard guiado de 8 etapas que gera estratégia completa por plataforma (Meta, Google, TikTok, LinkedIn)."}
                         <Badge variant="outline" className="ml-2 text-[9px]">25 créditos na aprovação</Badge>
                       </p>
                     </div>
@@ -619,10 +592,10 @@ export default function ClienteTrafegoPago() {
           )}
         </TabsContent>
 
-        {/* ═══ ANÚNCIOS (META ADS + GOOGLE ADS) ═══ */}
+        {/* ═══ VISÃO GERAL — gráfico + tabela campanhas ═══ */}
         <TabsContent value="anuncios" className="space-y-6 mt-4">
-          <AdMetricsDashboard period={30} />
-          <AdAIAnalysis />
+          <TrafficOverview metaConnection={metaConnection} />
+          {metaConnection && hasMetrics && <AdAIAnalysis />}
         </TabsContent>
 
         {/* ═══ HISTÓRICO ═══ */}
