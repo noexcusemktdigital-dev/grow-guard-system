@@ -83,7 +83,7 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const stateSecret = Deno.env.get("OAUTH_STATE_SECRET");
   const siteUrl = Deno.env.get("SITE_URL") ?? "https://grow-guard-system.lovable.app";
-  const errorBase = `${siteUrl}/cliente/contas-sociais`;
+  const errorBase = `${siteUrl}/cliente/redes-sociais`;
 
   if (!supabaseUrl || !serviceRoleKey || !stateSecret) {
     console.error("social-oauth-callback: missing required env vars");
