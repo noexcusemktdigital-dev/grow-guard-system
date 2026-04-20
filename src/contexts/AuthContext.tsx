@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchWithRetry = async <T,>(fn: () => PromiseLike<T>, label: string): Promise<T | null> => {
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const result = await withTimeout(fn(), 6000, null as T);
+            const result = await withTimeout(fn(), 15000, null as T);
             if (result !== null) return result;
           } catch {
             // retry
@@ -115,9 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Previous code fell back to "cliente_user" or "franqueado", allowing privilege escalation
         // for any user whose role fetch timed out (slow DB, new signup, error state, attacker).
         if (roleResult === null) {
-          logger.error("[Auth] Role fetch timed out — signing out to prevent privilege escalation (SEC-FIX CODE-003)");
-          // Force sign-out: do not assign any role, session is untrusted
-          await supabase.auth.signOut();
+          logger.warn("[Auth] Role fetch timed out — keeping session, will retry on next navigation");
+          lastFetchedUserRef.current = currentUser.id;
           return;
         }
 
