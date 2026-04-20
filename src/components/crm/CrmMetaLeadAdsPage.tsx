@@ -83,76 +83,36 @@ export default function CrmMetaLeadAdsPage() {
         .from("meta_leadgen_subscribed_pages")
         .select("*")
         .eq("organization_id", orgId)
+        .eq("active", true)
         .order("subscribed_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
     enabled: !!orgId,
   });
-
-  // Mapeamentos
-  const { data: mappings } = useQuery({
-    queryKey: ["meta-leadgen-mappings", orgId],
-    queryFn: async () => {
-      if (!orgId) return [];
-      const { data, error } = await supabase
-        .from("meta_leadgen_form_mappings")
-        .select("*, crm_funnels(name)")
-        .eq("organization_id", orgId)
-        .order("is_default", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!orgId,
-  });
-
-  // Eventos recentes
-  const { data: recentEvents } = useQuery({
-    queryKey: ["meta-leadgen-events", orgId],
-    queryFn: async () => {
-      if (!orgId) return [];
-      const { data } = await supabase
-        .from("meta_leadgen_events")
-        .select("*")
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      return data ?? [];
-    },
-    enabled: !!orgId,
-  });
-
+...
   // Listar páginas do FB
   const listPagesMutation = useMutation({
     mutationFn: async () => {
-      const { data: result, error: e2 } = await supabase.functions.invoke(
-        `meta-leadgen-pages?action=list_pages&org_id=${orgId}`,
-        { method: "GET" }
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess?.session?.access_token;
+      const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/meta-leadgen-pages?action=list_pages&org_id=${orgId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: ANON,
+          },
+        },
       );
-      if (e2) throw await extractEdgeFunctionError(e2);
-      return result.pages as MetaPage[];
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? `Erro ${res.status}`);
+      return (json?.pages ?? []) as MetaPage[];
     },
   });
-
-  // Subscribe page
-  const subscribeMutation = useMutation({
-    mutationFn: async (pageId: string) => {
-      const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
-        body: { org_id: orgId, page_id: pageId, action: "subscribe" },
-      });
-      if (error) throw await extractEdgeFunctionError(error);
-      return data;
-    },
-    onSuccess: () => {
-      toast({ title: "Página conectada!", description: "Novos leads chegarão automaticamente no CRM." });
-      qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
-      setPageDialogOpen(false);
-    },
-    onError: (err: any) => {
-      toast({ title: "Erro ao conectar página", description: err.message, variant: "destructive" });
-    },
-  });
-
+...
   const unsubscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
       const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
@@ -164,6 +124,10 @@ export default function CrmMetaLeadAdsPage() {
     onSuccess: () => {
       toast({ title: "Página desconectada" });
       qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
+      qc.invalidateQueries({ queryKey: ["meta-leadgen-mappings"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro ao desconectar página", description: err.message, variant: "destructive" });
     },
   });
 
