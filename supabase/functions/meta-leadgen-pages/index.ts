@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
     }
 
     // Busca token: tenta ads_connections primeiro, depois social_accounts
+    // IMPORTANTE: precisamos do USER access token (não page token) para chamar /me/accounts
     let accessToken: string | null = null;
     const { data: adsConn } = await supabase
       .from("ads_connections")
@@ -48,16 +49,34 @@ Deno.serve(async (req) => {
     if (adsConn?.access_token) {
       accessToken = adsConn.access_token;
     } else {
-      const { data: socialConn } = await supabase
+      // Buscar todas as contas Facebook ativas e priorizar user token
+      const { data: socialConns } = await supabase
         .from("social_accounts")
-        .select("access_token")
+        .select("access_token, metadata")
         .eq("organization_id", orgId)
         .eq("platform", "facebook")
         .eq("status", "active")
-        .order("last_synced_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      accessToken = (socialConn as any)?.access_token ?? null;
+        .order("last_synced_at", { ascending: false });
+
+      // Prioridade 1: registro com metadata.user_token === true (token de usuário)
+      const userTokenRow = (socialConns ?? []).find(
+        (r: any) => r?.metadata?.user_token === true || r?.metadata?.user_access_token,
+      );
+      if (userTokenRow) {
+        accessToken =
+          (userTokenRow as any).metadata?.user_access_token ??
+          (userTokenRow as any).access_token ??
+          null;
+      } else {
+        // Prioridade 2: qualquer metadata.user_access_token disponível
+        const anyWithUser = (socialConns ?? []).find(
+          (r: any) => r?.metadata?.user_access_token,
+        );
+        accessToken =
+          (anyWithUser as any)?.metadata?.user_access_token ??
+          (socialConns?.[0] as any)?.access_token ??
+          null;
+      }
     }
 
     if (!accessToken) {
