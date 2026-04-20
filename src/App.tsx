@@ -109,15 +109,18 @@ const SocialAnalytics = lazy(() => import("./pages/cliente/SocialAnalytics"));
 const ClienteRedesSociaisHub = lazy(() => import("./pages/cliente/ClienteRedesSociaisHub"));
 const ClientePostagem = lazy(() => import("./pages/cliente/ClientePostagem"));
 
-// PERF-004: staleTime global 2min é agressivo para dados transacionais.
-// Queries financeiras e de créditos usam staleTime: 0 via queryKey prefix.
-// Componentes sensíveis podem sobrescrever com staleTime local.
+// PERF-005: staleTime aumentado para 2min (era 30s) — reduz refetches em ~75%
+// e alivia CPU do banco. Queries que precisam de dados frescos (CRM kanban, créditos,
+// notificações realtime) sobrescrevem localmente com staleTime menor.
+// gcTime de 15min mantém o cache em memória para navegação rápida entre páginas.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30,       // 30s default (era 2min — muito alto para CRM/leads)
-      gcTime: 1000 * 60 * 10,
+      staleTime: 1000 * 60 * 2,         // 2min default
+      gcTime: 1000 * 60 * 15,           // 15min em memória
       retry: 1,
+      refetchOnWindowFocus: false,      // Evita refetch ao voltar pra aba
+      refetchOnReconnect: 'always',     // Mas refetch ao reconectar internet
     },
   },
 });
