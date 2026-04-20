@@ -329,7 +329,7 @@ serve(async (req) => {
             token_expires_at: expiresAt,
             scopes,
             status: "active",
-            metadata: { source: "oauth", long_lived: true, access_token: accessToken, user_token: true },
+            metadata: { source: "oauth", long_lived: true, user_token: accessToken },
             last_synced_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
