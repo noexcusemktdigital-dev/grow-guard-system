@@ -239,20 +239,55 @@ Deno.serve(async (req) => {
     }
 
     const meta = (account.metadata ?? {}) as Record<string, any>;
-    const accessToken: string | undefined =
-      account.access_token ?? meta.access_token ?? meta.page_access_token;
-    if (!accessToken) {
+    // User token (long-lived) deve estar salvo em metadata.user_token (preferencial) ou access_token
+    const userToken: string | undefined =
+      meta.user_token ?? account.access_token ?? meta.access_token;
+    // Page token salvo separadamente (caso já exista)
+    let pageToken: string | undefined = meta.page_access_token;
+
+    if (!userToken && !pageToken) {
       return new Response(JSON.stringify({ error: "Missing access token. Please reconnect this account." }), {
         status: 400,
         headers: cors,
       });
     }
 
+    // Para Facebook e Instagram, derivamos sempre o page token a partir do user token
+    // pois ele expira diferentemente e precisamos do token correto da Página
+    let pageId: string | null = null;
+    if (account.platform === "facebook") {
+      pageId = account.account_id;
+    } else if (account.platform === "instagram") {
+      // IG Business está vinculado a uma Page. Tentamos pegar de metadata
+      pageId = meta.page_id ?? meta.facebook_page_id ?? null;
+    }
+
+    if (userToken && pageId) {
+      try {
+        const accountsRes = await fetch(
+          `${GRAPH}/me/accounts?fields=id,name,access_token&limit=200&access_token=${userToken}`,
+        );
+        const accountsJson = await accountsRes.json();
+        if (accountsRes.ok) {
+          const pageEntry = (accountsJson.data ?? []).find((p: any) => p.id === pageId);
+          if (pageEntry?.access_token) {
+            pageToken = pageEntry.access_token;
+          }
+        } else {
+          console.warn("[insights] /me/accounts failed", accountsJson);
+        }
+      } catch (e) {
+        console.warn("[insights] failed to derive page token", e);
+      }
+    }
+
+    const effectiveToken = pageToken ?? userToken!;
+
     let payload: InsightPayload;
     if (account.platform === "facebook") {
-      payload = await fetchFacebook(account.account_id, accessToken);
+      payload = await fetchFacebook(account.account_id, effectiveToken);
     } else if (account.platform === "instagram") {
-      payload = await fetchInstagram(account.account_id, accessToken);
+      payload = await fetchInstagram(account.account_id, effectiveToken);
     } else {
       return new Response(JSON.stringify({ error: "Unsupported platform" }), { status: 400, headers: cors });
     }
