@@ -227,9 +227,10 @@ Deno.serve(async (req) => {
     }
 
     const meta = (account.metadata ?? {}) as Record<string, any>;
-    const accessToken: string | undefined = meta.access_token ?? meta.page_access_token;
+    const accessToken: string | undefined =
+      account.access_token ?? meta.access_token ?? meta.page_access_token;
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: "Missing access token in account metadata" }), {
+      return new Response(JSON.stringify({ error: "Missing access token. Please reconnect this account." }), {
         status: 400,
         headers: cors,
       });
