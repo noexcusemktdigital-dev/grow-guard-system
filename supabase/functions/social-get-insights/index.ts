@@ -110,7 +110,7 @@ function sumActions(_actions: unknown): number {
   return 0;
 }
 
-async function fetchFacebook(accountId: string, accessToken: string): Promise<InsightPayload> {
+async function fetchFacebook(accountId: string, accessToken: string): Promise<Omit<InsightPayload, "best_day_to_post" | "followers_growth_hint">> {
   // Page metadata - fan_count foi removido em versões recentes da Graph API; usar followers_count
   let meta: any = {};
   try {
@@ -179,12 +179,13 @@ async function fetchFacebook(accountId: string, accessToken: string): Promise<In
       reach_30d,
       impressions_30d,
       avg_engagement,
+      avg_engagement_rate: 0,
     },
-    recent_posts,
+    recent_posts: recent_posts.map((p: any) => ({ ...p, engagement_rate: 0 })),
   };
 }
 
-async function fetchInstagram(igUserId: string, accessToken: string): Promise<InsightPayload> {
+async function fetchInstagram(igUserId: string, accessToken: string): Promise<Omit<InsightPayload, "best_day_to_post" | "followers_growth_hint">> {
   const meta = await gget(
     `${GRAPH}/${igUserId}?fields=name,username,profile_picture_url,followers_count,media_count&access_token=${accessToken}`,
   );
@@ -237,8 +238,9 @@ async function fetchInstagram(igUserId: string, accessToken: string): Promise<In
       reach_30d,
       impressions_30d,
       avg_engagement,
+      avg_engagement_rate: 0,
     },
-    recent_posts,
+    recent_posts: recent_posts.map((p: any) => ({ ...p, engagement_rate: 0 })),
   };
 }
 
