@@ -85,26 +85,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       };
 
+      const portal = isSaasPortal ? "saas" : "franchise";
+
       const [profileResult, roleResult] = await Promise.all([
         fetchWithRetry(
           () => supabase.from("profiles").select("*").eq("id", currentUser.id).single(),
           "Profile fetch"
         ),
         fetchWithRetry(
-          async () => {
-            // Busca org do usuário no portal atual para filtrar role por workspace
-            const { data: orgs } = await supabase
-              .from("organization_memberships")
-              .select("organization_id")
-              .eq("user_id", currentUser.id)
-              .limit(5);
-            const orgIds = orgs?.map(o => o.organization_id) || [];
-            return supabase
-              .from("user_roles")
-              .select("role, organization_id")
-              .eq("user_id", currentUser.id)
-              .in("organization_id", orgIds.length > 0 ? orgIds : ["00000000-0000-0000-0000-000000000000"]);
-          },
+          () => supabase.rpc("get_user_role", { _user_id: currentUser.id, _portal: portal }),
           "Role fetch"
         ),
       ]);
@@ -115,26 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Handle roles
-      const roleData = (roleResult as { data: { role: string }[] | null } | null)?.data;
+      const resolvedRole = (roleResult as { data: AppRole | null } | null)?.data;
 
-      if (roleData && roleData.length > 0) {
-        const roles = roleData.map((r: { role: string }) => r.role as AppRole);
-
-        const saasRoles: AppRole[] = ["cliente_admin", "cliente_user"];
-        const franchiseRoles: AppRole[] = ["super_admin", "admin", "franqueado"];
-        const portalRoles = isSaasPortal
-          ? roles.filter((r: AppRole) => saasRoles.includes(r))
-          : roles.filter((r: AppRole) => franchiseRoles.includes(r));
-
-        const priorityOrder: AppRole[] = isSaasPortal
-          ? ["cliente_admin", "cliente_user", "super_admin", "admin", "franqueado"]
-          : ["super_admin", "admin", "franqueado", "cliente_admin", "cliente_user"];
-        const topRole = (portalRoles.length > 0 ? portalRoles[0] : null)
-          || priorityOrder.find((p) => roles.includes(p))
-          || roles[0];
-        setRole(topRole);
+      if (resolvedRole) {
+        setRole(resolvedRole);
         lastFetchedUserRef.current = currentUser.id;
-        try { localStorage.setItem("noe-cached-role", topRole); } catch {}
+        try { localStorage.setItem("noe-cached-role", resolvedRole); } catch {}
       } else {
         // SEC-FIX CODE-003: Never grant a role on DB timeout — fail secure instead.
         // Previous code fell back to "cliente_user" or "franqueado", allowing privilege escalation

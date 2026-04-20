@@ -11,13 +11,14 @@ import { RoleAccessGuard } from "./components/RoleAccessGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
-// Eager: Auth pages (first paint)
-import Auth from "./pages/Auth";
+// Eager: only truly critical auth pages
 import SaasAuth from "./pages/SaasAuth";
-import SaasLanding from "./pages/SaasLanding";
-import ResetPassword from "./pages/ResetPassword";
-import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
+
+const Auth = lazy(() => import("./pages/Auth"));
+const SaasLanding = lazy(() => import("./pages/SaasLanding"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Welcome = lazy(() => import("./pages/Welcome"));
 
 // Lazy: everything else
 const Index = lazy(() => import("./pages/Index"));
