@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: isMember } = await admin.rpc("is_member_of_org", {
-      _user_id: claims.claims.sub,
+      _user_id: userId,
       _org_id: account.organization_id,
     });
     if (!isMember) {
