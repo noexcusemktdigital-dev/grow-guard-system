@@ -97,6 +97,7 @@ serve(async (req) => {
       "pages_show_list",
       "pages_read_engagement",
       "pages_manage_posts",
+      "business_management",
       "ads_read",
     ].join(",");
 
