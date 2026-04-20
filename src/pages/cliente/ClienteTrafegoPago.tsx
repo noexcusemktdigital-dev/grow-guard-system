@@ -352,14 +352,20 @@ export default function ClienteTrafegoPago() {
             </Card>
           ) : (
             <>
-              <Card className="border-primary/20 bg-primary/5">
+              <Card className={activeStrategy ? "border-primary/20 bg-primary/5" : "border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5"}>
                 <CardContent className="py-5">
                   <div className="flex items-start gap-3 mb-4">
-                    <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                    <div className="p-2 rounded-xl bg-primary/15">
+                      <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold">Estratégia de Tráfego com IA</p>
+                      <p className="text-sm font-bold">
+                        {activeStrategy ? "Estratégia de Tráfego com IA" : "Crie sua estratégia de tráfego com IA"}
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Wizard guiado de 8 etapas que gera estratégia completa por plataforma.
+                        {activeStrategy
+                          ? "Gere uma nova versão a qualquer momento."
+                          : "Wizard guiado de 8 etapas que gera estratégia completa por plataforma (Meta, Google, TikTok, LinkedIn)."}
                         <Badge variant="outline" className="ml-2 text-[9px]">25 créditos na aprovação</Badge>
                       </p>
                     </div>
