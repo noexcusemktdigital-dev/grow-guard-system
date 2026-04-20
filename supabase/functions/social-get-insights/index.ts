@@ -42,11 +42,23 @@ function sumActions(_actions: unknown): number {
 }
 
 async function fetchFacebook(accountId: string, accessToken: string): Promise<InsightPayload> {
-  // Page metadata
-  const meta = await gget(
-    `${GRAPH}/${accountId}?fields=name,picture{url},fan_count,followers_count&access_token=${accessToken}`,
-  );
-  const followers = meta.followers_count ?? meta.fan_count ?? 0;
+  // Page metadata - fan_count foi removido em versões recentes da Graph API; usar followers_count
+  let meta: any = {};
+  try {
+    meta = await gget(
+      `${GRAPH}/${accountId}?fields=name,picture{url},followers_count&access_token=${accessToken}`,
+    );
+  } catch (e) {
+    console.warn("[fb] meta with followers_count failed, retrying minimal", e);
+    try {
+      meta = await gget(
+        `${GRAPH}/${accountId}?fields=name,picture{url}&access_token=${accessToken}`,
+      );
+    } catch (e2) {
+      console.warn("[fb] meta minimal failed", e2);
+    }
+  }
+  const followers = Number(meta?.followers_count ?? 0) || 0;
 
   // Page insights (last 30 days)
   let reach_30d = 0;
