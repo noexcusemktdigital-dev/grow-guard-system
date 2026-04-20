@@ -107,6 +107,8 @@ serve(async (req) => {
     authUrl.searchParams.set("scope", scopes);
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("auth_type", "rerequest");
+    authUrl.searchParams.set("display", "popup");
 
     return new Response(null, {
       status: 302,
