@@ -121,6 +121,13 @@ function parseContractContent(content: string, docxLib: typeof import("docx")): 
 }
 
 export async function downloadContractDocx(contract: ContractData) {
+  if (!contract.content || contract.content.trim().length < 50) {
+    const { toast } = await import("sonner");
+    toast.error("Este contrato não possui conteúdo gerado.", {
+      description: "Edite o contrato e gere o conteúdo antes de baixar o DOCX.",
+    });
+    return;
+  }
   // Dynamic import keeps docx (~1MB) out of the initial bundle
   const docxLib = await import("docx");
   const {
@@ -128,7 +135,7 @@ export async function downloadContractDocx(contract: ContractData) {
     Header, Footer, PageNumber,
   } = docxLib;
 
-  const content = contract.content || "Conteúdo do contrato não disponível.";
+  const content = contract.content;
   const contractTitle = contract.contract_type === "franquia"
     ? "CONTRATO DE FRANQUIA EMPRESARIAL"
     : "CONTRATO DE PRESTAÇÃO DE SERVIÇO";
