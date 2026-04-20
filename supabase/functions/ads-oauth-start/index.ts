@@ -14,6 +14,9 @@ const META_SCOPES = [
   "ads_management",
   "ads_read",
   "pages_show_list",
+  "pages_manage_ads",
+  "pages_manage_metadata",
+  "leads_retrieval",
   "business_management",
 ].join(",");
 
