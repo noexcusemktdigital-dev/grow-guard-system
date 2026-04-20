@@ -2,7 +2,7 @@
 // Pega posts agendados vencidos, marca como publishing, publica via Graph API
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { publishToPlatform } from "../social-publish-post/index.ts";
+import { publishToPlatform } from "../_shared/socialPublish.ts";
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
