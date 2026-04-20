@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Facebook, RefreshCw, CheckCircle2, XCircle, Settings, Plus, ExternalLink, AlertCircle, Trash2 } from "lucide-react";
@@ -213,9 +213,38 @@ export default function CrmMetaLeadAdsPage() {
     },
   });
 
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
   const handleConnectMeta = () => {
-    navigate("/cliente/redes-sociais");
+    if (!orgId) {
+      toast({ title: "Organização não identificada", variant: "destructive" });
+      return;
+    }
+    window.location.href = `${SUPABASE_URL}/functions/v1/social-oauth-meta?org_id=${orgId}&redirect_to=crm-leads`;
   };
+
+  // Detectar retorno do OAuth: ?connected=true
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "true") {
+      toast({
+        title: "Facebook conectado!",
+        description: "Carregando suas páginas...",
+      });
+      // Limpar query da URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+      // Recarregar conexão e abrir seletor de páginas
+      qc.invalidateQueries({ queryKey: ["social_facebook_account", orgId] });
+      qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages", orgId] });
+      // Após um pequeno delay, abrir o seletor
+      setTimeout(() => {
+        setPageDialogOpen(true);
+        listPagesMutation.mutate();
+      }, 800);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
 
   const openPageSelector = async () => {
     setPageDialogOpen(true);
@@ -255,17 +284,23 @@ export default function CrmMetaLeadAdsPage() {
 
       {/* Status da conexão Meta */}
       {!hasMetaConnection ? (
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium">Conecte o Facebook em Redes Sociais para continuar</p>
-              <p className="text-xs text-muted-foreground">
-                É necessário autorizar o acesso às suas Páginas e formulários de Lead Ads.
+        <Card className="border-primary/20">
+          <CardContent className="p-10 flex flex-col items-center text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-[#1877F2]/10 flex items-center justify-center">
+              <Facebook className="w-8 h-8 text-[#1877F2]" />
+            </div>
+            <div className="space-y-1.5 max-w-md">
+              <h2 className="text-base font-semibold">Conecte seu Facebook para importar leads</h2>
+              <p className="text-sm text-muted-foreground">
+                Conecte sua conta para que o sistema puxe automaticamente os leads dos seus formulários de anúncio.
               </p>
             </div>
-            <Button size="sm" onClick={handleConnectMeta} className="gap-1.5">
-              <Facebook className="w-4 h-4" /> Ir para Redes Sociais
+            <Button
+              onClick={handleConnectMeta}
+              className="gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
+              size="lg"
+            >
+              <Facebook className="w-4 h-4" /> Conectar com Facebook
             </Button>
           </CardContent>
         </Card>
