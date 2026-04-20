@@ -42,6 +42,8 @@ export default function CrmMetaLeadAdsPage() {
   const { data: orgId } = useUserOrgId();
   const { data: funnels } = useCrmFunnels();
 
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
   // Verifica conexão Facebook diretamente em social_accounts
   const { data: fbAccount } = useQuery({
     queryKey: ["social_facebook_account", orgId],
@@ -205,8 +207,6 @@ export default function CrmMetaLeadAdsPage() {
       qc.invalidateQueries({ queryKey: ["meta-leadgen-mappings"] });
     },
   });
-
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
   const handleConnectMeta = () => {
     if (!orgId) {
