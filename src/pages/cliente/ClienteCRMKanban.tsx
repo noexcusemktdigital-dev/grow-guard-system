@@ -170,23 +170,28 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
                 const today = new Date(); today.setHours(23, 59, 59, 999);
                 const overdue = tasks.filter(t => new Date(t.due_date as string) <= today).length;
                 const pending = tasks.length - overdue;
+                let indicator: React.ReactNode = null;
                 if (overdue > 0) {
-                  return (
-                    <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium text-red-600 dark:text-red-400">
+                  indicator = (
+                    <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium text-red-600 dark:text-red-400 hover:underline">
                       <AlertCircle className="w-3 h-3 shrink-0" />
                       {overdue} tarefa{overdue > 1 ? "s" : ""} atrasada{overdue > 1 ? "s" : ""}
                     </p>
                   );
-                }
-                if (pending > 0) {
-                  return (
-                    <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
+                } else if (pending > 0) {
+                  indicator = (
+                    <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400 hover:underline">
                       <CalendarClock className="w-3 h-3 shrink-0" />
                       {pending} tarefa{pending > 1 ? "s" : ""} pendente{pending > 1 ? "s" : ""}
                     </p>
                   );
                 }
-                return null;
+                if (!indicator) return null;
+                return (
+                  <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} onPointerDown={(e) => e.stopPropagation()}>
+                    <QuickTaskPopover lead={lead}>{indicator}</QuickTaskPopover>
+                  </div>
+                );
               })()}
             </div>
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
