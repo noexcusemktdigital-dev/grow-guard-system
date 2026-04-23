@@ -10,8 +10,18 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { FunnelStage } from "@/components/crm/CrmStageSystem";
+import { ArrowDownUp } from "lucide-react";
 
 const SOURCES = ["WhatsApp", "Formulário", "Indicação", "Ads", "LinkedIn", "Evento", "Orgânico"];
+
+export const ORDER_OPTIONS = [
+  { value: "updated_at", label: "Última atualização" },
+  { value: "task_due", label: "Prazo da tarefa" },
+  { value: "created_at", label: "Data de entrada" },
+  { value: "name", label: "Nome A-Z" },
+] as const;
+
+export type OrderByKey = typeof ORDER_OPTIONS[number]["value"];
 
 interface TeamMember {
   user_id: string;
@@ -73,6 +83,8 @@ interface ClienteCRMPipelineFiltersProps {
   handleBulkTransferFunnel: (funnelId: string) => void;
   handleBulkMarkLost: () => void;
   setBulkDeleteLeadsOpen: (v: boolean) => void;
+  orderBy: OrderByKey;
+  setOrderBy: (v: OrderByKey) => void;
 }
 
 export function ClienteCRMPipelineFilters({
@@ -118,6 +130,8 @@ export function ClienteCRMPipelineFilters({
   handleBulkTransferFunnel,
   handleBulkMarkLost,
   setBulkDeleteLeadsOpen,
+  orderBy,
+  setOrderBy,
 }: ClienteCRMPipelineFiltersProps) {
   return (
     <>
@@ -138,6 +152,18 @@ export function ClienteCRMPipelineFilters({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar lead" className="pl-10 h-8" />
         </div>
+
+        <Select value={orderBy} onValueChange={(v) => setOrderBy(v as OrderByKey)}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <ArrowDownUp className="w-3 h-3 mr-1" />
+            <SelectValue placeholder="Ordenar por" />
+          </SelectTrigger>
+          <SelectContent>
+            {ORDER_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
           <PopoverTrigger asChild>
