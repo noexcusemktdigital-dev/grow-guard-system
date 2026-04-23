@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useCallback } from "react";
 
 const TASK_PAGE_SIZE = 100;
@@ -57,14 +58,39 @@ export function useCrmTasks(leadId?: string, page = 0) {
 export function useCrmTaskMutations() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
 
   const createTask = useMutation({
-    mutationFn: async (task: { lead_id?: string; title: string; description?: string; due_date?: string; priority?: string; assigned_to?: string }) => {
-      const { data, error } = await supabase.from("crm_tasks").insert({ ...task, organization_id: orgId! }).select().single();
+    mutationFn: async (task: { lead_id?: string; title: string; description?: string; due_date?: string; priority?: string; assigned_to?: string; task_type?: string; lead_name?: string }) => {
+      const { lead_name, ...rest } = task;
+      const { data, error } = await supabase.from("crm_tasks").insert({ ...rest, organization_id: orgId! }).select().single();
       if (error) throw error;
+
+      // Mirror to client_tasks so it appears in the Tarefas tool
+      try {
+        await supabase.from("client_tasks").insert({
+          organization_id: orgId!,
+          title: `[CRM] ${task.title}`,
+          description: `Lead: ${lead_name || "—"} | Tipo: ${task.task_type || "outro"}`,
+          due_date: task.due_date ? task.due_date.split("T")[0] : null,
+          priority: task.priority || "medium",
+          source: "crm",
+          status: "pending",
+          assigned_to: task.assigned_to || user?.id || null,
+          created_by: user?.id || null,
+        } as any);
+      } catch (e) {
+        // Non-blocking — CRM task already created
+        console.warn("Failed to mirror task to client_tasks:", e);
+      }
+
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-tasks"] });
+      qc.invalidateQueries({ queryKey: ["client-tasks"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+    },
   });
 
   const updateTask = useMutation({
@@ -73,7 +99,10 @@ export function useCrmTaskMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-tasks"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+    },
   });
 
   const deleteTask = useMutation({
@@ -81,7 +110,10 @@ export function useCrmTaskMutations() {
       const { error } = await supabase.from("crm_tasks").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-tasks"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+    },
   });
 
   return { createTask, updateTask, deleteTask };
