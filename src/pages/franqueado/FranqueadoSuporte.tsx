@@ -546,3 +546,94 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
     </div>
   );
 }
+
+/* ── Kanban view ──────────────────────────────────────────────── */
+const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
+
+function FranqueadoKanbanView({ tickets, onSelect }: { tickets: any[]; onSelect: (t: any) => void }) {
+  const colColors: Record<string, string> = {
+    open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    waiting: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    resolved: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  };
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {KANBAN_COLUMNS.map(status => {
+        const col = tickets.filter(t => t.status === status);
+        return (
+          <div key={status} className="space-y-2">
+            <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-1 z-10">
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${colColors[status]}`}>
+                {STATUS_LABELS[status]}
+              </span>
+              <span className="text-[11px] text-muted-foreground font-medium">{col.length}</span>
+            </div>
+            <div className="space-y-2 min-h-[120px]">
+              {col.length === 0 ? (
+                <div className="border border-dashed border-border rounded-lg p-6 text-center">
+                  <p className="text-[11px] text-muted-foreground">Nenhum chamado</p>
+                </div>
+              ) : (
+                col.map(t => (
+                  <Card key={t.id} className="cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5" onClick={() => onSelect(t)}>
+                    <div className="p-3 space-y-2">
+                      <p className="text-sm font-semibold line-clamp-2">{t.title}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant="outline" className="text-[10px]">{t.category || "Geral"}</Badge>
+                        <span className={`text-[10px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                          ● {PRIORITY_LABELS[t.priority] || t.priority}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40">
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: true })}
+                        </span>
+                        {t.attachments && (t.attachments as string[]).length > 0 && (
+                          <Paperclip className="w-3 h-3 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FranqueadoListView({ tickets, onSelect, selectedId }: { tickets: any[]; onSelect: (t: any) => void; selectedId?: string }) {
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
+      {tickets.map((t: any) => (
+        <button
+          key={t.id}
+          onClick={() => onSelect(t)}
+          className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedId ? "bg-muted" : ""}`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
+            <span className="text-[10px] text-muted-foreground flex-shrink-0">
+              {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+              {STATUS_LABELS[t.status] || t.status}
+            </span>
+            <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
+            <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+              ● {PRIORITY_LABELS[t.priority] || t.priority}
+            </span>
+            {t.attachments && (t.attachments as string[]).length > 0 && (
+              <Paperclip className="w-3 h-3 text-muted-foreground" />
+            )}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
