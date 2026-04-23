@@ -1089,6 +1089,21 @@ Output ONLY the extracted logo image.`,
 MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic elements. Do NOT generate, add, or include ANY additional photographs, people, objects, or illustrated elements beyond the provided photos.`;
     }
 
+    // ─── CRITICAL TEXT RENDERING RULES (always appended last) ───
+    fullPrompt += `
+
+CRITICAL TEXT RENDERING RULES (MANDATORY):
+- All text must be crisp, sharp, and perfectly legible at thumbnail size
+- Use HIGH CONTRAST: white text on dark backgrounds OR dark text on light backgrounds — never low-contrast combinations
+- Font size hierarchy (relative to a 1080px design): headline minimum ~60px equivalent, subheadline ~36px, body ~24px
+- NEVER place text over busy/detailed image areas — use solid color overlays, gradients, or clean negative space behind text
+- Text alignment must be centered or left-aligned only — NEVER diagonal, vertical, curved, or rotated
+- Maximum 3 lines per text block
+- Leave at least 40px equivalent padding around all text elements
+- Maximum 3 text blocks total in the whole composition (headline + subheadline + CTA), no more than ~40 words combined
+- NO text shadows, glows, outlines or blur effects — text must be flat, clean, and typographically pure
+- Spelling and accents in Brazilian Portuguese must be 100% correct`;
+
     console.log(`🎨 Generating ${format} image (refs: ${base64Refs.length}, photos: ${photoBase64s.length}, layout: ${layout_type || "none"}, logo: ${logo_url ? "YES" : "NO"}, CoT: ${optimized ? "YES" : "FALLBACK"}, restrictions: ${classifiedRestrictions ? "CLASSIFIED" : "none"})...`);
     console.log(`📝 Final prompt preview: ${fullPrompt.slice(0, 800)}...`);
 
@@ -1103,42 +1118,89 @@ MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic
       messageContent = fullPrompt;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        messages: [{ role: "user", content: messageContent }],
-        modalities: ["image", "text"],
-      }),
-    });
+    // ─── Stage 2: Generate with primary model + fallback ───
+    // Primary: Gemini 3.1 Flash Image (Nano Banana 2) — fast & cheap
+    // Fallback: Gemini 3 Pro Image — slower but stronger on complex typography
+    // 429/402 errors propagate immediately (fallback won't help with rate/credits)
+    const PRIMARY_MODEL = "google/gemini-3.1-flash-image-preview";
+    const FALLBACK_MODEL = "google/gemini-3-pro-image-preview";
 
-    if (!response.ok) {
+    async function callImageModel(model: string) {
+      return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: messageContent }],
+          modalities: ["image", "text"],
+        }),
+      });
+    }
+
+    let usedModel = PRIMARY_MODEL;
+    let response = await callImageModel(PRIMARY_MODEL);
+
+    // Hard stops on rate limit / credit exhaustion — never fall back
+    if (response.status === 429) {
       const errorText = await response.text();
-      console.error("AI image gateway error:", response.status, errorText);
-      if (response.status === 429) {
+      console.error("AI image gateway rate-limited:", response.status, errorText);
+      return new Response(JSON.stringify({ error: "Limite de requisições excedido. Aguarde um momento." }), {
+        status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+    if (response.status === 402) {
+      const errorText = await response.text();
+      console.error("AI image gateway credits exhausted:", response.status, errorText);
+      return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+        status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
+    let data: any = null;
+    let imageData: string | undefined;
+
+    if (response.ok) {
+      data = await response.json();
+      imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    } else {
+      const errorText = await response.text();
+      console.warn(`⚠️ Primary model ${PRIMARY_MODEL} failed (${response.status}): ${errorText.slice(0, 300)}`);
+    }
+
+    // Fallback when primary returned non-OK or returned no image
+    if (!imageData) {
+      console.log(`🔁 Falling back to ${FALLBACK_MODEL}...`);
+      const fbResponse = await callImageModel(FALLBACK_MODEL);
+
+      if (fbResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições excedido. Aguarde um momento." }), {
           status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
+      if (fbResponse.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
           status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI image gateway error: ${response.status}`);
+      if (!fbResponse.ok) {
+        const errorText = await fbResponse.text();
+        console.error("AI image gateway fallback error:", fbResponse.status, errorText);
+        throw new Error(`AI image gateway error: ${fbResponse.status}`);
+      }
+      data = await fbResponse.json();
+      imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      usedModel = FALLBACK_MODEL;
     }
-
-    const data = await response.json();
-    let imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData) {
-      console.error("No image in response:", JSON.stringify(data).slice(0, 500));
+      console.error("No image in response (both models):", JSON.stringify(data).slice(0, 500));
       throw new Error("No image generated");
     }
+
+    console.log(`✅ Image generated by model: ${usedModel}`);
 
     // ─── Stage 3: Logo Composition (overlay real logo) ───
     if (logo_url) {

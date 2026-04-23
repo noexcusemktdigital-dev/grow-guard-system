@@ -145,6 +145,9 @@ export function ArtWizard({
   const [tipoPostagem, setTipoPostagem] = useState("post_unico");
   const [quantity, setQuantity] = useState(1);
   const [carouselSlides, setCarouselSlides] = useState(5);
+  // Carousel-only metadata: series title + per-slide topics
+  const [seriesTitle, setSeriesTitle] = useState("");
+  const [slideTopics, setSlideTopics] = useState<string[]>([]);
 
   // Step 4: Objective
   const [objective, setObjective] = useState("sales");
