@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { logger } from "@/lib/logger";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Card } from "@/components/ui/card";
@@ -12,17 +12,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Plus, MessageSquare, Search, AlertTriangle, Timer, Clock,
-  Send, Paperclip, X, FileText,
-  KanbanSquare, List,
+  Plus, MessageSquare, Search, Inbox, AlertTriangle, Timer, Clock,
+  Send, Paperclip, X, FileText, User, Download, MessagesSquare,
 } from "lucide-react";
-import { useSupportTickets, useSupportTicketMutations } from "@/hooks/useSupportTickets";
-import { formatDistanceToNow } from "date-fns";
+import { useSupportTickets, useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { KanbanView, ListView, AttachmentPreview, TicketMessages } from "./FranqueadoSuporteComponents";
+import { AttachmentPreview } from "./FranqueadoSuporteComponents";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Aberto",
@@ -55,6 +54,7 @@ const SUBCATEGORIAS: Record<string, string[]> = {
   Sistema: ["Erro no sistema", "Acesso", "Permissão", "Bug"],
   "Dúvidas gerais": ["Dúvida", "Sugestão", "Reclamação"],
 };
+
 export default function FranqueadoSuporte() {
   return (
     <ErrorBoundary pageName="FranqueadoSuporte">
@@ -72,7 +72,6 @@ function FranqueadoSuporteContent() {
   const [createDialog, setCreateDialog] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Record<string, unknown> | null>(null);
   const [newMessage, setNewMessage] = useState("");
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [msgAttachments, setMsgAttachments] = useState<File[]>([]);
   const [uploadingMsg, setUploadingMsg] = useState(false);
 
@@ -105,6 +104,16 @@ function FranqueadoSuporteContent() {
       { label: "Resolvidos", count: resolvidos, cor: "text-emerald-500", icon: Clock },
     ];
   }, [tickets]);
+
+  // Sync selected ticket
+  useEffect(() => {
+    if (selectedTicket && tickets) {
+      const updated = tickets.find((t: any) => t.id === selectedTicket.id);
+      if (updated && (updated.status !== selectedTicket.status || updated.updated_at !== selectedTicket.updated_at)) {
+        setSelectedTicket(updated as Record<string, unknown>);
+      }
+    }
+  }, [tickets, selectedTicket]);
 
   async function uploadFiles(files: File[]): Promise<string[]> {
     const urls: string[] = [];
@@ -181,7 +190,7 @@ function FranqueadoSuporteContent() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -192,27 +201,9 @@ function FranqueadoSuporteContent() {
           </div>
           <p className="text-sm text-muted-foreground">Abra e acompanhe seus chamados com a Matriz</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex border border-border rounded-lg overflow-hidden">
-            <Button
-              size="sm" variant={viewMode === "kanban" ? "default" : "ghost"}
-              className="rounded-none h-8 px-3"
-              onClick={() => setViewMode("kanban")}
-            >
-              <KanbanSquare className="w-3.5 h-3.5" />
-            </Button>
-            <Button
-              size="sm" variant={viewMode === "list" ? "default" : "ghost"}
-              className="rounded-none h-8 px-3"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-          <Button size="sm" onClick={() => setCreateDialog(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Novo Chamado
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => setCreateDialog(true)}>
+          <Plus className="w-4 h-4 mr-1" /> Novo Chamado
+        </Button>
       </div>
 
       {/* KPIs */}
@@ -228,120 +219,162 @@ function FranqueadoSuporteContent() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar" className="w-[200px] h-8 text-xs pl-8" />
-        </div>
-      </div>
+      {/* Two-column WhatsApp Web style layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4 border border-border rounded-lg overflow-hidden bg-card" style={{ height: "calc(100vh - 280px)", minHeight: "500px" }}>
+        {/* LEFT: Tickets list */}
+        <div className="flex flex-col border-r border-border min-h-0">
+          <div className="p-3 border-b border-border space-y-2 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input placeholder="Buscar chamado..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Content */}
-      {viewMode === "kanban" ? (
-        <KanbanView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} />
-      ) : (
-        <ListView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} />
-      )}
-
-      {/* Detail Panel */}
-      {selectedTicket && (
-        <Dialog open={!!selectedTicket} onOpenChange={open => !open && setSelectedTicket(null)}>
-          <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0">
-            <div className="p-5 border-b border-border">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold">{selectedTicket.title}</h3>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status] || ""}`}>
-                      {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
-                    </span>
-                    <Badge variant="outline" className="text-[10px]">{selectedTicket.category || "Geral"}</Badge>
-                    {selectedTicket.subcategory && (
-                      <Badge variant="outline" className="text-[10px]">{selectedTicket.subcategory}</Badge>
-                    )}
-                    <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority] || ""}`}>
-                      ● {PRIORITY_LABELS[selectedTicket.priority] || selectedTicket.priority}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
-                    </span>
-                  </div>
-                  {selectedTicket.description && (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{selectedTicket.description}</p>
-                  )}
-                  {/* Ticket attachments */}
-                  {selectedTicket.attachments && (selectedTicket.attachments as string[]).length > 0 && (
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {(selectedTicket.attachments as string[]).map((url: string, i: number) => (
-                        <AttachmentPreview key={i} url={url} />
-                      ))}
-                    </div>
-                  )}
-                </div>
+          <div className="flex-1 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />
+                <p className="text-sm font-medium">Nenhum chamado</p>
+                <p className="text-xs text-muted-foreground mt-1">Abra o primeiro chamado.</p>
               </div>
-            </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {filtered.map((t: any) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTicket(t)}
+                    className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedTicket?.id ? "bg-muted" : ""}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                        {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+                        {STATUS_LABELS[t.status] || t.status}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
+                      <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                        ● {PRIORITY_LABELS[t.priority] || t.priority}
+                      </span>
+                      {t.attachments && (t.attachments as string[]).length > 0 && (
+                        <Paperclip className="w-3 h-3 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-hidden">
-              <TicketMessages ticketId={selectedTicket.id} userId={user?.id} />
+        {/* RIGHT: Chat panel */}
+        <div className="flex flex-col min-h-0 bg-background">
+          {!selectedTicket ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <MessagesSquare className="w-16 h-16 text-muted-foreground/20 mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">Selecione um chamado para ver a conversa</p>
             </div>
-
-            {/* Input */}
-            {selectedTicket.status !== "closed" && (
-              <div className="p-3 border-t border-border space-y-2">
-                {msgAttachments.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {msgAttachments.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
-                        <FileText className="w-3 h-3" />
-                        <span className="truncate max-w-[120px]">{f.name}</span>
-                        <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
+          ) : (
+            <>
+              {/* Chat header */}
+              <div className="p-4 border-b border-border flex-shrink-0 bg-muted/20">
+                <h3 className="text-base font-semibold">{selectedTicket.title as string}</h3>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status as string] || ""}`}>
+                    {STATUS_LABELS[selectedTicket.status as string] || (selectedTicket.status as string)}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">{(selectedTicket.category as string) || "Geral"}</Badge>
+                  {selectedTicket.subcategory && (
+                    <Badge variant="outline" className="text-[10px]">{selectedTicket.subcategory as string}</Badge>
+                  )}
+                  <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority as string] || ""}`}>
+                    ● {PRIORITY_LABELS[selectedTicket.priority as string] || (selectedTicket.priority as string)}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Aberto {formatDistanceToNow(new Date(selectedTicket.created_at as string), { locale: ptBR, addSuffix: true })}
+                  </span>
+                </div>
+                {selectedTicket.description && (
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{selectedTicket.description as string}</p>
+                )}
+                {selectedTicket.attachments && (selectedTicket.attachments as string[]).length > 0 && (
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {(selectedTicket.attachments as string[]).map((url: string, i: number) => (
+                      <AttachmentPreview key={i} url={url} />
                     ))}
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept="image/*,.pdf,.doc,.docx"
-                      onChange={e => {
-                        if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+              </div>
+
+              {/* Messages */}
+              <TicketMessages ticketId={selectedTicket.id as string} userId={user?.id} />
+
+              {/* Input */}
+              {selectedTicket.status !== "closed" && (
+                <div className="p-3 border-t border-border space-y-2 flex-shrink-0 bg-muted/20">
+                  {msgAttachments.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {msgAttachments.map((f, i) => (
+                        <div key={i} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
+                          <FileText className="w-3 h-3" />
+                          <span className="truncate max-w-[120px]">{f.name}</span>
+                          <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 items-end">
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={e => {
+                          if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+                        }}
+                      />
+                      <div className="h-10 w-10 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
+                        <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </label>
+                    <Textarea
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      placeholder="Digite sua mensagem..."
+                      className="text-sm min-h-[40px] max-h-32 resize-none"
+                      rows={1}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
                       }}
                     />
-                    <div className="h-9 w-9 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
-                      <Paperclip className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </label>
-                  <Input
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    className="text-sm"
-                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                  />
-                  <Button size="icon" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
-                    <Send className="w-4 h-4" />
-                  </Button>
+                    <Button size="icon" className="h-10 w-10 flex-shrink-0" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {/* New Ticket Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
@@ -430,3 +463,104 @@ function FranqueadoSuporteContent() {
   );
 }
 
+/* ── Messages with Realtime ──────────────────────────────────── */
+function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: string }) {
+  const { data: messages, isLoading, refetch } = useSupportMessages(ticketId);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`support-messages-fr-${ticketId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "support_messages", filter: `ticket_id=eq.${ticketId}` }, () => {
+        refetch();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [ticketId, refetch]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  if (isLoading) return <div className="flex-1 flex items-center justify-center p-8"><Skeleton className="h-8 w-32" /></div>;
+
+  const groupedByDate: Record<string, any[]> = {};
+  (messages ?? []).forEach((m) => {
+    const dateKey = format(new Date(m.created_at), "yyyy-MM-dd");
+    if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
+    groupedByDate[dateKey].push(m);
+  });
+
+  return (
+    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
+      {(!messages || messages.length === 0) ? (
+        <div className="text-center text-muted-foreground text-xs py-8">
+          Nenhuma mensagem ainda. Inicie a conversa!
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(groupedByDate).map(([dateKey, msgs]) => (
+            <div key={dateKey}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  {format(new Date(dateKey), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <div className="space-y-2">
+                {msgs.map((m) => {
+                  const isMine = m.user_id === userId;
+                  const attachments = m.attachments as string[] | null;
+                  return (
+                    <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[75%] rounded-lg overflow-hidden border ${
+                        isMine
+                          ? "bg-primary/10 border-r-4 border-r-primary"
+                          : "bg-muted border-l-4 border-l-muted-foreground/30"
+                      }`}>
+                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/50 gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3 h-3" />
+                            <span className="text-[10px] font-semibold">{isMine ? "Você (Franqueado)" : "Equipe Matriz"}</span>
+                          </div>
+                          <span className="text-[9px] text-muted-foreground">
+                            {format(new Date(m.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <div className="px-3 py-2">
+                          {m.content && m.content !== "📎 Anexo" && (
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                          )}
+                          {attachments && attachments.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              {attachments.map((url: string, i: number) => {
+                                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                                return isImg ? (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block group">
+                                    <img src={url} alt="Anexo" className="w-full h-24 object-cover rounded-md border border-border group-hover:opacity-80 transition-opacity" />
+                                  </a>
+                                ) : (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-background rounded-md px-2 py-1.5 text-[11px] hover:bg-background/80 transition-colors">
+                                    <Download className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{url.split("/").pop()?.substring(0, 20)}</span>
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
