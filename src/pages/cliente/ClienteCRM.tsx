@@ -445,6 +445,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
             handleBulkTransferFunnel={handleBulkTransferFunnel}
             handleBulkMarkLost={handleBulkMarkLost}
             setBulkDeleteLeadsOpen={setBulkDeleteLeadsOpen}
+            orderBy={orderBy}
+            setOrderBy={setOrderBy}
           />
 
           <ClienteCRMLeadsView
