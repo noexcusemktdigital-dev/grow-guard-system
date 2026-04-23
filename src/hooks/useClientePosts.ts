@@ -323,17 +323,35 @@ export function useApprovePost() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ postId }: { postId: string; type?: "art" | "video"; numFrames?: number }) => {
-      const { error } = await supabase
+    mutationFn: async ({
+      postId,
+      result_url,
+    }: {
+      postId: string;
+      type?: "art" | "video";
+      numFrames?: number;
+      result_url?: string | null;
+    }) => {
+      const updatePayload: Record<string, unknown> = {
+        status: "approved",
+        updated_at: new Date().toISOString(),
+      };
+      // Persist the generated art URL when provided so it survives reloads
+      if (result_url) updatePayload.result_url = result_url;
+
+      const { data, error } = await supabase
         .from("client_posts" as any)
-        .update({ status: "approved" } as any)
-        .eq("id", postId);
+        .update(updatePayload as any)
+        .eq("id", postId)
+        .select()
+        .single();
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-posts"] });
       qc.invalidateQueries({ queryKey: ["approval-stats"] });
-      toast({ title: "Postagem aprovada!" });
+      toast({ title: "Arte salva com sucesso!" });
     },
   });
 }
