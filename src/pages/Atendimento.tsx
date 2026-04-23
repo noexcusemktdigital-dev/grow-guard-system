@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus, MessageSquare, Search, Inbox, AlertTriangle, Timer, Clock,
   Send, User, Paperclip, X, FileText, Download, Settings, MessagesSquare,
+  KanbanSquare, List,
 } from "lucide-react";
 import { useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
@@ -59,6 +60,7 @@ export default function Atendimento() {
   const [newMessage, setNewMessage] = useState("");
   const [msgAttachments, setMsgAttachments] = useState<File[]>([]);
   const [uploadingMsg, setUploadingMsg] = useState(false);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   // New ticket form
   const [novoTitulo, setNovoTitulo] = useState("");
