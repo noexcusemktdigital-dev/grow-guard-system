@@ -285,7 +285,12 @@ export default function ClienteRedesSociais() {
     try {
       for (const r of results) {
         if (r.post.status !== "approved") {
-          await approvePost.mutateAsync({ postId: r.post.id, type: "art", numFrames: 0 });
+          await approvePost.mutateAsync({
+            postId: r.post.id,
+            type: "art",
+            numFrames: 0,
+            result_url: r.result_url ?? r.post.result_url ?? null,
+          });
         }
       }
       resetAll();
