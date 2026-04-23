@@ -113,6 +113,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateLead, markAsWon, markAsLost } = useCrmLeadMutations();
+  const { can } = useOrgPermissions();
   const { data: crmSettings } = useCrmSettings();
   const { data: activities } = useCrmActivities(lead.id);
   const { createActivity } = useCrmActivityMutations();
@@ -295,14 +296,18 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
           <Button size="sm" className="w-full" onClick={handleSave}>Salvar alterações</Button>
           <Separator />
 
-          {!lead.won_at && !lead.lost_at && (
+          {!lead.won_at && !lead.lost_at && (can("crm.mark_won") || can("crm.mark_lost")) && (
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { markAsWon.mutate(lead.id); triggerCelebration(); playSound("celebration"); toast({ title: "🎉 Lead marcado como vendido!" }); }}>
-                <CheckCircle className="w-3.5 h-3.5" /> Vendido
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setLostDialog(true)}>
-                <XCircle className="w-3.5 h-3.5" /> Perdido
-              </Button>
+              {can("crm.mark_won") && (
+                <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { markAsWon.mutate(lead.id); triggerCelebration(); playSound("celebration"); toast({ title: "🎉 Lead marcado como vendido!" }); }}>
+                  <CheckCircle className="w-3.5 h-3.5" /> Vendido
+                </Button>
+              )}
+              {can("crm.mark_lost") && (
+                <Button size="sm" variant="outline" className="flex-1 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setLostDialog(true)}>
+                  <XCircle className="w-3.5 h-3.5" /> Perdido
+                </Button>
+              )}
             </div>
           )}
 
