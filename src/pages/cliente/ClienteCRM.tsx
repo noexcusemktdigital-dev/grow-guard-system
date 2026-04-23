@@ -99,6 +99,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const [filterValueMax, setFilterValueMax] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [orderBy, setOrderBy] = useState<"updated_at" | "task_due" | "created_at" | "name">("updated_at");
 
   const selectedFunnel = useMemo(() => {
     if (!funnelsData || !selectedFunnelId) return null;
