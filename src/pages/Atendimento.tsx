@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus, MessageSquare, Search, Inbox, AlertTriangle, Timer, Clock,
   Send, User, Paperclip, X, FileText, Download, Settings, MessagesSquare,
+  KanbanSquare, List,
 } from "lucide-react";
 import { useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
@@ -59,6 +60,7 @@ export default function Atendimento() {
   const [newMessage, setNewMessage] = useState("");
   const [msgAttachments, setMsgAttachments] = useState<File[]>([]);
   const [uploadingMsg, setUploadingMsg] = useState(false);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   // New ticket form
   const [novoTitulo, setNovoTitulo] = useState("");
@@ -206,163 +208,146 @@ export default function Atendimento() {
             ))}
           </div>
 
-          {/* Two-column WhatsApp Web style layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4 border border-border rounded-lg overflow-hidden bg-card" style={{ height: "calc(100vh - 320px)", minHeight: "500px" }}>
-            {/* LEFT: Tickets list */}
-            <div className="flex flex-col border-r border-border min-h-0">
-              {/* Filters */}
-              <div className="p-3 border-b border-border space-y-2 flex-shrink-0">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <Input placeholder="Buscar título ou unidade..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
-                </div>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os status</SelectItem>
-                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Ticket list */}
-              <div className="flex-1 overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                    <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />
-                    <p className="text-sm font-medium">Nenhum chamado</p>
-                    <p className="text-xs text-muted-foreground mt-1">Crie o primeiro ou aguarde os da rede.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {filtered.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => setSelectedTicket(t)}
-                        className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedTicket?.id ? "bg-muted" : ""}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
-                        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
-                            {STATUS_LABELS[t.status] || t.status}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
-                          <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
-                            ● {PRIORITY_LABELS[t.priority] || t.priority}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+          {/* Filters + view toggle */}
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input placeholder="Buscar título ou unidade..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
             </div>
-
-            {/* RIGHT: Chat panel */}
-            <div className="flex flex-col min-h-0 bg-background">
-              {!selectedTicket ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-                  <MessagesSquare className="w-16 h-16 text-muted-foreground/20 mb-4" />
-                  <p className="text-sm font-medium text-muted-foreground">Selecione um chamado para ver a conversa</p>
-                </div>
-              ) : (
-                <>
-                  {/* Chat header */}
-                  <div className="p-4 border-b border-border flex-shrink-0 bg-muted/20">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-semibold truncate">{selectedTicket.title}</h3>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status] || ""}`}>
-                            {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
-                          </span>
-                          <Badge variant="outline" className="text-[10px]">{selectedTicket.category || "Geral"}</Badge>
-                          <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority] || ""}`}>
-                            ● {PRIORITY_LABELS[selectedTicket.priority] || selectedTicket.priority}
-                          </span>
-                          <span className="text-[10px] text-primary font-medium">{selectedTicket.org_name}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
-                          </span>
-                        </div>
-                      </div>
-                      <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
-                        <SelectTrigger className="h-8 w-36 text-xs flex-shrink-0"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {selectedTicket.description && (
-                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{selectedTicket.description}</p>
-                    )}
-                  </div>
-
-                  {/* Messages */}
-                  <TicketMessages ticketId={selectedTicket.id} userId={user?.id} />
-
-                  {/* Input */}
-                  {selectedTicket.status !== "closed" && (
-                    <div className="p-3 border-t border-border space-y-2 flex-shrink-0 bg-muted/20">
-                      {msgAttachments.length > 0 && (
-                        <div className="flex gap-2 flex-wrap">
-                          {msgAttachments.map((f, i) => (
-                            <div key={`${f.name}-${i}`} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
-                              <FileText className="w-3 h-3" />
-                              <span className="truncate max-w-[120px]">{f.name}</span>
-                              <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="flex gap-2 items-end">
-                        <label className="cursor-pointer flex-shrink-0">
-                          <input type="file" className="hidden" multiple accept="image/*,.pdf,.doc,.docx" onChange={e => {
-                            if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
-                          }} />
-                          <div className="h-10 w-10 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
-                            <Paperclip className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                        </label>
-                        <Textarea
-                          value={newMessage}
-                          onChange={e => setNewMessage(e.target.value)}
-                          placeholder="Responder ao chamado..."
-                          className="text-sm min-h-[40px] max-h-32 resize-none"
-                          rows={1}
-                          onKeyDown={e => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage();
-                            }
-                          }}
-                        />
-                        <Button size="icon" className="h-10 w-10 flex-shrink-0" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-8 text-xs w-full md:w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "kanban" ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={() => setViewMode("kanban")}
+              >
+                <KanbanSquare className="w-3.5 h-3.5" /> Kanban
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                className="gap-1.5 h-8"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="w-3.5 h-3.5" /> Lista
+              </Button>
             </div>
           </div>
+
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-4 border border-dashed border-border rounded-lg">
+              <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />
+              <p className="text-sm font-medium">Nenhum chamado</p>
+              <p className="text-xs text-muted-foreground mt-1">Crie o primeiro ou aguarde os da rede.</p>
+            </div>
+          ) : viewMode === "kanban" ? (
+            <AtendimentoKanbanView tickets={filtered} onSelect={setSelectedTicket} />
+          ) : (
+            <AtendimentoListView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} />
+          )}
         </TabsContent>
 
         <TabsContent value="config" className="mt-4">
           <AtendimentoConfig />
         </TabsContent>
       </Tabs>
+
+      {/* Chat Dialog — opens when a ticket is selected (from Kanban or List) */}
+      <Dialog open={!!selectedTicket} onOpenChange={(open) => { if (!open) setSelectedTicket(null); }}>
+        <DialogContent className="max-w-3xl p-0 gap-0 h-[85vh] flex flex-col">
+          {selectedTicket && (
+            <>
+              {/* Chat header */}
+              <div className="p-4 border-b border-border flex-shrink-0 bg-muted/20">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold truncate pr-6">{selectedTicket.title}</h3>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status] || ""}`}>
+                        {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">{selectedTicket.category || "Geral"}</Badge>
+                      <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority] || ""}`}>
+                        ● {PRIORITY_LABELS[selectedTicket.priority] || selectedTicket.priority}
+                      </span>
+                      <span className="text-[10px] text-primary font-medium">{selectedTicket.org_name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+                  <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
+                    <SelectTrigger className="h-8 w-36 text-xs flex-shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedTicket.description && (
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{selectedTicket.description}</p>
+                )}
+              </div>
+
+              {/* Messages */}
+              <TicketMessages ticketId={selectedTicket.id} userId={user?.id} />
+
+              {/* Input */}
+              {selectedTicket.status !== "closed" && (
+                <div className="p-3 border-t border-border space-y-2 flex-shrink-0 bg-muted/20">
+                  {msgAttachments.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {msgAttachments.map((f, i) => (
+                        <div key={`${f.name}-${i}`} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
+                          <FileText className="w-3 h-3" />
+                          <span className="truncate max-w-[120px]">{f.name}</span>
+                          <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 items-end">
+                    <label className="cursor-pointer flex-shrink-0">
+                      <input type="file" className="hidden" multiple accept="image/*,.pdf,.doc,.docx" onChange={e => {
+                        if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+                      }} />
+                      <div className="h-10 w-10 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
+                        <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </label>
+                    <Textarea
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      placeholder="Responder ao chamado..."
+                      className="text-sm min-h-[40px] max-h-32 resize-none"
+                      rows={1}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <Button size="icon" className="h-10 w-10 flex-shrink-0" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* New Ticket Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
@@ -509,6 +494,105 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Kanban view ──────────────────────────────────────────────── */
+const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
+
+function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; onClick: () => void }) {
+  return (
+    <Card className="cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5" onClick={onClick}>
+      <CardContent className="p-3 space-y-2">
+        <p className="text-sm font-semibold line-clamp-2">{t.title}</p>
+        <p className="text-[11px] text-primary font-medium truncate">{t.org_name}</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant="outline" className="text-[10px]">{t.category || "Geral"}</Badge>
+          <span className={`text-[10px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+            ● {PRIORITY_LABELS[t.priority] || t.priority}
+          </span>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+          <span className="text-[10px] text-muted-foreground">
+            {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: true })}
+          </span>
+          {(t as any).message_count > 0 && (
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <MessageSquare className="w-3 h-3" /> {(t as any).message_count}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AtendimentoKanbanView({ tickets, onSelect }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void }) {
+  const colColors: Record<string, string> = {
+    open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    waiting: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    resolved: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  };
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {KANBAN_COLUMNS.map(status => {
+        const col = tickets.filter(t => t.status === status);
+        return (
+          <div key={status} className="space-y-2">
+            <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background/80 backdrop-blur-sm py-1 z-10">
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${colColors[status]}`}>
+                {STATUS_LABELS[status]}
+              </span>
+              <span className="text-[11px] text-muted-foreground font-medium">{col.length}</span>
+            </div>
+            <div className="space-y-2 min-h-[120px]">
+              {col.length === 0 ? (
+                <div className="border border-dashed border-border rounded-lg p-6 text-center">
+                  <p className="text-[11px] text-muted-foreground">Nenhum chamado</p>
+                </div>
+              ) : (
+                col.map(t => (
+                  <AtendimentoKanbanCard key={t.id} ticket={t} onClick={() => onSelect(t)} />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── List view ────────────────────────────────────────────────── */
+function AtendimentoListView({ tickets, onSelect, selectedId }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; selectedId?: string }) {
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
+      {tickets.map(t => (
+        <button
+          key={t.id}
+          onClick={() => onSelect(t)}
+          className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedId ? "bg-muted" : ""}`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
+            <span className="text-[10px] text-muted-foreground flex-shrink-0">
+              {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
+            </span>
+          </div>
+          <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+              {STATUS_LABELS[t.status] || t.status}
+            </span>
+            <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
+            <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+              ● {PRIORITY_LABELS[t.priority] || t.priority}
+            </span>
+          </div>
+        </button>
+      ))}
     </div>
   );
 }
