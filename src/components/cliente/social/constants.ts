@@ -46,6 +46,12 @@ export const LAYOUT_TYPES = [
     desc: "Grid estruturado estilo infográfico, ideal para carrosséis e listas.",
     promptRules: "Organized grid layout with 2-3 columns or rows. Each cell contains an icon/number + short text. Header zone at top with headline. Footer zone with CTA. Clean dividers between sections. Consistent spacing and alignment. Brand logo in header. Professional infographic aesthetic.",
   },
+  {
+    value: "premium_luxo",
+    label: "Premium / Luxo",
+    desc: "Fundo escuro com acentos metálicos/dourados, tipografia serifada elegante e amplo espaço.",
+    promptRules: "Dark sophisticated background (near-black, deep navy or charcoal) with subtle texture. Single elegant serif or refined modern sans-serif headline centered, in metallic gold, champagne, or off-white. Very generous negative space. Thin metallic accent lines or borders (gold/silver). Minimal supporting text in light weight. CTA as a thin outlined button in metallic tone. Brand logo small and refined. Premium luxury brand aesthetic — timeless, sophisticated, never flashy.",
+  },
 ] as const;
 
 /* ── Grid Maps (internal, injected into prompts) ── */
@@ -82,6 +88,14 @@ export const GRID_MAPS: Record<string, string> = {
 - Each block contains title + short supporting content
 - Maintain equal spacing
 - Bottom center: logo outside content blocks`,
+  premium_luxo: `Grid:
+- Dark background covering entire canvas
+- Center: elegant headline (serif or refined sans)
+- Below headline: thin metallic divider line
+- Below divider: short supporting text
+- Bottom center: CTA as thin outlined button
+- Top corner: small refined logo
+- Generous negative space on all sides`,
 };
 
 // Keep ART_STYLES as alias for backward compatibility in other files
