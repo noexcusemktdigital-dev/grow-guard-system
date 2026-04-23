@@ -182,6 +182,19 @@ export default function ClienteRedesSociais() {
           ? (i === 0 ? "capa_carrossel" : i === totalPieces - 1 ? "cta_carrossel" : "slide_carrossel")
           : payload.tipoPostagem;
 
+        // Carousel-only: enrich the scene description with series title + per-slide topic
+        // so the model produces a cohesive series with distinct slide focus.
+        const slideTopic = isCarousel ? (payload.slideTopics?.[i] || "").trim() : "";
+        const series = isCarousel ? (payload.seriesTitle || "").trim() : "";
+        const carouselContext = isCarousel
+          ? [
+              series ? `Série: "${series}"` : "",
+              `Slide ${i + 1} de ${totalPieces}`,
+              slideTopic ? `Tópico deste slide: ${slideTopic}` : "",
+            ].filter(Boolean).join(" — ")
+          : "";
+        const enrichedCena = [carouselContext, payload.cena].filter(Boolean).join("\n") || undefined;
+
           try {
           const result = await generatePost.mutateAsync({
             type: "art",
@@ -195,7 +208,7 @@ export default function ClienteRedesSociais() {
             headline: slideHeadline,
             subheadline: slideSubheadline,
             cta: slideCta,
-            cena: payload.cena || undefined,
+            cena: enrichedCena,
             elementos_visuais: payload.elementosVisuais || undefined,
             manual_colors: !visualIdentity && payload.manualColors ? payload.manualColors : undefined,
             manual_style: !visualIdentity && payload.manualStyle ? payload.manualStyle : undefined,
@@ -210,7 +223,7 @@ export default function ClienteRedesSociais() {
             output_mode: payload.outputMode,
             print_format: payload.printFormat,
             // New art direction engine fields
-            topic: payload.topic,
+            topic: isCarousel && slideTopic ? slideTopic : payload.topic,
             audience: payload.audience,
             text_mode: payload.textMode,
             restrictions: payload.restrictions,
