@@ -68,6 +68,9 @@ export interface ArtGeneratePayload {
   baseImageUrl?: string;
   characterImageUrl?: string;
   backgroundImageUrl?: string;
+  // Carousel-only series metadata
+  seriesTitle?: string;
+  slideTopics?: string[];
 }
 
 export interface ArtBriefingResult {
@@ -216,6 +219,20 @@ export function ArtWizard({
   }, [referenceMemory.lastLogoUrl]);
 
   const totalPieces = tipoPostagem === "carrossel" ? carouselSlides : quantity;
+
+  // Keep slideTopics array length in sync with the number of carousel slides
+  useEffect(() => {
+    if (tipoPostagem !== "carrossel") return;
+    setSlideTopics(prev => {
+      const next = [...prev];
+      if (next.length < carouselSlides) {
+        while (next.length < carouselSlides) next.push("");
+      } else if (next.length > carouselSlides) {
+        next.length = carouselSlides;
+      }
+      return next;
+    });
+  }, [carouselSlides, tipoPostagem]);
 
   const handleAutoFillTexts = async () => {
     const enrichedBriefing = textMode === "ai"
@@ -381,6 +398,8 @@ export function ArtWizard({
       characterImageUrl: characterImageUrl || undefined,
       backgroundImageUrl: backgroundImageUrl || undefined,
       caption: caption || undefined,
+      seriesTitle: tipoPostagem === "carrossel" ? (seriesTitle || undefined) : undefined,
+      slideTopics: tipoPostagem === "carrossel" ? slideTopics : undefined,
     });
   };
 
@@ -418,6 +437,8 @@ export function ArtWizard({
           tipoPostagem={tipoPostagem} setTipoPostagem={setTipoPostagem}
           quantity={quantity} setQuantity={setQuantity}
           carouselSlides={carouselSlides} setCarouselSlides={setCarouselSlides}
+          seriesTitle={seriesTitle} setSeriesTitle={setSeriesTitle}
+          slideTopics={slideTopics} setSlideTopics={setSlideTopics}
           creditCost={creditCost}
           logoUrl={logoUrl} setLogoUrl={setLogoUrl}
           referenceUrls={referenceUrls} setReferenceUrls={setReferenceUrls}

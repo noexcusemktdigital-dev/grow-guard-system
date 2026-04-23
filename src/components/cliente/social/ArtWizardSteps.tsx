@@ -54,6 +54,10 @@ export interface StepProps {
   setQuantity: (v: number) => void;
   carouselSlides: number;
   setCarouselSlides: (v: number) => void;
+  seriesTitle: string;
+  setSeriesTitle: (v: string) => void;
+  slideTopics: string[];
+  setSlideTopics: (v: string[]) => void;
   creditCost: number;
   logoUrl: string;
   setLogoUrl: (v: string) => void;
@@ -215,7 +219,18 @@ function Step2Format({ outputMode, printType, printFormat, setPrintFormat, artFo
 }
 
 /* ── Step 3: Type + Quantity ── */
-function Step3TypeQuantity({ tipoPostagem, setTipoPostagem, quantity, setQuantity, carouselSlides, setCarouselSlides, creditCost }: StepProps) {
+function Step3TypeQuantity({
+  tipoPostagem, setTipoPostagem, quantity, setQuantity,
+  carouselSlides, setCarouselSlides, creditCost,
+  seriesTitle, setSeriesTitle, slideTopics, setSlideTopics,
+}: StepProps) {
+  const updateSlideTopic = (idx: number, value: string) => {
+    const next = [...slideTopics];
+    while (next.length < carouselSlides) next.push("");
+    next[idx] = value;
+    setSlideTopics(next);
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -234,14 +249,46 @@ function Step3TypeQuantity({ tipoPostagem, setTipoPostagem, quantity, setQuantit
         ))}
       </div>
       {tipoPostagem === "carrossel" ? (
-        <div>
-          <Label className="text-xs">Quantos slides no carrossel?</Label>
-          <div className="flex gap-2 mt-2">
-            {[2, 3, 5, 7, 10].map(n => (
-              <Button key={n} variant={carouselSlides === n ? "default" : "outline"} size="sm" onClick={() => setCarouselSlides(n)}>{n}</Button>
-            ))}
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs">Quantos slides no carrossel?</Label>
+            <div className="flex gap-2 mt-2">
+              {[2, 3, 5, 7, 10].map(n => (
+                <Button key={n} variant={carouselSlides === n ? "default" : "outline"} size="sm" onClick={() => setCarouselSlides(n)}>{n}</Button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">{creditCost} créditos/slide</p>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">{creditCost} créditos/slide</p>
+
+          <div>
+            <Label className="text-xs">Título da série <span className="text-muted-foreground">(opcional)</span></Label>
+            <Input
+              placeholder="Ex: 5 erros que travam suas vendas"
+              value={seriesTitle}
+              onChange={(e) => setSeriesTitle(e.target.value)}
+              className="mt-1"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">Aparece como tema unificador em todos os slides</p>
+          </div>
+
+          <div>
+            <Label className="text-xs">Tópico de cada slide <span className="text-muted-foreground">(opcional)</span></Label>
+            <div className="space-y-2 mt-2">
+              {Array.from({ length: carouselSlides }, (_, i) => (
+                <Input
+                  key={i}
+                  placeholder={
+                    i === 0 ? "Slide 1 — Capa (chamada principal)"
+                    : i === carouselSlides - 1 ? `Slide ${i + 1} — CTA (chamada para ação)`
+                    : `Slide ${i + 1} — Tópico`
+                  }
+                  value={slideTopics[i] || ""}
+                  onChange={(e) => updateSlideTopic(i, e.target.value)}
+                />
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">Deixe em branco para a IA decidir o tópico de cada slide</p>
+          </div>
         </div>
       ) : (
         <div>
