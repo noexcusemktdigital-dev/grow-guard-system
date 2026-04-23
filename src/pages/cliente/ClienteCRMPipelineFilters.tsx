@@ -130,6 +130,8 @@ export function ClienteCRMPipelineFilters({
   handleBulkTransferFunnel,
   handleBulkMarkLost,
   setBulkDeleteLeadsOpen,
+  orderBy,
+  setOrderBy,
 }: ClienteCRMPipelineFiltersProps) {
   return (
     <>
