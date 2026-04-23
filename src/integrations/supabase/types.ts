@@ -5256,6 +5256,44 @@ export type Database = {
           },
         ]
       }
+      org_user_permissions: {
+        Row: {
+          created_at: string
+          granted: boolean
+          granted_by: string | null
+          id: string
+          organization_id: string
+          permission: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted?: boolean
+          granted_by?: string | null
+          id?: string
+          organization_id: string
+          permission: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted?: boolean
+          granted_by?: string | null
+          id?: string
+          organization_id?: string
+          permission?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_user_permissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_integrations: {
         Row: {
           config: Json
@@ -7985,6 +8023,10 @@ export type Database = {
         }
         Returns: string
       }
+      is_admin_of_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_member_of_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -8042,6 +8084,10 @@ export type Database = {
       }
       start_meta_ads_oauth: { Args: { p_org_id?: string }; Returns: Json }
       sync_team_chat_channels: { Args: { _org_id: string }; Returns: undefined }
+      user_has_permission: {
+        Args: { _org_id: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
       weekly_db_maintenance: { Args: never; Returns: Json }
     }
     Enums: {
