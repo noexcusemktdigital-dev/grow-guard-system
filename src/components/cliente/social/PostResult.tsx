@@ -40,12 +40,23 @@ export function PostResult({
   const allApproved = allResults.every(r => r.post.status === "approved");
 
   const caption = allResults[0]?.post?.caption;
+  const downloadableResults = allResults.filter(r => !!r.result_url);
 
   const handleCopyCaption = () => {
     if (caption) {
       navigator.clipboard.writeText(caption);
       toast({ title: "Legenda copiada!" });
     }
+  };
+
+  const handleDownloadAll = () => {
+    if (downloadableResults.length === 0) return;
+    downloadableResults.forEach((r, i) => {
+      setTimeout(() => {
+        window.open(r.result_url as string, "_blank", "noopener,noreferrer");
+      }, i * 150);
+    });
+    toast({ title: `Abrindo ${downloadableResults.length} arte(s) para download…` });
   };
 
   return (
@@ -161,6 +172,11 @@ export function PostResult({
                 <a href={allResults[0].result_url} download target="_blank" rel="noopener noreferrer">
                   <Download className="w-4 h-4 mr-2" /> Baixar
                 </a>
+              </Button>
+            )}
+            {allResults.length > 1 && downloadableResults.length > 0 && (
+              <Button variant="secondary" size="lg" onClick={handleDownloadAll}>
+                <Download className="w-4 h-4 mr-2" /> Baixar todos ({downloadableResults.length})
               </Button>
             )}
             <AlertDialog>
