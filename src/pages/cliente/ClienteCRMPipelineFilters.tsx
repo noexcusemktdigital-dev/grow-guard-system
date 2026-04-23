@@ -83,6 +83,8 @@ interface ClienteCRMPipelineFiltersProps {
   handleBulkTransferFunnel: (funnelId: string) => void;
   handleBulkMarkLost: () => void;
   setBulkDeleteLeadsOpen: (v: boolean) => void;
+  orderBy: OrderByKey;
+  setOrderBy: (v: OrderByKey) => void;
 }
 
 export function ClienteCRMPipelineFilters({
