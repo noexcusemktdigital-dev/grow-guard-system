@@ -92,6 +92,13 @@ export function useGeneratePost() {
       character_image_url?: string;
       background_image_url?: string;
       caption?: string;
+      // Layout customization (Step 8)
+      logo_position?: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none";
+      title_position?: "top" | "center" | "bottom";
+      background_type?: "ai_photo" | "solid_color" | "gradient" | "clean";
+      color_tone?: "brand" | "neutral" | "vibrant" | "dark" | "pastel";
+      primary_color?: string;
+      secondary_color?: string;
       // Video-specific structured fields
       plataforma?: string;
       estilo_visual?: string;
@@ -144,6 +151,13 @@ export function useGeneratePost() {
             base_image_url: payload.base_image_url,
             character_image_url: payload.character_image_url,
             background_image_url: payload.background_image_url,
+            // Layout customization (Step 8)
+            logo_position: payload.logo_position,
+            title_position: payload.title_position,
+            background_type: payload.background_type,
+            color_tone: payload.color_tone,
+            primary_color: payload.primary_color,
+            secondary_color: payload.secondary_color,
           },
         });
         if (resp.error) throw await extractEdgeFunctionError(resp.error);

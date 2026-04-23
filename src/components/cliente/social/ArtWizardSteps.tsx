@@ -14,6 +14,7 @@ import {
 import type { SmartSuggestions } from "@/utils/smartSuggestions";
 import type { ReferenceMemory } from "@/hooks/useReferenceMemory";
 import { LayoutPicker } from "./LayoutPicker";
+import { LayoutPreviewSvg } from "./LayoutPreviewSvg";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import type { ArtTextItem } from "./ArtWizard";
 import {
@@ -90,6 +91,18 @@ export interface StepProps {
   setTextMode: (v: "ai" | "manual") => void;
   layoutType: string;
   setLayoutType: (v: string) => void;
+  logoPosition: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none";
+  setLogoPosition: (v: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none") => void;
+  titlePosition: "top" | "center" | "bottom";
+  setTitlePosition: (v: "top" | "center" | "bottom") => void;
+  backgroundType: "ai_photo" | "solid_color" | "gradient" | "clean";
+  setBackgroundType: (v: "ai_photo" | "solid_color" | "gradient" | "clean") => void;
+  colorTone: "brand" | "neutral" | "vibrant" | "dark" | "pastel";
+  setColorTone: (v: "brand" | "neutral" | "vibrant" | "dark" | "pastel") => void;
+  primaryColor: string;
+  setPrimaryColor: (v: string) => void;
+  secondaryColor: string;
+  setSecondaryColor: (v: string) => void;
   restrictions: string;
   setRestrictions: (v: string) => void;
   elements: string[];
@@ -436,18 +449,216 @@ function Step7Audience({ audience, setAudience, suggestions }: StepProps) {
   );
 }
 
-/* ── Step 8: Layout ── */
-function Step8Layout({ layoutType, setLayoutType }: StepProps) {
+/* ── Step 8: Layout + Customizer + Live Preview ── */
+function Step8Layout(props: StepProps) {
+  const {
+    layoutType, setLayoutType,
+    logoPosition, setLogoPosition,
+    titlePosition, setTitlePosition,
+    backgroundType, setBackgroundType,
+    colorTone, setColorTone,
+    primaryColor, setPrimaryColor,
+    secondaryColor, setSecondaryColor,
+    artFormat,
+  } = props;
+
+  // Preview aspect: default to user's chosen format (story → 9:16, otherwise 1:1)
+  const defaultAspect: "1:1" | "9:16" = artFormat === "story" ? "9:16" : "1:1";
+  const [previewAspect, setPreviewAspect] = React.useState<"1:1" | "9:16">(defaultAspect);
+
+  const logoOpts: { value: typeof logoPosition; label: string }[] = [
+    { value: "top_left",     label: "↖ Sup. Esq." },
+    { value: "top_right",    label: "↗ Sup. Dir." },
+    { value: "bottom_left",  label: "↙ Inf. Esq." },
+    { value: "bottom_right", label: "↘ Inf. Dir." },
+    { value: "none",         label: "✕ Sem logo" },
+  ];
+
+  const titleOpts: { value: typeof titlePosition; label: string }[] = [
+    { value: "top",    label: "Topo" },
+    { value: "center", label: "Centro" },
+    { value: "bottom", label: "Inferior" },
+  ];
+
+  const bgOpts: { value: typeof backgroundType; label: string; emoji: string }[] = [
+    { value: "ai_photo",    label: "Foto IA",    emoji: "📸" },
+    { value: "solid_color", label: "Cor sólida", emoji: "🎨" },
+    { value: "gradient",    label: "Gradiente",  emoji: "🌈" },
+    { value: "clean",       label: "Limpo",      emoji: "⬜" },
+  ];
+
+  const toneOpts: { value: typeof colorTone; label: string }[] = [
+    { value: "brand",   label: "Marca" },
+    { value: "neutral", label: "Neutro" },
+    { value: "vibrant", label: "Vibrante" },
+    { value: "dark",    label: "Dark" },
+    { value: "pastel",  label: "Pastel" },
+  ];
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <h3 className="text-base font-semibold mb-1">📐 Escolha como sua arte será organizada</h3>
-        <p className="text-sm text-muted-foreground">A diagramação define o posicionamento dos elementos</p>
+        <p className="text-sm text-muted-foreground">Selecione um template e personalize os detalhes — o preview atualiza em tempo real</p>
       </div>
-      <LayoutPicker
-        selected={[layoutType]}
-        onSelect={(v) => setLayoutType(v[0] || "hero_center")}
-      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Esquerda: grid de templates */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Template</Label>
+          <LayoutPicker
+            selected={[layoutType]}
+            onSelect={(v) => setLayoutType(v[0] || "hero_center")}
+          />
+        </div>
+
+        {/* Direita: personalizador + preview */}
+        <div className="space-y-4">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Personalizar</Label>
+
+          {/* Preview */}
+          <Card className="overflow-hidden bg-muted/40">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-medium text-muted-foreground">Preview ao vivo</span>
+                <div className="flex gap-1">
+                  <Button
+                    type="button" size="sm" variant={previewAspect === "1:1" ? "default" : "outline"}
+                    onClick={() => setPreviewAspect("1:1")}
+                    className="h-6 px-2 text-[10px]"
+                  >1:1</Button>
+                  <Button
+                    type="button" size="sm" variant={previewAspect === "9:16" ? "default" : "outline"}
+                    onClick={() => setPreviewAspect("9:16")}
+                    className="h-6 px-2 text-[10px]"
+                  >9:16</Button>
+                </div>
+              </div>
+              <div className={`mx-auto ${previewAspect === "9:16" ? "w-[160px]" : "w-full max-w-[260px]"}`}>
+                <LayoutPreviewSvg
+                  layoutType={layoutType}
+                  logoPosition={logoPosition}
+                  titlePosition={titlePosition}
+                  backgroundType={backgroundType}
+                  colorTone={colorTone}
+                  primaryColor={primaryColor}
+                  secondaryColor={secondaryColor}
+                  aspect={previewAspect}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Logo position */}
+          <div>
+            <Label className="text-[11px] font-semibold">Posição do logo</Label>
+            <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+              {logoOpts.map(o => (
+                <Button
+                  key={o.value} type="button" size="sm"
+                  variant={logoPosition === o.value ? "default" : "outline"}
+                  onClick={() => setLogoPosition(o.value)}
+                  className="h-7 text-[10px] px-1"
+                >{o.label}</Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Title position */}
+          <div>
+            <Label className="text-[11px] font-semibold">Posição do título</Label>
+            <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+              {titleOpts.map(o => (
+                <Button
+                  key={o.value} type="button" size="sm"
+                  variant={titlePosition === o.value ? "default" : "outline"}
+                  onClick={() => setTitlePosition(o.value)}
+                  className="h-7 text-[11px]"
+                >{o.label}</Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Background type */}
+          <div>
+            <Label className="text-[11px] font-semibold">Tipo de fundo</Label>
+            <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+              {bgOpts.map(o => (
+                <Button
+                  key={o.value} type="button" size="sm"
+                  variant={backgroundType === o.value ? "default" : "outline"}
+                  onClick={() => setBackgroundType(o.value)}
+                  className="h-7 text-[11px] gap-1"
+                >
+                  <span>{o.emoji}</span>{o.label}
+                </Button>
+              ))}
+            </div>
+
+            {backgroundType === "solid_color" && (
+              <div className="flex items-center gap-2 mt-2">
+                <Label className="text-[10px] text-muted-foreground">Cor:</Label>
+                <Input
+                  type="color" value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="h-8 w-14 p-1 cursor-pointer"
+                />
+                <Input
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="h-8 text-[11px] flex-1"
+                />
+              </div>
+            )}
+
+            {backgroundType === "gradient" && (
+              <div className="space-y-2 mt-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-[10px] text-muted-foreground w-10">De:</Label>
+                  <Input
+                    type="color" value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="h-8 w-14 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="h-8 text-[11px] flex-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-[10px] text-muted-foreground w-10">Para:</Label>
+                  <Input
+                    type="color" value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="h-8 w-14 p-1 cursor-pointer"
+                  />
+                  <Input
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="h-8 text-[11px] flex-1"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Color tone */}
+          <div>
+            <Label className="text-[11px] font-semibold">Tom de cor</Label>
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {toneOpts.map(o => (
+                <Button
+                  key={o.value} type="button" size="sm"
+                  variant={colorTone === o.value ? "default" : "outline"}
+                  onClick={() => setColorTone(o.value)}
+                  className="h-7 text-[11px]"
+                >{o.label}</Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

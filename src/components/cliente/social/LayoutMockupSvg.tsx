@@ -143,6 +143,30 @@ export function LayoutMockupSvg({ type }: { type: string }) {
         </svg>
       );
 
+    case "premium_luxo":
+      return (
+        <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full">
+          <rect width={w} height={h} fill="#0a0a0f" rx="6" />
+          <defs>
+            <linearGradient id="luxoGold" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#b8860b" />
+              <stop offset="50%" stopColor="#f5d57a" />
+              <stop offset="100%" stopColor="#b8860b" />
+            </linearGradient>
+          </defs>
+          <rect x="10" y="10" width="22" height="10" rx="2" fill="none" stroke="#b8860b" strokeWidth="0.5" />
+          <text x="21" y="17" textAnchor="middle" fill="#f5d57a" style={{ ...labelStyle, fontSize: "4.5px" }}>LOGO</text>
+          <line x1="60" y1="55" x2="140" y2="55" stroke="url(#luxoGold)" strokeWidth="0.4" />
+          <rect x="30" y="80" width="140" height="14" rx="1" fill="url(#luxoGold)" opacity="0.95" />
+          <text x="100" y="90" textAnchor="middle" fill="#0a0a0f" style={{ ...labelStyle, fontFamily: "serif" }}>HEADLINE</text>
+          <line x1="60" y1="105" x2="140" y2="105" stroke="url(#luxoGold)" strokeWidth="0.4" />
+          <rect x="55" y="115" width="90" height="6" rx="1" fill="#d4d4d8" opacity="0.5" />
+          <rect x="65" y="125" width="70" height="6" rx="1" fill="#d4d4d8" opacity="0.3" />
+          <rect x="65" y="155" width="70" height="20" rx="2" fill="none" stroke="url(#luxoGold)" strokeWidth="1" />
+          <text x="100" y="168" textAnchor="middle" fill="#f5d57a" style={{ ...labelStyle, letterSpacing: "1.5px" }}>CTA</text>
+        </svg>
+      );
+
     default:
       return (
         <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full">

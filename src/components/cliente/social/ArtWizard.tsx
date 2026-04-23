@@ -71,6 +71,13 @@ export interface ArtGeneratePayload {
   // Carousel-only series metadata
   seriesTitle?: string;
   slideTopics?: string[];
+  // Layout customization (Step 8)
+  logoPosition?: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none";
+  titlePosition?: "top" | "center" | "bottom";
+  backgroundType?: "ai_photo" | "solid_color" | "gradient" | "clean";
+  colorTone?: "brand" | "neutral" | "vibrant" | "dark" | "pastel";
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 export interface ArtBriefingResult {
@@ -166,8 +173,14 @@ export function ArtWizard({
   // Step 7: Audience
   const [audience, setAudience] = useState("");
 
-  // Step 8: Layout
+  // Step 8: Layout + customization
   const [layoutType, setLayoutType] = useState("hero_center");
+  const [logoPosition, setLogoPosition] = useState<"top_left" | "top_right" | "bottom_left" | "bottom_right" | "none">("top_right");
+  const [titlePosition, setTitlePosition] = useState<"top" | "center" | "bottom">("center");
+  const [backgroundType, setBackgroundType] = useState<"ai_photo" | "solid_color" | "gradient" | "clean">("ai_photo");
+  const [colorTone, setColorTone] = useState<"brand" | "neutral" | "vibrant" | "dark" | "pastel">("brand");
+  const [primaryColor, setPrimaryColor] = useState<string>("#000000");
+  const [secondaryColor, setSecondaryColor] = useState<string>("#ffffff");
 
   // Step 9: References
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
@@ -208,6 +221,12 @@ export function ArtWizard({
     }
     if (!logoUrl && visualIdentity?.logo_url) {
       setLogoUrl(visualIdentity.logo_url);
+    }
+    // Hydrate brand colors from palette → used as defaults for "brand" tone + custom solid/gradient
+    const palette = (visualIdentity as any)?.palette as string[] | undefined;
+    if (palette && palette.length > 0) {
+      if (primaryColor === "#000000") setPrimaryColor(palette[0]);
+      if (secondaryColor === "#ffffff" && palette[1]) setSecondaryColor(palette[1]);
     }
   }, [visualIdentity]);
 
@@ -400,6 +419,12 @@ export function ArtWizard({
       caption: caption || undefined,
       seriesTitle: tipoPostagem === "carrossel" ? (seriesTitle || undefined) : undefined,
       slideTopics: tipoPostagem === "carrossel" ? slideTopics : undefined,
+      logoPosition,
+      titlePosition,
+      backgroundType,
+      colorTone,
+      primaryColor,
+      secondaryColor,
     });
   };
 
@@ -458,6 +483,12 @@ export function ArtWizard({
           audience={audience} setAudience={setAudience}
           textMode={textMode} setTextMode={setTextMode}
           layoutType={layoutType} setLayoutType={setLayoutType}
+          logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+          titlePosition={titlePosition} setTitlePosition={setTitlePosition}
+          backgroundType={backgroundType} setBackgroundType={setBackgroundType}
+          colorTone={colorTone} setColorTone={setColorTone}
+          primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
+          secondaryColor={secondaryColor} setSecondaryColor={setSecondaryColor}
           restrictions={restrictions} setRestrictions={setRestrictions}
           elements={elements} setElements={setElements}
           baseImageUrl={baseImageUrl} setBaseImageUrl={setBaseImageUrl}
