@@ -3181,6 +3181,7 @@ export type Database = {
           lead_id: string | null
           organization_id: string
           priority: string | null
+          task_type: string | null
           title: string
           updated_at: string
         }
@@ -3194,6 +3195,7 @@ export type Database = {
           lead_id?: string | null
           organization_id: string
           priority?: string | null
+          task_type?: string | null
           title: string
           updated_at?: string
         }
@@ -3207,6 +3209,7 @@ export type Database = {
           lead_id?: string | null
           organization_id?: string
           priority?: string | null
+          task_type?: string | null
           title?: string
           updated_at?: string
         }
