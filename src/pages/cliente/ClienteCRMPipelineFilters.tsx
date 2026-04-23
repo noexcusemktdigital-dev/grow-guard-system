@@ -10,8 +10,18 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { FunnelStage } from "@/components/crm/CrmStageSystem";
+import { ArrowDownUp } from "lucide-react";
 
 const SOURCES = ["WhatsApp", "Formulário", "Indicação", "Ads", "LinkedIn", "Evento", "Orgânico"];
+
+export const ORDER_OPTIONS = [
+  { value: "updated_at", label: "Última atualização" },
+  { value: "task_due", label: "Prazo da tarefa" },
+  { value: "created_at", label: "Data de entrada" },
+  { value: "name", label: "Nome A-Z" },
+] as const;
+
+export type OrderByKey = typeof ORDER_OPTIONS[number]["value"];
 
 interface TeamMember {
   user_id: string;
