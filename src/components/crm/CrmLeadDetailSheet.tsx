@@ -77,6 +77,17 @@ const ACTIVITY_TYPES = [
   { value: "note", label: "Nota", icon: <StickyNote className="w-3.5 h-3.5" /> },
 ];
 
+const TASK_TYPES = [
+  { value: "follow_up", label: "📞 Follow-up" },
+  { value: "proposta", label: "📄 Enviar proposta" },
+  { value: "reuniao", label: "📅 Agendar reunião" },
+  { value: "whatsapp", label: "💬 Enviar WhatsApp" },
+  { value: "email", label: "📧 Enviar e-mail" },
+  { value: "visita", label: "🏢 Visita presencial" },
+  { value: "ligacao", label: "☎️ Realizar ligação" },
+  { value: "outro", label: "✏️ Outro" },
+];
+
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   draft: { label: "Rascunho", color: "bg-muted text-muted-foreground" },
   sent: { label: "Enviada", color: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
@@ -128,6 +139,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [actTitle, setActTitle] = useState("");
   const [actDesc, setActDesc] = useState("");
 
+  const [taskType, setTaskType] = useState("follow_up");
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [taskPriority, setTaskPriority] = useState("medium");
@@ -160,7 +172,14 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
 
   const handleCreateTask = () => {
     if (!taskTitle.trim()) return;
-    createTask.mutate({ lead_id: lead.id, title: taskTitle, due_date: taskDue || undefined, priority: taskPriority });
+    createTask.mutate({
+      lead_id: lead.id,
+      title: taskTitle,
+      due_date: taskDue || undefined,
+      priority: taskPriority,
+      task_type: taskType,
+      lead_name: lead.name,
+    });
     setTaskTitle(""); setTaskDue("");
     toast({ title: "Tarefa criada" });
   };
@@ -341,6 +360,22 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
         <TabsContent value="tasks" className="space-y-3 mt-3">
           <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
             <p className="text-xs font-semibold">Nova tarefa</p>
+            <div>
+              <Label className="text-[10px] text-muted-foreground">Tipo de tarefa</Label>
+              <Select
+                value={taskType}
+                onValueChange={(v) => {
+                  setTaskType(v);
+                  const opt = TASK_TYPES.find(t => t.value === v);
+                  if (opt) setTaskTitle(opt.label);
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TASK_TYPES.map(t => <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} placeholder="Título da tarefa..." className="h-8 text-xs" />
             <div className="grid grid-cols-2 gap-2">
               <Input type="date" value={taskDue} onChange={e => setTaskDue(e.target.value)} className="h-8 text-xs" />
