@@ -71,6 +71,13 @@ export interface ArtGeneratePayload {
   // Carousel-only series metadata
   seriesTitle?: string;
   slideTopics?: string[];
+  // Layout customization (Step 8)
+  logoPosition?: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none";
+  titlePosition?: "top" | "center" | "bottom";
+  backgroundType?: "ai_photo" | "solid_color" | "gradient" | "clean";
+  colorTone?: "brand" | "neutral" | "vibrant" | "dark" | "pastel";
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 export interface ArtBriefingResult {
@@ -166,8 +173,14 @@ export function ArtWizard({
   // Step 7: Audience
   const [audience, setAudience] = useState("");
 
-  // Step 8: Layout
+  // Step 8: Layout + customization
   const [layoutType, setLayoutType] = useState("hero_center");
+  const [logoPosition, setLogoPosition] = useState<"top_left" | "top_right" | "bottom_left" | "bottom_right" | "none">("top_right");
+  const [titlePosition, setTitlePosition] = useState<"top" | "center" | "bottom">("center");
+  const [backgroundType, setBackgroundType] = useState<"ai_photo" | "solid_color" | "gradient" | "clean">("ai_photo");
+  const [colorTone, setColorTone] = useState<"brand" | "neutral" | "vibrant" | "dark" | "pastel">("brand");
+  const [primaryColor, setPrimaryColor] = useState<string>("#000000");
+  const [secondaryColor, setSecondaryColor] = useState<string>("#ffffff");
 
   // Step 9: References
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
