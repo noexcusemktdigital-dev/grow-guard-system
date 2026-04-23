@@ -232,6 +232,13 @@ export default function ClienteRedesSociais() {
             character_image_url: payload.characterImageUrl,
             background_image_url: payload.backgroundImageUrl,
             caption: payload.caption,
+            // Layout customization (Step 8)
+            logo_position: payload.logoPosition,
+            title_position: payload.titlePosition,
+            background_type: payload.backgroundType,
+            color_tone: payload.colorTone,
+            primary_color: payload.primaryColor,
+            secondary_color: payload.secondaryColor,
           });
           results.push(result);
         } catch (slideErr: unknown) {
