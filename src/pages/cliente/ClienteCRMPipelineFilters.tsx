@@ -153,6 +153,18 @@ export function ClienteCRMPipelineFilters({
           <Input placeholder="Buscar lead..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar lead" className="pl-10 h-8" />
         </div>
 
+        <Select value={orderBy} onValueChange={(v) => setOrderBy(v as OrderByKey)}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <ArrowDownUp className="w-3 h-3 mr-1" />
+            <SelectValue placeholder="Ordenar por" />
+          </SelectTrigger>
+          <SelectContent>
+            {ORDER_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
