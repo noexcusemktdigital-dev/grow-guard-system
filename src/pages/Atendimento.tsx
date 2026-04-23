@@ -9,12 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus, MessageSquare, Search, Inbox, AlertTriangle, Timer, Clock,
-  Send, ArrowLeft, User, Paperclip, X, FileText, Download,
-  KanbanSquare, List, ChevronRight, Settings,
+  Send, User, Paperclip, X, FileText, Download, Settings, MessagesSquare,
 } from "lucide-react";
 import { useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
@@ -48,7 +46,6 @@ const PRIORITY_COLORS: Record<string, string> = {
   urgent: "text-red-600",
 };
 const CATEGORIAS = ["Financeiro", "Jurídico", "Comercial", "Marketing", "Treinamentos", "Sistema", "Dúvidas gerais"];
-const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
 
 export default function Atendimento() {
   const { user } = useAuth();
@@ -56,12 +53,10 @@ export default function Atendimento() {
   const { createTicket, updateTicket, sendMessage } = useSupportTicketMutations();
   const [activeTab, setActiveTab] = useState<"chamados" | "config">("chamados");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterOrigin, setFilterOrigin] = useState("all");
   const [search, setSearch] = useState("");
   const [createDialog, setCreateDialog] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<NetworkTicket | null>(null);
   const [newMessage, setNewMessage] = useState("");
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [msgAttachments, setMsgAttachments] = useState<File[]>([]);
   const [uploadingMsg, setUploadingMsg] = useState(false);
 
@@ -78,7 +73,7 @@ export default function Atendimento() {
       if (search && !t.title.toLowerCase().includes(search.toLowerCase()) && !t.org_name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [tickets, filterStatus, filterOrigin, search]);
+  }, [tickets, filterStatus, search]);
 
   const alerts = useMemo(() => {
     const abertos = (tickets ?? []).filter(t => t.status === "open").length;
@@ -173,7 +168,7 @@ export default function Atendimento() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -185,19 +180,9 @@ export default function Atendimento() {
           <p className="text-sm text-muted-foreground">Central de suporte e chamados da rede</p>
         </div>
         {activeTab === "chamados" && (
-          <div className="flex items-center gap-2">
-            <div className="flex border border-border rounded-lg overflow-hidden">
-              <Button size="sm" variant={viewMode === "kanban" ? "default" : "ghost"} className="rounded-none h-8 px-3" onClick={() => setViewMode("kanban")}>
-                <KanbanSquare className="w-3.5 h-3.5" />
-              </Button>
-              <Button size="sm" variant={viewMode === "list" ? "default" : "ghost"} className="rounded-none h-8 px-3" onClick={() => setViewMode("list")}>
-                <List className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            <Button size="sm" onClick={() => setCreateDialog(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Novo Chamado
-            </Button>
-          </div>
+          <Button size="sm" onClick={() => setCreateDialog(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Novo Chamado
+          </Button>
         )}
       </div>
 
@@ -221,186 +206,163 @@ export default function Atendimento() {
             ))}
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar título ou unidade..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Buscar título ou unidade" className="w-[240px] h-8 text-xs pl-8" />
-            </div>
-          </div>
+          {/* Two-column WhatsApp Web style layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4 border border-border rounded-lg overflow-hidden bg-card" style={{ height: "calc(100vh - 320px)", minHeight: "500px" }}>
+            {/* LEFT: Tickets list */}
+            <div className="flex flex-col border-r border-border min-h-0">
+              {/* Filters */}
+              <div className="p-3 border-b border-border space-y-2 flex-shrink-0">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input placeholder="Buscar título ou unidade..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
+                </div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Content */}
-          {(filtered ?? []).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Inbox className="w-12 h-12 text-muted-foreground/30 mb-3" />
-              <h3 className="text-lg font-semibold mb-1">Nenhum chamado</h3>
-              <p className="text-sm text-muted-foreground mb-4">Crie o primeiro chamado ou aguarde os da rede.</p>
-              <Button onClick={() => setCreateDialog(true)}><Plus className="w-4 h-4 mr-1" /> Novo Chamado</Button>
-            </div>
-          ) : viewMode === "kanban" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {KANBAN_COLUMNS.map(status => {
-                const col = filtered.filter(t => t.status === status);
-                return (
-                  <div key={status} className="space-y-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[status]}`}>
-                        {STATUS_LABELS[status]}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">{col.length}</span>
-                    </div>
-                    <div className="space-y-2 min-h-[200px]">
-                      {col.length === 0 ? (
-                        <div className="border border-dashed border-border rounded-lg p-4 text-center">
-                          <p className="text-[11px] text-muted-foreground">Nenhum chamado</p>
-                        </div>
-                      ) : col.map(t => (
-                        <Card key={t.id} className={`cursor-pointer transition-all hover:shadow-md ${t.id === selectedTicket?.id ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedTicket(t)}>
-                          <CardContent className="p-3 space-y-1.5">
-                            <p className="text-sm font-medium line-clamp-2">{t.title}</p>
-                            <p className="text-[10px] text-primary font-medium">{t.org_name}</p>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge variant="outline" className="text-[10px]">{t.category || "Geral"}</Badge>
-                              <span className={`text-[10px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
-                                ● {PRIORITY_LABELS[t.priority] || t.priority}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-muted-foreground block">
-                              {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: true })}
-                            </span>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+              {/* Ticket list */}
+              <div className="flex-1 overflow-y-auto">
+                {filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+                    <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />
+                    <p className="text-sm font-medium">Nenhum chamado</p>
+                    <p className="text-xs text-muted-foreground mt-1">Crie o primeiro ou aguarde os da rede.</p>
                   </div>
-                );
-              })}
+                ) : (
+                  <div className="divide-y divide-border">
+                    {filtered.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setSelectedTicket(t)}
+                        className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedTicket?.id ? "bg-muted" : ""}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
+                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                            {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+                            {STATUS_LABELS[t.status] || t.status}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
+                          <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                            ● {PRIORITY_LABELS[t.priority] || t.priority}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {filtered.map(t => (
-                <Card key={t.id} className={`cursor-pointer transition-all hover:shadow-md ${t.id === selectedTicket?.id ? "ring-2 ring-primary" : ""}`} onClick={() => setSelectedTicket(t)}>
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{t.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
-                          {STATUS_LABELS[t.status] || t.status}
-                        </span>
-                        <span className="text-[10px] text-primary font-medium">{t.org_name}</span>
-                        <span className="text-[10px] text-muted-foreground">{t.category || "Geral"}</span>
-                        <span className={`text-[10px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
-                          {PRIORITY_LABELS[t.priority] || t.priority}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">{format(new Date(t.created_at), "dd/MM")}</span>
+
+            {/* RIGHT: Chat panel */}
+            <div className="flex flex-col min-h-0 bg-background">
+              {!selectedTicket ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                  <MessagesSquare className="w-16 h-16 text-muted-foreground/20 mb-4" />
+                  <p className="text-sm font-medium text-muted-foreground">Selecione um chamado para ver a conversa</p>
+                </div>
+              ) : (
+                <>
+                  {/* Chat header */}
+                  <div className="p-4 border-b border-border flex-shrink-0 bg-muted/20">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold truncate">{selectedTicket.title}</h3>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status] || ""}`}>
+                            {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
+                          </span>
+                          <Badge variant="outline" className="text-[10px]">{selectedTicket.category || "Geral"}</Badge>
+                          <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority] || ""}`}>
+                            ● {PRIORITY_LABELS[selectedTicket.priority] || selectedTicket.priority}
+                          </span>
+                          <span className="text-[10px] text-primary font-medium">{selectedTicket.org_name}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                      <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
+                        <SelectTrigger className="h-8 w-36 text-xs flex-shrink-0"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {selectedTicket.description && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{selectedTicket.description}</p>
+                    )}
+                  </div>
+
+                  {/* Messages */}
+                  <TicketMessages ticketId={selectedTicket.id} userId={user?.id} />
+
+                  {/* Input */}
+                  {selectedTicket.status !== "closed" && (
+                    <div className="p-3 border-t border-border space-y-2 flex-shrink-0 bg-muted/20">
+                      {msgAttachments.length > 0 && (
+                        <div className="flex gap-2 flex-wrap">
+                          {msgAttachments.map((f, i) => (
+                            <div key={`${f.name}-${i}`} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
+                              <FileText className="w-3 h-3" />
+                              <span className="truncate max-w-[120px]">{f.name}</span>
+                              <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2 items-end">
+                        <label className="cursor-pointer flex-shrink-0">
+                          <input type="file" className="hidden" multiple accept="image/*,.pdf,.doc,.docx" onChange={e => {
+                            if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+                          }} />
+                          <div className="h-10 w-10 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
+                            <Paperclip className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </label>
+                        <Textarea
+                          value={newMessage}
+                          onChange={e => setNewMessage(e.target.value)}
+                          placeholder="Responder ao chamado..."
+                          className="text-sm min-h-[40px] max-h-32 resize-none"
+                          rows={1}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage();
+                            }
+                          }}
+                        />
+                        <Button size="icon" className="h-10 w-10 flex-shrink-0" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
+                          <Send className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </CardContent>
-                </Card>
-              ))}
+                  )}
+                </>
+              )}
             </div>
-          )}
+          </div>
         </TabsContent>
 
         <TabsContent value="config" className="mt-4">
           <AtendimentoConfig />
         </TabsContent>
       </Tabs>
-
-      {/* Detail Dialog */}
-      {selectedTicket && (
-        <Dialog open={!!selectedTicket} onOpenChange={open => !open && setSelectedTicket(null)}>
-          <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0">
-            <DialogHeader className="sr-only"><DialogTitle>{selectedTicket.title}</DialogTitle></DialogHeader>
-            <div className="p-5 border-b border-border">
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold">{selectedTicket.title}</h3>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status] || ""}`}>
-                      {STATUS_LABELS[selectedTicket.status] || selectedTicket.status}
-                    </span>
-                    <Badge variant="outline" className="text-[10px]">{selectedTicket.category || "Geral"}</Badge>
-                    <span className={`text-[10px] font-medium ${PRIORITY_COLORS[selectedTicket.priority] || ""}`}>
-                      ● {PRIORITY_LABELS[selectedTicket.priority] || selectedTicket.priority}
-                    </span>
-                    <span className="text-[10px] text-primary font-medium">{selectedTicket.org_name}</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
-                    </span>
-                  </div>
-                  {selectedTicket.description && (
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{selectedTicket.description}</p>
-                  )}
-                  {/* Status changer */}
-                  <div className="mt-3">
-                    <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
-                      <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-hidden">
-              <TicketMessages ticketId={selectedTicket.id} userId={user?.id} />
-            </div>
-
-            {/* Input */}
-            {selectedTicket.status !== "closed" && (
-              <div className="p-3 border-t border-border space-y-2">
-                {msgAttachments.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {msgAttachments.map((f, i) => (
-                      <div key={`${f.name}-${i}`} className="flex items-center gap-1 bg-muted rounded px-2 py-1 text-[11px]">
-                        <FileText className="w-3 h-3" />
-                        <span className="truncate max-w-[120px]">{f.name}</span>
-                        <button onClick={() => setMsgAttachments(prev => prev.filter((_, j) => j !== i))}>
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <label className="cursor-pointer">
-                    <input type="file" className="hidden" multiple accept="image/*,.pdf,.doc,.docx" onChange={e => {
-                      if (e.target.files) setMsgAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
-                    }} />
-                    <div className="h-9 w-9 flex items-center justify-center rounded-md border border-border hover:bg-muted transition-colors">
-                      <Paperclip className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </label>
-                  <Input
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Responder ao chamado..."
-                    className="text-sm"
-                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                  />
-                  <Button size="icon" onClick={handleSendMessage} disabled={uploadingMsg || (!newMessage.trim() && msgAttachments.length === 0)} aria-label="Enviar">
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* New Ticket Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
@@ -480,7 +442,7 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
   });
 
   return (
-    <ScrollArea className="flex-1 p-4 max-h-[400px]" ref={scrollRef}>
+    <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 min-h-0">
       {(!messages || messages.length === 0) ? (
         <div className="text-center text-muted-foreground text-xs py-8">
           Nenhuma mensagem ainda. Responda ao chamado!
@@ -496,49 +458,48 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
                 </span>
                 <div className="flex-1 h-px bg-border" />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {msgs.map((m) => {
                   const isMine = m.user_id === userId;
                   const msgAtt = m.attachments as string[] | null;
                   return (
-                    <div key={m.id} className={`rounded-lg border bg-card overflow-hidden ${isMine ? "border-l-4 border-l-primary" : "border-l-4 border-l-muted-foreground/30"}`}>
-                      <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b border-border">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isMine ? "bg-primary/15 text-primary" : "bg-muted-foreground/15 text-muted-foreground"}`}>
-                            <User className="w-3.5 h-3.5" />
+                    <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[75%] rounded-lg overflow-hidden border ${
+                        isMine
+                          ? "bg-primary/10 border-r-4 border-r-primary"
+                          : "bg-muted border-l-4 border-l-muted-foreground/30"
+                      }`}>
+                        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/50 gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3 h-3" />
+                            <span className="text-[10px] font-semibold">{isMine ? "Você (Matriz)" : "Franqueado/Cliente"}</span>
                           </div>
-                          <div>
-                            <span className="text-xs font-semibold">{isMine ? "Você" : "Unidade"}</span>
-                            <span className="text-[10px] text-muted-foreground ml-2">
-                              {isMine ? "Equipe Matriz" : "Franqueado/Cliente"}
-                            </span>
-                          </div>
+                          <span className="text-[9px] text-muted-foreground">
+                            {format(new Date(m.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-muted-foreground">
-                          {format(new Date(m.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </span>
-                      </div>
-                      <div className="px-4 py-3">
-                        {m.content && m.content !== "📎 Anexo" && (
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</p>
-                        )}
-                        {msgAtt && msgAtt.length > 0 && (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-                            {msgAtt.map((url: string, i: number) => {
-                              const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-                              return isImg ? (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block group">
-                                  <img src={url} alt="Anexo" className="w-full h-24 object-cover rounded-md border border-border group-hover:opacity-80 transition-opacity" />
-                                </a>
-                              ) : (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-muted rounded-md px-3 py-2 text-[11px] hover:bg-muted/80 transition-colors">
-                                  <Download className="w-3.5 h-3.5 flex-shrink-0" />
-                                  <span className="truncate">{url.split("/").pop()?.substring(0, 25)}</span>
-                                </a>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <div className="px-3 py-2">
+                          {m.content && m.content !== "📎 Anexo" && (
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                          )}
+                          {msgAtt && msgAtt.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              {msgAtt.map((url: string, i: number) => {
+                                const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                                return isImg ? (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block group">
+                                    <img src={url} alt="Anexo" className="w-full h-24 object-cover rounded-md border border-border group-hover:opacity-80 transition-opacity" />
+                                  </a>
+                                ) : (
+                                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-background rounded-md px-2 py-1.5 text-[11px] hover:bg-background/80 transition-colors">
+                                    <Download className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">{url.split("/").pop()?.substring(0, 20)}</span>
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -548,6 +509,6 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
           ))}
         </div>
       )}
-    </ScrollArea>
+    </div>
   );
 }
