@@ -14,6 +14,7 @@ import {
 import type { SmartSuggestions } from "@/utils/smartSuggestions";
 import type { ReferenceMemory } from "@/hooks/useReferenceMemory";
 import { LayoutPicker } from "./LayoutPicker";
+import { LayoutPreviewSvg } from "./LayoutPreviewSvg";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import type { ArtTextItem } from "./ArtWizard";
 import {
@@ -90,6 +91,18 @@ export interface StepProps {
   setTextMode: (v: "ai" | "manual") => void;
   layoutType: string;
   setLayoutType: (v: string) => void;
+  logoPosition: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none";
+  setLogoPosition: (v: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none") => void;
+  titlePosition: "top" | "center" | "bottom";
+  setTitlePosition: (v: "top" | "center" | "bottom") => void;
+  backgroundType: "ai_photo" | "solid_color" | "gradient" | "clean";
+  setBackgroundType: (v: "ai_photo" | "solid_color" | "gradient" | "clean") => void;
+  colorTone: "brand" | "neutral" | "vibrant" | "dark" | "pastel";
+  setColorTone: (v: "brand" | "neutral" | "vibrant" | "dark" | "pastel") => void;
+  primaryColor: string;
+  setPrimaryColor: (v: string) => void;
+  secondaryColor: string;
+  setSecondaryColor: (v: string) => void;
   restrictions: string;
   setRestrictions: (v: string) => void;
   elements: string[];
