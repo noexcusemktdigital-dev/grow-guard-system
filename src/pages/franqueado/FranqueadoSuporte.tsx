@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   Plus, MessageSquare, Search, Inbox, AlertTriangle, Timer, Clock,
   Send, Paperclip, X, FileText, User, Download, MessagesSquare,
+  KanbanSquare, List,
 } from "lucide-react";
 import { useSupportTickets, useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { format, formatDistanceToNow } from "date-fns";
@@ -74,6 +75,7 @@ function FranqueadoSuporteContent() {
   const [newMessage, setNewMessage] = useState("");
   const [msgAttachments, setMsgAttachments] = useState<File[]>([]);
   const [uploadingMsg, setUploadingMsg] = useState(false);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   // New ticket form
   const [novoTitulo, setNovoTitulo] = useState("");
