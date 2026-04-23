@@ -221,78 +221,60 @@ function FranqueadoSuporteContent() {
         ))}
       </div>
 
-      {/* Two-column WhatsApp Web style layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-4 border border-border rounded-lg overflow-hidden bg-card" style={{ height: "calc(100vh - 280px)", minHeight: "500px" }}>
-        {/* LEFT: Tickets list */}
-        <div className="flex flex-col border-r border-border min-h-0">
-          <div className="p-3 border-b border-border space-y-2 flex-shrink-0">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar chamado..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
-            </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />
-                <p className="text-sm font-medium">Nenhum chamado</p>
-                <p className="text-xs text-muted-foreground mt-1">Abra o primeiro chamado.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {filtered.map((t: any) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setSelectedTicket(t)}
-                    className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedTicket?.id ? "bg-muted" : ""}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
-                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                        {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
-                        {STATUS_LABELS[t.status] || t.status}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
-                      <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
-                        ● {PRIORITY_LABELS[t.priority] || t.priority}
-                      </span>
-                      {t.attachments && (t.attachments as string[]).length > 0 && (
-                        <Paperclip className="w-3 h-3 text-muted-foreground" />
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Filters + view toggle */}
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input placeholder="Buscar chamado..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 text-xs pl-8" />
         </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="h-8 text-xs w-full md:w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === "kanban" ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 h-8"
+            onClick={() => setViewMode("kanban")}
+          >
+            <KanbanSquare className="w-3.5 h-3.5" /> Kanban
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 h-8"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="w-3.5 h-3.5" /> Lista
+          </Button>
+        </div>
+      </div>
 
-        {/* RIGHT: Chat panel */}
-        <div className="flex flex-col min-h-0 bg-background">
-          {!selectedTicket ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <MessagesSquare className="w-16 h-16 text-muted-foreground/20 mb-4" />
-              <p className="text-sm font-medium text-muted-foreground">Selecione um chamado para ver a conversa</p>
-            </div>
-          ) : (
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center px-4 border border-dashed border-border rounded-lg">
+          <Inbox className="w-10 h-10 text-muted-foreground/30 mb-2" />
+          <p className="text-sm font-medium">Nenhum chamado</p>
+          <p className="text-xs text-muted-foreground mt-1">Abra o primeiro chamado.</p>
+        </div>
+      ) : viewMode === "kanban" ? (
+        <FranqueadoKanbanView tickets={filtered} onSelect={(t) => setSelectedTicket(t as Record<string, unknown>)} />
+      ) : (
+        <FranqueadoListView tickets={filtered} onSelect={(t) => setSelectedTicket(t as Record<string, unknown>)} selectedId={selectedTicket?.id as string | undefined} />
+      )}
+
+      {/* Chat Dialog — opens when a ticket is selected (from Kanban or List) */}
+      <Dialog open={!!selectedTicket} onOpenChange={(open) => { if (!open) setSelectedTicket(null); }}>
+        <DialogContent className="max-w-3xl p-0 gap-0 h-[85vh] flex flex-col">
+          {selectedTicket && (
             <>
-              {/* Chat header */}
               <div className="p-4 border-b border-border flex-shrink-0 bg-muted/20">
-                <h3 className="text-base font-semibold">{selectedTicket.title as string}</h3>
+                <h3 className="text-base font-semibold pr-6">{selectedTicket.title as string}</h3>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[selectedTicket.status as string] || ""}`}>
                     {STATUS_LABELS[selectedTicket.status as string] || (selectedTicket.status as string)}
@@ -320,10 +302,8 @@ function FranqueadoSuporteContent() {
                 )}
               </div>
 
-              {/* Messages */}
               <TicketMessages ticketId={selectedTicket.id as string} userId={user?.id} />
 
-              {/* Input */}
               {selectedTicket.status !== "closed" && (
                 <div className="p-3 border-t border-border space-y-2 flex-shrink-0 bg-muted/20">
                   {msgAttachments.length > 0 && (
@@ -375,8 +355,8 @@ function FranqueadoSuporteContent() {
               )}
             </>
           )}
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* New Ticket Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
