@@ -67,8 +67,8 @@ export function useSupportTicketMutations() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["support-messages"] });
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["support-messages", (data as any)?.ticket_id] });
       qc.invalidateQueries({ queryKey: ["support-tickets-network"] });
     },
   });
