@@ -820,6 +820,9 @@ serve(async (req) => {
       // New art direction engine fields
       topic, audience, text_mode, restrictions, elements,
       base_image_url, character_image_url, background_image_url,
+      // Layout customization (Step 8)
+      logo_position, title_position, background_type, color_tone,
+      primary_color, secondary_color,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -1087,6 +1090,53 @@ Output ONLY the extracted logo image.`,
       }
       fullPrompt += `\n\nPHOTOS TO INCLUDE IN THE DESIGN: ${photoBase64s.length} photo(s) have been attached. These photos MUST appear as visual elements IN the final design composition. Incorporate them naturally into the layout — they are real product/person/place photos that the client wants visible in the art. Do NOT use them just as style reference.
 MANDATORY PHOTO RESTRICTION: Use ONLY the attached photos as visual/photographic elements. Do NOT generate, add, or include ANY additional photographs, people, objects, or illustrated elements beyond the provided photos.`;
+    }
+
+    // ─── LAYOUT CUSTOMIZATION RULES (from Step 8 personalizer) ───
+    // Injected before CRITICAL TEXT RULES so they take precedence over template defaults.
+    const customizationRules: string[] = [];
+
+    if (logo_position === "none") {
+      customizationRules.push("DO NOT include any brand logo, logotype, brand mark or brand name text anywhere in the image.");
+    } else if (logo_position) {
+      const posLabel = String(logo_position).replace("_", " ");
+      customizationRules.push(`LOGO POSITION: Reserve clean empty space for the brand logo at the ${posLabel} corner of the composition.`);
+    }
+
+    if (title_position) {
+      const zoneMap: Record<string, string> = {
+        top:    "upper third (top zone) of the canvas",
+        center: "center of the canvas, vertically and horizontally balanced",
+        bottom: "lower third (bottom zone) of the canvas",
+      };
+      customizationRules.push(`TITLE POSITION: Place the main headline in the ${zoneMap[title_position] || "center"}.`);
+    }
+
+    if (background_type === "solid_color" && primary_color) {
+      customizationRules.push(`BACKGROUND: Solid flat color ${primary_color}. NO photographs, NO textures, NO gradients — completely uniform color across the entire canvas.`);
+    } else if (background_type === "gradient") {
+      const a = primary_color || "#000000";
+      const b = secondary_color || "#ffffff";
+      customizationRules.push(`BACKGROUND: Smooth diagonal gradient from ${a} to ${b}. NO photographs, NO textures — only the gradient.`);
+    } else if (background_type === "clean") {
+      customizationRules.push(`BACKGROUND: Pure white or very light off-white background, completely clean with NO imagery, NO photos, NO textures.`);
+    } else if (background_type === "ai_photo") {
+      customizationRules.push(`BACKGROUND: A high-quality photographic background appropriate to the topic, with subtle dark overlay for text legibility.`);
+    }
+
+    if (color_tone) {
+      const toneMap: Record<string, string> = {
+        brand:   `Use the brand palette strictly: primary color ${primary_color || "#000000"}, secondary color ${secondary_color || "#ffffff"}. Do not introduce other dominant colors.`,
+        neutral: "Color palette: neutral tones — warm grays, off-white, charcoal, beige. NO saturated colors. Refined and editorial.",
+        vibrant: "Color palette: vibrant saturated bold colors — high-energy and attention-grabbing. Use bright primaries and contrasting accents.",
+        dark:    "Color palette: dark luxurious — near-black or deep navy background with a single bright metallic or jewel-tone accent color.",
+        pastel:  "Color palette: soft pastels — muted desaturated tones with high lightness (light pinks, mint, lavender, peach). Gentle and friendly.",
+      };
+      customizationRules.push(`COLOR TONE: ${toneMap[color_tone] || toneMap.brand}`);
+    }
+
+    if (customizationRules.length > 0) {
+      fullPrompt += `\n\nLAYOUT CUSTOMIZATION (MANDATORY — overrides template defaults):\n- ${customizationRules.join("\n- ")}`;
     }
 
     // ─── CRITICAL TEXT RENDERING RULES (always appended last) ───
