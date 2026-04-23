@@ -181,7 +181,7 @@ export function getEffectiveLimits(
       maxContents: 9999,
       maxSocialArts: 9999,
       maxSites: 1,
-      maxLeads: 9999,
+      maxLeads: 100,
     };
   }
 
@@ -203,7 +203,7 @@ export function getEffectiveLimits(
     maxContents: 9999,
     maxSocialArts: 9999,
     maxSites: siteLimits[planId ?? "starter"] ?? 1,
-    maxLeads: 9999,
+    maxLeads: CRM_LEAD_LIMITS[planId ?? "starter"] ?? CRM_LEAD_LIMITS.starter,
   };
 }
 
