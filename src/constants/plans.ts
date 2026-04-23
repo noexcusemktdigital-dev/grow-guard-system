@@ -155,9 +155,16 @@ export interface EffectiveLimits {
   /** @deprecated */
   maxSocialArts: number;
   maxSites: number;
-  /** @deprecated */
+  /** Limite de leads/cards no CRM por plano */
   maxLeads: number;
 }
+
+// ── CRM Lead Limits per plan ────────────────────────────────────
+export const CRM_LEAD_LIMITS: Record<string, number> = {
+  starter: 500,
+  pro: 8000,
+  enterprise: 8000,
+};
 
 export function getEffectiveLimits(
   planId: string | null | undefined,
@@ -174,7 +181,7 @@ export function getEffectiveLimits(
       maxContents: 9999,
       maxSocialArts: 9999,
       maxSites: 1,
-      maxLeads: 9999,
+      maxLeads: 100,
     };
   }
 
@@ -196,7 +203,7 @@ export function getEffectiveLimits(
     maxContents: 9999,
     maxSocialArts: 9999,
     maxSites: siteLimits[planId ?? "starter"] ?? 1,
-    maxLeads: 9999,
+    maxLeads: CRM_LEAD_LIMITS[planId ?? "starter"] ?? CRM_LEAD_LIMITS.starter,
   };
 }
 
