@@ -28,6 +28,7 @@ import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { TeamSelector } from "@/components/TeamSelector";
+import { OrgPermissionsTab } from "@/components/cliente/OrgPermissionsTab";
 import { getEffectiveLimits } from "@/constants/plans";
 import { supabase } from "@/lib/supabase";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
