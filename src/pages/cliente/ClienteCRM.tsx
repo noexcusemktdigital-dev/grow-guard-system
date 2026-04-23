@@ -168,8 +168,34 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
       if (map[l.stage]) map[l.stage].push(l);
       else if (stages.length > 0) map[stages[0].key]?.push(l);
     });
+    const earliestDue = (l: LeadRow): number => {
+      const tasks = (l.crm_tasks || []).filter((t: any) => !t.completed_at && t.due_date);
+      if (tasks.length === 0) return Number.POSITIVE_INFINITY;
+      return Math.min(...tasks.map((t: any) => new Date(t.due_date).getTime()));
+    };
+    const cmp = (a: LeadRow, b: LeadRow): number => {
+      switch (orderBy) {
+        case "name":
+          return (a.name || "").localeCompare(b.name || "", "pt-BR");
+        case "created_at":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "task_due": {
+          const da = earliestDue(a);
+          const db = earliestDue(b);
+          if (da === db) return 0;
+          return da - db; // ascending; leads without tasks (Infinity) go last
+        }
+        case "updated_at":
+        default: {
+          const ua = new Date((a as any).updated_at || a.created_at).getTime();
+          const ub = new Date((b as any).updated_at || b.created_at).getTime();
+          return ub - ua;
+        }
+      }
+    };
+    Object.keys(map).forEach((k) => { map[k] = [...map[k]].sort(cmp); });
     return map;
-  }, [filteredLeads, stages]);
+  }, [filteredLeads, stages, orderBy]);
 
   const handleDragStart = (e: DragStartEvent) => setDraggingId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent) => {
