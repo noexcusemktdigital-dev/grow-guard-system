@@ -12,6 +12,87 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { getColorStyle } from "@/components/crm/CrmStageSystem";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useCrmTaskMutations } from "@/hooks/useCrmTasks";
+import { toast } from "sonner";
+
+/* ===== Quick Task Popover ===== */
+function QuickTaskPopover({ lead, children }: { lead: LeadRow; children: React.ReactNode }) {
+  const { updateTask } = useCrmTaskMutations();
+  const [open, setOpen] = useState(false);
+  const pendingTasks = (lead.crm_tasks || []).filter(t => !t.completed_at && t.due_date);
+  const sorted = [...pendingTasks].sort((a, b) =>
+    new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime()
+  );
+  const task = sorted[0];
+  const initialDate = task?.due_date ? String(task.due_date).slice(0, 10) : "";
+  const [dueDate, setDueDate] = useState(initialDate);
+
+  if (!task) return <>{children}</>;
+
+  const handleSave = async () => {
+    if (!dueDate) return;
+    try {
+      await updateTask.mutateAsync({ id: task.id, due_date: new Date(dueDate).toISOString() });
+      toast.success("Prazo atualizado");
+      setOpen(false);
+    } catch {
+      toast.error("Erro ao atualizar prazo");
+    }
+  };
+
+  const handleComplete = async () => {
+    try {
+      await updateTask.mutateAsync({ id: task.id, completed_at: new Date().toISOString() });
+      toast.success("Tarefa concluída");
+      setOpen(false);
+    } catch {
+      toast.error("Erro ao concluir tarefa");
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) setDueDate(initialDate); }}>
+      <PopoverTrigger asChild onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+        <button type="button" className="text-left w-full" onClick={(e) => { e.stopPropagation(); }}>
+          {children}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-64 p-3 space-y-2"
+        align="start"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div>
+          <p className="text-[11px] font-semibold leading-tight">Tarefa rápida</p>
+          <p className="text-[10px] text-muted-foreground line-clamp-2">
+            {pendingTasks.length} tarefa{pendingTasks.length > 1 ? "s" : ""} pendente{pendingTasks.length > 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground">Prazo</Label>
+          <Input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <div className="flex gap-1.5 pt-1">
+          <Button size="sm" className="h-7 text-[11px] flex-1" onClick={handleSave} disabled={updateTask.isPending || !dueDate}>
+            Salvar
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 text-[11px] flex-1" onClick={handleComplete} disabled={updateTask.isPending}>
+            Concluir
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /* ===== Lead Card Row Type ===== */
 export interface LeadRow {
