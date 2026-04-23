@@ -28,6 +28,7 @@ import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities, useCrmActivityMutations } from "@/hooks/useCrmActivities";
 import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmLeadHistory } from "@/hooks/useCrmLeadHistory";
+import { useOrgPermissions } from "@/hooks/useOrgPermissions";
 import { LeadProductsTab, ProposalsTab, WhatsAppTab, LeadHistoryTimeline } from "./CrmLeadDetailHelpers";
 import { useCrmPartners } from "@/hooks/useCrmPartners";
 import { useWhatsAppMessages, useSendWhatsAppMessage } from "@/hooks/useWhatsApp";
