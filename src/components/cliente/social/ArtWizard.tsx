@@ -222,6 +222,12 @@ export function ArtWizard({
     if (!logoUrl && visualIdentity?.logo_url) {
       setLogoUrl(visualIdentity.logo_url);
     }
+    // Hydrate brand colors from palette → used as defaults for "brand" tone + custom solid/gradient
+    const palette = (visualIdentity as any)?.palette as string[] | undefined;
+    if (palette && palette.length > 0) {
+      if (primaryColor === "#000000") setPrimaryColor(palette[0]);
+      if (secondaryColor === "#ffffff" && palette[1]) setSecondaryColor(palette[1]);
+    }
   }, [visualIdentity]);
 
   // Pre-fill logo from reference memory (last used)
@@ -471,6 +477,12 @@ export function ArtWizard({
           audience={audience} setAudience={setAudience}
           textMode={textMode} setTextMode={setTextMode}
           layoutType={layoutType} setLayoutType={setLayoutType}
+          logoPosition={logoPosition} setLogoPosition={setLogoPosition}
+          titlePosition={titlePosition} setTitlePosition={setTitlePosition}
+          backgroundType={backgroundType} setBackgroundType={setBackgroundType}
+          colorTone={colorTone} setColorTone={setColorTone}
+          primaryColor={primaryColor} setPrimaryColor={setPrimaryColor}
+          secondaryColor={secondaryColor} setSecondaryColor={setSecondaryColor}
           restrictions={restrictions} setRestrictions={setRestrictions}
           elements={elements} setElements={setElements}
           baseImageUrl={baseImageUrl} setBaseImageUrl={setBaseImageUrl}
