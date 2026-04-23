@@ -1,95 +1,113 @@
 
 
-# Melhoria de qualidade das artes (sem trocar de gateway)
+# Personalizador de Layout no Wizard de Postagem
 
-## Análise do prompt — pontos por item
+## O que vai mudar
 
-**Item 1 — Trocar modelo final para Gemini 3.1 Flash Image Preview com fallback para 3 Pro: ✅ FAZ SENTIDO, com ressalva**
+No passo **8 — Layout** do wizard de Postagem (que hoje só tem o grid de templates), serão adicionados:
+1. Um **7º template** novo: "Premium / Luxo"
+2. Um **painel de personalização** logo abaixo do grid (logo, título, fundo, tom de cor)
+3. Um **preview SVG dinâmico** ao lado do painel que se atualiza em tempo real
+4. Esses ajustes passam para a edge function e são injetados no prompt visual
 
-- Ambos os modelos são suportados pelo gateway Lovable
-- 3.1 Flash (Nano Banana 2) é mais rápido e mais barato, com qualidade pro-level segundo a documentação
-- ⚠️ Ressalva: 3 Pro Image historicamente é mais consistente em renderização tipográfica complexa. Vamos implementar como **opt-in com fallback** para evitar regressão silenciosa em artes complexas
-- O Stage 3 (composição de logo) **já usa** `gemini-3.1-flash-image-preview` — então só o Stage 2 (geração principal) muda
+Estrutura do wizard continua com 14 passos. Nenhum passo novo.
 
-**Item 2 — Regras de renderização de texto no prompt: ✅ FAZ SENTIDO**
+## O que vai melhorar
 
-- É uma das alavancas mais eficazes de qualidade
-- ⚠️ Já existe no projeto a memória `post-generation-quality-rules` com Text Density Rule (máx 3 blocos, 40 palavras, sem sombras/glows). Vou **mesclar** as regras novas com as existentes, sem duplicar nem entrar em conflito (ex: a regra existente diz "no shadows", a nova fala em hierarquia tipográfica — combinam bem)
-- Vou injetar no `fullPrompt` em **todos os caminhos** (CoT otimizado e fallback), não só "no final"
+- **Controle granular sem gastar créditos testando**: hoje você escolhe 1 dos 6 layouts e só vê o resultado depois de gerar (custa créditos). Com o preview reativo, você ajusta posição do logo / tipo de fundo / tom de cor e vê a composição antes de gerar.
+- **Fundos não-foto** (cor sólida, gradiente, clean): hoje o modelo quase sempre coloca foto IA — útil pra arte de produto, mas ruim pra anúncios minimalistas/promocionais. Permitir escolher resolve esse atrito.
+- **Tom de cor controlado**: traduz "Vibrante / Dark / Pastel / Neutro / Marca" em instruções concretas no prompt, dando consistência por campanha.
+- **Posição do logo customizável** (4 cantos + nenhum): hoje fica onde o template manda; agora vira escolha.
+- **Layout Premium/Luxo**: cobre a categoria de marcas premium/sofisticadas que os 6 atuais não atendem bem.
+- **Obediência do modelo melhora**: as instruções vão explícitas e únicas no prompt (`LOGO POSITION: top right`, `BACKGROUND: gradient #ff6b6b → #4ecdc4`, etc.) em vez de ficarem implícitas no `promptRules` do template.
 
-**Item 3 — Adicionar carrossel/apresentação: ⚠️ PARCIALMENTE REDUNDANTE**
+## O que vai ser feito
 
-- **Carrossel já existe** em `POST_TYPES` (`src/components/cliente/social/constants.ts`) com até 10 slides, geração sequencial em `ClienteRedesSociais.tsx`, e capa/conteúdo/CTA classificados automaticamente
-- O que **falta** vs o pedido:
-  - Campo de "Título da série"
-  - Campo de "Tópico de cada slide" (input dinâmico por slide)
-  - Botão "Baixar todos" (atualmente cada arte tem download individual em `PostResult.tsx`)
-- Vou **estender o que já existe** em vez de criar um tipo novo paralelo
+### 1. Adicionar layout "Premium / Luxo"
 
----
+**Arquivos:** `src/components/cliente/social/constants.ts` + `src/components/cliente/social/LayoutMockupSvg.tsx`
 
-## O que será feito
+- Novo entry em `LAYOUT_TYPES` com `value: "premium_luxo"`, `promptRules` descrevendo composição escura, dourado/metálico, espaço amplo, tipografia serifada elegante
+- Novo case `premium_luxo` em `LayoutMockupSvg` com mockup escuro + acentos dourados + texto centralizado
+- Atualizar `GRID_MAPS` correspondentemente
 
-### 1. Edge function `generate-social-image` (Stage 2 — geração principal)
+### 2. Estado e UI no passo 8 do wizard
 
-**Arquivo:** `supabase/functions/generate-social-image/index.ts` (linhas ~1106-1133)
+**Arquivos:** `src/components/cliente/social/ArtWizard.tsx` + `src/components/cliente/social/ArtWizardSteps.tsx`
 
-- Trocar modelo principal para `google/gemini-3.1-flash-image-preview`
-- Em caso de falha (status não-OK ou ausência de imagem na resposta) e não sendo erro de rate-limit/credits (429/402), refazer a chamada com `google/gemini-3-pro-image-preview` como fallback
-- Logar qual modelo gerou cada arte para acompanhamento
-- Erros 429/402 continuam propagando como antes (não usar fallback nesses casos — não resolve)
+Novos estados em `ArtWizard.tsx`:
+- `logoPosition: "top_left" | "top_right" | "bottom_left" | "bottom_right" | "none"` — default `top_right`
+- `titlePosition: "top" | "center" | "bottom"` — default `center`
+- `backgroundType: "ai_photo" | "solid_color" | "gradient" | "clean"` — default `ai_photo`
+- `colorTone: "brand" | "neutral" | "vibrant" | "dark" | "pastel"` — default `brand`
+- `primaryColor: string` (hex) — default puxado de `visualIdentity.primary_color` ou `#000000`
+- `secondaryColor: string` — default puxado de `visualIdentity.secondary_color` ou `#ffffff`
 
-### 2. Regras de renderização de texto no prompt
+Layout do passo 8 reorganizado em duas colunas (em md+):
+- **Esquerda**: grid atual de 7 templates (`LayoutPicker`)
+- **Direita**: painel "Personalizar" com:
+  - Posição do logo (5 botões compactos com mini-ícones de canto)
+  - Posição do título (3 botões: Topo / Centro / Inferior)
+  - Tipo de fundo (4 botões; quando `solid_color` mostra 1 color picker; quando `gradient` mostra 2)
+  - Tom de cor (5 chips: Marca / Neutro / Vibrante / Dark / Pastel)
+  - Toggle de aspecto do preview: 1:1 ↔ 9:16 (apenas pré-visualização — o formato real continua vindo do passo 2)
+  - Preview SVG dinâmico abaixo das opções
 
-**Arquivo:** `supabase/functions/generate-social-image/index.ts` (após o bloco de objective/audience/photo, antes do `console.log` da linha 1093)
+No mobile (sm-): painel vai abaixo do grid, preview no topo do painel.
 
-Adicionar bloco final único `CRITICAL TEXT RENDERING RULES` que combina:
-- Regras pedidas: nitidez, contraste, hierarquia (60/36/24px), evitar áreas ocupadas, alinhamento centro/esquerda, máx 3 linhas, padding 40px
-- Regras já existentes preservadas: máx 3 blocos de texto / 40 palavras totais, sem sombras/glows/blur (Stage 3)
+### 3. Componente novo `LayoutPreviewSvg`
 
-Aplicado tanto no caminho otimizado (CoT) quanto no fallback, garantindo que sempre apareça.
+**Arquivo novo:** `src/components/cliente/social/LayoutPreviewSvg.tsx`
 
-### 3. Carrossel — UI completa em vez de novo tipo
+- Recebe props: `layoutType`, `logoPosition`, `titlePosition`, `backgroundType`, `colorTone`, `primaryColor`, `secondaryColor`, `aspect: "1:1" | "9:16"`
+- Renderiza SVG reativo com retângulos coloridos para cada zona, labels "LOGO", "TÍTULO", "SUBTÍTULO", "CTA", "IMAGEM"
+- Posições calculadas dinamicamente conforme as opções (logo no canto correto, bloco de título no zona escolhida, fundo conforme tipo selecionado)
+- `colorTone` mapeia para paletas internas (Vibrante = cores saturadas, Dark = #0a0a0a + acento, Pastel = tons claros, Neutro = grays, Marca = `primaryColor/secondaryColor`)
 
-**Arquivos:**
-- `src/components/cliente/social/ArtWizardSteps.tsx` (passo de tipo + slides)
-- `src/components/cliente/social/ArtWizard.tsx` (estado + payload)
-- `src/pages/cliente/ClienteRedesSociais.tsx` (envio do tópico por slide)
-- `src/components/cliente/social/PostResult.tsx` (botão "Baixar todos")
+### 4. Passar campos novos para a edge function
 
-Mudanças:
-- Quando `tipoPostagem === "carrossel"`:
-  - Adicionar input "Título da série" (já exibido logo após o seletor de número de slides)
-  - Renderizar N inputs dinâmicos "Tópico do slide 1", "Tópico do slide 2"... conforme `carouselSlides`
-  - Persistir `seriesTitle: string` e `slideTopics: string[]` no estado do wizard
-- Em `ClienteRedesSociais.tsx` ao gerar cada slide do carrossel: incluir `series_title` e o `slide_topic` correspondente no `briefing` enviado para `generate-social-image`, melhorando a coerência da série
-- Em `PostResult.tsx`: quando `allResults.length > 1`, adicionar botão "📥 Baixar todos" que abre cada `result_url` em nova aba (com pequeno delay sequencial de ~150ms para evitar bloqueio do navegador)
+**Arquivos:** `src/components/cliente/social/ArtWizard.tsx` (em `handleGenerate`) → `src/pages/cliente/ClienteRedesSociais.tsx` (envio para edge) → `supabase/functions/generate-social-image/index.ts`
 
-### 4. Não fazer
+- Adicionar ao `ArtGeneratePayload`: `logoPosition`, `titlePosition`, `backgroundType`, `colorTone`, `primaryColor`, `secondaryColor`
+- Em `ClienteRedesSociais.tsx`, repassar no `body` da chamada
+- Na edge function:
+  - Estender o tipo do contexto de layout com os 6 campos novos
+  - Em `buildVisualPrompt`, **antes** do bloco `CRITICAL TEXT RENDERING RULES`, injetar:
+    - Regra explícita de logo: posição ou "DO NOT include any brand logo"
+    - Regra explícita de título: zona top/center/bottom
+    - Regra explícita de fundo conforme tipo (foto IA / cor sólida com hex / gradiente com 2 hex / clean branco)
+    - Regra de tom de cor traduzida para palette mood ("vibrant saturated palette", "dark luxurious palette with single accent color", etc.); quando `brand`, usar `primaryColor` e `secondaryColor` literalmente
 
-- ❌ Não criar tipo "📊 Carrossel / Apresentação" separado (já existe como "📚 Carrossel")
-- ❌ Não tocar em `generate-social-video-frames` (escopo é arte estática)
-- ❌ Não mexer no Stage 3 (composição de logo já está no 3.1 Flash)
+Aplicado tanto no caminho otimizado (CoT) quanto no fallback, para garantir consistência com a outra mudança recente.
+
+### 5. Não fazer
+
+- ❌ Não criar passo novo no wizard (continua 14 passos)
+- ❌ Não criar 9 layouts — só adicionar 1 (Premium/Luxo)
+- ❌ Não tocar em `LayoutMockupSvg` dos 6 layouts existentes (só adicionar o novo case)
+- ❌ Não mexer no Stage 3 (composição de logo) — ele já lê o `logoPosition` indiretamente via composição final
 
 ## Detalhes técnicos
 
-**Estratégia de fallback (Stage 2):**
-```
-1. POST gateway com model=gemini-3.1-flash-image-preview
-2. Se 429/402 → retornar erro ao cliente (não tentar fallback)
-3. Se outro erro OU resposta sem imagem → POST com model=gemini-3-pro-image-preview
-4. Se também falhar → erro 500 como hoje
-```
+**Mapeamento de `colorTone` no prompt:**
+| Tom | Tradução no prompt visual |
+|---|---|
+| `brand` | Use brand palette: primary `{primaryColor}`, secondary `{secondaryColor}` |
+| `neutral` | Neutral palette: warm grays, off-white, charcoal — no saturated colors |
+| `vibrant` | Vibrant saturated palette with bold high-energy colors |
+| `dark` | Dark luxurious palette: near-black background with single bright accent |
+| `pastel` | Soft pastel palette: muted desaturated tones with high lightness |
 
-**Locais exatos a editar:**
-- `supabase/functions/generate-social-image/index.ts:1106-1141` (Stage 2 + extração de imagem → envolver em helper `generateWithFallback`)
-- `supabase/functions/generate-social-image/index.ts:~1090` (injeção do bloco CRITICAL TEXT RENDERING RULES)
-- `src/components/cliente/social/ArtWizard.tsx:~145` (novos estados `seriesTitle`, `slideTopics`)
-- `src/components/cliente/social/ArtWizardSteps.tsx:~236-256` (UI dos novos campos no bloco existente de carrossel)
-- `src/pages/cliente/ClienteRedesSociais.tsx:~157-200` (passar topic + series_title para cada chamada do loop)
-- `src/components/cliente/social/PostResult.tsx` (botão "Baixar todos")
+**Locais exatos de edição:**
+- `src/components/cliente/social/constants.ts` (~linha 49 — adicionar entry no `LAYOUT_TYPES`; ~linha 80+ — adicionar entrada no `GRID_MAPS`)
+- `src/components/cliente/social/LayoutMockupSvg.tsx` (final do switch — novo case)
+- `src/components/cliente/social/LayoutPreviewSvg.tsx` (arquivo novo)
+- `src/components/cliente/social/ArtWizard.tsx` (~linha 145+ — novos estados; `handleGenerate` — incluir no payload)
+- `src/components/cliente/social/ArtWizardSteps.tsx` (passo 8 — refatorar para 2 colunas com personalizador + preview)
+- `src/pages/cliente/ClienteRedesSociais.tsx` (~linha 157-200 — incluir campos no `body` enviado para `generate-social-image`)
+- `supabase/functions/generate-social-image/index.ts` (extender tipo do contexto + injetar regras no `buildVisualPrompt` antes das `CRITICAL TEXT RENDERING RULES`)
 
-**Memória a atualizar após implementação:**
-- `mem://features/cliente-final/marketing/post-generation-quality-rules`: registrar troca de modelo padrão e nova regra de hierarquia tipográfica
-- `mem://features/cliente-final/marketing/social-content-engine`: registrar campos de série/tópico no carrossel
+**Memórias a atualizar após implementação:**
+- `mem://features/cliente-final/marketing/content-and-art-wizard-logic`: registrar personalizador inline e novos campos
+- `mem://features/cliente-final/marketing/post-generation-quality-rules`: registrar layout Premium/Luxo e nova hierarquia de instruções de fundo/logo no prompt
 
