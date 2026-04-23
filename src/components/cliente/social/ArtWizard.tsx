@@ -419,6 +419,12 @@ export function ArtWizard({
       caption: caption || undefined,
       seriesTitle: tipoPostagem === "carrossel" ? (seriesTitle || undefined) : undefined,
       slideTopics: tipoPostagem === "carrossel" ? slideTopics : undefined,
+      logoPosition,
+      titlePosition,
+      backgroundType,
+      colorTone,
+      primaryColor,
+      secondaryColor,
     });
   };
 
