@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   Phone, Clock, GripVertical, MoreHorizontal,
   MessageCircle, XCircle, Copy, Snowflake, Sun, Flame,
+  AlertCircle, CalendarClock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ export interface LeadRow {
   lost_at?: string | null;
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
+  crm_tasks?: Array<{ id: string; due_date: string | null; completed_at: string | null }> | null;
   [key: string]: unknown;
 }
 
@@ -81,6 +83,30 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
                   <Phone className="w-3 h-3 shrink-0" /> {lead.phone}
                 </p>
               )}
+              {(() => {
+                const tasks = (lead.crm_tasks || []).filter(t => !t.completed_at && t.due_date);
+                if (tasks.length === 0) return null;
+                const today = new Date(); today.setHours(23, 59, 59, 999);
+                const overdue = tasks.filter(t => new Date(t.due_date as string) <= today).length;
+                const pending = tasks.length - overdue;
+                if (overdue > 0) {
+                  return (
+                    <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-3 h-3 shrink-0" />
+                      {overdue} tarefa{overdue > 1 ? "s" : ""} atrasada{overdue > 1 ? "s" : ""}
+                    </p>
+                  );
+                }
+                if (pending > 0) {
+                  return (
+                    <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
+                      <CalendarClock className="w-3 h-3 shrink-0" />
+                      {pending} tarefa{pending > 1 ? "s" : ""} pendente{pending > 1 ? "s" : ""}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
             <div className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => { e.stopPropagation(); e.preventDefault(); }}>
               <DropdownMenu>
