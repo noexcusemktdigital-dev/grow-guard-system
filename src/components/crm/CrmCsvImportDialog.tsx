@@ -309,6 +309,14 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
                 Mostrando 5 de {parsedRows.length} contatos
               </p>
             )}
+            {importing && (
+              <div className="space-y-1.5 pt-2">
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  Importando {progress}%... ({importedCount}/{parsedRows.length} contatos)
+                </p>
+              </div>
+            )}
           </div>
         )}
 
