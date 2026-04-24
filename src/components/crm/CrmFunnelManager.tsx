@@ -74,6 +74,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
     setLocalStages([...DEFAULT_STAGES]);
     setFunnelName("");
     setFunnelDesc("");
+    setBacktrackMode("allow");
     setStageDialogOpen(true);
   };
 
