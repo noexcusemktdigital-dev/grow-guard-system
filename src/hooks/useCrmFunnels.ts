@@ -72,6 +72,8 @@ export interface CrmFunnel {
   description: string | null;
   stages: FunnelStage[];
   is_default: boolean;
+  allow_backtrack?: boolean;
+  backtrack_mode?: "allow" | "warn" | "block";
   created_at: string;
   updated_at: string;
 }
