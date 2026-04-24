@@ -106,6 +106,8 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
     setParsedRows([]);
     setMappedHeaders([]);
     setImporting(false);
+    setProgress(0);
+    setImportedCount(0);
     setResult(null);
     if (fileRef.current) fileRef.current.value = "";
   };
