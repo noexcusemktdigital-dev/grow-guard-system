@@ -147,30 +147,61 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
   };
 
   const handleImport = async () => {
-    setImporting(true);
-    let success = 0, errors = 0;
-    for (const row of parsedRows) {
-      try {
-        const tags = row.tags ? row.tags.split(",").map(t => t.trim()).filter(Boolean) : [];
-        await createContact.mutateAsync({
-          name: row.name,
-          email: row.email || null,
-          phone: row.phone || null,
-          company: row.company || null,
-          position: row.position || null,
-          source: row.source || "CSV",
-          notes: row.notes || null,
-          tags,
-        });
-        success++;
-      } catch {
-        errors++;
-      }
+    const MAX_IMPORT = orgPlan === "enterprise" || orgPlan === "pro" ? 5000 : 500;
+    if (parsedRows.length > MAX_IMPORT) {
+      toast({
+        title: "Limite excedido",
+        description: `Seu plano permite importar até ${MAX_IMPORT} contatos por vez.`,
+        variant: "destructive",
+      });
+      return;
     }
+
+    setImporting(true);
+    setProgress(0);
+    setImportedCount(0);
+
+    const rows = parsedRows.map(row => ({
+      organization_id: orgId ?? "",
+      name: row.name,
+      email: row.email || null,
+      phone: row.phone || null,
+      company: row.company || null,
+      position: row.position || null,
+      source: row.source || "CSV",
+      notes: row.notes || null,
+      tags: row.tags ? row.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+    }));
+
+    const BATCH_SIZE = 100;
+    const batches: typeof rows[] = [];
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      batches.push(rows.slice(i, i + BATCH_SIZE));
+    }
+
+    let success = 0;
+    let errors = 0;
+    let imported = 0;
+
+    for (const batch of batches) {
+      const { error } = await supabase.from("crm_contacts").insert(batch as any);
+      if (error) {
+        errors += batch.length;
+      } else {
+        success += batch.length;
+      }
+      imported += batch.length;
+      setImportedCount(imported);
+      setProgress(Math.round((imported / rows.length) * 100));
+    }
+
     setResult({ success, errors });
     setImporting(false);
     setStep(3);
-    toast({ title: "Planilha aceita!", description: `${success} contatos foram gerados na aba de Contatos.${errors > 0 ? ` ${errors} erros.` : ""}` });
+    toast({
+      title: "Planilha aceita!",
+      description: `${success} contatos foram gerados na aba de Contatos.${errors > 0 ? ` ${errors} erros.` : ""}`,
+    });
   };
 
   const recognizedCount = DISPLAY_COLUMNS.filter(c => mappedHeaders.includes(c.key)).length;
