@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCrmContactMutations } from "@/hooks/useCrmContacts";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { useClienteSubscription } from "@/hooks/useClienteSubscription";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { supabase } from "@/lib/supabase";
 
 const CSV_TEMPLATE_HEADERS = "nome;email;telefone;empresa;cargo;origem;tags;notas";
 const CSV_TEMPLATE_EXAMPLE = 'João Silva;joao@email.com;11999999999;Empresa XYZ;Diretor;Indicação;"tag1, tag2";Observações aqui';
