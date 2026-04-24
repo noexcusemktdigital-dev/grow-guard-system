@@ -32,6 +32,9 @@ import { ClienteCRMPipelineFilters } from "./ClienteCRMPipelineFilters";
 import { ClienteCRMLeadsView } from "./ClienteCRMLeadsView";
 import { ClienteCRMHeader } from "./ClienteCRMHeader";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 // ===== Main Component =====
 export interface ClienteCRMProps {
