@@ -430,8 +430,23 @@ async function executeAction(
           .update({
             funnel_id: actionConfig.target_funnel_id,
             stage: actionConfig.target_stage,
+            updated_at: new Date().toISOString(),
           })
           .eq("id", lead.id);
+
+        // Enfileirar evento de stage_change no funil destino
+        // para que automações do funil destino sejam disparadas
+        await admin.from("crm_automation_queue").insert({
+          organization_id: lead.organization_id,
+          lead_id: lead.id,
+          trigger_type: "stage_change",
+          trigger_data: {
+            new_stage: actionConfig.target_stage,
+            funnel_id: actionConfig.target_funnel_id,
+            previous_stage: lead.stage,
+            transferred_from_funnel: lead.funnel_id,
+          },
+        });
       }
       break;
     }
