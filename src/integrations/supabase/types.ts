@@ -2549,6 +2549,8 @@ export type Database = {
       }
       crm_funnels: {
         Row: {
+          allow_backtrack: boolean
+          backtrack_mode: string
           created_at: string
           custom_fields_schema: Json | null
           description: string | null
@@ -2567,6 +2569,8 @@ export type Database = {
           win_label: string | null
         }
         Insert: {
+          allow_backtrack?: boolean
+          backtrack_mode?: string
           created_at?: string
           custom_fields_schema?: Json | null
           description?: string | null
@@ -2585,6 +2589,8 @@ export type Database = {
           win_label?: string | null
         }
         Update: {
+          allow_backtrack?: boolean
+          backtrack_mode?: string
           created_at?: string
           custom_fields_schema?: Json | null
           description?: string | null
