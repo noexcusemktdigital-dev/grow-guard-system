@@ -214,12 +214,40 @@ async function executeAction(
 
   switch (actionType) {
     case "create_task": {
-      await admin.from("crm_tasks").insert({
+      const dueDate = new Date(
+        Date.now() + (actionConfig.due_days || 1) * 86400000
+      ).toISOString();
+
+      // Inserir na tabela do CRM
+      const { data: crmTask } = await admin
+        .from("crm_tasks")
+        .insert({
+          organization_id: orgId,
+          lead_id: lead.id,
+          title: actionConfig.task_title || `Tarefa: ${automation.name}`,
+          task_type: actionConfig.task_type || "follow_up",
+          due_date: dueDate,
+          assigned_to: lead.assigned_to || null,
+        })
+        .select()
+        .single();
+
+      // Sincronizar com a ferramenta Tarefas (client_tasks)
+      await admin.from("client_tasks").insert({
         organization_id: orgId,
-        lead_id: lead.id,
-        title: actionConfig.task_title || `Tarefa automática: ${automation.name}`,
-        due_date: new Date(Date.now() + (actionConfig.due_days || 1) * 86400000).toISOString(),
+        title: `[CRM] ${actionConfig.task_title || automation.name}`,
+        description: `Lead: ${lead.name} | Funil: ${lead.funnel_id} | Etapa: ${lead.stage}`,
+        due_date: dueDate.split("T")[0],
+        priority: actionConfig.priority || "medium",
+        status: "pending",
+        source: "crm_automation",
         assigned_to: lead.assigned_to || null,
+        created_by: null,
+        metadata: {
+          crm_task_id: crmTask?.id,
+          lead_id: lead.id,
+          automation_id: automation.id,
+        },
       });
       break;
     }
