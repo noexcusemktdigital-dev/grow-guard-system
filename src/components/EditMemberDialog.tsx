@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 import { MemberPermissionsEditor } from "@/components/cliente/MemberPermissionsEditor";
+import { ModuleAccessEditor } from "@/components/cliente/ModuleAccessEditor";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -126,6 +127,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
               <p className="text-[10px] text-muted-foreground text-center">
                 💡 Salve as permissões acima separadamente antes de fechar.
               </p>
+              <ModuleAccessEditor userId={member.user_id} />
             </>
           )}
           {extraContent}
