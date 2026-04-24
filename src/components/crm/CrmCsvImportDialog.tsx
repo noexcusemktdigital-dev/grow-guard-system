@@ -88,12 +88,17 @@ interface Props {
 export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
   const { toast } = useToast();
   const { createContact } = useCrmContactMutations();
+  const { data: orgId } = useUserOrgId();
+  const { data: subscription } = useClienteSubscription();
+  const orgPlan = subscription?.plan_id ?? "starter";
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [mappedHeaders, setMappedHeaders] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [importedCount, setImportedCount] = useState(0);
   const [result, setResult] = useState<{ success: number; errors: number } | null>(null);
 
   const reset = () => {
