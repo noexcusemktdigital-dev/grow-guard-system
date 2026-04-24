@@ -167,8 +167,16 @@ function NavItem({ item, collapsed, isGated, gateReason }: { item: SidebarItem; 
 function SidebarNavItems({ items, collapsed }: { items: SidebarItem[]; collapsed: boolean }) {
   const { getGateReason } = useFeatureGate();
   const { isAdmin } = useRoleAccess();
+  const { can, isAdmin: isOrgAdmin } = useOrgPermissions();
 
-  const visibleItems = items.filter((item) => !item.adminOnly || isAdmin);
+  const visibleItems = items.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    // Module-level gating: admins always see; non-admins need module.<key> granted
+    if (item.moduleKey && !isOrgAdmin && !isAdmin) {
+      if (!can(`module.${item.moduleKey}`)) return false;
+    }
+    return true;
+  });
 
   return (
     <nav className="flex flex-col gap-[2px]">
