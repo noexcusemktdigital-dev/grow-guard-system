@@ -203,7 +203,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   }, [filteredLeads, stages, orderBy]);
 
   const handleDragStart = (e: DragStartEvent) => setDraggingId(String(e.active.id));
-  const handleDragEnd = (e: DragEndEvent) => {
+  const handleDragEnd = async (e: DragEndEvent) => {
     setDraggingId(null);
     const { active, over } = e;
     if (!over) return;
@@ -227,9 +227,65 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
 
     if (!newStage) return;
     const lead = allLeads.find(l => l.id === leadId);
-    if (lead && lead.stage !== newStage) {
-      updateLead.mutate({ id: leadId, stage: newStage });
+    if (!lead || lead.stage === newStage) return;
+
+    // Backtrack control based on funnel configuration
+    const currentStageIndex = stages.findIndex(s => s.key === lead.stage);
+    const targetStageIndex = stages.findIndex(s => s.key === newStage);
+    const isMovingBack =
+      currentStageIndex >= 0 && targetStageIndex >= 0 && targetStageIndex < currentStageIndex;
+
+    if (isMovingBack) {
+      const funnel = (funnelsData || []).find(f => f.id === (lead as any).funnel_id) as any;
+      const mode = funnel?.backtrack_mode || (funnel?.allow_backtrack === false ? "block" : "allow");
+
+      if (mode === "block" || funnel?.allow_backtrack === false) {
+        toast({
+          title: "Retrocesso não permitido",
+          description: "Este funil não permite retroceder etapas.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (mode === "warn") {
+        const currentLabel = stages[currentStageIndex]?.label || lead.stage;
+        const targetLabel = stages[targetStageIndex]?.label || newStage;
+        const actorEmail = user?.email || "um usuário";
+
+        if (orgId) {
+          try {
+            // Notify all admins of the org
+            const { data: admins } = await supabase
+              .from("user_roles")
+              .select("user_id")
+              .eq("organization_id", orgId)
+              .in("role", ["cliente_admin", "admin", "super_admin"]);
+
+            const rows = (admins || []).map((a: any) => ({
+              user_id: a.user_id,
+              organization_id: orgId,
+              title: "Lead retrocedeu no funil",
+              message: `Lead "${lead.name}" foi movido de "${currentLabel}" para "${targetLabel}" por ${actorEmail}`,
+              type: "CRM",
+              action_url: "/crm",
+            }));
+            if (rows.length > 0) {
+              await supabase.from("client_notifications").insert(rows);
+            }
+          } catch {
+            // silent — não bloquear a movimentação
+          }
+        }
+
+        toast({
+          title: "⚠️ Lead retrocedido",
+          description: "O administrador foi notificado sobre este retrocesso.",
+        });
+      }
     }
+
+    updateLead.mutate({ id: leadId, stage: newStage });
   };
 
   const hasFilters = activeFilterCount > 0;
