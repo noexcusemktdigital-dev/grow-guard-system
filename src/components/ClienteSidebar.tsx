@@ -21,6 +21,7 @@ import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
+import { useOrgPermissions } from "@/hooks/useOrgPermissions";
 import { getEffectiveLimits } from "@/constants/plans";
 import { differenceInDays } from "date-fns";
 
@@ -31,6 +32,8 @@ interface SidebarItem {
   badgeKey?: string;
   adminOnly?: boolean;
   highlight?: boolean;
+  /** When set, the item is only visible if the user has `module.<moduleKey>` granted (admins always see it). */
+  moduleKey?: string;
 }
 
 const globalSection: SidebarItem[] = [
@@ -48,20 +51,20 @@ const gpsItem: SidebarItem = {
 };
 
 const vendasSection: SidebarItem[] = [
-  { label: "CRM", icon: Users, path: "/cliente/crm" },
-  { label: "WhatsApp", icon: MessageCircle, path: "/cliente/chat" },
-  { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia" },
-  { label: "Scripts", icon: BookOpen, path: "/cliente/scripts" },
-  { label: "Disparos", icon: Send, path: "/cliente/disparos", adminOnly: true },
-  { label: "Relatórios", icon: BarChart3, path: "/cliente/dashboard", adminOnly: true },
+  { label: "CRM", icon: Users, path: "/cliente/crm", moduleKey: "crm" },
+  { label: "WhatsApp", icon: MessageCircle, path: "/cliente/chat", moduleKey: "whatsapp" },
+  { label: "Agentes IA", icon: Bot, path: "/cliente/agentes-ia", moduleKey: "agentes_ia" },
+  { label: "Scripts", icon: BookOpen, path: "/cliente/scripts", moduleKey: "roteiro" },
+  { label: "Disparos", icon: Send, path: "/cliente/disparos", adminOnly: true, moduleKey: "disparos" },
+  { label: "Relatórios", icon: BarChart3, path: "/cliente/dashboard", adminOnly: true, moduleKey: "relatorios" },
 ];
 
 const marketingSection: SidebarItem[] = [
-  { label: "Roteiros", icon: Video, path: "/cliente/conteudos" },
-  { label: "Postagem", icon: Image, path: "/cliente/postagem" },
-  { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais" },
-  { label: "Sites", icon: Globe, path: "/cliente/sites" },
-  { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", adminOnly: true },
+  { label: "Roteiros", icon: Video, path: "/cliente/conteudos", moduleKey: "roteiro" },
+  { label: "Postagem", icon: Image, path: "/cliente/postagem", moduleKey: "postagem" },
+  { label: "Redes Sociais", icon: Share2, path: "/cliente/redes-sociais", moduleKey: "redes_sociais" },
+  { label: "Sites", icon: Globe, path: "/cliente/sites", moduleKey: "sites" },
+  { label: "Tráfego Pago", icon: DollarSign, path: "/cliente/trafego-pago", adminOnly: true, moduleKey: "trafego_pago" },
 ];
 
 const sistemaSection: SidebarItem[] = [
