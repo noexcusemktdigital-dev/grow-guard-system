@@ -251,6 +251,28 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
             </div>
             <Button variant="outline" size="sm" className="w-full text-xs gap-1" onClick={addStage}><Plus className="w-3.5 h-3.5" /> Adicionar etapa</Button>
 
+            {/* Backtrack control */}
+            <div className="space-y-2 mt-4 p-3 rounded-lg border border-border/50 bg-muted/20">
+              <Label className="text-xs font-semibold">Controle de retrocesso de cards</Label>
+              <p className="text-[10px] text-muted-foreground">
+                Define o que acontece quando alguém arrasta um lead para uma etapa anterior do funil.
+              </p>
+              <RadioGroup value={backtrackMode} onValueChange={(v) => setBacktrackMode(v as "allow" | "warn" | "block")} className="gap-2">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="allow" id="bt-allow" />
+                  <Label htmlFor="bt-allow" className="text-xs font-normal cursor-pointer">✅ Permitir livremente</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="warn" id="bt-warn" />
+                  <Label htmlFor="bt-warn" className="text-xs font-normal cursor-pointer">⚠️ Permitir, mas avisar administrador</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="block" id="bt-block" />
+                  <Label htmlFor="bt-block" className="text-xs font-normal cursor-pointer">🚫 Não permitir retrocesso</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Custom Fields */}
             <div className="flex items-center justify-between mt-4">
               <Label className="text-xs font-semibold">Campos adicionais do lead</Label>
