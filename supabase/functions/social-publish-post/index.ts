@@ -22,11 +22,11 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: cErr } = await userClient.auth.getClaims(token);
-    if (cErr || !claims?.claims) {
+    const { data: userData, error: cErr } = await userClient.auth.getUser(token);
+    if (cErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: cors });
     }
-    const userId = claims.claims.sub;
+    const userId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
     const { social_account_id, caption, image_url, scheduled_for } = body as {
