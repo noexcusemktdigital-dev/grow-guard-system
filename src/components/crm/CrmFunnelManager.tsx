@@ -61,6 +61,10 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       setWinLabel(editingFunnel.win_label || "Ganho");
       setLossLabel(editingFunnel.loss_label || "Perdido");
       setCustomFieldsSchema((editingFunnel as any).custom_fields_schema || []);
+      const ef: any = editingFunnel;
+      const mode: "allow" | "warn" | "block" =
+        ef.backtrack_mode || (ef.allow_backtrack === false ? "block" : "allow");
+      setBacktrackMode(mode);
     }
   }, [editingFunnel]);
 
