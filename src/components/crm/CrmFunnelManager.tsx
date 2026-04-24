@@ -38,6 +38,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [lossLabel, setLossLabel] = useState("Perdido");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const [customFieldsSchema, setCustomFieldsSchema] = useState<any[]>([]);
+  const [backtrackMode, setBacktrackMode] = useState<"allow" | "warn" | "block">("allow");
 
   const isTrial = subscription?.status === "trial";
   const planId = subscription?.plan as string | null;
