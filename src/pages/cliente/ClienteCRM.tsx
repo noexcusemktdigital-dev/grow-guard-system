@@ -47,6 +47,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const { toast } = useToast();
   const { data: funnelsData, isLoading: funnelsLoading } = useCrmFunnels();
   useEnsureDefaultFunnel();
+  const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
   const { data: crmSettings } = useCrmSettings();
   const { data: team } = useCrmTeam();
   const { activeLeadCount, maxLeads, atLimit: quotaAtLimit, planName } = useLeadQuota();
