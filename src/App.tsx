@@ -16,6 +16,7 @@ import SaasAuth from "./pages/SaasAuth";
 import NotFound from "./pages/NotFound";
 
 const Auth = lazy(() => import("./pages/Auth"));
+const PlataformaDoEmpresario = lazy(() => import("./pages/PlataformaDoEmpresario"));
 const SaasLanding = lazy(() => import("./pages/SaasLanding"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Welcome = lazy(() => import("./pages/Welcome"));
