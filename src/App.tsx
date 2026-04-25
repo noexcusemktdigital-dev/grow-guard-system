@@ -180,6 +180,7 @@ function App() {
 
               <Route path="/" element={<SaasAuth />} />
               <Route path="/crescimento" element={<SaasLanding />} />
+              <Route path="/plataformadoempresario" element={<PageBoundary><PlataformaDoEmpresario /></PageBoundary>} />
 
               {/* Protected app shell */}
               <Route path="/franqueadora/*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Index /></ProtectedRoute>}>
