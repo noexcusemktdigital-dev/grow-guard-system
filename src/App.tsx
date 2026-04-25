@@ -16,6 +16,7 @@ import SaasAuth from "./pages/SaasAuth";
 import NotFound from "./pages/NotFound";
 
 const Auth = lazy(() => import("./pages/Auth"));
+const PlataformaDoEmpresario = lazy(() => import("./pages/PlataformaDoEmpresario"));
 const SaasLanding = lazy(() => import("./pages/SaasLanding"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Welcome = lazy(() => import("./pages/Welcome"));
@@ -179,6 +180,7 @@ function App() {
 
               <Route path="/" element={<SaasAuth />} />
               <Route path="/crescimento" element={<SaasLanding />} />
+              <Route path="/plataformadoempresario" element={<PageBoundary><PlataformaDoEmpresario /></PageBoundary>} />
 
               {/* Protected app shell */}
               <Route path="/franqueadora/*" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Index /></ProtectedRoute>}>
