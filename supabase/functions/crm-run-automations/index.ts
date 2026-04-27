@@ -23,18 +23,40 @@ Deno.serve(async (req) => {
     const TIME_BUDGET_MS = 12_000;
     const timeLeft = () => Date.now() - startedAt < TIME_BUDGET_MS;
 
-    // ── Detect lead_stuck & no_contact_sla (periodic scan) ──
-    if (timeLeft()) await detectStuckLeads(admin);
-    if (timeLeft()) await detectNoContactSla(admin);
+    // INSTANT MODE: if invoked with a specific event_id (from the queue trigger),
+    // process only that event and skip the heavy periodic scans. This keeps
+    // automations near-realtime without re-introducing the worker avalanche
+    // that caused the immediate trigger to be removed in the past.
+    let targetEventId: string | null = null;
+    try {
+      if (req.method === "POST") {
+        const body = await req.json().catch(() => null);
+        if (body && typeof body.event_id === "string") {
+          targetEventId = body.event_id;
+        }
+      }
+    } catch (_) { /* ignore body parsing errors */ }
 
-    // PERF: reduce batch size to 8 so one slow event can't starve the whole queue.
-    const { data: events, error: evErr } = await admin
+    // Periodic scans only run in batch mode (cron / manual "Executar agora")
+    if (!targetEventId) {
+      if (timeLeft()) await detectStuckLeads(admin);
+      if (timeLeft()) await detectNoContactSla(admin);
+    }
+
+    let eventsQuery = admin
       .from("crm_automation_queue")
       .select("*")
       .eq("processed", false)
       .or(`next_retry_at.is.null,next_retry_at.lte.${new Date().toISOString()}`)
-      .order("created_at")
-      .limit(8);
+      .order("created_at");
+
+    if (targetEventId) {
+      eventsQuery = eventsQuery.eq("id", targetEventId).limit(1);
+    } else {
+      eventsQuery = eventsQuery.limit(8);
+    }
+
+    const { data: events, error: evErr } = await eventsQuery;
 
     if (evErr) throw evErr;
     if (!events || events.length === 0) {
@@ -221,8 +243,9 @@ async function executeAction(
 
   // Anti-recursion: if this lead was just created by THIS automation (duplicate),
   // skip to prevent infinite duplication chains.
-  const leadMeta = (lead as any).metadata || {};
-  if (leadMeta.duplicated_by_automation_id === automation.id) {
+  // NOTE: crm_leads has no `metadata` column — we store this marker inside `custom_fields`.
+  const leadCustom = ((lead as any).custom_fields || {}) as Record<string, unknown>;
+  if (leadCustom.duplicated_by_automation_id === automation.id) {
     console.log(`[anti-recursion] skipping automation ${automation.id} on duplicated lead ${lead.id}`);
     return;
   }
@@ -487,11 +510,14 @@ async function executeAction(
 
       if (moveMode === "duplicate") {
         // Create a copy in the target funnel; original lead stays untouched.
-        const newMeta = {
-          ...((lead as any).metadata || {}),
+        // IMPORTANT: crm_leads has neither `metadata` nor `notes` columns —
+        // we persist the duplication trail inside `custom_fields` (jsonb).
+        const newCustomFields = {
+          ...(((lead as any).custom_fields || {}) as Record<string, unknown>),
           duplicated_from_lead_id: lead.id,
           duplicated_by_automation_id: automation.id,
           duplicated_at: new Date().toISOString(),
+          duplicated_by_automation_name: automation.name,
         };
         const { error: insErr } = await admin.from("crm_leads").insert({
           organization_id: lead.organization_id,
@@ -500,12 +526,12 @@ async function executeAction(
           name: lead.name,
           phone: (lead as any).phone ?? null,
           email: (lead as any).email ?? null,
+          company: (lead as any).company ?? null,
           value: (lead as any).value ?? null,
           source: (lead as any).source ?? "automation_duplicate",
           assigned_to: (lead as any).assigned_to ?? null,
           tags: (lead as any).tags ?? null,
-          notes: `Duplicado automaticamente de: ${lead.name} (automação: ${automation.name})`,
-          metadata: newMeta,
+          custom_fields: newCustomFields,
           // Reset lifecycle fields so the copy is "fresh" in the new funnel
           won_at: null,
           lost_at: null,
