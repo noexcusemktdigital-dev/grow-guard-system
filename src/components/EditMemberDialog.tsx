@@ -94,11 +94,11 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogTitle>Editar Membro</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           <div className="space-y-2">
             <Label>Nome Completo</Label>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nome do membro" />
@@ -132,7 +132,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
           )}
           {extraContent}
         </div>
-        <DialogFooter className="flex items-center justify-between sm:justify-between gap-2">
+        <DialogFooter className="border-t px-6 py-4 shrink-0 bg-background flex items-center justify-between sm:justify-between gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" className="gap-1.5" disabled={removing}>
