@@ -467,30 +467,65 @@ async function executeAction(
     }
 
     case "move_to_funnel": {
-      if (actionConfig.target_funnel_id && actionConfig.target_stage) {
+      const targetFunnelId = actionConfig.target_funnel_id;
+      if (!targetFunnelId) break;
+
+      // Resolve target stage: explicit value, or first stage of destination funnel
+      let targetStage: string | null = actionConfig.target_stage || null;
+      if (!targetStage) {
+        const { data: tf } = await admin
+          .from("crm_funnels")
+          .select("stages")
+          .eq("id", targetFunnelId)
+          .maybeSingle();
+        const stages = (tf?.stages as any[]) || [];
+        targetStage = stages[0]?.key || null;
+      }
+      if (!targetStage) break;
+
+      const moveMode = actionConfig.move_mode === "duplicate" ? "duplicate" : "transfer";
+
+      if (moveMode === "duplicate") {
+        // Create a copy in the target funnel; original lead stays untouched.
+        const newMeta = {
+          ...((lead as any).metadata || {}),
+          duplicated_from_lead_id: lead.id,
+          duplicated_by_automation_id: automation.id,
+          duplicated_at: new Date().toISOString(),
+        };
+        const { error: insErr } = await admin.from("crm_leads").insert({
+          organization_id: lead.organization_id,
+          funnel_id: targetFunnelId,
+          stage: targetStage,
+          name: lead.name,
+          phone: (lead as any).phone ?? null,
+          email: (lead as any).email ?? null,
+          value: (lead as any).value ?? null,
+          source: (lead as any).source ?? "automation_duplicate",
+          assigned_to: (lead as any).assigned_to ?? null,
+          tags: (lead as any).tags ?? null,
+          notes: (lead as any).notes ?? null,
+          metadata: newMeta,
+          // Reset lifecycle fields so the copy is "fresh" in the new funnel
+          won_at: null,
+          lost_at: null,
+          lost_reason: null,
+        });
+        if (insErr) throw insErr;
+      } else {
+        // Transfer: update the original lead to the target funnel/stage.
         await admin
           .from("crm_leads")
           .update({
-            funnel_id: actionConfig.target_funnel_id,
-            stage: actionConfig.target_stage,
+            funnel_id: targetFunnelId,
+            stage: targetStage,
             updated_at: new Date().toISOString(),
           })
           .eq("id", lead.id);
-
-        // Enfileirar evento de stage_change no funil destino
-        // para que automações do funil destino sejam disparadas
-        await admin.from("crm_automation_queue").insert({
-          organization_id: lead.organization_id,
-          lead_id: lead.id,
-          trigger_type: "stage_change",
-          trigger_data: {
-            new_stage: actionConfig.target_stage,
-            funnel_id: actionConfig.target_funnel_id,
-            previous_stage: lead.stage,
-            transferred_from_funnel: lead.funnel_id,
-          },
-        });
       }
+      // Note: we no longer manually enqueue stage_change here.
+      // The DB trigger `enqueue_crm_automation` already handles INSERT/UPDATE,
+      // and manual enqueue was causing duplicate executions / loops.
       break;
     }
 
