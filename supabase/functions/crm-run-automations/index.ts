@@ -219,6 +219,14 @@ async function executeAction(
   const actionConfig = automation.action_config || {};
   const orgId = lead.organization_id;
 
+  // Anti-recursion: if this lead was just created by THIS automation (duplicate),
+  // skip to prevent infinite duplication chains.
+  const leadMeta = (lead as any).metadata || {};
+  if (leadMeta.duplicated_by_automation_id === automation.id) {
+    console.log(`[anti-recursion] skipping automation ${automation.id} on duplicated lead ${lead.id}`);
+    return;
+  }
+
   switch (actionType) {
     case "create_task": {
       const dueDate = new Date(
