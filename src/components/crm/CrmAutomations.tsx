@@ -876,7 +876,7 @@ function AutomationTabContent({
                         )}
                         {auto.is_active && execCount === 0 && (
                           <Badge variant="outline" className="text-[8px] gap-0.5 bg-amber-500/5 border-amber-500/20 text-amber-700">
-                            <AlertCircle className="w-2.5 h-2.5" /> Aguardando próximo ciclo (5 min)
+                            <AlertCircle className="w-2.5 h-2.5" /> Pronta — executa assim que o gatilho ocorrer
                           </Badge>
                         )}
                       </div>
