@@ -846,6 +846,7 @@ function AutomationTabContent({
           {automations.map(auto => {
             const fids = Array.isArray(auto.funnel_ids) ? auto.funnel_ids as string[] : [];
             const execCount = auto.execution_count || 0;
+            const lastExec = auto.last_executed_at ? new Date(auto.last_executed_at) : null;
             return (
               <Card key={auto.id} className={auto.is_active ? "" : "opacity-60"}>
                 <CardContent className="p-3 flex items-center justify-between">
