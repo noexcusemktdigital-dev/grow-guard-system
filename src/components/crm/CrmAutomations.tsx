@@ -266,9 +266,14 @@ export function CrmAutomations() {
     if (isAiAction(actionType) && !selectedAgentId) {
       toast({ title: "Selecione um agente IA para esta automação", variant: "destructive" }); return;
     }
+    // Ensure move_mode is explicit (default "transfer") so the backend never has to guess
+    const finalActionConfig: Record<string, unknown> = { ...actionConfig };
+    if (actionType === "move_to_funnel" && !finalActionConfig.move_mode) {
+      finalActionConfig.move_mode = "transfer";
+    }
     const payload: Record<string, unknown> = {
       name, description, trigger_type: triggerType, action_type: actionType,
-      action_config: actionConfig, trigger_config: triggerConfig,
+      action_config: finalActionConfig, trigger_config: triggerConfig,
       funnel_ids: selectedFunnels, team_ids: selectedTeams,
       agent_id: selectedAgentId || null,
     };
