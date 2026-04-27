@@ -182,14 +182,21 @@ function matchesTriggerConfig(config: Record<string, unknown> | null, triggerDat
     return false;
   }
 
-  // Filter by stage
-  if (config.stage && triggerData?.new_stage && config.stage !== triggerData.new_stage) {
+  // Filter by stage (UI may save as `stage` or `specific_stage`)
+  const cfgStage = (config as any).stage ?? (config as any).specific_stage;
+  if (cfgStage && triggerData?.new_stage && cfgStage !== triggerData.new_stage) {
     return false;
   }
 
-  // Filter by funnel
+  // Filter by funnel — single id
   if (config.funnel_id && triggerData?.funnel_id && config.funnel_id !== triggerData.funnel_id) {
     return false;
+  }
+
+  // Filter by funnels — array of allowed funnel ids (empty = all)
+  const cfgFunnels = (config as any).funnels;
+  if (Array.isArray(cfgFunnels) && cfgFunnels.length > 0 && triggerData?.funnel_id) {
+    if (!cfgFunnels.includes(triggerData.funnel_id)) return false;
   }
 
   // Filter by tag
