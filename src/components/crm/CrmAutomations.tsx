@@ -771,17 +771,17 @@ function AutomationTabContent({
   const forceRun = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("crm-run-automations");
+      const { error } = await supabase.functions.invoke("crm-run-automations", { body: {} });
       if (error) throw error;
       toast({ title: "Automações executadas!", description: "Processando fila agora..." });
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
-        queryClient.invalidateQueries({ queryKey: ["automation-logs"] });
-      }, 2000);
+        queryClient.invalidateQueries({ queryKey: ["automation-execution-logs"] });
+      }, 1500);
     } catch (e: any) {
       toast({ title: "Erro ao executar", description: e?.message || "Tente novamente", variant: "destructive" });
     } finally {
-      setTimeout(() => setRunning(false), 2000);
+      setTimeout(() => setRunning(false), 1500);
     }
   };
 
