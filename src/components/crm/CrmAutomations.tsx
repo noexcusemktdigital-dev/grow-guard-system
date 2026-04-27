@@ -764,6 +764,27 @@ function AutomationTabContent({
   onActivateRec: (rec: RecommendedAutomation) => void;
   isAiAction: (type: string) => any;
 }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(false);
+
+  const forceRun = async () => {
+    setRunning(true);
+    try {
+      const { error } = await supabase.functions.invoke("crm-run-automations");
+      if (error) throw error;
+      toast({ title: "Automações executadas!", description: "Processando fila agora..." });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
+        queryClient.invalidateQueries({ queryKey: ["automation-logs"] });
+      }, 2000);
+    } catch (e: any) {
+      toast({ title: "Erro ao executar", description: e?.message || "Tente novamente", variant: "destructive" });
+    } finally {
+      setTimeout(() => setRunning(false), 2000);
+    }
+  };
+
   return (
     <div className="space-y-3 mt-3">
       <EducationalBlock isAi={isAi} />
