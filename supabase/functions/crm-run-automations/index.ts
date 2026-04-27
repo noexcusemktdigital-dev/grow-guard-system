@@ -504,7 +504,7 @@ async function executeAction(
           source: (lead as any).source ?? "automation_duplicate",
           assigned_to: (lead as any).assigned_to ?? null,
           tags: (lead as any).tags ?? null,
-          notes: (lead as any).notes ?? null,
+          notes: `Duplicado automaticamente de: ${lead.name} (automação: ${automation.name})`,
           metadata: newMeta,
           // Reset lifecycle fields so the copy is "fresh" in the new funnel
           won_at: null,
