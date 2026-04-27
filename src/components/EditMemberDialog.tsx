@@ -132,7 +132,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
           )}
           {extraContent}
         </div>
-        <DialogFooter className="flex items-center justify-between sm:justify-between gap-2">
+        <DialogFooter className="border-t px-6 py-4 shrink-0 bg-background flex items-center justify-between sm:justify-between gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" className="gap-1.5" disabled={removing}>
