@@ -13,10 +13,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { Zap, Plus, Trash2, Bot, Edit2, Layers, ArrowRight, Sparkles, CheckCircle2, Clock, MessageSquare, Users2, BookOpen, ChevronDown, Lightbulb, ScrollText, AlertCircle, CheckCircle, XCircle, SkipForward } from "lucide-react";
+import { Zap, Plus, Trash2, Bot, Edit2, Layers, ArrowRight, Sparkles, CheckCircle2, Clock, MessageSquare, Users2, BookOpen, ChevronDown, Lightbulb, ScrollText, AlertCircle, CheckCircle, XCircle, SkipForward, Play } from "lucide-react";
 import { useCrmAutomations, useCrmAutomationMutations } from "@/hooks/useCrmAutomations";
 import { useAutomationLogs } from "@/hooks/useAutomationLogs";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ptBR } from "date-fns/locale";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -762,6 +764,27 @@ function AutomationTabContent({
   onActivateRec: (rec: RecommendedAutomation) => void;
   isAiAction: (type: string) => any;
 }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(false);
+
+  const forceRun = async () => {
+    setRunning(true);
+    try {
+      const { error } = await supabase.functions.invoke("crm-run-automations");
+      if (error) throw error;
+      toast({ title: "Automações executadas!", description: "Processando fila agora..." });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
+        queryClient.invalidateQueries({ queryKey: ["automation-logs"] });
+      }, 2000);
+    } catch (e: any) {
+      toast({ title: "Erro ao executar", description: e?.message || "Tente novamente", variant: "destructive" });
+    } finally {
+      setTimeout(() => setRunning(false), 2000);
+    }
+  };
+
   return (
     <div className="space-y-3 mt-3">
       <EducationalBlock isAi={isAi} />
@@ -793,12 +816,17 @@ function AutomationTabContent({
         </div>
       )}
 
-      {/* List + New button */}
+      {/* List + actions */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Suas automações</span>
-        <Button size="sm" className="gap-1" onClick={onNew}>
-          <Plus className="w-3.5 h-3.5" /> Nova automação
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={forceRun} disabled={running}>
+            <Play className="w-3.5 h-3.5" /> {running ? "Executando..." : "Executar agora"}
+          </Button>
+          <Button size="sm" className="gap-1" onClick={onNew}>
+            <Plus className="w-3.5 h-3.5" /> Nova automação
+          </Button>
+        </div>
       </div>
 
       {automations.length === 0 ? (
@@ -818,6 +846,7 @@ function AutomationTabContent({
           {automations.map(auto => {
             const fids = Array.isArray(auto.funnel_ids) ? auto.funnel_ids as string[] : [];
             const execCount = auto.execution_count || 0;
+            const lastExec = auto.last_executed_at ? new Date(auto.last_executed_at) : null;
             return (
               <Card key={auto.id} className={auto.is_active ? "" : "opacity-60"}>
                 <CardContent className="p-3 flex items-center justify-between">
@@ -836,8 +865,18 @@ function AutomationTabContent({
                           return f ? <Badge key={fid} variant="outline" className="text-[8px]">{f.name}</Badge> : null;
                         })}
                         {execCount > 0 && (
-                          <Badge variant="secondary" className="text-[8px] gap-0.5">
-                            <CheckCircle2 className="w-2.5 h-2.5" /> {execCount}x executada
+                          <Badge variant="secondary" className="text-[8px] gap-0.5 bg-emerald-500/10 text-emerald-700 border-emerald-200">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Executada {execCount}x
+                          </Badge>
+                        )}
+                        {lastExec && (
+                          <Badge variant="outline" className="text-[8px] gap-0.5 text-muted-foreground">
+                            <Clock className="w-2.5 h-2.5" /> {formatDistanceToNow(lastExec, { addSuffix: true, locale: ptBR })}
+                          </Badge>
+                        )}
+                        {auto.is_active && execCount === 0 && (
+                          <Badge variant="outline" className="text-[8px] gap-0.5 bg-amber-500/5 border-amber-500/20 text-amber-700">
+                            <AlertCircle className="w-2.5 h-2.5" /> Aguardando próximo ciclo (5 min)
                           </Badge>
                         )}
                       </div>
