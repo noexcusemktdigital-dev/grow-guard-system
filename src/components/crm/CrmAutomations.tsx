@@ -816,12 +816,17 @@ function AutomationTabContent({
         </div>
       )}
 
-      {/* List + New button */}
+      {/* List + actions */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Suas automações</span>
-        <Button size="sm" className="gap-1" onClick={onNew}>
-          <Plus className="w-3.5 h-3.5" /> Nova automação
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={forceRun} disabled={running}>
+            <Play className="w-3.5 h-3.5" /> {running ? "Executando..." : "Executar agora"}
+          </Button>
+          <Button size="sm" className="gap-1" onClick={onNew}>
+            <Plus className="w-3.5 h-3.5" /> Nova automação
+          </Button>
+        </div>
       </div>
 
       {automations.length === 0 ? (
