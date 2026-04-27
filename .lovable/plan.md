@@ -1,49 +1,91 @@
-## Resumo
+## Objetivo
+Fazer as automações do CRM funcionarem de forma confiável e dispararem na hora em que o evento acontece, sem esperar o ciclo de 5 minutos.
 
-Aplicar 3 correções nas automações do CRM: (1) ajustar `move_to_funnel` no edge function, (2) corrigir trigger DB para incluir `funnel_id` em `lead_won`, (3) melhorar feedback visual e botão "Executar agora" na UI.
+## Diagnóstico confirmado
+Encontrei 3 fatos importantes no projeto atual:
 
----
+1. As automações do tipo **mover para outro funil** estão sendo disparadas, mas falham dentro da função backend.
+2. Os eventos estão chegando na fila normalmente para o usuário teste.
+3. O erro real atual é este:
+   - `Could not find the 'metadata' column of 'crm_leads'`
 
-## Correção 1 — `supabase/functions/crm-run-automations/index.ts` (case `move_to_funnel`)
+Também confirmei que a tabela `crm_leads` **não tem** as colunas `metadata` nem `notes`, mas a função `crm-run-automations` está tentando ler/escrever essas colunas no `move_to_funnel`.
 
-A lógica `transfer`/`duplicate` já existe (linhas 469–530), mas falta um detalhe: trocar o `notes` do lead duplicado por uma mensagem rastreável. **Não vamos** enfileirar `stage_change` manualmente como pediu o snippet, porque isso reintroduziria o loop infinito que corrigimos antes — o trigger DB `enqueue_crm_automation` já dispara `lead_created` no INSERT, e a metadata `duplicated_by_automation_id` impede recursão.
+Isso explica o comportamento atual:
+- automações de notificação e mudança de etapa funcionam;
+- automações de envio/duplicação para outro funil falham.
 
-Alteração mínima no bloco duplicate:
-- `notes: (lead as any).notes ?? null` → `notes: \`Duplicado automaticamente de: ${lead.name} (automação: ${automation.name})\``
+## O que vou implementar
 
-## Correção 2 — Nova migration corrigindo `enqueue_crm_automation`
+### 1) Corrigir o backend da automação `move_to_funnel`
+Arquivo:
+- `supabase/functions/crm-run-automations/index.ts`
 
-Criar `supabase/migrations/<timestamp>_fix_lead_won_trigger_data.sql` que faz `CREATE OR REPLACE FUNCTION public.enqueue_crm_automation()` adicionando `funnel_id`, `stage` e `value` ao `trigger_data` do evento `lead_won` (e `funnel_id` no `lead_lost`). A função alvo é a real do banco (`enqueue_crm_automation`, não `enqueue_automation_on_lead_change` como no snippet original).
+Ajustes:
+- parar de usar `crm_leads.metadata` e `crm_leads.notes`, porque essas colunas não existem hoje no banco;
+- usar `custom_fields` para guardar a marcação técnica de duplicação, por exemplo:
+  - `duplicated_from_lead_id`
+  - `duplicated_by_automation_id`
+  - `duplicated_at`
+- manter a proteção anti-recursão lendo esses dados de `custom_fields`;
+- no modo `duplicate`, inserir o lead novo apenas com colunas que realmente existem na tabela;
+- no modo `transfer`, manter a atualização do lead original normalmente.
 
-Mantém todos os outros eventos (`lead_created`, `stage_change`, `lead_lost`, `tag_added`) idênticos, apenas com payload enriquecido onde necessário.
+Resultado esperado:
+- “lead ganho vai para outro funil” volta a funcionar;
+- “lead entrou em etapa X e vai para outro funil” volta a funcionar.
 
-## Correção 3 — `src/components/crm/CrmAutomations.tsx`
+### 2) Tornar a execução instantânea sem reabrir o problema de performance
+Hoje existe um cron a cada 5 minutos, e o disparo imediato antigo foi removido porque causava avalanche de execuções.
 
-### 3a. Badges de status na lista de automações (linhas ~833–843)
-Substituir o badge atual "execução" por um conjunto contextual:
-- **`execution_count > 0`**: badge verde "✅ Executada {N}x"
-- **`last_executed_at`**: badge cinza "🕐 há {tempo relativo}" (usar `date-fns` formatDistanceToNow já disponível no projeto)
-- **`is_active && execution_count === 0`**: badge âmbar "⚠️ Aguardando próximo ciclo (5 min)"
+Em vez de voltar ao modelo antigo, vou implementar um fluxo seguro:
 
-### 3b. Botão "▶ Executar agora" no header da lista (linha ~797)
-Adicionar ao lado do botão "Nova automação":
-```tsx
-<Button size="sm" variant="outline" onClick={forceRun} disabled={running}>
-  <Play className="w-3.5 h-3.5" /> Executar agora
-</Button>
+```text
+Evento no lead
+-> trigger grava item na fila
+-> trigger chama a função backend passando o event_id
+-> a função processa só aquele evento
+-> cron de 5 min continua como fallback
 ```
 
-Implementar `forceRun` no escopo de `AutomationsListTab` (recebendo `onRefetch` por prop, ou usando `useQueryClient` + invalidate) que invoca `supabase.functions.invoke("crm-run-automations")`, exibe toast de sucesso/erro e revalida queries de automações + logs após 2s.
+Ajustes planejados:
+- `supabase/functions/crm-run-automations/index.ts`
+  - aceitar `event_id` no body;
+  - se vier `event_id`, processar somente aquele item da fila;
+  - se não vier `event_id`, continuar no modo lote (cron/manual);
+- nova migration SQL
+  - recriar o trigger imediato de forma segura, chamando a função com `event_id` específico;
+  - evitar voltar ao comportamento antigo que disparava processamento pesado da fila inteira a cada insert.
 
-### 3c. Passar callback de refetch
-`AutomationsListTab` já é usado em duas instâncias (IA e Time). Adicionar prop opcional `onForceRun` ou inicializar `useQueryClient()` direto no componente para invalidar `["crm-automations"]` e `["automation-logs"]` após executar.
+Resultado esperado:
+- a automação roda quase em tempo real;
+- o cron continua existindo como segurança se alguma chamada imediata falhar.
 
----
+### 3) Ajustar o botão “Executar agora” e feedback da tela
+Arquivo:
+- `src/components/crm/CrmAutomations.tsx`
 
-## Arquivos alterados
+Ajustes:
+- manter o botão manual;
+- corrigir o refetch/invalidate para atualizar logs e automações com a chave certa;
+- melhorar a mensagem de status para deixar claro quando a automação foi executada imediatamente vs. quando está aguardando fallback.
 
-- `supabase/functions/crm-run-automations/index.ts` — ajuste do `notes` no bloco duplicate
-- `supabase/migrations/<timestamp>_fix_lead_won_trigger_data.sql` — nova migration
-- `src/components/crm/CrmAutomations.tsx` — badges contextuais + botão "Executar agora"
+## Arquivos previstos
+- `supabase/functions/crm-run-automations/index.ts`
+- `supabase/migrations/<timestamp>_fix_crm_automation_instant_processing.sql`
+- `src/components/crm/CrmAutomations.tsx`
 
-Sem mudanças em outras telas ou contratos.
+## Detalhes técnicos
+- A tabela `crm_leads` atual tem `custom_fields`, mas não tem `metadata` nem `notes`.
+- Os logs de execução mostram erro apenas nas automações `move_to_funnel`.
+- O cron atual está em `*/5 * * * *`.
+- A execução imediata antiga foi removida por performance; por isso a correção precisa ser por `event_id`, não por reprocessamento geral.
+
+## Validação após implementar
+Vou validar estes cenários:
+1. mover lead para etapa `qualificacao` e confirmar duplicação imediata no outro funil;
+2. marcar lead como ganho e confirmar envio imediato ao outro funil;
+3. verificar logs de execução sem erro `PGRST204`;
+4. confirmar que o botão `Executar agora` continua funcionando como fallback manual.
+
+Se aprovar, eu implemento essa correção agora.

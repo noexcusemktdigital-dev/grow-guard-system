@@ -771,17 +771,17 @@ function AutomationTabContent({
   const forceRun = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("crm-run-automations");
+      const { error } = await supabase.functions.invoke("crm-run-automations", { body: {} });
       if (error) throw error;
       toast({ title: "Automações executadas!", description: "Processando fila agora..." });
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
-        queryClient.invalidateQueries({ queryKey: ["automation-logs"] });
-      }, 2000);
+        queryClient.invalidateQueries({ queryKey: ["automation-execution-logs"] });
+      }, 1500);
     } catch (e: any) {
       toast({ title: "Erro ao executar", description: e?.message || "Tente novamente", variant: "destructive" });
     } finally {
-      setTimeout(() => setRunning(false), 2000);
+      setTimeout(() => setRunning(false), 1500);
     }
   };
 
@@ -876,7 +876,7 @@ function AutomationTabContent({
                         )}
                         {auto.is_active && execCount === 0 && (
                           <Badge variant="outline" className="text-[8px] gap-0.5 bg-amber-500/5 border-amber-500/20 text-amber-700">
-                            <AlertCircle className="w-2.5 h-2.5" /> Aguardando próximo ciclo (5 min)
+                            <AlertCircle className="w-2.5 h-2.5" /> Pronta — executa assim que o gatilho ocorrer
                           </Badge>
                         )}
                       </div>
