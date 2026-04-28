@@ -301,6 +301,37 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
             )}
           </div>
 
+          {customFieldsSchema.length > 0 && (
+            <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+              <Label className="text-xs font-semibold">Campos adicionais</Label>
+              {customFieldsSchema.map((field: any, idx: number) => (
+                <div key={`${field.key}__${idx}`}>
+                  <Label className="text-xs">{field.label}{field.required ? " *" : ""}</Label>
+                  {field.type === "select" ? (
+                    <select
+                      value={editCustomFields[field.key] || ""}
+                      onChange={e => setEditCustomFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                    >
+                      <option value="">Selecionar</option>
+                      {(field.options || []).map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={editCustomFields[field.key] || ""}
+                      onChange={e => setEditCustomFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder || ""}
+                      className="h-8 text-xs"
+                      type={field.type === "number" ? "number" : "text"}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div>
             <Label className="text-xs">Tags</Label>
             <div className="flex flex-wrap gap-1 mt-1">
