@@ -291,7 +291,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
             <div className="flex items-center justify-between mt-4">
               <Label className="text-xs font-semibold">Campos adicionais do lead</Label>
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
-                const newField = { key: `field_${Date.now()}`, label: "Novo campo", type: "text", required: false, placeholder: "" };
+                const newField = { key: `field_${Date.now()}_${customFieldsSchema.length}`, label: "Novo campo", type: "text", required: false, placeholder: "" };
                 setCustomFieldsSchema([...customFieldsSchema, newField]);
               }}>
                 <Plus className="w-3 h-3" /> Adicionar campo
