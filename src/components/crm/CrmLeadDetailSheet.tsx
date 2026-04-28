@@ -54,12 +54,15 @@ interface LeadRow {
   lost_at?: string | null;
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
+  funnel_id?: string | null;
+  custom_fields?: Record<string, any> | null;
 }
 
 interface FunnelOption {
   id: string;
   name: string;
   stages: Array<{ key?: string; label?: string; color?: string; icon?: string }>;
+  custom_fields_schema?: Array<{ key: string; label: string; type: string; required?: boolean; placeholder?: string; options?: string[] }>;
 }
 
 interface CrmLeadDetailSheetProps {
@@ -128,6 +131,25 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [editStage, setEditStage] = useState(lead.stage);
   const [newTag, setNewTag] = useState("");
   const [editTags, setEditTags] = useState<string[]>(lead.tags || []);
+  const [editCustomFields, setEditCustomFields] = useState<Record<string, any>>(
+    (lead.custom_fields as Record<string, any>) || {}
+  );
+
+  // Schema de campos adicionais do funil atual (deduplicado contra dados legados)
+  const currentFunnel = funnels?.find(f => f.id === (lead as any).funnel_id) ||
+    funnels?.find(f => f.id === currentFunnelId);
+  const customFieldsSchema = (() => {
+    const raw = (currentFunnel as any)?.custom_fields_schema || [];
+    const seen = new Set<string>();
+    return raw.map((f: any, i: number) => {
+      let baseKey = f?.key || `field_${i}`;
+      let key = baseKey;
+      let suffix = 2;
+      while (seen.has(key)) key = `${baseKey}_${suffix++}`;
+      seen.add(key);
+      return { ...f, key };
+    });
+  })();
 
   const [lostDialog, setLostDialog] = useState(false);
   const [lostReason, setLostReason] = useState("");
@@ -154,7 +176,9 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
       id: lead.id, name: editName, phone: editPhone || null,
       email: editEmail || null, company: editCompany || null,
       value: editValue ? parseFloat(editValue) : null, stage: editStage, tags: editTags,
-    });
+      // Preserva campos legados não exibidos no schema atual e mescla os editados
+      custom_fields: { ...((lead.custom_fields as Record<string, any>) || {}), ...editCustomFields },
+    } as any);
     toast({ title: "Lead atualizado" });
   };
 
@@ -276,6 +300,37 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
               </div>
             )}
           </div>
+
+          {customFieldsSchema.length > 0 && (
+            <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+              <Label className="text-xs font-semibold">Campos adicionais</Label>
+              {customFieldsSchema.map((field: any, idx: number) => (
+                <div key={`${field.key}__${idx}`}>
+                  <Label className="text-xs">{field.label}{field.required ? " *" : ""}</Label>
+                  {field.type === "select" ? (
+                    <select
+                      value={editCustomFields[field.key] || ""}
+                      onChange={e => setEditCustomFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                    >
+                      <option value="">Selecionar</option>
+                      {(field.options || []).map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={editCustomFields[field.key] || ""}
+                      onChange={e => setEditCustomFields(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      placeholder={field.placeholder || ""}
+                      className="h-8 text-xs"
+                      type={field.type === "number" ? "number" : "text"}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div>
             <Label className="text-xs">Tags</Label>

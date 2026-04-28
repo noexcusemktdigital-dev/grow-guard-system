@@ -555,7 +555,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
       )}
 
       {/* Lead Detail Sheet */}
-      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }> }))} currentFunnelId={selectedFunnelId || undefined} />
+      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>, custom_fields_schema: (f as any).custom_fields_schema || [] }))} currentFunnelId={selectedFunnelId || undefined} />
 
       {/* New Lead Dialog */}
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={(o) => { setNewLeadOpen(o); if (!o) setNewLeadContact(null); }} defaultStage={stages[0]?.key || "novo"} funnelId={selectedFunnelId || undefined} prefillContact={newLeadContact} />

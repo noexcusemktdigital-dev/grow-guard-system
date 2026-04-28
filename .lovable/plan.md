@@ -1,91 +1,39 @@
-## Objetivo
-Fazer as automações do CRM funcionarem de forma confiável e dispararem na hora em que o evento acontece, sem esperar o ciclo de 5 minutos.
+## Problemas identificados
 
-## Diagnóstico confirmado
-Encontrei 3 fatos importantes no projeto atual:
+**1. Duplicação dos valores entre campos adicionais (bug)**
 
-1. As automações do tipo **mover para outro funil** estão sendo disparadas, mas falham dentro da função backend.
-2. Os eventos estão chegando na fila normalmente para o usuário teste.
-3. O erro real atual é este:
-   - `Could not find the 'metadata' column of 'crm_leads'`
-
-Também confirmei que a tabela `crm_leads` **não tem** as colunas `metadata` nem `notes`, mas a função `crm-run-automations` está tentando ler/escrever essas colunas no `move_to_funnel`.
-
-Isso explica o comportamento atual:
-- automações de notificação e mudança de etapa funcionam;
-- automações de envio/duplicação para outro funil falham.
-
-## O que vou implementar
-
-### 1) Corrigir o backend da automação `move_to_funnel`
-Arquivo:
-- `supabase/functions/crm-run-automations/index.ts`
-
-Ajustes:
-- parar de usar `crm_leads.metadata` e `crm_leads.notes`, porque essas colunas não existem hoje no banco;
-- usar `custom_fields` para guardar a marcação técnica de duplicação, por exemplo:
-  - `duplicated_from_lead_id`
-  - `duplicated_by_automation_id`
-  - `duplicated_at`
-- manter a proteção anti-recursão lendo esses dados de `custom_fields`;
-- no modo `duplicate`, inserir o lead novo apenas com colunas que realmente existem na tabela;
-- no modo `transfer`, manter a atualização do lead original normalmente.
-
-Resultado esperado:
-- “lead ganho vai para outro funil” volta a funcionar;
-- “lead entrou em etapa X e vai para outro funil” volta a funcionar.
-
-### 2) Tornar a execução instantânea sem reabrir o problema de performance
-Hoje existe um cron a cada 5 minutos, e o disparo imediato antigo foi removido porque causava avalanche de execuções.
-
-Em vez de voltar ao modelo antigo, vou implementar um fluxo seguro:
-
-```text
-Evento no lead
--> trigger grava item na fila
--> trigger chama a função backend passando o event_id
--> a função processa só aquele evento
--> cron de 5 min continua como fallback
+No `CrmFunnelManager.tsx` (linha 295), ao editar o nome do campo, o `key` é gerado automaticamente a partir do label:
+```
+key: e.target.value.toLowerCase().replace(/\s+/g, "_")
 ```
 
-Ajustes planejados:
-- `supabase/functions/crm-run-automations/index.ts`
-  - aceitar `event_id` no body;
-  - se vier `event_id`, processar somente aquele item da fila;
-  - se não vier `event_id`, continuar no modo lote (cron/manual);
-- nova migration SQL
-  - recriar o trigger imediato de forma segura, chamando a função com `event_id` específico;
-  - evitar voltar ao comportamento antigo que disparava processamento pesado da fila inteira a cada insert.
+Quando o usuário cria 3 campos com o mesmo nome ("CAMPO TESTE"), os 3 ficam com `key="campo_teste"`. No diálogo de criação do lead (`CrmNewLeadDialog.tsx`), o estado é indexado por `field.key` — por isso digitar em um campo replica o valor nos outros.
 
-Resultado esperado:
-- a automação roda quase em tempo real;
-- o cron continua existindo como segurança se alguma chamada imediata falhar.
+**2. Campos adicionais não aparecem na edição de leads existentes**
 
-### 3) Ajustar o botão “Executar agora” e feedback da tela
-Arquivo:
-- `src/components/crm/CrmAutomations.tsx`
+O componente `CrmLeadDetailSheet.tsx` (usado tanto no portal Cliente quanto Franqueado) não lê nem renderiza o `custom_fields_schema` do funil, nem permite editar `lead.custom_fields`. Só o diálogo de criação faz isso.
 
-Ajustes:
-- manter o botão manual;
-- corrigir o refetch/invalidate para atualizar logs e automações com a chave certa;
-- melhorar a mensagem de status para deixar claro quando a automação foi executada imediatamente vs. quando está aguardando fallback.
+## Mudanças propostas
 
-## Arquivos previstos
-- `supabase/functions/crm-run-automations/index.ts`
-- `supabase/migrations/<timestamp>_fix_crm_automation_instant_processing.sql`
-- `src/components/crm/CrmAutomations.tsx`
+### A. `src/components/crm/CrmFunnelManager.tsx` — garantir keys únicas
 
-## Detalhes técnicos
-- A tabela `crm_leads` atual tem `custom_fields`, mas não tem `metadata` nem `notes`.
-- Os logs de execução mostram erro apenas nas automações `move_to_funnel`.
-- O cron atual está em `*/5 * * * *`.
-- A execução imediata antiga foi removida por performance; por isso a correção precisa ser por `event_id`, não por reprocessamento geral.
+- Gerar `key` estável e único na criação do campo (usar o `Date.now()` que já existe no `newField`) e parar de regenerar a partir do label.
+- O label (visível ao usuário) continua editável livremente, sem afetar o `key`.
+- Para schemas legados que já têm chaves duplicadas, deduplicar ao carregar (`useEffect` de hidratação) acrescentando sufixo `_2`, `_3` quando colidir.
 
-## Validação após implementar
-Vou validar estes cenários:
-1. mover lead para etapa `qualificacao` e confirmar duplicação imediata no outro funil;
-2. marcar lead como ganho e confirmar envio imediato ao outro funil;
-3. verificar logs de execução sem erro `PGRST204`;
-4. confirmar que o botão `Executar agora` continua funcionando como fallback manual.
+### B. `src/components/crm/CrmLeadDetailSheet.tsx` — editar campos adicionais
 
-Se aprovar, eu implemento essa correção agora.
+- Buscar o funil do lead via `useCrmFunnels()` (ou usar a prop `funnels` já recebida, fazendo lookup por `lead.funnel_id`) para obter o `custom_fields_schema`.
+- Adicionar estado `editCustomFields` inicializado com `lead.custom_fields || {}`.
+- Renderizar uma seção "Campos adicionais" na aba de detalhes (acima de Tags), com mesmo padrão visual do `CrmNewLeadDialog` (text/number/select).
+- Incluir `custom_fields: editCustomFields` no payload do `updateLead.mutate` em `handleSave`.
+
+### C. `src/components/crm/CrmNewLeadDialog.tsx` — pequeno hardening
+
+- Não depende da correção, mas garantir que se o schema vier com keys duplicadas (dados legados), os inputs ainda funcionem isoladamente. Solução simples: usar `idx` como fallback de chave de estado quando detectar colisão.
+
+## Resultado esperado
+
+- Cada campo adicional armazena seu próprio valor, mesmo quando os labels são iguais.
+- Ao abrir um lead já criado, o usuário vê e pode editar os campos adicionais definidos no funil.
+- Schemas e leads existentes continuam funcionando (migração suave via dedup no carregamento).

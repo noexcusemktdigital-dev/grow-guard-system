@@ -60,7 +60,21 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       setGoalType(editingFunnel.goal_type || "revenue");
       setWinLabel(editingFunnel.win_label || "Ganho");
       setLossLabel(editingFunnel.loss_label || "Perdido");
-      setCustomFieldsSchema((editingFunnel as any).custom_fields_schema || []);
+      // Hidrata schema garantindo que toda chave seja única (corrige dados legados onde
+      // múltiplos campos com o mesmo label compartilhavam a mesma key e duplicavam valores).
+      const rawSchema = ((editingFunnel as any).custom_fields_schema || []) as any[];
+      const seen = new Set<string>();
+      const dedupedSchema = rawSchema.map((f, i) => {
+        let baseKey = f?.key || `field_${i}`;
+        let key = baseKey;
+        let suffix = 2;
+        while (seen.has(key)) {
+          key = `${baseKey}_${suffix++}`;
+        }
+        seen.add(key);
+        return { ...f, key };
+      });
+      setCustomFieldsSchema(dedupedSchema);
       const ef: any = editingFunnel;
       const mode: "allow" | "warn" | "block" =
         ef.backtrack_mode || (ef.allow_backtrack === false ? "block" : "allow");
@@ -277,7 +291,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
             <div className="flex items-center justify-between mt-4">
               <Label className="text-xs font-semibold">Campos adicionais do lead</Label>
               <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
-                const newField = { key: `field_${Date.now()}`, label: "Novo campo", type: "text", required: false, placeholder: "" };
+                const newField = { key: `field_${Date.now()}_${customFieldsSchema.length}`, label: "Novo campo", type: "text", required: false, placeholder: "" };
                 setCustomFieldsSchema([...customFieldsSchema, newField]);
               }}>
                 <Plus className="w-3 h-3" /> Adicionar campo
@@ -292,7 +306,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                   value={field.label}
                   onChange={e => {
                     const updated = [...customFieldsSchema];
-                    updated[idx] = { ...field, label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    // IMPORTANTE: não regerar a `key` a partir do label — isso fazia campos
+                    // com o mesmo nome compartilharem a mesma chave e duplicarem valores.
+                    updated[idx] = { ...field, label: e.target.value };
                     setCustomFieldsSchema(updated);
                   }}
                   className="h-7 text-xs flex-1"
