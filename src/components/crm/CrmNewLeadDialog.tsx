@@ -36,7 +36,19 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
 
   const selectedFunnelData = funnelsData?.find(f => f.id === funnelId);
-  const customFieldsSchema = (selectedFunnelData as any)?.custom_fields_schema || [];
+  const rawSchema = (selectedFunnelData as any)?.custom_fields_schema || [];
+  // Deduplica chaves para suportar dados legados onde múltiplos campos compartilhavam a mesma key
+  const customFieldsSchema = (() => {
+    const seen = new Set<string>();
+    return rawSchema.map((f: any, i: number) => {
+      let baseKey = f?.key || `field_${i}`;
+      let key = baseKey;
+      let suffix = 2;
+      while (seen.has(key)) key = `${baseKey}_${suffix++}`;
+      seen.add(key);
+      return { ...f, key };
+    });
+  })();
 
   // Auto-fill from prefillContact
   const [prefilled, setPrefilled] = useState(false);
