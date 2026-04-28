@@ -131,6 +131,25 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [editStage, setEditStage] = useState(lead.stage);
   const [newTag, setNewTag] = useState("");
   const [editTags, setEditTags] = useState<string[]>(lead.tags || []);
+  const [editCustomFields, setEditCustomFields] = useState<Record<string, any>>(
+    (lead.custom_fields as Record<string, any>) || {}
+  );
+
+  // Schema de campos adicionais do funil atual (deduplicado contra dados legados)
+  const currentFunnel = funnels?.find(f => f.id === (lead as any).funnel_id) ||
+    funnels?.find(f => f.id === currentFunnelId);
+  const customFieldsSchema = (() => {
+    const raw = (currentFunnel as any)?.custom_fields_schema || [];
+    const seen = new Set<string>();
+    return raw.map((f: any, i: number) => {
+      let baseKey = f?.key || `field_${i}`;
+      let key = baseKey;
+      let suffix = 2;
+      while (seen.has(key)) key = `${baseKey}_${suffix++}`;
+      seen.add(key);
+      return { ...f, key };
+    });
+  })();
 
   const [lostDialog, setLostDialog] = useState(false);
   const [lostReason, setLostReason] = useState("");
