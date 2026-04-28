@@ -60,7 +60,21 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       setGoalType(editingFunnel.goal_type || "revenue");
       setWinLabel(editingFunnel.win_label || "Ganho");
       setLossLabel(editingFunnel.loss_label || "Perdido");
-      setCustomFieldsSchema((editingFunnel as any).custom_fields_schema || []);
+      // Hidrata schema garantindo que toda chave seja única (corrige dados legados onde
+      // múltiplos campos com o mesmo label compartilhavam a mesma key e duplicavam valores).
+      const rawSchema = ((editingFunnel as any).custom_fields_schema || []) as any[];
+      const seen = new Set<string>();
+      const dedupedSchema = rawSchema.map((f, i) => {
+        let baseKey = f?.key || `field_${i}`;
+        let key = baseKey;
+        let suffix = 2;
+        while (seen.has(key)) {
+          key = `${baseKey}_${suffix++}`;
+        }
+        seen.add(key);
+        return { ...f, key };
+      });
+      setCustomFieldsSchema(dedupedSchema);
       const ef: any = editingFunnel;
       const mode: "allow" | "warn" | "block" =
         ef.backtrack_mode || (ef.allow_backtrack === false ? "block" : "allow");
