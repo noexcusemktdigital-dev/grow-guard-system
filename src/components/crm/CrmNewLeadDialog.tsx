@@ -126,8 +126,8 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
           {customFieldsSchema.length > 0 && (
             <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
               <Label className="text-xs font-semibold">Campos adicionais</Label>
-              {customFieldsSchema.map((field: any) => (
-                <div key={field.key}>
+              {customFieldsSchema.map((field: any, idx: number) => (
+                <div key={`${field.key}__${idx}`}>
                   <Label className="text-xs">{field.label}{field.required ? " *" : ""}</Label>
                   {field.type === "select" ? (
                     <select
