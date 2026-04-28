@@ -306,7 +306,9 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                   value={field.label}
                   onChange={e => {
                     const updated = [...customFieldsSchema];
-                    updated[idx] = { ...field, label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    // IMPORTANTE: não regerar a `key` a partir do label — isso fazia campos
+                    // com o mesmo nome compartilharem a mesma chave e duplicarem valores.
+                    updated[idx] = { ...field, label: e.target.value };
                     setCustomFieldsSchema(updated);
                   }}
                   className="h-7 text-xs flex-1"
