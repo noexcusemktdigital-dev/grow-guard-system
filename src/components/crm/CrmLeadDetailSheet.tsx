@@ -54,12 +54,15 @@ interface LeadRow {
   lost_at?: string | null;
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
+  funnel_id?: string | null;
+  custom_fields?: Record<string, any> | null;
 }
 
 interface FunnelOption {
   id: string;
   name: string;
   stages: Array<{ key?: string; label?: string; color?: string; icon?: string }>;
+  custom_fields_schema?: Array<{ key: string; label: string; type: string; required?: boolean; placeholder?: string; options?: string[] }>;
 }
 
 interface CrmLeadDetailSheetProps {
