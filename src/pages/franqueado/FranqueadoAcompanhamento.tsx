@@ -1322,13 +1322,12 @@ function WebSecaoCard({ secao, idx, onChange, onRemove }: { secao: WebSecao; idx
 // ─── Main Page ───
 export default function FranqueadoAcompanhamento({ forceReadOnly = false }: { forceReadOnly?: boolean } = {}) {
   const { role } = useAuth();
-  // Somente ADM da Matriz (super_admin) pode criar e editar
-  const canEdit = role === "super_admin" && !forceReadOnly;
-  // Matriz vê todos os projetos
-  const isMatriz = role === "super_admin";
-  // Franqueado e admin de unidade veem somente sua unidade — somente leitura
-  const isFranqueado = role === "franqueado" || role === "admin";
-  // Todos que não são super_admin (ou forceReadOnly) são readOnly
+  // ADMs da Matriz (super_admin e admin) podem criar, editar, alimentar e renomear
+  const isMatriz = role === "super_admin" || role === "admin";
+  const canEdit = isMatriz && !forceReadOnly;
+  // Franqueado vê somente sua unidade — somente leitura
+  const isFranqueado = role === "franqueado";
+  // Todos que não são matriz (ou forceReadOnly) são readOnly
   const readOnly = !canEdit;
 
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
