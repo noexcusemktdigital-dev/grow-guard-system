@@ -121,12 +121,15 @@ function AnaliseMetricsChart({ metricas, title }: { metricas: Record<string, num
 
 // ─── Analysis sub-section editor ───
 function AnaliseAreaEditor({
-  title, description, icon: Icon, accentColor, metricLabels, section, onChange, showImageUpload = false, readOnly = false,
+  title, description, icon: Icon, accentColor, metricLabels, section, onChange,
+  showImageUpload = false, readOnly = false, indicadoresFixos,
 }: {
   title: string; description: string; icon: React.ElementType; accentColor: string;
   metricLabels: string[]; section: AnaliseSubSection; onChange: (s: AnaliseSubSection) => void;
   showImageUpload?: boolean;
   readOnly?: boolean;
+  /** Quando definido, renderiza exatamente esses indicadores (labels fixos, sem add/remover). */
+  indicadoresFixos?: Array<{ label: string; unidade: string }>;
 }) {
   const metricas = section.metricas || {};
   const positivos = section.positivos || [""];
@@ -231,13 +234,13 @@ function AnaliseAreaEditor({
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5" />
-              Indicadores — Ideal vs Atual
+              Indicadores — Meta vs Realizado
             </label>
-            {!readOnly && (
+            {!indicadoresFixos && !readOnly && (
               <Button size="sm" variant="ghost" className="h-6 text-xs"
                 onClick={() => onChange({
                   ...section,
-                  indicadores: [...(section.indicadores || []), { label: "", ideal: 0, atual: 0, unidade: "" }]
+                  indicadores: [...(section.indicadores || []), { label: "", ideal: 0, atual: 0, unidade: "" }],
                 })}
               >
                 <Plus className="w-3 h-3 mr-1" /> Adicionar
@@ -245,93 +248,123 @@ function AnaliseAreaEditor({
             )}
           </div>
 
-          {(section.indicadores || []).map((ind, i) => {
-            const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
-            const barColor = pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
-            return (
-              <div key={i} className="mb-3 p-3 rounded-lg border bg-card space-y-2">
-                <div className="flex items-center gap-2">
-                  {readOnly ? (
-                    <span className="text-sm font-medium flex-1">{ind.label}</span>
-                  ) : (
-                    <Input
-                      value={ind.label}
-                      onChange={e => {
-                        const n = [...(section.indicadores || [])];
-                        n[i] = { ...n[i], label: e.target.value };
-                        onChange({ ...section, indicadores: n });
-                      }}
-                      placeholder="Ex: CPL médio, Alcance..."
-                      className="h-7 text-sm flex-1"
-                    />
-                  )}
-                  {!readOnly && (
-                    <Button size="icon" variant="ghost" className="w-6 h-6"
-                      onClick={() => onChange({
-                        ...section,
-                        indicadores: (section.indicadores || []).filter((_, j) => j !== i)
-                      })}
-                    >
-                      <XCircle className="w-3.5 h-3.5 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2 items-end">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Meta (ideal)</label>
-                    {readOnly ? (
-                      <span className="text-sm font-semibold">{ind.ideal} {ind.unidade}</span>
+          {(() => {
+            // Em modo "fixo": montar lista garantindo que todos os labels obrigatórios existam
+            let lista = section.indicadores || [];
+            if (indicadoresFixos) {
+              lista = indicadoresFixos.map((fx) => {
+                const found = (section.indicadores || []).find(
+                  (ind) => (ind.label || "").trim().toLowerCase() === fx.label.toLowerCase(),
+                );
+                return found
+                  ? { ...found, label: fx.label, unidade: found.unidade || fx.unidade }
+                  : { label: fx.label, ideal: 0, atual: 0, unidade: fx.unidade };
+              });
+            }
+
+            const persistFixos = (next: typeof lista) => {
+              if (!indicadoresFixos) {
+                onChange({ ...section, indicadores: next });
+                return;
+              }
+              // Mantém indicadores extras (não-fixos) intactos no fim
+              const fixosLabels = indicadoresFixos.map((f) => f.label.toLowerCase());
+              const extras = (section.indicadores || []).filter(
+                (ind) => !fixosLabels.includes((ind.label || "").trim().toLowerCase()),
+              );
+              onChange({ ...section, indicadores: [...next, ...extras] });
+            };
+
+            return lista.map((ind, i) => {
+              const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
+              const barColor = pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+              return (
+                <div key={`${ind.label}-${i}`} className="mb-3 p-3 rounded-lg border bg-card space-y-2">
+                  <div className="flex items-center gap-2">
+                    {indicadoresFixos || readOnly ? (
+                      <span className="text-sm font-semibold flex-1">{ind.label}</span>
                     ) : (
-                      <div className="flex gap-1">
-                        <Input type="number" value={ind.ideal || ""} placeholder="Meta"
-                          onChange={e => {
-                            const n = [...(section.indicadores || [])];
-                            n[i] = { ...n[i], ideal: Number(e.target.value) };
-                            onChange({ ...section, indicadores: n });
+                      <Input
+                        value={ind.label}
+                        onChange={(e) => {
+                          const n = [...lista];
+                          n[i] = { ...n[i], label: e.target.value };
+                          persistFixos(n);
+                        }}
+                        placeholder="Ex: CPL médio, Alcance..."
+                        className="h-7 text-sm flex-1"
+                      />
+                    )}
+                    {!indicadoresFixos && !readOnly && (
+                      <Button size="icon" variant="ghost" className="w-6 h-6"
+                        onClick={() => onChange({
+                          ...section,
+                          indicadores: (section.indicadores || []).filter((_, j) => j !== i),
+                        })}
+                      >
+                        <XCircle className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-end">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Meta (ideal)</label>
+                      {readOnly ? (
+                        <span className="text-sm font-semibold">{ind.ideal} {ind.unidade}</span>
+                      ) : (
+                        <div className="flex gap-1">
+                          <Input type="number" value={ind.ideal || ""} placeholder="Meta"
+                            onChange={(e) => {
+                              const n = [...lista];
+                              n[i] = { ...n[i], ideal: Number(e.target.value) };
+                              persistFixos(n);
+                            }}
+                            className="h-7 text-xs"
+                          />
+                          {!indicadoresFixos && (
+                            <Input value={ind.unidade || ""} placeholder="und"
+                              onChange={(e) => {
+                                const n = [...lista];
+                                n[i] = { ...n[i], unidade: e.target.value };
+                                persistFixos(n);
+                              }}
+                              className="h-7 text-xs w-16"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Realizado</label>
+                      {readOnly ? (
+                        <span className="text-sm font-bold text-primary">{ind.atual} {ind.unidade}</span>
+                      ) : (
+                        <Input type="number" value={ind.atual || ""} placeholder="Atual"
+                          onChange={(e) => {
+                            const n = [...lista];
+                            n[i] = { ...n[i], atual: Number(e.target.value) };
+                            persistFixos(n);
                           }}
                           className="h-7 text-xs"
                         />
-                        <Input value={ind.unidade || ""} placeholder="und"
-                          onChange={e => {
-                            const n = [...(section.indicadores || [])];
-                            n[i] = { ...n[i], unidade: e.target.value };
-                            onChange({ ...section, indicadores: n });
-                          }}
-                          className="h-7 text-xs w-16"
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">
+                        {pct.toFixed(0)}% da meta
+                      </label>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${barColor}`}
+                          style={{ width: `${pct}%` }}
                         />
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Atual</label>
-                    {readOnly ? (
-                      <span className="text-sm font-bold text-primary">{ind.atual} {ind.unidade}</span>
-                    ) : (
-                      <Input type="number" value={ind.atual || ""} placeholder="Atual"
-                        onChange={e => {
-                          const n = [...(section.indicadores || [])];
-                          n[i] = { ...n[i], atual: Number(e.target.value) };
-                          onChange({ ...section, indicadores: n });
-                        }}
-                        className="h-7 text-xs"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">
-                      {pct.toFixed(0)}% da meta
-                    </label>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${barColor}`}
-                        style={{ width: `${pct}%` }}
-                      />
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
 
         <Separator />
@@ -715,7 +748,7 @@ function CycleListView({ clientName, followups, onBack, onNew, onEdit, canEdit }
 }
 
 // ─── Default empty objects ───
-const EMPTY_PAUTA: ConteudoPauta = { titulo: "", formato: "Reels", objetivo: "", roteiro: "", tempo_duracao: "", data_postagem: "", plataforma: "Instagram", tipo: "organico", cta: "", referencias: "", necessidades_cliente: "", observacoes: "" };
+const EMPTY_PAUTA: ConteudoPauta = { titulo: "", formato: "Reels", objetivo: "", roteiro: "", tempo_duracao: "", data_postagem: "", plataforma: "Instagram", tipo: "organico", cta: "", referencias: "", imagens_referencia: [], necessidades_cliente: "", observacoes: "" };
 const EMPTY_CAMPANHA: TrafegoCampanha = { nome_campanha: "", plataforma: "Meta Ads", objetivo_campanha: "", tipo_campanha: "", formato_anuncio: "", publico_alvo: "", segmentacao: "", localizacao: "", faixa_etaria: "", investimento_diario: 0, investimento_total: 0, duracao_dias: 30, data_inicio: "", data_fim: "", copy_principal: "", cta: "", url_destino: "", meta_cpl: 0, meta_cpc: 0, meta_ctr: 0, meta_conversoes: 0, meta_roas: 0, observacoes: "" };
 const EMPTY_WEB_SECAO: WebSecao = { titulo: "", tipo: "Landing Page", objetivo: "", descricao: "", secoes_pagina: [""], expectativa_resultado: "", necessidades_cliente: "", prazo_estimado: "", status: "A criar", observacoes: "" };
 
@@ -870,19 +903,41 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 
           <AnaliseAreaEditor title="Conteúdo & Criativos" description="Performance dos criativos orgânicos e pagos" icon={Palette} accentColor="bg-violet-500"
             metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
+            indicadoresFixos={[
+              { label: "CTR", unidade: "%" },
+              { label: "Engajamento", unidade: "%" },
+              { label: "Impressões", unidade: "" },
+            ]}
             section={analiseConteudo} onChange={setAnaliseConteudo} showImageUpload readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Tráfego Pago" description="Números das campanhas — investimento, custo e conversões" icon={MousePointerClick} accentColor="bg-blue-500"
             metricLabels={["Investimento Total", "Impressões", "Cliques", "CTR (%)", "CPC (R$)", "CPL (R$)", "Conversões", "ROAS"]}
+            indicadoresFixos={[
+              { label: "CTR", unidade: "%" },
+              { label: "CPC", unidade: "R$" },
+              { label: "CPL", unidade: "R$" },
+              { label: "Alcance", unidade: "" },
+            ]}
             section={analiseTrafego} onChange={setAnaliseTrafego} readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Web / Site" description="Desempenho do site e landing pages" icon={Globe} accentColor="bg-emerald-500"
             metricLabels={["Sessões", "Usuários Únicos", "Taxa de Rejeição (%)", "Tempo Médio (s)", "Conversões Site", "Páginas/Sessão"]}
+            indicadoresFixos={[
+              { label: "Pageviews", unidade: "" },
+              { label: "Taxa de Rejeição", unidade: "%" },
+              { label: "Conversão", unidade: "%" },
+            ]}
             section={analiseWeb} onChange={setAnaliseWeb} readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Vendas / CRM" description="Resultados comerciais e pipeline" icon={ShoppingCart} accentColor="bg-orange-500"
             metricLabels={["Leads Gerados", "Leads Qualificados", "Propostas Enviadas", "Vendas Fechadas", "Ticket Médio (R$)", "Faturamento (R$)"]}
+            indicadoresFixos={[
+              { label: "MQL", unidade: "" },
+              { label: "SQL", unidade: "" },
+              { label: "ROAS", unidade: "x" },
+            ]}
             section={analiseVendas} onChange={setAnaliseVendas} readOnly={readOnly} />
+
           <Separator />
 
           <Card className="border-primary/20">
@@ -1033,6 +1088,41 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 // ─── Pauta Card (content post) ───
 function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; idx: number; onChange: (i: number, f: keyof ConteudoPauta, v: any) => void; onRemove: (i: number) => void }) {
   const borderColor = pauta.tipo === "organico" ? "border-l-green-500" : "border-l-blue-500";
+  const refImagens = pauta.imagens_referencia || [];
+  const refInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingRef, setUploadingRef] = useState(false);
+
+  const handleRefUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingRef(true);
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) continue;
+        const ext = file.name.split(".").pop() || "png";
+        const path = `pauta-refs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("followup-assets").upload(path, file);
+        if (error) { console.error(error); continue; }
+        const { data: urlData } = supabase.storage.from("followup-assets").getPublicUrl(path);
+        if (urlData?.publicUrl) newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        onChange(idx, "imagens_referencia", [...refImagens, ...newUrls]);
+      }
+    } catch (err) {
+      console.error("Upload de referência falhou", err);
+    } finally {
+      setUploadingRef(false);
+      if (refInputRef.current) refInputRef.current.value = "";
+    }
+  };
+
+  const removeRef = (i: number) => {
+    onChange(idx, "imagens_referencia", refImagens.filter((_, j) => j !== i));
+  };
+
   return (
     <Card className={`mb-3 border-l-4 ${borderColor}`}>
       <CardHeader className="pb-2 pt-3">
@@ -1083,10 +1173,44 @@ function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; i
             <Input value={pauta.cta} onChange={(e) => onChange(idx, "cta", e.target.value)} placeholder="Ex: Agende sua consulta" className="text-xs" />
           </div>
           <div>
-            <label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1 mb-1"><Link2 className="w-3 h-3" /> Referências</label>
-            <Input value={pauta.referencias} onChange={(e) => onChange(idx, "referencias", e.target.value)} placeholder="Links ou referências visuais" className="text-xs" />
+            <label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1 mb-1"><Link2 className="w-3 h-3" /> Referências (link)</label>
+            <Input value={pauta.referencias} onChange={(e) => onChange(idx, "referencias", e.target.value)} placeholder="Cole um link de referência (uso interno)" className="text-xs" />
+            <p className="text-[10px] text-muted-foreground mt-1">Uso interno — o link não aparece como clicável na apresentação ao cliente.</p>
           </div>
         </div>
+
+        {/* Referências visuais (imagens) — aparecem para o cliente na apresentação */}
+        <div className="rounded-lg border bg-muted/20 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1.5">
+              <ImageIcon className="w-3 h-3" />
+              Referências Visuais (imagens)
+            </label>
+            <Button type="button" variant="outline" size="sm" disabled={uploadingRef}
+              onClick={() => refInputRef.current?.click()}>
+              {uploadingRef ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+              {uploadingRef ? "Enviando..." : "Adicionar"}
+            </Button>
+            <input ref={refInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
+              multiple className="hidden" onChange={handleRefUpload} />
+          </div>
+          {refImagens.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {refImagens.map((url, i) => (
+                <div key={i} className="relative group rounded-md overflow-hidden border bg-muted aspect-square">
+                  <img src={url} alt={`Referência ${i + 1}`} className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => removeRef(i)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground italic">Nenhuma referência visual enviada.</p>
+          )}
+        </div>
+
         <div>
           <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1 block">Necessidades do Cliente</label>
           <Input value={pauta.necessidades_cliente} onChange={(e) => onChange(idx, "necessidades_cliente", e.target.value)} placeholder="O que precisa do cliente para produzir?" className="text-xs" />
