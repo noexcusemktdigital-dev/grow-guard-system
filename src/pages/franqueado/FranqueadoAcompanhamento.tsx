@@ -234,13 +234,13 @@ function AnaliseAreaEditor({
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5" />
-              Indicadores — Ideal vs Atual
+              Indicadores — Meta vs Realizado
             </label>
-            {!readOnly && (
+            {!indicadoresFixos && !readOnly && (
               <Button size="sm" variant="ghost" className="h-6 text-xs"
                 onClick={() => onChange({
                   ...section,
-                  indicadores: [...(section.indicadores || []), { label: "", ideal: 0, atual: 0, unidade: "" }]
+                  indicadores: [...(section.indicadores || []), { label: "", ideal: 0, atual: 0, unidade: "" }],
                 })}
               >
                 <Plus className="w-3 h-3 mr-1" /> Adicionar
@@ -248,93 +248,123 @@ function AnaliseAreaEditor({
             )}
           </div>
 
-          {(section.indicadores || []).map((ind, i) => {
-            const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
-            const barColor = pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
-            return (
-              <div key={i} className="mb-3 p-3 rounded-lg border bg-card space-y-2">
-                <div className="flex items-center gap-2">
-                  {readOnly ? (
-                    <span className="text-sm font-medium flex-1">{ind.label}</span>
-                  ) : (
-                    <Input
-                      value={ind.label}
-                      onChange={e => {
-                        const n = [...(section.indicadores || [])];
-                        n[i] = { ...n[i], label: e.target.value };
-                        onChange({ ...section, indicadores: n });
-                      }}
-                      placeholder="Ex: CPL médio, Alcance..."
-                      className="h-7 text-sm flex-1"
-                    />
-                  )}
-                  {!readOnly && (
-                    <Button size="icon" variant="ghost" className="w-6 h-6"
-                      onClick={() => onChange({
-                        ...section,
-                        indicadores: (section.indicadores || []).filter((_, j) => j !== i)
-                      })}
-                    >
-                      <XCircle className="w-3.5 h-3.5 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2 items-end">
-                  <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Meta (ideal)</label>
-                    {readOnly ? (
-                      <span className="text-sm font-semibold">{ind.ideal} {ind.unidade}</span>
+          {(() => {
+            // Em modo "fixo": montar lista garantindo que todos os labels obrigatórios existam
+            let lista = section.indicadores || [];
+            if (indicadoresFixos) {
+              lista = indicadoresFixos.map((fx) => {
+                const found = (section.indicadores || []).find(
+                  (ind) => (ind.label || "").trim().toLowerCase() === fx.label.toLowerCase(),
+                );
+                return found
+                  ? { ...found, label: fx.label, unidade: found.unidade || fx.unidade }
+                  : { label: fx.label, ideal: 0, atual: 0, unidade: fx.unidade };
+              });
+            }
+
+            const persistFixos = (next: typeof lista) => {
+              if (!indicadoresFixos) {
+                onChange({ ...section, indicadores: next });
+                return;
+              }
+              // Mantém indicadores extras (não-fixos) intactos no fim
+              const fixosLabels = indicadoresFixos.map((f) => f.label.toLowerCase());
+              const extras = (section.indicadores || []).filter(
+                (ind) => !fixosLabels.includes((ind.label || "").trim().toLowerCase()),
+              );
+              onChange({ ...section, indicadores: [...next, ...extras] });
+            };
+
+            return lista.map((ind, i) => {
+              const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
+              const barColor = pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+              return (
+                <div key={`${ind.label}-${i}`} className="mb-3 p-3 rounded-lg border bg-card space-y-2">
+                  <div className="flex items-center gap-2">
+                    {indicadoresFixos || readOnly ? (
+                      <span className="text-sm font-semibold flex-1">{ind.label}</span>
                     ) : (
-                      <div className="flex gap-1">
-                        <Input type="number" value={ind.ideal || ""} placeholder="Meta"
-                          onChange={e => {
-                            const n = [...(section.indicadores || [])];
-                            n[i] = { ...n[i], ideal: Number(e.target.value) };
-                            onChange({ ...section, indicadores: n });
+                      <Input
+                        value={ind.label}
+                        onChange={(e) => {
+                          const n = [...lista];
+                          n[i] = { ...n[i], label: e.target.value };
+                          persistFixos(n);
+                        }}
+                        placeholder="Ex: CPL médio, Alcance..."
+                        className="h-7 text-sm flex-1"
+                      />
+                    )}
+                    {!indicadoresFixos && !readOnly && (
+                      <Button size="icon" variant="ghost" className="w-6 h-6"
+                        onClick={() => onChange({
+                          ...section,
+                          indicadores: (section.indicadores || []).filter((_, j) => j !== i),
+                        })}
+                      >
+                        <XCircle className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-end">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Meta (ideal)</label>
+                      {readOnly ? (
+                        <span className="text-sm font-semibold">{ind.ideal} {ind.unidade}</span>
+                      ) : (
+                        <div className="flex gap-1">
+                          <Input type="number" value={ind.ideal || ""} placeholder="Meta"
+                            onChange={(e) => {
+                              const n = [...lista];
+                              n[i] = { ...n[i], ideal: Number(e.target.value) };
+                              persistFixos(n);
+                            }}
+                            className="h-7 text-xs"
+                          />
+                          {!indicadoresFixos && (
+                            <Input value={ind.unidade || ""} placeholder="und"
+                              onChange={(e) => {
+                                const n = [...lista];
+                                n[i] = { ...n[i], unidade: e.target.value };
+                                persistFixos(n);
+                              }}
+                              className="h-7 text-xs w-16"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Realizado</label>
+                      {readOnly ? (
+                        <span className="text-sm font-bold text-primary">{ind.atual} {ind.unidade}</span>
+                      ) : (
+                        <Input type="number" value={ind.atual || ""} placeholder="Atual"
+                          onChange={(e) => {
+                            const n = [...lista];
+                            n[i] = { ...n[i], atual: Number(e.target.value) };
+                            persistFixos(n);
                           }}
                           className="h-7 text-xs"
                         />
-                        <Input value={ind.unidade || ""} placeholder="und"
-                          onChange={e => {
-                            const n = [...(section.indicadores || [])];
-                            n[i] = { ...n[i], unidade: e.target.value };
-                            onChange({ ...section, indicadores: n });
-                          }}
-                          className="h-7 text-xs w-16"
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">
+                        {pct.toFixed(0)}% da meta
+                      </label>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${barColor}`}
+                          style={{ width: `${pct}%` }}
                         />
                       </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">Atual</label>
-                    {readOnly ? (
-                      <span className="text-sm font-bold text-primary">{ind.atual} {ind.unidade}</span>
-                    ) : (
-                      <Input type="number" value={ind.atual || ""} placeholder="Atual"
-                        onChange={e => {
-                          const n = [...(section.indicadores || [])];
-                          n[i] = { ...n[i], atual: Number(e.target.value) };
-                          onChange({ ...section, indicadores: n });
-                        }}
-                        className="h-7 text-xs"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground mb-1 block">
-                      {pct.toFixed(0)}% da meta
-                    </label>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${barColor}`}
-                        style={{ width: `${pct}%` }}
-                      />
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
 
         <Separator />
