@@ -667,7 +667,12 @@ export default function Apresentacao() {
 
       <AnaliseSection analise={analise} />
 
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+      {/* PARTE 2 — Próximas ações */}
+      <div className="page-break my-12 border-t-4 border-violet-500/30 relative max-w-[1400px] mx-auto">
+        <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#0a0a0f] px-4 text-sm font-semibold text-gray-400 uppercase tracking-widest">
+          Parte 2 — Próximas Ações
+        </span>
+      </div>
 
       <ConteudoSection plano={plano} analise={analise} />
 
