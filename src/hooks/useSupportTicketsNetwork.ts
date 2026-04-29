@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { useUserOrgId } from "./useUserOrgId";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface NetworkTicket {
   id: string;
@@ -21,17 +21,17 @@ export interface NetworkTicket {
 }
 
 export function useSupportTicketsNetwork() {
-  const { data: orgId } = useUserOrgId();
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["support-tickets-network", orgId],
+    queryKey: ["support-tickets-network", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_network_tickets", {
-        _parent_org_id: orgId!,
-      });
+      // Uses get_all_network_tickets which auto-detects the matrix org from auth.uid(),
+      // so any matrix member sees ALL tickets regardless of which org is "active" in their session.
+      const { data, error } = await supabase.rpc("get_all_network_tickets");
       if (error) throw error;
       return (data ?? []) as NetworkTicket[];
     },
-    enabled: !!orgId,
+    enabled: !!user,
   });
 }
