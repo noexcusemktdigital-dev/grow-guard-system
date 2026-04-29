@@ -5,6 +5,7 @@ import {
   useClientFoldersForUnit,
   useClientFollowups,
   useSaveFollowup,
+  useRenameFolder,
   type ClientFollowup,
   type FollowupAnalise,
   type FollowupPlano,
@@ -32,7 +33,7 @@ import {
   BarChart3, Megaphone, TrendingUp, Globe, Target,
   ThumbsUp, ThumbsDown, Eye, Palette, MousePointerClick, ShoppingCart,
   ArrowUpRight, AlertTriangle, Sparkles, Calendar, Clock, Link2, FileText, Crosshair, DollarSign, Users,
-  Upload, Loader2, ImageIcon,
+  Upload, Loader2, ImageIcon, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -120,11 +121,12 @@ function AnaliseMetricsChart({ metricas, title }: { metricas: Record<string, num
 
 // ─── Analysis sub-section editor ───
 function AnaliseAreaEditor({
-  title, description, icon: Icon, accentColor, metricLabels, section, onChange, showImageUpload = false,
+  title, description, icon: Icon, accentColor, metricLabels, section, onChange, showImageUpload = false, readOnly = false,
 }: {
   title: string; description: string; icon: React.ElementType; accentColor: string;
   metricLabels: string[]; section: AnaliseSubSection; onChange: (s: AnaliseSubSection) => void;
   showImageUpload?: boolean;
+  readOnly?: boolean;
 }) {
   const metricas = section.metricas || {};
   const positivos = section.positivos || [""];
@@ -180,6 +182,38 @@ function AnaliseAreaEditor({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Score manual desta área */}
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border">
+          <div className="flex-1">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+              Score desta frente
+            </label>
+            <p className="text-[10px] text-muted-foreground">
+              Avalie de 0 a 5 o desempenho desta área no período
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => !readOnly && onChange({ ...section, score: n })}
+                disabled={readOnly}
+                className={`w-9 h-9 rounded-lg text-sm font-bold transition-all border-2 ${
+                  (section.score || 0) >= n
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-muted-foreground/30 text-muted-foreground hover:border-primary/50"
+                } ${readOnly ? "cursor-default" : "cursor-pointer"}`}
+              >
+                {n}
+              </button>
+            ))}
+            <div className="ml-2 text-2xl font-bold text-primary w-12 text-center">
+              {section.score || 0}<span className="text-xs font-normal text-muted-foreground">/5</span>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Métricas do Mês</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -191,6 +225,114 @@ function AnaliseAreaEditor({
         </div>
 
         <AnaliseMetricsChart metricas={metricas} title={`Visão Geral — ${title}`} />
+
+        {/* Indicadores Ideal x Atual */}
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5" />
+              Indicadores — Ideal vs Atual
+            </label>
+            {!readOnly && (
+              <Button size="sm" variant="ghost" className="h-6 text-xs"
+                onClick={() => onChange({
+                  ...section,
+                  indicadores: [...(section.indicadores || []), { label: "", ideal: 0, atual: 0, unidade: "" }]
+                })}
+              >
+                <Plus className="w-3 h-3 mr-1" /> Adicionar
+              </Button>
+            )}
+          </div>
+
+          {(section.indicadores || []).map((ind, i) => {
+            const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
+            const barColor = pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+            return (
+              <div key={i} className="mb-3 p-3 rounded-lg border bg-card space-y-2">
+                <div className="flex items-center gap-2">
+                  {readOnly ? (
+                    <span className="text-sm font-medium flex-1">{ind.label}</span>
+                  ) : (
+                    <Input
+                      value={ind.label}
+                      onChange={e => {
+                        const n = [...(section.indicadores || [])];
+                        n[i] = { ...n[i], label: e.target.value };
+                        onChange({ ...section, indicadores: n });
+                      }}
+                      placeholder="Ex: CPL médio, Alcance..."
+                      className="h-7 text-sm flex-1"
+                    />
+                  )}
+                  {!readOnly && (
+                    <Button size="icon" variant="ghost" className="w-6 h-6"
+                      onClick={() => onChange({
+                        ...section,
+                        indicadores: (section.indicadores || []).filter((_, j) => j !== i)
+                      })}
+                    >
+                      <XCircle className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 items-end">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">Meta (ideal)</label>
+                    {readOnly ? (
+                      <span className="text-sm font-semibold">{ind.ideal} {ind.unidade}</span>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Input type="number" value={ind.ideal || ""} placeholder="Meta"
+                          onChange={e => {
+                            const n = [...(section.indicadores || [])];
+                            n[i] = { ...n[i], ideal: Number(e.target.value) };
+                            onChange({ ...section, indicadores: n });
+                          }}
+                          className="h-7 text-xs"
+                        />
+                        <Input value={ind.unidade || ""} placeholder="und"
+                          onChange={e => {
+                            const n = [...(section.indicadores || [])];
+                            n[i] = { ...n[i], unidade: e.target.value };
+                            onChange({ ...section, indicadores: n });
+                          }}
+                          className="h-7 text-xs w-16"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">Atual</label>
+                    {readOnly ? (
+                      <span className="text-sm font-bold text-primary">{ind.atual} {ind.unidade}</span>
+                    ) : (
+                      <Input type="number" value={ind.atual || ""} placeholder="Atual"
+                        onChange={e => {
+                          const n = [...(section.indicadores || [])];
+                          n[i] = { ...n[i], atual: Number(e.target.value) };
+                          onChange({ ...section, indicadores: n });
+                        }}
+                        className="h-7 text-xs"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">
+                      {pct.toFixed(0)}% da meta
+                    </label>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${barColor}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         <Separator />
 
@@ -278,43 +420,94 @@ function AnaliseAreaEditor({
   );
 }
 
-// ─── Radar overview chart ───
-function AnaliseOverviewRadar({ analise }: { analise: { conteudo?: AnaliseSubSection; trafego?: AnaliseSubSection; web?: AnaliseSubSection; vendas?: AnaliseSubSection } }) {
-  const getScore = (s?: AnaliseSubSection) => {
-    if (!s?.metricas) return 0;
-    const vals = Object.values(s.metricas).filter((v) => v > 0);
-    return vals.length;
-  };
-
-  const data = [
-    { area: "Conteúdo", preenchido: getScore(analise.conteudo), positivos: analise.conteudo?.positivos?.filter(Boolean).length || 0 },
-    { area: "Tráfego", preenchido: getScore(analise.trafego), positivos: analise.trafego?.positivos?.filter(Boolean).length || 0 },
-    { area: "Web", preenchido: getScore(analise.web), positivos: analise.web?.positivos?.filter(Boolean).length || 0 },
-    { area: "Vendas", preenchido: getScore(analise.vendas), positivos: analise.vendas?.positivos?.filter(Boolean).length || 0 },
+// ─── Score overview (auto-generated from manual scores) ───
+function ScoreOverview({ analise }: {
+  analise: {
+    conteudo?: AnaliseSubSection;
+    trafego?: AnaliseSubSection;
+    web?: AnaliseSubSection;
+    vendas?: AnaliseSubSection;
+  }
+}) {
+  const areas = [
+    { key: "conteudo", label: "Criativos", icon: Palette, colorHex: "#8b5cf6", data: analise.conteudo },
+    { key: "trafego", label: "Tráfego Pago", icon: MousePointerClick, colorHex: "#3b82f6", data: analise.trafego },
+    { key: "web", label: "Web", icon: Globe, colorHex: "#10b981", data: analise.web },
+    { key: "vendas", label: "Vendas", icon: ShoppingCart, colorHex: "#f97316", data: analise.vendas },
   ];
 
-  const hasData = data.some((d) => d.preenchido > 0);
-  if (!hasData) return null;
+  const scoreMedia = areas.reduce((s, a) => s + (a.data?.score || 0), 0) / 4;
+  const chartData = areas.map(a => ({
+    area: a.label,
+    score: a.data?.score || 0,
+    fill: a.colorHex,
+  }));
+  const hasAnyScore = areas.some(a => (a.data?.score || 0) > 0);
+  if (!hasAnyScore) return null;
 
   return (
-    <Card>
-      <CardHeader className="pb-2 pt-3">
-        <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Visão Geral das Áreas</CardTitle>
+    <Card className="border-primary/20">
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base">Score Geral do Período</CardTitle>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-bold text-primary leading-none">
+              {scoreMedia.toFixed(1)}
+            </p>
+            <p className="text-xs text-muted-foreground">média geral /5</p>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="pb-3">
-        <ResponsiveContainer width="100%" height={220}>
-          <RadarChart data={data}>
-            <PolarGrid stroke="hsl(var(--border))" />
-            <PolarAngleAxis dataKey="area" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} />
-            <PolarRadiusAxis tick={{ fontSize: 9 }} />
-            <Radar name="Métricas" dataKey="preenchido" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
-            <Radar name="Positivos" dataKey="positivos" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.2} />
-          </RadarChart>
+      <CardContent className="space-y-4 pb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {areas.map((area) => {
+            const score = area.data?.score || 0;
+            const Icon = area.icon;
+            const label = score === 0 ? "Sem avaliação" :
+              score <= 1 ? "Crítico" :
+              score <= 2 ? "Abaixo do esperado" :
+              score <= 3 ? "Regular" :
+              score <= 4 ? "Bom" : "Excelente";
+            return (
+              <div key={area.key} className="text-center p-3 rounded-xl border bg-card space-y-1">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto"
+                  style={{ backgroundColor: `${area.colorHex}20` }}>
+                  <Icon className="w-3.5 h-3.5" style={{ color: area.colorHex }} />
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">{area.label}</p>
+                <p className="text-2xl font-bold leading-none" style={{ color: area.colorHex }}>
+                  {score}
+                  <span className="text-xs font-normal text-muted-foreground">/5</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground">{label}</p>
+              </div>
+            );
+          })}
+        </div>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={chartData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="area" tick={{ fontSize: 11 }} />
+            <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{ fontSize: 10 }} />
+            <Tooltip
+              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+              formatter={(v: number) => [`${v}/5`, "Score"]}
+            />
+            <Bar dataKey="score" radius={[6, 6, 0, 0]}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 }
+
 
 // ─── Content format distribution chart ───
 function ConteudoFormatChart({ pautas }: { pautas: ConteudoPauta[] }) {
@@ -378,10 +571,19 @@ function TrafegoInvestimentoChart({ campanhas }: { campanhas: TrafegoCampanha[] 
 }
 
 // ─── LEVEL 1: Client Folders ───
-function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; units?: any[] }) {
+function FolderListView({ folders, onSelect, isMatriz, canEdit, units, onRename }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; canEdit: boolean; units?: any[]; onRename: (oldName: string, newName: string) => void }) {
   const [newName, setNewName] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("");
   const [showInput, setShowInput] = useState(false);
+  const [editingFolderName, setEditingFolderName] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const submitRename = (oldName: string) => {
+    const trimmed = newFolderName.trim();
+    if (!trimmed || trimmed === oldName) { setEditingFolderName(null); return; }
+    onRename(oldName, trimmed);
+    setEditingFolderName(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -389,12 +591,12 @@ function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { nam
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><FolderOpen className="w-6 h-6 text-primary" /> Acompanhamento de Clientes</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isMatriz ? "Crie e gerencie ciclos mensais vinculados às unidades" : "Visualize os acompanhamentos da sua unidade"}
+            {canEdit ? "Crie e gerencie ciclos mensais vinculados às unidades" : "Visualize os acompanhamentos da sua unidade"}
           </p>
         </div>
-        {isMatriz && <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>}
+        {canEdit && <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>}
       </div>
-      {showInput && isMatriz && (
+      {showInput && canEdit && (
         <Card><CardContent className="pt-4 space-y-3">
           <div className="flex gap-3">
             <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
@@ -418,18 +620,59 @@ function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { nam
       )}
       {folders.length === 0 && !showInput ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
-          {isMatriz ? "Nenhum cliente cadastrado." : "Nenhum acompanhamento vinculado à sua unidade."}
+          {canEdit ? "Nenhum cliente cadastrado." : "Nenhum acompanhamento vinculado à sua unidade."}
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {folders.map((f) => (
-            <Card key={f.name} className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => onSelect(f.name)}>
+            <Card
+              key={f.name}
+              className="cursor-pointer hover:border-primary/40 transition-colors group relative"
+              onClick={() => editingFolderName !== f.name && onSelect(f.name)}
+            >
               <CardContent className="pt-5 flex items-center gap-3">
-                <FolderOpen className="w-8 h-8 text-primary/60" />
-                <div>
-                  <p className="font-semibold">{f.name}</p>
+                <FolderOpen className="w-8 h-8 text-primary/60 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  {editingFolderName === f.name ? (
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <Input
+                        value={newFolderName}
+                        onChange={e => setNewFolderName(e.target.value)}
+                        className="h-7 text-sm"
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === "Enter") submitRename(f.name);
+                          if (e.key === "Escape") setEditingFolderName(null);
+                        }}
+                      />
+                      <Button size="sm" className="h-7 px-2"
+                        onClick={() => submitRename(f.name)}>
+                        ✓
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2"
+                        onClick={() => setEditingFolderName(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="font-semibold truncate">{f.name}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">{f.count} {f.count === 1 ? "ciclo" : "ciclos"}</p>
                 </div>
+                {canEdit && editingFolderName !== f.name && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setEditingFolderName(f.name);
+                      setNewFolderName(f.name);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -439,13 +682,13 @@ function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { nam
   );
 }
 // ─── LEVEL 2: Cycle list ───
-function CycleListView({ clientName, followups, onBack, onNew, onEdit, isMatriz }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void; isMatriz: boolean }) {
+function CycleListView({ clientName, followups, onBack, onNew, onEdit, canEdit }: { clientName: string; followups: ClientFollowup[]; onBack: () => void; onNew: () => void; onEdit: (f: ClientFollowup) => void; canEdit: boolean }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}><ChevronLeft className="w-4 h-4 mr-1" /> Voltar</Button>
         <h1 className="text-xl font-bold flex-1">{clientName}</h1>
-        {isMatriz && <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>}
+        {canEdit && <Button onClick={onNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Acompanhamento</Button>}
       </div>
       {followups.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum acompanhamento criado.</CardContent></Card>
@@ -623,24 +866,23 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
             <p className="text-sm text-muted-foreground">Analise cada área para fundamentar o plano do próximo mês.</p>
           </div>
 
-          <AnaliseOverviewRadar analise={{ conteudo: analiseConteudo, trafego: analiseTrafego, web: analiseWeb, vendas: analiseVendas }} />
+          <ScoreOverview analise={{ conteudo: analiseConteudo, trafego: analiseTrafego, web: analiseWeb, vendas: analiseVendas }} />
 
           <AnaliseAreaEditor title="Conteúdo & Criativos" description="Performance dos criativos orgânicos e pagos" icon={Palette} accentColor="bg-violet-500"
             metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
-            section={analiseConteudo} onChange={setAnaliseConteudo} showImageUpload />
+            section={analiseConteudo} onChange={setAnaliseConteudo} showImageUpload readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Tráfego Pago" description="Números das campanhas — investimento, custo e conversões" icon={MousePointerClick} accentColor="bg-blue-500"
             metricLabels={["Investimento Total", "Impressões", "Cliques", "CTR (%)", "CPC (R$)", "CPL (R$)", "Conversões", "ROAS"]}
-            section={analiseTrafego} onChange={setAnaliseTrafego} />
+            section={analiseTrafego} onChange={setAnaliseTrafego} readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Web / Site" description="Desempenho do site e landing pages" icon={Globe} accentColor="bg-emerald-500"
             metricLabels={["Sessões", "Usuários Únicos", "Taxa de Rejeição (%)", "Tempo Médio (s)", "Conversões Site", "Páginas/Sessão"]}
-            section={analiseWeb} onChange={setAnaliseWeb} />
+            section={analiseWeb} onChange={setAnaliseWeb} readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Vendas / CRM" description="Resultados comerciais e pipeline" icon={ShoppingCart} accentColor="bg-orange-500"
             metricLabels={["Leads Gerados", "Leads Qualificados", "Propostas Enviadas", "Vendas Fechadas", "Ticket Médio (R$)", "Faturamento (R$)"]}
-            section={analiseVendas} onChange={setAnaliseVendas} />
-
+            section={analiseVendas} onChange={setAnaliseVendas} readOnly={readOnly} />
           <Separator />
 
           <Card className="border-primary/20">
@@ -1078,10 +1320,16 @@ function WebSecaoCard({ secao, idx, onChange, onRemove }: { secao: WebSecao; idx
 }
 
 // ─── Main Page ───
-export default function FranqueadoAcompanhamento() {
+export default function FranqueadoAcompanhamento({ forceReadOnly = false }: { forceReadOnly?: boolean } = {}) {
   const { role } = useAuth();
-  const isMatriz = role === "super_admin" || role === "admin";
-  const isFranqueado = role === "franqueado";
+  // Somente ADM da Matriz (super_admin) pode criar e editar
+  const canEdit = role === "super_admin" && !forceReadOnly;
+  // Matriz vê todos os projetos
+  const isMatriz = role === "super_admin";
+  // Franqueado e admin de unidade veem somente sua unidade — somente leitura
+  const isFranqueado = role === "franqueado" || role === "admin";
+  // Todos que não são super_admin (ou forceReadOnly) são readOnly
+  const readOnly = !canEdit;
 
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedUnitOrgId, setSelectedUnitOrgId] = useState<string | undefined>();
@@ -1091,13 +1339,21 @@ export default function FranqueadoAcompanhamento() {
   const { data: unitFolders = [] } = useClientFoldersForUnit();
   const { data: units = [] } = useUnits();
   const { data: followups = [] } = useClientFollowups(selectedClient);
+  const renameFolder = useRenameFolder();
 
   const folders = isMatriz ? matrizFolders : unitFolders;
-  const readOnly = isFranqueado;
 
   const handleFolderSelect = (name: string, unitOrgId?: string) => {
     setSelectedClient(name);
     if (unitOrgId) setSelectedUnitOrgId(unitOrgId);
+  };
+
+  const handleRename = (oldName: string, newName: string) => {
+    renameFolder.mutate({ oldName, newName }, {
+      onSuccess: (finalName) => {
+        if (selectedClient === oldName) setSelectedClient(finalName as string);
+      }
+    });
   };
 
   if (editing) {
@@ -1122,7 +1378,7 @@ export default function FranqueadoAcompanhamento() {
           onBack={() => { setSelectedClient(null); setSelectedUnitOrgId(undefined); }}
           onNew={() => setEditing("new")}
           onEdit={(f) => setEditing(f)}
-          isMatriz={isMatriz}
+          canEdit={canEdit}
         />
       </div>
     );
@@ -1133,7 +1389,9 @@ export default function FranqueadoAcompanhamento() {
         folders={folders}
         onSelect={handleFolderSelect}
         isMatriz={isMatriz}
+        canEdit={canEdit}
         units={units}
+        onRename={handleRename}
       />
     </div>
   );
