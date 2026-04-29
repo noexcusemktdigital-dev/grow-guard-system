@@ -172,6 +172,13 @@ export default function Atendimento() {
     toast.success(`Status atualizado para ${STATUS_LABELS[status] || status}`);
   }
 
+  function handleAssignChange(id: string, value: string) {
+    const assigned_to = value === "none" ? null : value;
+    updateTicket.mutate({ id, assigned_to });
+    setSelectedTicket(prev => prev ? { ...prev, assigned_to } : null);
+    toast.success(assigned_to ? "Responsável definido" : "Responsável removido");
+  }
+
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
