@@ -558,6 +558,7 @@ export default function ClienteSites() {
   // ── MAIN VIEW
   return (
     <div className="w-full space-y-6">
+      <AssessoriaPopup storageKey="noexcuse_popup_sites_v1" servico="Criação de Sites" />
       <PageHeader title="Sites & Landing Pages" subtitle="Gere sites profissionais com IA e publique no seu domínio" icon={<Globe className="w-5 h-5 text-primary" />} actions={<FeatureTutorialButton slug="sites" />} />
 
       <UsageQuotaBanner used={sites.length} limit={maxSites} label="sites ativos" planName="Atual" />

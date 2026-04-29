@@ -97,5 +97,10 @@ export default function ClienteAcompanhamento() {
   }
 
   // Cliente has projects → render in read-only mode
-  return <FranqueadoAcompanhamento forceReadOnly />;
+  return (
+    <>
+      <AssessoriaPopup storageKey="noexcuse_popup_acompanhamento_v1" servico="Acompanhamento Estratégico" />
+      <FranqueadoAcompanhamento forceReadOnly />
+    </>
+  );
 }

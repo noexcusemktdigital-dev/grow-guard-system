@@ -64,6 +64,7 @@ export default function ClienteRedesSociaisHub() {
 
   return (
     <div className="w-full space-y-6">
+      <AssessoriaPopup storageKey="noexcuse_popup_redes_v1" servico="Gestão de Redes Sociais" />
       <PageHeader
         title="Redes Sociais"
         subtitle="Conecte, analise e publique nas suas redes em um só lugar"
