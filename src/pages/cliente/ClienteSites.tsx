@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useCallback, useMemo } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import {
   Globe, Sparkles, ArrowLeft, ArrowRight, Loader2,
   Building2, Target, Users, Package,

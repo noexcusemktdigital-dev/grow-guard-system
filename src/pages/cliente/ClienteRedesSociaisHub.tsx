@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import { Share2, BarChart3, Send, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSocialAccounts } from "@/hooks/useSocialAccounts";

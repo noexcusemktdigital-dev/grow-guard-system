@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import {
   DollarSign, Sparkles, Target,
   Loader2, History, Folder,
