@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
+import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { AtendimentoConfig } from "@/components/atendimento/AtendimentoConfig";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -51,7 +52,19 @@ const CATEGORIAS = ["Financeiro", "Jurídico", "Comercial", "Marketing", "Treina
 export default function Atendimento() {
   const { user } = useAuth();
   const { data: tickets, isLoading } = useSupportTicketsNetwork();
+  const { data: orgMembers } = useOrgMembers();
   const { createTicket, updateTicket, sendMessage } = useSupportTicketMutations();
+
+  // Equipe da matriz disponível para responsabilizar por chamados
+  const matrizTeam = useMemo(
+    () => (orgMembers ?? []).filter(m => m.role === "super_admin" || m.role === "admin"),
+    [orgMembers]
+  );
+  const memberMap = useMemo(() => {
+    const m = new Map<string, { name: string; avatar: string | null }>();
+    (orgMembers ?? []).forEach(x => m.set(x.user_id, { name: x.full_name || x.email, avatar: x.avatar_url }));
+    return m;
+  }, [orgMembers]);
   const [activeTab, setActiveTab] = useState<"chamados" | "config">("chamados");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -159,6 +172,13 @@ export default function Atendimento() {
     toast.success(`Status atualizado para ${STATUS_LABELS[status] || status}`);
   }
 
+  function handleAssignChange(id: string, value: string) {
+    const assigned_to = value === "none" ? null : value;
+    updateTicket.mutate({ id, assigned_to });
+    setSelectedTicket(prev => prev ? { ...prev, assigned_to } : null);
+    toast.success(assigned_to ? "Responsável definido" : "Responsável removido");
+  }
+
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -250,9 +270,9 @@ export default function Atendimento() {
               <p className="text-xs text-muted-foreground mt-1">Crie o primeiro ou aguarde os da rede.</p>
             </div>
           ) : viewMode === "kanban" ? (
-            <AtendimentoKanbanView tickets={filtered} onSelect={setSelectedTicket} />
+            <AtendimentoKanbanView tickets={filtered} onSelect={setSelectedTicket} memberMap={memberMap} />
           ) : (
-            <AtendimentoListView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} />
+            <AtendimentoListView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} memberMap={memberMap} />
           )}
         </TabsContent>
 
@@ -283,14 +303,37 @@ export default function Atendimento() {
                       <span className="text-[10px] text-muted-foreground">
                         Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
                       </span>
+                      {selectedTicket.assigned_to && memberMap.get(selectedTicket.assigned_to) && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                          Resp.: {memberMap.get(selectedTicket.assigned_to)!.name}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
-                    <SelectTrigger className="h-8 w-36 text-xs flex-shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
+                      <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={selectedTicket.assigned_to ?? "none"}
+                      onValueChange={(v) => handleAssignChange(selectedTicket.id, v)}
+                    >
+                      <SelectTrigger className="h-8 w-44 text-xs">
+                        <SelectValue placeholder="Sem responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs">Sem responsável</SelectItem>
+                        {matrizTeam.map(m => (
+                          <SelectItem key={m.user_id} value={m.user_id} className="text-xs">
+                            {m.full_name || m.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 {selectedTicket.description && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{selectedTicket.description}</p>
@@ -501,7 +544,10 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 /* ── Kanban view ──────────────────────────────────────────────── */
 const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
 
-function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; onClick: () => void }) {
+type MemberMap = Map<string, { name: string; avatar: string | null }>;
+
+function AtendimentoKanbanCard({ ticket: t, onClick, memberMap }: { ticket: NetworkTicket; onClick: () => void; memberMap: MemberMap }) {
+  const responsavel = t.assigned_to ? memberMap.get(t.assigned_to) : null;
   return (
     <Card className="cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5" onClick={onClick}>
       <CardContent className="p-3 space-y-2">
@@ -513,14 +559,16 @@ function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; 
             ● {PRIORITY_LABELS[t.priority] || t.priority}
           </span>
         </div>
-        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+        <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-2">
           <span className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: true })}
           </span>
-          {(t as any).message_count > 0 && (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <MessageSquare className="w-3 h-3" /> {(t as any).message_count}
+          {responsavel ? (
+            <span className="flex items-center gap-1 text-[10px] text-primary font-medium truncate" title={`Responsável: ${responsavel.name}`}>
+              <User className="w-3 h-3" /> {responsavel.name}
             </span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground/60 italic">Sem resp.</span>
           )}
         </div>
       </CardContent>
@@ -528,7 +576,7 @@ function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; 
   );
 }
 
-function AtendimentoKanbanView({ tickets, onSelect }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void }) {
+function AtendimentoKanbanView({ tickets, onSelect, memberMap }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; memberMap: MemberMap }) {
   const colColors: Record<string, string> = {
     open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
@@ -554,7 +602,7 @@ function AtendimentoKanbanView({ tickets, onSelect }: { tickets: NetworkTicket[]
                 </div>
               ) : (
                 col.map(t => (
-                  <AtendimentoKanbanCard key={t.id} ticket={t} onClick={() => onSelect(t)} />
+                  <AtendimentoKanbanCard key={t.id} ticket={t} onClick={() => onSelect(t)} memberMap={memberMap} />
                 ))
               )}
             </div>
@@ -566,33 +614,41 @@ function AtendimentoKanbanView({ tickets, onSelect }: { tickets: NetworkTicket[]
 }
 
 /* ── List view ────────────────────────────────────────────────── */
-function AtendimentoListView({ tickets, onSelect, selectedId }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; selectedId?: string }) {
+function AtendimentoListView({ tickets, onSelect, selectedId, memberMap }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; selectedId?: string; memberMap: MemberMap }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-      {tickets.map(t => (
-        <button
-          key={t.id}
-          onClick={() => onSelect(t)}
-          className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedId ? "bg-muted" : ""}`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
-            </span>
-          </div>
-          <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
-          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
-              {STATUS_LABELS[t.status] || t.status}
-            </span>
-            <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
-            <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
-              ● {PRIORITY_LABELS[t.priority] || t.priority}
-            </span>
-          </div>
-        </button>
-      ))}
+      {tickets.map(t => {
+        const responsavel = t.assigned_to ? memberMap.get(t.assigned_to) : null;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onSelect(t)}
+            className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedId ? "bg-muted" : ""}`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
+              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
+              </span>
+            </div>
+            <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+                {STATUS_LABELS[t.status] || t.status}
+              </span>
+              <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
+              <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                ● {PRIORITY_LABELS[t.priority] || t.priority}
+              </span>
+              {responsavel && (
+                <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  <User className="w-2.5 h-2.5" /> {responsavel.name}
+                </span>
+              )}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
