@@ -68,6 +68,7 @@ const marketingSection: SidebarItem[] = [
 ];
 
 const sistemaSection: SidebarItem[] = [
+  { label: "Acompanhamento", icon: BarChart3, path: "/cliente/acompanhamento" },
   { label: "Avaliações", icon: ClipboardCheck, path: "/cliente/avaliacoes" },
   { label: "Suporte", icon: Headphones, path: "/cliente/suporte" },
   { label: "Integrações", icon: Link, path: "/cliente/integracoes", adminOnly: true },
