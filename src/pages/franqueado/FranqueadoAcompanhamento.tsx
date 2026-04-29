@@ -816,7 +816,7 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
             <p className="text-sm text-muted-foreground">Analise cada área para fundamentar o plano do próximo mês.</p>
           </div>
 
-          <AnaliseOverviewRadar analise={{ conteudo: analiseConteudo, trafego: analiseTrafego, web: analiseWeb, vendas: analiseVendas }} />
+          <ScoreOverview analise={{ conteudo: analiseConteudo, trafego: analiseTrafego, web: analiseWeb, vendas: analiseVendas }} />
 
           <AnaliseAreaEditor title="Conteúdo & Criativos" description="Performance dos criativos orgânicos e pagos" icon={Palette} accentColor="bg-violet-500"
             metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
