@@ -121,12 +121,15 @@ function AnaliseMetricsChart({ metricas, title }: { metricas: Record<string, num
 
 // ─── Analysis sub-section editor ───
 function AnaliseAreaEditor({
-  title, description, icon: Icon, accentColor, metricLabels, section, onChange, showImageUpload = false, readOnly = false,
+  title, description, icon: Icon, accentColor, metricLabels, section, onChange,
+  showImageUpload = false, readOnly = false, indicadoresFixos,
 }: {
   title: string; description: string; icon: React.ElementType; accentColor: string;
   metricLabels: string[]; section: AnaliseSubSection; onChange: (s: AnaliseSubSection) => void;
   showImageUpload?: boolean;
   readOnly?: boolean;
+  /** Quando definido, renderiza exatamente esses indicadores (labels fixos, sem add/remover). */
+  indicadoresFixos?: Array<{ label: string; unidade: string }>;
 }) {
   const metricas = section.metricas || {};
   const positivos = section.positivos || [""];
