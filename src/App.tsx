@@ -77,6 +77,7 @@ const FranqueadoAcompanhamento = lazy(() => import("./pages/franqueado/Franquead
 
 // Cliente pages
 const ClienteInicio = lazy(() => import("./pages/cliente/ClienteInicio"));
+const ClienteAcompanhamento = lazy(() => import("./pages/cliente/ClienteAcompanhamento"));
 const ClienteChecklist = lazy(() => import("./pages/cliente/ClienteChecklist"));
 const ClienteNotificacoes = lazy(() => import("./pages/cliente/ClienteNotificacoes"));
 const ClienteGamificacao = lazy(() => import("./pages/cliente/ClienteGamificacao"));
