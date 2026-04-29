@@ -270,9 +270,9 @@ export default function Atendimento() {
               <p className="text-xs text-muted-foreground mt-1">Crie o primeiro ou aguarde os da rede.</p>
             </div>
           ) : viewMode === "kanban" ? (
-            <AtendimentoKanbanView tickets={filtered} onSelect={setSelectedTicket} />
+            <AtendimentoKanbanView tickets={filtered} onSelect={setSelectedTicket} memberMap={memberMap} />
           ) : (
-            <AtendimentoListView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} />
+            <AtendimentoListView tickets={filtered} onSelect={setSelectedTicket} selectedId={selectedTicket?.id} memberMap={memberMap} />
           )}
         </TabsContent>
 
