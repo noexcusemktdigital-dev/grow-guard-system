@@ -11,6 +11,8 @@ export interface AnaliseSubSection {
   negativos?: string[];
   observacoes?: string;
   imagens?: string[];
+  score?: number;
+  indicadores?: Array<{ label: string; ideal: number; atual: number; unidade: string }>;
 }
 
 export interface FollowupAnalise {
