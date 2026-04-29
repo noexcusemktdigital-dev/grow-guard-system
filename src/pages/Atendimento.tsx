@@ -305,12 +305,30 @@ export default function Atendimento() {
                       </span>
                     </div>
                   </div>
-                  <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
-                    <SelectTrigger className="h-8 w-36 text-xs flex-shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <Select value={selectedTicket.status} onValueChange={(v) => handleStatusChange(selectedTicket.id, v)}>
+                      <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={selectedTicket.assigned_to ?? "none"}
+                      onValueChange={(v) => handleAssignChange(selectedTicket.id, v)}
+                    >
+                      <SelectTrigger className="h-8 w-44 text-xs">
+                        <SelectValue placeholder="Sem responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="text-xs">Sem responsável</SelectItem>
+                        {matrizTeam.map(m => (
+                          <SelectItem key={m.user_id} value={m.user_id} className="text-xs">
+                            {m.full_name || m.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 {selectedTicket.description && (
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{selectedTicket.description}</p>
