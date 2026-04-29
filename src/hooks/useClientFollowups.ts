@@ -288,20 +288,31 @@ export function useSaveFollowup() {
   });
 }
 
-/* ── Rename a client folder (updates client_name on all followups) ── */
+/* ── Rename a client folder (updates client_name on all followups) ──
+   Matriz (super_admin/admin) pode renomear pastas de qualquer unidade,
+   por isso NÃO filtramos por organization_id aqui. Opcionalmente pode-se
+   restringir a uma unidade específica via unitOrgId. */
 export function useRenameFolder() {
   const qc = useQueryClient();
-  const { data: orgId } = useUserOrgId();
   return useMutation({
-    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
-      if (!orgId) throw new Error("Organização não encontrada");
+    mutationFn: async ({
+      oldName,
+      newName,
+      unitOrgId,
+    }: { oldName: string; newName: string; unitOrgId?: string | null }) => {
       const trimmed = newName.trim();
       if (!trimmed) throw new Error("Nome não pode ser vazio");
-      const { error } = await supabase
+
+      let q = supabase
         .from("client_followups")
         .update({ client_name: trimmed })
-        .eq("client_name", oldName)
-        .eq("organization_id", orgId);
+        .eq("client_name", oldName);
+
+      if (unitOrgId) {
+        q = q.eq("unit_org_id", unitOrgId);
+      }
+
+      const { error } = await q;
       if (error) throw error;
       return trimmed;
     },
