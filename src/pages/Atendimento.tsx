@@ -602,7 +602,7 @@ function AtendimentoKanbanView({ tickets, onSelect, memberMap }: { tickets: Netw
                 </div>
               ) : (
                 col.map(t => (
-                  <AtendimentoKanbanCard key={t.id} ticket={t} onClick={() => onSelect(t)} />
+                  <AtendimentoKanbanCard key={t.id} ticket={t} onClick={() => onSelect(t)} memberMap={memberMap} />
                 ))
               )}
             </div>
