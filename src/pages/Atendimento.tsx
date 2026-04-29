@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useSupportMessages, useSupportTicketMutations } from "@/hooks/useSupportTickets";
 import { useSupportTicketsNetwork, type NetworkTicket } from "@/hooks/useSupportTicketsNetwork";
+import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { AtendimentoConfig } from "@/components/atendimento/AtendimentoConfig";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
