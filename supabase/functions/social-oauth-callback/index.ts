@@ -257,11 +257,6 @@ serve(async (req) => {
         "pages_show_list",
         "pages_read_engagement",
         "pages_manage_posts",
-        "pages_manage_ads",
-        "pages_manage_metadata",
-        "leads_retrieval",
-        "business_management",
-        "ads_read",
       ];
 
       let pages: Array<{
@@ -274,7 +269,7 @@ serve(async (req) => {
 
       try {
         const pagesRes = await fetch(
-          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,tasks,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
         );
         const pagesData = await pagesRes.json();
         console.log("Meta /me/accounts response:", JSON.stringify(pagesData));
@@ -283,37 +278,22 @@ serve(async (req) => {
 
         if (pageSeeds.length === 0) {
           const assignedRes = await fetch(
-            `https://graph.facebook.com/v25.0/me/assigned_pages?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+            `https://graph.facebook.com/v25.0/me/assigned_pages?fields=id,name,access_token,tasks,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
           );
           const assignedData = await assignedRes.json();
           console.log("Meta /me/assigned_pages response:", JSON.stringify(assignedData));
           pageSeeds = Array.isArray(assignedData?.data) ? assignedData.data : [];
         }
 
-        const pageDetails = await Promise.all(
-          pageSeeds.map(async (seed: any) => {
-            try {
-              const pageRes = await fetch(
-                `https://graph.facebook.com/v25.0/${seed.id}?fields=id,name,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
-              );
-              const pageData = await pageRes.json();
-              console.log("Meta page detail response:", JSON.stringify(pageData));
-              if (!pageData?.id) return null;
-              return {
-                id: pageData.id,
-                name: pageData.name ?? seed.name,
-                access_token: pageData.access_token ?? accessToken,
-                picture_url: pageData.picture?.data?.url,
-                instagram_business_account: pageData.instagram_business_account,
-              };
-            } catch (pageErr) {
-              console.warn("Meta page detail fetch failed:", pageErr);
-              return null;
-            }
-          }),
-        );
-
-        pages = pageDetails.filter(Boolean) as typeof pages;
+        pages = pageSeeds
+          .filter((p: any) => p?.id)
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            access_token: p.access_token ?? accessToken,
+            picture_url: p.picture?.data?.url,
+            instagram_business_account: p.instagram_business_account,
+          }));
       } catch (e) {
         console.warn("Meta pages fetch failed:", e);
       }
