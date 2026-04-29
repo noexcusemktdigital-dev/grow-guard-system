@@ -748,7 +748,7 @@ function CycleListView({ clientName, followups, onBack, onNew, onEdit, canEdit }
 }
 
 // ─── Default empty objects ───
-const EMPTY_PAUTA: ConteudoPauta = { titulo: "", formato: "Reels", objetivo: "", roteiro: "", tempo_duracao: "", data_postagem: "", plataforma: "Instagram", tipo: "organico", cta: "", referencias: "", necessidades_cliente: "", observacoes: "" };
+const EMPTY_PAUTA: ConteudoPauta = { titulo: "", formato: "Reels", objetivo: "", roteiro: "", tempo_duracao: "", data_postagem: "", plataforma: "Instagram", tipo: "organico", cta: "", referencias: "", imagens_referencia: [], necessidades_cliente: "", observacoes: "" };
 const EMPTY_CAMPANHA: TrafegoCampanha = { nome_campanha: "", plataforma: "Meta Ads", objetivo_campanha: "", tipo_campanha: "", formato_anuncio: "", publico_alvo: "", segmentacao: "", localizacao: "", faixa_etaria: "", investimento_diario: 0, investimento_total: 0, duracao_dias: 30, data_inicio: "", data_fim: "", copy_principal: "", cta: "", url_destino: "", meta_cpl: 0, meta_cpc: 0, meta_ctr: 0, meta_conversoes: 0, meta_roas: 0, observacoes: "" };
 const EMPTY_WEB_SECAO: WebSecao = { titulo: "", tipo: "Landing Page", objetivo: "", descricao: "", secoes_pagina: [""], expectativa_resultado: "", necessidades_cliente: "", prazo_estimado: "", status: "A criar", observacoes: "" };
 
