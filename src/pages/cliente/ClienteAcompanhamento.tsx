@@ -4,6 +4,7 @@ import FranqueadoAcompanhamento from "@/pages/franqueado/FranqueadoAcompanhament
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, MessageCircle, Sparkles, BarChart3, Target, TrendingUp } from "lucide-react";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 
 const WHATSAPP_NUMBER = "5544991129613";
 const WHATSAPP_MESSAGE = encodeURIComponent(
@@ -97,5 +98,10 @@ export default function ClienteAcompanhamento() {
   }
 
   // Cliente has projects → render in read-only mode
-  return <FranqueadoAcompanhamento forceReadOnly />;
+  return (
+    <>
+      <AssessoriaPopup storageKey="noexcuse_popup_acompanhamento_v1" servico="Acompanhamento Estratégico" />
+      <FranqueadoAcompanhamento forceReadOnly />
+    </>
+  );
 }

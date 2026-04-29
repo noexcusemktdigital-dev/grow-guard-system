@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import {
   DollarSign, Sparkles, Target,
   Loader2, History, Folder,
@@ -211,6 +212,7 @@ export default function ClienteTrafegoPago() {
 
   return (
     <div className="w-full space-y-6">
+      <AssessoriaPopup storageKey="noexcuse_popup_trafego_v1" servico="Tráfego Pago" />
       <PageHeader
         title="Tráfego Pago"
         subtitle="Estratégia de campanhas gerada por IA com wizard guiado"
