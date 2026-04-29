@@ -544,7 +544,10 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 /* ── Kanban view ──────────────────────────────────────────────── */
 const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
 
-function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; onClick: () => void }) {
+type MemberMap = Map<string, { name: string; avatar: string | null }>;
+
+function AtendimentoKanbanCard({ ticket: t, onClick, memberMap }: { ticket: NetworkTicket; onClick: () => void; memberMap: MemberMap }) {
+  const responsavel = t.assigned_to ? memberMap.get(t.assigned_to) : null;
   return (
     <Card className="cursor-pointer hover:shadow-md transition-all hover:-translate-y-0.5" onClick={onClick}>
       <CardContent className="p-3 space-y-2">
@@ -556,14 +559,16 @@ function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; 
             ● {PRIORITY_LABELS[t.priority] || t.priority}
           </span>
         </div>
-        <div className="flex items-center justify-between pt-1 border-t border-border/40">
+        <div className="flex items-center justify-between pt-1 border-t border-border/40 gap-2">
           <span className="text-[10px] text-muted-foreground">
             {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: true })}
           </span>
-          {(t as any).message_count > 0 && (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <MessageSquare className="w-3 h-3" /> {(t as any).message_count}
+          {responsavel ? (
+            <span className="flex items-center gap-1 text-[10px] text-primary font-medium truncate" title={`Responsável: ${responsavel.name}`}>
+              <User className="w-3 h-3" /> {responsavel.name}
             </span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground/60 italic">Sem resp.</span>
           )}
         </div>
       </CardContent>
@@ -571,7 +576,7 @@ function AtendimentoKanbanCard({ ticket: t, onClick }: { ticket: NetworkTicket; 
   );
 }
 
-function AtendimentoKanbanView({ tickets, onSelect }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void }) {
+function AtendimentoKanbanView({ tickets, onSelect, memberMap }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; memberMap: MemberMap }) {
   const colColors: Record<string, string> = {
     open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
