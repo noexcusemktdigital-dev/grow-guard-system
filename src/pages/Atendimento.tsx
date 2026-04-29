@@ -614,33 +614,41 @@ function AtendimentoKanbanView({ tickets, onSelect, memberMap }: { tickets: Netw
 }
 
 /* ── List view ────────────────────────────────────────────────── */
-function AtendimentoListView({ tickets, onSelect, selectedId }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; selectedId?: string }) {
+function AtendimentoListView({ tickets, onSelect, selectedId, memberMap }: { tickets: NetworkTicket[]; onSelect: (t: NetworkTicket) => void; selectedId?: string; memberMap: MemberMap }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-      {tickets.map(t => (
-        <button
-          key={t.id}
-          onClick={() => onSelect(t)}
-          className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedId ? "bg-muted" : ""}`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
-            </span>
-          </div>
-          <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
-          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
-              {STATUS_LABELS[t.status] || t.status}
-            </span>
-            <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
-            <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
-              ● {PRIORITY_LABELS[t.priority] || t.priority}
-            </span>
-          </div>
-        </button>
-      ))}
+      {tickets.map(t => {
+        const responsavel = t.assigned_to ? memberMap.get(t.assigned_to) : null;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onSelect(t)}
+            className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${t.id === selectedId ? "bg-muted" : ""}`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium line-clamp-1 flex-1">{t.title}</p>
+              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                {formatDistanceToNow(new Date(t.created_at), { locale: ptBR, addSuffix: false })}
+              </span>
+            </div>
+            <p className="text-[11px] text-primary font-medium mt-0.5 truncate">{t.org_name}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[t.status] || ""}`}>
+                {STATUS_LABELS[t.status] || t.status}
+              </span>
+              <span className="text-[9px] text-muted-foreground">{t.category || "Geral"}</span>
+              <span className={`text-[9px] font-medium ${PRIORITY_COLORS[t.priority] || ""}`}>
+                ● {PRIORITY_LABELS[t.priority] || t.priority}
+              </span>
+              {responsavel && (
+                <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  <User className="w-2.5 h-2.5" /> {responsavel.name}
+                </span>
+              )}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
