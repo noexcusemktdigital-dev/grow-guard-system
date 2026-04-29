@@ -52,7 +52,19 @@ const CATEGORIAS = ["Financeiro", "Jurídico", "Comercial", "Marketing", "Treina
 export default function Atendimento() {
   const { user } = useAuth();
   const { data: tickets, isLoading } = useSupportTicketsNetwork();
+  const { data: orgMembers } = useOrgMembers();
   const { createTicket, updateTicket, sendMessage } = useSupportTicketMutations();
+
+  // Equipe da matriz disponível para responsabilizar por chamados
+  const matrizTeam = useMemo(
+    () => (orgMembers ?? []).filter(m => m.role === "super_admin" || m.role === "admin"),
+    [orgMembers]
+  );
+  const memberMap = useMemo(() => {
+    const m = new Map<string, { name: string; avatar: string | null }>();
+    (orgMembers ?? []).forEach(x => m.set(x.user_id, { name: x.full_name || x.email, avatar: x.avatar_url }));
+    return m;
+  }, [orgMembers]);
   const [activeTab, setActiveTab] = useState<"chamados" | "config">("chamados");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
