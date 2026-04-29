@@ -287,3 +287,32 @@ export function useSaveFollowup() {
     },
   });
 }
+
+/* ── Rename a client folder (updates client_name on all followups) ── */
+export function useRenameFolder() {
+  const qc = useQueryClient();
+  const { data: orgId } = useUserOrgId();
+  return useMutation({
+    mutationFn: async ({ oldName, newName }: { oldName: string; newName: string }) => {
+      if (!orgId) throw new Error("Organização não encontrada");
+      const trimmed = newName.trim();
+      if (!trimmed) throw new Error("Nome não pode ser vazio");
+      const { error } = await supabase
+        .from("client_followups")
+        .update({ client_name: trimmed })
+        .eq("client_name", oldName)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+      return trimmed;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-folders"] });
+      qc.invalidateQueries({ queryKey: ["client-folders-unit"] });
+      qc.invalidateQueries({ queryKey: ["client-followups"] });
+      toast.success("Nome do projeto atualizado!");
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "Erro ao renomear projeto");
+    },
+  });
+}
