@@ -571,10 +571,19 @@ function TrafegoInvestimentoChart({ campanhas }: { campanhas: TrafegoCampanha[] 
 }
 
 // ─── LEVEL 1: Client Folders ───
-function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; units?: any[] }) {
+function FolderListView({ folders, onSelect, isMatriz, canEdit, units, onRename }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; canEdit: boolean; units?: any[]; onRename: (oldName: string, newName: string) => void }) {
   const [newName, setNewName] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("");
   const [showInput, setShowInput] = useState(false);
+  const [editingFolderName, setEditingFolderName] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const submitRename = (oldName: string) => {
+    const trimmed = newFolderName.trim();
+    if (!trimmed || trimmed === oldName) { setEditingFolderName(null); return; }
+    onRename(oldName, trimmed);
+    setEditingFolderName(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -582,12 +591,12 @@ function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { nam
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><FolderOpen className="w-6 h-6 text-primary" /> Acompanhamento de Clientes</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isMatriz ? "Crie e gerencie ciclos mensais vinculados às unidades" : "Visualize os acompanhamentos da sua unidade"}
+            {canEdit ? "Crie e gerencie ciclos mensais vinculados às unidades" : "Visualize os acompanhamentos da sua unidade"}
           </p>
         </div>
-        {isMatriz && <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>}
+        {canEdit && <Button onClick={() => setShowInput(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova Pasta</Button>}
       </div>
-      {showInput && isMatriz && (
+      {showInput && canEdit && (
         <Card><CardContent className="pt-4 space-y-3">
           <div className="flex gap-3">
             <Input placeholder="Nome do cliente..." value={newName} onChange={(e) => setNewName(e.target.value)} className="flex-1" autoFocus />
@@ -611,18 +620,59 @@ function FolderListView({ folders, onSelect, isMatriz, units }: { folders: { nam
       )}
       {folders.length === 0 && !showInput ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
-          {isMatriz ? "Nenhum cliente cadastrado." : "Nenhum acompanhamento vinculado à sua unidade."}
+          {canEdit ? "Nenhum cliente cadastrado." : "Nenhum acompanhamento vinculado à sua unidade."}
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {folders.map((f) => (
-            <Card key={f.name} className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => onSelect(f.name)}>
+            <Card
+              key={f.name}
+              className="cursor-pointer hover:border-primary/40 transition-colors group relative"
+              onClick={() => editingFolderName !== f.name && onSelect(f.name)}
+            >
               <CardContent className="pt-5 flex items-center gap-3">
-                <FolderOpen className="w-8 h-8 text-primary/60" />
-                <div>
-                  <p className="font-semibold">{f.name}</p>
+                <FolderOpen className="w-8 h-8 text-primary/60 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  {editingFolderName === f.name ? (
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <Input
+                        value={newFolderName}
+                        onChange={e => setNewFolderName(e.target.value)}
+                        className="h-7 text-sm"
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === "Enter") submitRename(f.name);
+                          if (e.key === "Escape") setEditingFolderName(null);
+                        }}
+                      />
+                      <Button size="sm" className="h-7 px-2"
+                        onClick={() => submitRename(f.name)}>
+                        ✓
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2"
+                        onClick={() => setEditingFolderName(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="font-semibold truncate">{f.name}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">{f.count} {f.count === 1 ? "ciclo" : "ciclos"}</p>
                 </div>
+                {canEdit && editingFolderName !== f.name && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setEditingFolderName(f.name);
+                      setNewFolderName(f.name);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}
