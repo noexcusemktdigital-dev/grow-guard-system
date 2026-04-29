@@ -5,6 +5,7 @@ import {
   useClientFoldersForUnit,
   useClientFollowups,
   useSaveFollowup,
+  useRenameFolder,
   type ClientFollowup,
   type FollowupAnalise,
   type FollowupPlano,
