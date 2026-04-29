@@ -4682,6 +4682,39 @@ export type Database = {
           },
         ]
       }
+      meta_data_deletion_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          platform: string
+          platform_user_id: string
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          platform?: string
+          platform_user_id: string
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          platform?: string
+          platform_user_id?: string
+          requested_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       meta_leadgen_events: {
         Row: {
           created_at: string | null
