@@ -7629,6 +7629,25 @@ export type Database = {
           users_count: number
         }[]
       }
+      get_all_network_tickets: {
+        Args: never
+        Returns: {
+          assigned_to: string
+          category: string
+          closed_at: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          org_name: string
+          organization_id: string
+          priority: string
+          status: string
+          subcategory: string
+          title: string
+          updated_at: string
+        }[]
+      }
       get_and_increment_roulette_index: {
         Args: { _member_count: number; _org_id: string }
         Returns: number
