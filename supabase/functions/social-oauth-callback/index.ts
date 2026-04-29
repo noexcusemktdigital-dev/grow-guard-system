@@ -89,7 +89,7 @@ serve(async (req) => {
     console.error("social-oauth-callback: missing required env vars");
     return new Response(null, {
       status: 302,
-      headers: { Location: `${errorBase}?error=server_misconfigured` },
+      headers: { Location: `${errorBase}&error=server_misconfigured` },
     });
   }
 
@@ -108,7 +108,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${errorBase}?error=${encodeURIComponent(oauthError)}`,
+          Location: `${errorBase}&error=${encodeURIComponent(oauthError)}`,
         },
       });
     }
@@ -116,7 +116,7 @@ serve(async (req) => {
     if (!code || !stateRaw) {
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=missing_code_or_state` },
+        headers: { Location: `${errorBase}&error=missing_code_or_state` },
       });
     }
 
@@ -126,7 +126,7 @@ serve(async (req) => {
       console.error("social-oauth-callback: invalid state signature");
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=invalid_state` },
+        headers: { Location: `${errorBase}&error=invalid_state` },
       });
     }
 
@@ -136,7 +136,7 @@ serve(async (req) => {
       console.error("social-oauth-callback: state expired");
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=state_expired` },
+        headers: { Location: `${errorBase}&error=state_expired` },
       });
     }
 
@@ -144,7 +144,7 @@ serve(async (req) => {
     if (!orgId) {
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=missing_org_id` },
+        headers: { Location: `${errorBase}&error=missing_org_id` },
       });
     }
 
@@ -154,7 +154,7 @@ serve(async (req) => {
       console.error("social-oauth-callback: unknown platform in state:", payload.platform);
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=unknown_platform` },
+        headers: { Location: `${errorBase}&error=unknown_platform` },
       });
     }
 
@@ -171,7 +171,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: META_CLIENT_ID or META_CLIENT_SECRET not set");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=provider_not_configured` },
+          headers: { Location: `${errorBase}&error=provider_not_configured` },
         });
       }
 
@@ -191,7 +191,7 @@ serve(async (req) => {
         console.error("Meta short token exchange failed:", tokenData);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=token_exchange_failed` },
+          headers: { Location: `${errorBase}&error=token_exchange_failed` },
         });
       }
 
@@ -245,7 +245,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: could not get Meta account ID");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=account_info_failed` },
+          headers: { Location: `${errorBase}&error=account_info_failed` },
         });
       }
 
@@ -322,7 +322,7 @@ serve(async (req) => {
           console.error("social_accounts upsert error (meta user fallback):", dbError);
           return new Response(null, {
             status: 302,
-            headers: { Location: `${errorBase}?error=save_failed` },
+            headers: { Location: `${errorBase}&error=save_failed` },
           });
         }
         const redirectTo = (payload as any).redirect_to as string | null | undefined;
@@ -454,7 +454,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: LINKEDIN_CLIENT_ID or LINKEDIN_CLIENT_SECRET not set");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=provider_not_configured` },
+          headers: { Location: `${errorBase}&error=provider_not_configured` },
         });
       }
 
@@ -476,7 +476,7 @@ serve(async (req) => {
         console.error("LinkedIn token exchange failed:", tokenData);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=token_exchange_failed` },
+          headers: { Location: `${errorBase}&error=token_exchange_failed` },
         });
       }
 
@@ -510,7 +510,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: could not get LinkedIn account ID");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=account_info_failed` },
+          headers: { Location: `${errorBase}&error=account_info_failed` },
         });
       }
 
@@ -545,7 +545,7 @@ serve(async (req) => {
         console.error("social_accounts upsert error (linkedin):", dbError);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=save_failed` },
+          headers: { Location: `${errorBase}&error=save_failed` },
         });
       }
 
@@ -560,7 +560,7 @@ serve(async (req) => {
     // Unreachable — all platforms handled above
     return new Response(null, {
       status: 302,
-      headers: { Location: `${errorBase}?error=unknown_platform` },
+      headers: { Location: `${errorBase}&error=unknown_platform` },
     });
   } catch (err) {
     console.error("social-oauth-callback unexpected error:", err);
