@@ -83,7 +83,7 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const stateSecret = Deno.env.get("OAUTH_STATE_SECRET");
   const siteUrl = Deno.env.get("SITE_URL") ?? "https://grow-guard-system.lovable.app";
-  const errorBase = `${siteUrl}/cliente/redes-sociais`;
+  const errorBase = `${siteUrl}/cliente/redes-sociais?tab=contas`;
 
   if (!supabaseUrl || !serviceRoleKey || !stateSecret) {
     console.error("social-oauth-callback: missing required env vars");
@@ -329,7 +329,7 @@ serve(async (req) => {
         const fallbackLocation =
           redirectTo === "crm-leads"
             ? `${siteUrl}/cliente/crm/integracoes/meta-lead-ads?connected=true&warning=no_pages`
-            : `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook&warning=no_pages`;
+            : `${siteUrl}/cliente/redes-sociais?tab=contas&connected=true&platform=facebook&warning=no_pages`;
         return new Response(null, {
           status: 302,
           headers: { Location: fallbackLocation },
@@ -436,7 +436,7 @@ serve(async (req) => {
       const successLocation =
         redirectTo === "crm-leads"
           ? `${siteUrl}/cliente/crm/integracoes/meta-lead-ads?connected=true`
-          : `${siteUrl}/cliente/redes-sociais?connected=true&platform=${successPlatform}`;
+          : `${siteUrl}/cliente/redes-sociais?tab=contas&connected=true&platform=${successPlatform}`;
       return new Response(null, {
         status: 302,
         headers: { Location: successLocation },
@@ -552,7 +552,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=linkedin`,
+          Location: `${siteUrl}/cliente/redes-sociais?tab=contas&connected=true&platform=linkedin`,
         },
       });
     }
@@ -567,7 +567,7 @@ serve(async (req) => {
     return new Response(null, {
       status: 302,
       headers: {
-        Location: `${siteUrl}/cliente/redes-sociais?error=unexpected_error`,
+        Location: `${siteUrl}/cliente/redes-sociais?tab=contas&error=unexpected_error`,
       },
     });
   }
