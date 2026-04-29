@@ -83,13 +83,13 @@ serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const stateSecret = Deno.env.get("OAUTH_STATE_SECRET");
   const siteUrl = Deno.env.get("SITE_URL") ?? "https://grow-guard-system.lovable.app";
-  const errorBase = `${siteUrl}/cliente/redes-sociais`;
+  const errorBase = `${siteUrl}/cliente/redes-sociais?tab=contas`;
 
   if (!supabaseUrl || !serviceRoleKey || !stateSecret) {
     console.error("social-oauth-callback: missing required env vars");
     return new Response(null, {
       status: 302,
-      headers: { Location: `${errorBase}?error=server_misconfigured` },
+      headers: { Location: `${errorBase}&error=server_misconfigured` },
     });
   }
 
@@ -108,7 +108,7 @@ serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${errorBase}?error=${encodeURIComponent(oauthError)}`,
+          Location: `${errorBase}&error=${encodeURIComponent(oauthError)}`,
         },
       });
     }
@@ -116,7 +116,7 @@ serve(async (req) => {
     if (!code || !stateRaw) {
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=missing_code_or_state` },
+        headers: { Location: `${errorBase}&error=missing_code_or_state` },
       });
     }
 
@@ -126,7 +126,7 @@ serve(async (req) => {
       console.error("social-oauth-callback: invalid state signature");
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=invalid_state` },
+        headers: { Location: `${errorBase}&error=invalid_state` },
       });
     }
 
@@ -136,7 +136,7 @@ serve(async (req) => {
       console.error("social-oauth-callback: state expired");
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=state_expired` },
+        headers: { Location: `${errorBase}&error=state_expired` },
       });
     }
 
@@ -144,7 +144,7 @@ serve(async (req) => {
     if (!orgId) {
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=missing_org_id` },
+        headers: { Location: `${errorBase}&error=missing_org_id` },
       });
     }
 
@@ -154,7 +154,7 @@ serve(async (req) => {
       console.error("social-oauth-callback: unknown platform in state:", payload.platform);
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}?error=unknown_platform` },
+        headers: { Location: `${errorBase}&error=unknown_platform` },
       });
     }
 
@@ -171,7 +171,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: META_CLIENT_ID or META_CLIENT_SECRET not set");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=provider_not_configured` },
+          headers: { Location: `${errorBase}&error=provider_not_configured` },
         });
       }
 
@@ -191,7 +191,7 @@ serve(async (req) => {
         console.error("Meta short token exchange failed:", tokenData);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=token_exchange_failed` },
+          headers: { Location: `${errorBase}&error=token_exchange_failed` },
         });
       }
 
@@ -245,7 +245,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: could not get Meta account ID");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=account_info_failed` },
+          headers: { Location: `${errorBase}&error=account_info_failed` },
         });
       }
 
@@ -257,11 +257,6 @@ serve(async (req) => {
         "pages_show_list",
         "pages_read_engagement",
         "pages_manage_posts",
-        "pages_manage_ads",
-        "pages_manage_metadata",
-        "leads_retrieval",
-        "business_management",
-        "ads_read",
       ];
 
       let pages: Array<{
@@ -274,7 +269,7 @@ serve(async (req) => {
 
       try {
         const pagesRes = await fetch(
-          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,tasks,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
         );
         const pagesData = await pagesRes.json();
         console.log("Meta /me/accounts response:", JSON.stringify(pagesData));
@@ -283,37 +278,22 @@ serve(async (req) => {
 
         if (pageSeeds.length === 0) {
           const assignedRes = await fetch(
-            `https://graph.facebook.com/v25.0/me/assigned_pages?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+            `https://graph.facebook.com/v25.0/me/assigned_pages?fields=id,name,access_token,tasks,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
           );
           const assignedData = await assignedRes.json();
           console.log("Meta /me/assigned_pages response:", JSON.stringify(assignedData));
           pageSeeds = Array.isArray(assignedData?.data) ? assignedData.data : [];
         }
 
-        const pageDetails = await Promise.all(
-          pageSeeds.map(async (seed: any) => {
-            try {
-              const pageRes = await fetch(
-                `https://graph.facebook.com/v25.0/${seed.id}?fields=id,name,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
-              );
-              const pageData = await pageRes.json();
-              console.log("Meta page detail response:", JSON.stringify(pageData));
-              if (!pageData?.id) return null;
-              return {
-                id: pageData.id,
-                name: pageData.name ?? seed.name,
-                access_token: pageData.access_token ?? accessToken,
-                picture_url: pageData.picture?.data?.url,
-                instagram_business_account: pageData.instagram_business_account,
-              };
-            } catch (pageErr) {
-              console.warn("Meta page detail fetch failed:", pageErr);
-              return null;
-            }
-          }),
-        );
-
-        pages = pageDetails.filter(Boolean) as typeof pages;
+        pages = pageSeeds
+          .filter((p: any) => p?.id)
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            access_token: p.access_token ?? accessToken,
+            picture_url: p.picture?.data?.url,
+            instagram_business_account: p.instagram_business_account,
+          }));
       } catch (e) {
         console.warn("Meta pages fetch failed:", e);
       }
@@ -342,14 +322,14 @@ serve(async (req) => {
           console.error("social_accounts upsert error (meta user fallback):", dbError);
           return new Response(null, {
             status: 302,
-            headers: { Location: `${errorBase}?error=save_failed` },
+            headers: { Location: `${errorBase}&error=save_failed` },
           });
         }
         const redirectTo = (payload as any).redirect_to as string | null | undefined;
         const fallbackLocation =
           redirectTo === "crm-leads"
             ? `${siteUrl}/cliente/crm/integracoes/meta-lead-ads?connected=true&warning=no_pages`
-            : `${siteUrl}/cliente/redes-sociais?connected=true&platform=facebook&warning=no_pages`;
+            : `${siteUrl}/cliente/redes-sociais?tab=contas&connected=true&platform=facebook&warning=no_pages`;
         return new Response(null, {
           status: 302,
           headers: { Location: fallbackLocation },
@@ -456,7 +436,7 @@ serve(async (req) => {
       const successLocation =
         redirectTo === "crm-leads"
           ? `${siteUrl}/cliente/crm/integracoes/meta-lead-ads?connected=true`
-          : `${siteUrl}/cliente/redes-sociais?connected=true&platform=${successPlatform}`;
+          : `${siteUrl}/cliente/redes-sociais?tab=contas&connected=true&platform=${successPlatform}`;
       return new Response(null, {
         status: 302,
         headers: { Location: successLocation },
@@ -474,7 +454,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: LINKEDIN_CLIENT_ID or LINKEDIN_CLIENT_SECRET not set");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=provider_not_configured` },
+          headers: { Location: `${errorBase}&error=provider_not_configured` },
         });
       }
 
@@ -496,7 +476,7 @@ serve(async (req) => {
         console.error("LinkedIn token exchange failed:", tokenData);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=token_exchange_failed` },
+          headers: { Location: `${errorBase}&error=token_exchange_failed` },
         });
       }
 
@@ -530,7 +510,7 @@ serve(async (req) => {
         console.error("social-oauth-callback: could not get LinkedIn account ID");
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=account_info_failed` },
+          headers: { Location: `${errorBase}&error=account_info_failed` },
         });
       }
 
@@ -565,14 +545,14 @@ serve(async (req) => {
         console.error("social_accounts upsert error (linkedin):", dbError);
         return new Response(null, {
           status: 302,
-          headers: { Location: `${errorBase}?error=save_failed` },
+          headers: { Location: `${errorBase}&error=save_failed` },
         });
       }
 
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `${siteUrl}/cliente/redes-sociais?connected=true&platform=linkedin`,
+          Location: `${siteUrl}/cliente/redes-sociais?tab=contas&connected=true&platform=linkedin`,
         },
       });
     }
@@ -580,14 +560,14 @@ serve(async (req) => {
     // Unreachable — all platforms handled above
     return new Response(null, {
       status: 302,
-      headers: { Location: `${errorBase}?error=unknown_platform` },
+      headers: { Location: `${errorBase}&error=unknown_platform` },
     });
   } catch (err) {
     console.error("social-oauth-callback unexpected error:", err);
     return new Response(null, {
       status: 302,
       headers: {
-        Location: `${siteUrl}/cliente/redes-sociais?error=unexpected_error`,
+        Location: `${siteUrl}/cliente/redes-sociais?tab=contas&error=unexpected_error`,
       },
     });
   }

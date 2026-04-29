@@ -26,8 +26,8 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 // Mapeia período para o date_preset aceito pela Graph API
 const PERIOD_MAP: Record<string, string> = {
   today: "today",
-  last_7d: "last_7_d",
-  last_30d: "last_30_d",
+  last_7d: "last_7d",
+  last_30d: "last_30d",
 };
 
 interface MetaCampaign {
