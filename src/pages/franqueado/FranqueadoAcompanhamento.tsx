@@ -420,43 +420,94 @@ function AnaliseAreaEditor({
   );
 }
 
-// ─── Radar overview chart ───
-function AnaliseOverviewRadar({ analise }: { analise: { conteudo?: AnaliseSubSection; trafego?: AnaliseSubSection; web?: AnaliseSubSection; vendas?: AnaliseSubSection } }) {
-  const getScore = (s?: AnaliseSubSection) => {
-    if (!s?.metricas) return 0;
-    const vals = Object.values(s.metricas).filter((v) => v > 0);
-    return vals.length;
-  };
-
-  const data = [
-    { area: "Conteúdo", preenchido: getScore(analise.conteudo), positivos: analise.conteudo?.positivos?.filter(Boolean).length || 0 },
-    { area: "Tráfego", preenchido: getScore(analise.trafego), positivos: analise.trafego?.positivos?.filter(Boolean).length || 0 },
-    { area: "Web", preenchido: getScore(analise.web), positivos: analise.web?.positivos?.filter(Boolean).length || 0 },
-    { area: "Vendas", preenchido: getScore(analise.vendas), positivos: analise.vendas?.positivos?.filter(Boolean).length || 0 },
+// ─── Score overview (auto-generated from manual scores) ───
+function ScoreOverview({ analise }: {
+  analise: {
+    conteudo?: AnaliseSubSection;
+    trafego?: AnaliseSubSection;
+    web?: AnaliseSubSection;
+    vendas?: AnaliseSubSection;
+  }
+}) {
+  const areas = [
+    { key: "conteudo", label: "Criativos", icon: Palette, colorHex: "#8b5cf6", data: analise.conteudo },
+    { key: "trafego", label: "Tráfego Pago", icon: MousePointerClick, colorHex: "#3b82f6", data: analise.trafego },
+    { key: "web", label: "Web", icon: Globe, colorHex: "#10b981", data: analise.web },
+    { key: "vendas", label: "Vendas", icon: ShoppingCart, colorHex: "#f97316", data: analise.vendas },
   ];
 
-  const hasData = data.some((d) => d.preenchido > 0);
-  if (!hasData) return null;
+  const scoreMedia = areas.reduce((s, a) => s + (a.data?.score || 0), 0) / 4;
+  const chartData = areas.map(a => ({
+    area: a.label,
+    score: a.data?.score || 0,
+    fill: a.colorHex,
+  }));
+  const hasAnyScore = areas.some(a => (a.data?.score || 0) > 0);
+  if (!hasAnyScore) return null;
 
   return (
-    <Card>
-      <CardHeader className="pb-2 pt-3">
-        <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Visão Geral das Áreas</CardTitle>
+    <Card className="border-primary/20">
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base">Score Geral do Período</CardTitle>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-bold text-primary leading-none">
+              {scoreMedia.toFixed(1)}
+            </p>
+            <p className="text-xs text-muted-foreground">média geral /5</p>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="pb-3">
-        <ResponsiveContainer width="100%" height={220}>
-          <RadarChart data={data}>
-            <PolarGrid stroke="hsl(var(--border))" />
-            <PolarAngleAxis dataKey="area" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} />
-            <PolarRadiusAxis tick={{ fontSize: 9 }} />
-            <Radar name="Métricas" dataKey="preenchido" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
-            <Radar name="Positivos" dataKey="positivos" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.2} />
-          </RadarChart>
+      <CardContent className="space-y-4 pb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {areas.map((area) => {
+            const score = area.data?.score || 0;
+            const Icon = area.icon;
+            const label = score === 0 ? "Sem avaliação" :
+              score <= 1 ? "Crítico" :
+              score <= 2 ? "Abaixo do esperado" :
+              score <= 3 ? "Regular" :
+              score <= 4 ? "Bom" : "Excelente";
+            return (
+              <div key={area.key} className="text-center p-3 rounded-xl border bg-card space-y-1">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto"
+                  style={{ backgroundColor: `${area.colorHex}20` }}>
+                  <Icon className="w-3.5 h-3.5" style={{ color: area.colorHex }} />
+                </div>
+                <p className="text-xs font-semibold text-muted-foreground">{area.label}</p>
+                <p className="text-2xl font-bold leading-none" style={{ color: area.colorHex }}>
+                  {score}
+                  <span className="text-xs font-normal text-muted-foreground">/5</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground">{label}</p>
+              </div>
+            );
+          })}
+        </div>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={chartData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="area" tick={{ fontSize: 11 }} />
+            <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{ fontSize: 10 }} />
+            <Tooltip
+              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+              formatter={(v: number) => [`${v}/5`, "Score"]}
+            />
+            <Bar dataKey="score" radius={[6, 6, 0, 0]}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 }
+
 
 // ─── Content format distribution chart ───
 function ConteudoFormatChart({ pautas }: { pautas: ConteudoPauta[] }) {
