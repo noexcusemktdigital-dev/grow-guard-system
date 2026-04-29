@@ -415,35 +415,50 @@ function ConteudoSection({ plano, analise }: { plano: FollowupPlano; analise?: F
       )}
 
       {/* Pautas */}
-      <div className="space-y-6">
-        {pautas.map((p, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: i * 0.05 }}
-            className="bg-white/[0.03] border border-white/10 rounded-2xl p-8"
-            style={{ borderLeftColor: p.tipo === "organico" ? "#22c55e" : "#3b82f6", borderLeftWidth: 4 }}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <h4 className="text-xl font-bold text-white">{p.titulo || `Pauta ${i + 1}`}</h4>
-              <span className={`text-xs px-3 py-1 rounded-full font-medium ${p.tipo === "organico" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"}`}>
-                {p.tipo === "organico" ? "Orgânico" : "Pago"}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              {p.formato && <div><span className="text-gray-500">Formato</span><p className="text-gray-200 font-medium">{p.formato}</p></div>}
-              {p.plataforma && <div><span className="text-gray-500">Plataforma</span><p className="text-gray-200 font-medium">{p.plataforma}</p></div>}
-              {p.tempo_duracao && <div><span className="text-gray-500">Duração</span><p className="text-gray-200 font-medium">{p.tempo_duracao}</p></div>}
-              {p.data_postagem && <div><span className="text-gray-500">Data</span><p className="text-gray-200 font-medium">{p.data_postagem}</p></div>}
-            </div>
-            {p.objetivo && <p className="text-gray-400 mt-4 text-sm"><span className="text-gray-500">Objetivo:</span> {p.objetivo}</p>}
-            {p.roteiro && <p className="text-gray-400 mt-2 text-sm"><span className="text-gray-500">Roteiro:</span> {p.roteiro}</p>}
-            {p.cta && <p className="text-gray-400 mt-2 text-sm"><span className="text-gray-500">CTA:</span> {p.cta}</p>}
-            {p.necessidades_cliente && <p className="text-yellow-400/80 mt-2 text-sm"><span className="text-gray-500">Necessidade do cliente:</span> {p.necessidades_cliente}</p>}
-          </motion.div>
-        ))}
+      <div className="space-y-8">
+        {pautas.map((p, i) => {
+          const refImgs = ((p as any).imagens_referencia || []).filter(Boolean) as string[];
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 md:p-10"
+              style={{ borderLeftColor: p.tipo === "organico" ? "#22c55e" : "#3b82f6", borderLeftWidth: 4 }}
+            >
+              <div className="flex justify-between items-start mb-6 gap-4 flex-wrap">
+                <h4 className="text-xl md:text-2xl font-bold text-white leading-tight">{p.titulo || `Pauta ${i + 1}`}</h4>
+                <span className={`text-xs px-3 py-1 rounded-full font-medium ${p.tipo === "organico" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"}`}>
+                  {p.tipo === "organico" ? "Orgânico" : "Pago"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 text-sm mb-6">
+                {p.formato && <div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Formato</span><p className="text-gray-200 font-medium">{p.formato}</p></div>}
+                {p.plataforma && <div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Plataforma</span><p className="text-gray-200 font-medium">{p.plataforma}</p></div>}
+                {p.tempo_duracao && <div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Duração</span><p className="text-gray-200 font-medium">{p.tempo_duracao}</p></div>}
+                {p.data_postagem && <div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1">Data</span><p className="text-gray-200 font-medium">{p.data_postagem}</p></div>}
+              </div>
+              <div className="space-y-5">
+                {p.objetivo && (<div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1.5">Objetivo</span><p className="text-gray-300 text-[15px] leading-relaxed">{p.objetivo}</p></div>)}
+                {p.roteiro && (<div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1.5">Roteiro</span><p className="text-gray-300 text-[15px] leading-relaxed whitespace-pre-line">{p.roteiro}</p></div>)}
+                {p.cta && (<div><span className="text-gray-500 text-xs uppercase tracking-wider block mb-1.5">Call to Action</span><p className="text-gray-300 text-[15px] leading-relaxed">{p.cta}</p></div>)}
+                {p.necessidades_cliente && (<div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-5"><span className="text-yellow-500 text-xs font-semibold uppercase tracking-wider block mb-1.5">Necessidade do cliente</span><p className="text-yellow-100/90 text-[15px] leading-relaxed">{p.necessidades_cliente}</p></div>)}
+              </div>
+              {refImgs.length > 0 && (
+                <div className="mt-8 pt-8 border-t border-white/10">
+                  <span className="text-gray-500 text-xs uppercase tracking-wider block mb-4">Referências Visuais</span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {refImgs.map((url, j) => (
+                      <img key={j} src={url} alt={`Referência ${j + 1}`} className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          );
+        })}
       </div>
     </Section>
   );
