@@ -903,19 +903,41 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 
           <AnaliseAreaEditor title="Conteúdo & Criativos" description="Performance dos criativos orgânicos e pagos" icon={Palette} accentColor="bg-violet-500"
             metricLabels={["Alcance Orgânico", "Engajamento", "Impressões", "Cliques no Link", "Seguidores Novos", "Posts Publicados"]}
+            indicadoresFixos={[
+              { label: "CTR", unidade: "%" },
+              { label: "Engajamento", unidade: "%" },
+              { label: "Impressões", unidade: "" },
+            ]}
             section={analiseConteudo} onChange={setAnaliseConteudo} showImageUpload readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Tráfego Pago" description="Números das campanhas — investimento, custo e conversões" icon={MousePointerClick} accentColor="bg-blue-500"
             metricLabels={["Investimento Total", "Impressões", "Cliques", "CTR (%)", "CPC (R$)", "CPL (R$)", "Conversões", "ROAS"]}
+            indicadoresFixos={[
+              { label: "CTR", unidade: "%" },
+              { label: "CPC", unidade: "R$" },
+              { label: "CPL", unidade: "R$" },
+              { label: "Alcance", unidade: "" },
+            ]}
             section={analiseTrafego} onChange={setAnaliseTrafego} readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Web / Site" description="Desempenho do site e landing pages" icon={Globe} accentColor="bg-emerald-500"
             metricLabels={["Sessões", "Usuários Únicos", "Taxa de Rejeição (%)", "Tempo Médio (s)", "Conversões Site", "Páginas/Sessão"]}
+            indicadoresFixos={[
+              { label: "Pageviews", unidade: "" },
+              { label: "Taxa de Rejeição", unidade: "%" },
+              { label: "Conversão", unidade: "%" },
+            ]}
             section={analiseWeb} onChange={setAnaliseWeb} readOnly={readOnly} />
 
           <AnaliseAreaEditor title="Vendas / CRM" description="Resultados comerciais e pipeline" icon={ShoppingCart} accentColor="bg-orange-500"
             metricLabels={["Leads Gerados", "Leads Qualificados", "Propostas Enviadas", "Vendas Fechadas", "Ticket Médio (R$)", "Faturamento (R$)"]}
+            indicadoresFixos={[
+              { label: "MQL", unidade: "" },
+              { label: "SQL", unidade: "" },
+              { label: "ROAS", unidade: "x" },
+            ]}
             section={analiseVendas} onChange={setAnaliseVendas} readOnly={readOnly} />
+
           <Separator />
 
           <Card className="border-primary/20">
