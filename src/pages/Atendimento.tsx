@@ -303,6 +303,11 @@ export default function Atendimento() {
                       <span className="text-[10px] text-muted-foreground">
                         Aberto {formatDistanceToNow(new Date(selectedTicket.created_at), { locale: ptBR, addSuffix: true })}
                       </span>
+                      {selectedTicket.assigned_to && memberMap.get(selectedTicket.assigned_to) && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                          Resp.: {memberMap.get(selectedTicket.assigned_to)!.name}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5 flex-shrink-0">
