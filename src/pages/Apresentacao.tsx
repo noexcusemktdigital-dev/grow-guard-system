@@ -83,7 +83,7 @@ function HeroSection({ clientName, monthRef }: { clientName: string; monthRef: s
         Acompanhamento Mensal
       </p>
       <p className="text-lg text-gray-400 mt-6 text-center max-w-2xl">
-        Análise de performance e planejamento estratégico completo para o próximo ciclo.
+        Análise de Performance & Planejamento Estratégico
       </p>
       <p className="text-gray-500 mt-4">{getMonthLabel(monthRef)}</p>
       <motion.div
