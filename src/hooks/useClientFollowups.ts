@@ -37,6 +37,7 @@ export interface ConteudoPauta {
   tipo: "organico" | "pago";
   cta: string;
   referencias: string;
+  imagens_referencia?: string[];
   necessidades_cliente: string;
   observacoes: string;
 }
