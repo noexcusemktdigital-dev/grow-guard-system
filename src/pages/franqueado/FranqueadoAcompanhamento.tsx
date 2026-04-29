@@ -1320,10 +1320,16 @@ function WebSecaoCard({ secao, idx, onChange, onRemove }: { secao: WebSecao; idx
 }
 
 // ─── Main Page ───
-export default function FranqueadoAcompanhamento() {
+export default function FranqueadoAcompanhamento({ forceReadOnly = false }: { forceReadOnly?: boolean } = {}) {
   const { role } = useAuth();
-  const isMatriz = role === "super_admin" || role === "admin";
-  const isFranqueado = role === "franqueado";
+  // Somente ADM da Matriz (super_admin) pode criar e editar
+  const canEdit = role === "super_admin" && !forceReadOnly;
+  // Matriz vê todos os projetos
+  const isMatriz = role === "super_admin";
+  // Franqueado e admin de unidade veem somente sua unidade — somente leitura
+  const isFranqueado = role === "franqueado" || role === "admin";
+  // Todos que não são super_admin (ou forceReadOnly) são readOnly
+  const readOnly = !canEdit;
 
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedUnitOrgId, setSelectedUnitOrgId] = useState<string | undefined>();
@@ -1333,13 +1339,21 @@ export default function FranqueadoAcompanhamento() {
   const { data: unitFolders = [] } = useClientFoldersForUnit();
   const { data: units = [] } = useUnits();
   const { data: followups = [] } = useClientFollowups(selectedClient);
+  const renameFolder = useRenameFolder();
 
   const folders = isMatriz ? matrizFolders : unitFolders;
-  const readOnly = isFranqueado;
 
   const handleFolderSelect = (name: string, unitOrgId?: string) => {
     setSelectedClient(name);
     if (unitOrgId) setSelectedUnitOrgId(unitOrgId);
+  };
+
+  const handleRename = (oldName: string, newName: string) => {
+    renameFolder.mutate({ oldName, newName }, {
+      onSuccess: (finalName) => {
+        if (selectedClient === oldName) setSelectedClient(finalName as string);
+      }
+    });
   };
 
   if (editing) {
@@ -1364,7 +1378,7 @@ export default function FranqueadoAcompanhamento() {
           onBack={() => { setSelectedClient(null); setSelectedUnitOrgId(undefined); }}
           onNew={() => setEditing("new")}
           onEdit={(f) => setEditing(f)}
-          isMatriz={isMatriz}
+          canEdit={canEdit}
         />
       </div>
     );
@@ -1375,7 +1389,9 @@ export default function FranqueadoAcompanhamento() {
         folders={folders}
         onSelect={handleFolderSelect}
         isMatriz={isMatriz}
+        canEdit={canEdit}
         units={units}
+        onRename={handleRename}
       />
     </div>
   );
