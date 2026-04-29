@@ -83,7 +83,7 @@ function HeroSection({ clientName, monthRef }: { clientName: string; monthRef: s
         Acompanhamento Mensal
       </p>
       <p className="text-lg text-gray-400 mt-6 text-center max-w-2xl">
-        Análise de performance e planejamento estratégico completo para o próximo ciclo.
+        Análise de Performance & Planejamento Estratégico
       </p>
       <p className="text-gray-500 mt-4">{getMonthLabel(monthRef)}</p>
       <motion.div
@@ -97,114 +97,258 @@ function HeroSection({ clientName, monthRef }: { clientName: string; monthRef: s
   );
 }
 
-/* ── ANÁLISE GERAL ── */
-function AnaliseSection({ analise }: { analise: FollowupAnalise }) {
+/* ── SCORE GERAL (substitui radar) ── */
+function ScoreSection({ analise }: { analise: FollowupAnalise }) {
   const areas = [
-    { name: "Conteúdo", data: analise.conteudo, color: "#8b5cf6", icon: Megaphone },
-    { name: "Tráfego", data: analise.trafego, color: "#3b82f6", icon: TrendingUp },
-    { name: "Web", data: analise.web, color: "#22c55e", icon: Globe },
-    { name: "Vendas", data: analise.vendas, color: "#f97316", icon: ShoppingCart },
+    { key: "conteudo", label: "Criativos", color: "#8b5cf6", icon: Megaphone },
+    { key: "trafego", label: "Tráfego Pago", color: "#3b82f6", icon: TrendingUp },
+    { key: "web", label: "Web", color: "#22c55e", icon: Globe },
+    { key: "vendas", label: "Vendas", color: "#f97316", icon: ShoppingCart },
   ];
 
-  const radarData = areas.map((a) => {
-    const m = a.data?.metricas || {};
-    const vals = Object.values(m).filter((v) => typeof v === "number" && v > 0);
-    const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
-    return { area: a.name, valor: Math.min(avg, 100) };
-  });
+  const getScore = (section?: AnaliseSubSection) => (section as any)?.score || 0;
+  const scores = {
+    conteudo: getScore(analise.conteudo),
+    trafego: getScore(analise.trafego),
+    web: getScore(analise.web),
+    vendas: getScore(analise.vendas),
+  };
+  const media = Object.values(scores).reduce((a, b) => a + b, 0) / 4;
+  const chartData = areas.map((a) => ({
+    area: a.label,
+    score: scores[a.key as keyof typeof scores],
+    fill: a.color,
+  }));
 
-  const hasRadar = radarData.some((d) => d.valor > 0);
+  const scoreLabel = (s: number) =>
+    s === 0 ? "Sem avaliação" :
+    s <= 1 ? "Crítico" :
+    s <= 2 ? "Abaixo do esperado" :
+    s <= 3 ? "Regular" :
+    s <= 4 ? "Bom" : "Excelente";
 
   return (
-    <Section id="analise">
-      <SectionLabel text="Análise de Performance" />
-      <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Visão Geral do Mês</h2>
+    <Section id="score">
+      <SectionLabel text="Score de Performance" />
+      <h2 className="text-3xl md:text-5xl font-bold text-white mb-2">
+        Avaliação do Período
+      </h2>
       <p className="text-gray-400 mb-12 max-w-2xl">
-        Performance consolidada das 4 áreas estratégicas com métricas e indicadores do período.
+        Score individual por frente estratégica — de 0 a 5.
       </p>
 
-      {hasRadar && (
-        <div className="flex justify-center mb-16">
-          <div className="w-full max-w-lg">
-            <ResponsiveContainer width="100%" height={400}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="#333" />
-                <PolarAngleAxis dataKey="area" tick={{ fill: "#ccc", fontSize: 14 }} />
-                <PolarRadiusAxis tick={{ fill: "#666", fontSize: 12 }} domain={[0, 100]} />
-                <Radar dataKey="valor" stroke="#ef4444" fill="#ef4444" fillOpacity={0.25} strokeWidth={2} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
+      <div className="flex justify-center mb-16">
+        <div className="text-center">
+          <p className="text-gray-500 text-sm uppercase tracking-widest mb-2">Score Médio Geral</p>
+          <p className="text-8xl font-bold text-white leading-none">{media.toFixed(1)}</p>
+          <p className="text-2xl text-gray-500 mt-1">/5</p>
+          <p className="text-lg mt-3" style={{ color: media >= 4 ? "#22c55e" : media >= 3 ? "#f97316" : "#ef4444" }}>
+            {scoreLabel(media)}
+          </p>
         </div>
-      )}
+      </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
         {areas.map((a) => {
-          const m = a.data?.metricas || {};
-          const entries = Object.entries(m).filter(([, v]) => (v as number) > 0);
+          const score = scores[a.key as keyof typeof scores];
           const Icon = a.icon;
           return (
             <motion.div
-              key={a.name}
+              key={a.key}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="bg-white/[0.03] border border-white/10 rounded-2xl p-8"
-              style={{ borderLeftColor: a.color, borderLeftWidth: 4 }}
+              className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 text-center"
+              style={{ borderTopColor: a.color, borderTopWidth: 4 }}
             >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: a.color + "20" }}>
-                  <Icon className="w-5 h-5" style={{ color: a.color }} />
-                </div>
-                <h3 className="text-xl font-bold text-white">{a.name}</h3>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: a.color + "20" }}>
+                <Icon className="w-6 h-6" style={{ color: a.color }} />
               </div>
-
-              {entries.length > 0 ? (
-                <div className="space-y-3">
-                  {entries.map(([k, v]) => (
-                    <div key={k} className="flex justify-between items-center">
-                      <span className="text-gray-400 text-sm">{k}</span>
-                      <span className="text-white font-semibold text-lg">{fmt(v as number)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600 text-sm">Sem métricas registradas</p>
-              )}
-
-              {((a.data?.positivos?.filter(Boolean).length ?? 0) > 0 || (a.data?.negativos?.filter(Boolean).length ?? 0) > 0) && (
-                <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-green-400 text-xs font-semibold uppercase tracking-wider mb-2">Positivos</p>
-                    {a.data?.positivos?.filter(Boolean).map((p, i) => (
-                      <p key={i} className="text-gray-300 text-sm mb-1">• {p}</p>
-                    ))}
-                  </div>
-                  <div>
-                    <p className="text-red-400 text-xs font-semibold uppercase tracking-wider mb-2">A Melhorar</p>
-                    {a.data?.negativos?.filter(Boolean).map((p, i) => (
-                      <p key={i} className="text-gray-300 text-sm mb-1">• {p}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {a.name === "Conteúdo" && (analise.conteudo?.imagens?.filter(Boolean)?.length ?? 0) > 0 && (
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <p className="text-xs text-violet-400 font-semibold uppercase tracking-wider mb-3">Criativos em Veiculação</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {analise.conteudo!.imagens!.filter(Boolean).map((url, idx) => (
-                      <img key={idx} src={url} alt={`Criativo ${idx + 1}`} className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
-                    ))}
-                  </div>
-                </div>
-              )}
+              <p className="text-gray-400 text-sm mb-3">{a.label}</p>
+              <p className="text-5xl font-bold mb-1" style={{ color: a.color }}>
+                {score}
+              </p>
+              <p className="text-gray-600 text-xs">/5 — {scoreLabel(score)}</p>
             </motion.div>
           );
         })}
       </div>
+
+      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8">
+        <h3 className="text-lg font-semibold text-white mb-6 text-center">
+          Comparativo por Frente
+        </h3>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+            <XAxis dataKey="area" tick={{ fill: "#ccc", fontSize: 13 }} />
+            <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{ fill: "#666", fontSize: 12 }} />
+            <Tooltip
+              formatter={(v: number) => [`${v}/5`, "Score"]}
+              contentStyle={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }}
+            />
+            <Bar dataKey="score" radius={[8, 8, 0, 0]}>
+              {chartData.map((entry, i) => (
+                <Cell key={i} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </Section>
+  );
+}
+
+/* ── ANÁLISE POR ÁREA ── */
+function AnaliseAreaSection({
+  id, label, color, icon: Icon, section, isConteudo = false,
+}: {
+  id: string; label: string; color: string;
+  icon: React.ElementType; section?: AnaliseSubSection; isConteudo?: boolean;
+}) {
+  if (!section) return null;
+
+  const metricas = Object.entries(section.metricas || {}).filter(([, v]) => (v as number) > 0);
+  const indicadores = (section as any).indicadores || [];
+  const positivos = section.positivos?.filter(Boolean) || [];
+  const negativos = section.negativos?.filter(Boolean) || [];
+  const score = (section as any).score || 0;
+  const hasContent = metricas.length > 0 || indicadores.length > 0 || positivos.length > 0 || negativos.length > 0 || section.observacoes;
+  if (!hasContent) return null;
+
+  return (
+    <Section id={id}>
+      <SectionLabel text={`Análise — ${label}`} color="bg-gray-500" />
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          style={{ backgroundColor: color + "20" }}>
+          <Icon className="w-7 h-7" style={{ color }} />
+        </div>
+        <h2 className="text-3xl md:text-4xl font-bold text-white">{label}</h2>
+        {score > 0 && (
+          <span className="ml-auto text-3xl font-bold" style={{ color }}>
+            {score}<span className="text-lg text-gray-500">/5</span>
+          </span>
+        )}
+      </div>
+
+      {metricas.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+          {metricas.map(([k, v]) => (
+            <div key={k} className="bg-white/[0.03] border border-white/10 rounded-xl p-5 text-center">
+              <p className="text-2xl font-bold text-white">{fmt(v as number)}</p>
+              <p className="text-xs text-gray-500 mt-1">{k}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {indicadores.length > 0 && (
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 mb-8">
+          <h3 className="text-sm text-gray-500 uppercase tracking-widest mb-6">
+            Indicadores — Meta vs Realizado
+          </h3>
+          <div className="space-y-5">
+            {indicadores.map((ind: any, i: number) => {
+              const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
+              const barColor = pct >= 90 ? "#22c55e" : pct >= 60 ? "#f97316" : "#ef4444";
+              return (
+                <div key={i}>
+                  <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+                    <span className="text-gray-300 text-sm">{ind.label}</span>
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-gray-500">Meta: {ind.ideal} {ind.unidade}</span>
+                      <span className="font-bold text-white">Atual: {ind.atual} {ind.unidade}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ backgroundColor: barColor + "20", color: barColor }}>
+                        {pct.toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {!isConteudo && (section as any).imagens?.filter(Boolean).length > 0 && (
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 mb-8">
+          <h3 className="text-sm text-gray-500 uppercase tracking-widest mb-4">
+            Anúncios em Veiculação
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {(section as any).imagens.filter(Boolean).map((url: string, idx: number) => (
+              <img key={idx} src={url} alt={`Anúncio ${idx + 1}`}
+                className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(positivos.length > 0 || negativos.length > 0) && (
+        <div className="grid md:grid-cols-2 gap-6">
+          {positivos.length > 0 && (
+            <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-8">
+              <p className="text-green-400 text-xs font-semibold uppercase tracking-wider mb-4">
+                ✓ Pontos Positivos
+              </p>
+              {positivos.map((p, i) => (
+                <p key={i} className="text-gray-300 text-sm mb-2 flex gap-2">
+                  <span className="text-green-400 shrink-0">•</span> {p}
+                </p>
+              ))}
+            </div>
+          )}
+          {negativos.length > 0 && (
+            <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-8">
+              <p className="text-red-400 text-xs font-semibold uppercase tracking-wider mb-4">
+                → A Melhorar
+              </p>
+              {negativos.map((p, i) => (
+                <p key={i} className="text-gray-300 text-sm mb-2 flex gap-2">
+                  <span className="text-red-400 shrink-0">•</span> {p}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {section.observacoes && (
+        <div className="mt-6 bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+          <p className="text-gray-400 text-sm italic">{section.observacoes}</p>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+/* ── DIVISOR DE PARTES ── */
+function ParteDivisor({ id, numero, titulo, descricao }: {
+  id?: string; numero: string; titulo: string; descricao: string;
+}) {
+  return (
+    <section
+      id={id}
+      className="min-h-[50vh] flex flex-col items-center justify-center px-6 bg-gradient-to-b from-[#0a0a0f] via-[#0d0d15] to-[#0a0a0f] relative overflow-hidden"
+    >
+      <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
+        <p className="text-[20rem] font-black text-white leading-none select-none">
+          {numero}
+        </p>
+      </div>
+      <SectionLabel text={`Parte ${numero}`} />
+      <h2 className="text-4xl md:text-6xl font-bold text-white text-center mt-4 relative">
+        {titulo}
+      </h2>
+      <p className="text-gray-400 mt-4 text-center max-w-xl text-lg relative">{descricao}</p>
+    </section>
   );
 }
 
@@ -648,31 +792,84 @@ export default function Apresentacao() {
   const analise = (followup.analise || {}) as FollowupAnalise;
   const plano = (followup.plano_proximo || {}) as FollowupPlano;
 
-  const sections = [
-    { id: "analise", label: "Análise" },
-    { id: "conteudo", label: "Conteúdo" },
-    { id: "trafego", label: "Tráfego" },
-    { id: "web", label: "Web" },
-    { id: "vendas", label: "Vendas" },
-    { id: "resumo", label: "Resumo" },
-  ];
-
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white scroll-smooth">
-      <NavDots sections={sections} />
+      <NavDots sections={[
+        { id: "score", label: "Score" },
+        { id: "analise-criativos", label: "Criativos" },
+        { id: "analise-trafego", label: "Tráfego" },
+        { id: "analise-web", label: "Web" },
+        { id: "analise-vendas", label: "Vendas" },
+        { id: "resumo", label: "Resumo" },
+        { id: "parte2", label: "Estratégia" },
+        { id: "conteudo", label: "Conteúdo" },
+        { id: "trafego", label: "Campanhas" },
+        { id: "web", label: "Páginas" },
+        { id: "vendas", label: "Vendas" },
+      ]} />
 
+      {/* ── CAPA ── */}
       <HeroSection clientName={followup.client_name} monthRef={followup.month_ref} />
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
 
-      <AnaliseSection analise={analise} />
+      {/* ══════════════════════════════════ */}
+      {/* PARTE 1 — ANÁLISE                 */}
+      {/* ══════════════════════════════════ */}
+      <ParteDivisor
+        numero="1"
+        titulo="Análise de Performance"
+        descricao="O que aconteceu — métricas, indicadores, pontos fortes e oportunidades de melhoria."
+      />
 
-      {/* PARTE 2 — Próximas ações */}
-      <div className="page-break my-12 border-t-4 border-violet-500/30 relative max-w-[1400px] mx-auto">
-        <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#0a0a0f] px-4 text-sm font-semibold text-gray-400 uppercase tracking-widest">
-          Parte 2 — Próximas Ações
-        </span>
-      </div>
+      <ScoreSection analise={analise} />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-criativos" label="Criativos"
+        color="#8b5cf6" icon={Megaphone}
+        section={analise.conteudo}
+        isConteudo
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-trafego" label="Tráfego Pago"
+        color="#3b82f6" icon={TrendingUp}
+        section={analise.trafego}
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-web" label="Web"
+        color="#22c55e" icon={Globe}
+        section={analise.web}
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-vendas" label="Vendas"
+        color="#f97316" icon={ShoppingCart}
+        section={analise.vendas}
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+      <ResumoSection analise={analise} />
+
+      {/* ══════════════════════════════════ */}
+      {/* PARTE 2 — ESTRATÉGIA              */}
+      {/* ══════════════════════════════════ */}
+      <ParteDivisor
+        id="parte2"
+        numero="2"
+        titulo="Estratégia & Próximas Ações"
+        descricao="O que faremos — plano de criativos, campanhas, web e comercial para o próximo ciclo."
+      />
 
       <ConteudoSection plano={plano} analise={analise} />
 
@@ -688,13 +885,9 @@ export default function Apresentacao() {
 
       <VendasSectionComp plano={plano} />
 
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
-
-      <ResumoSection analise={analise} />
-
-      {/* Footer */}
       <footer className="py-12 flex flex-col items-center gap-4 border-t border-white/5">
-        <img src="/lovable-uploads/5765bdd4-e02b-42f0-b942-ad992bf21b09.png" alt="Logo" className="h-8 opacity-40" />
+        <img src="/lovable-uploads/5765bdd4-e02b-42f0-b942-ad992bf21b09.png"
+          alt="Logo" className="h-8 opacity-40" />
         <p className="text-gray-600 text-xs">Powered by No Excuse Digital</p>
       </footer>
     </div>
