@@ -1088,6 +1088,41 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 // ─── Pauta Card (content post) ───
 function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; idx: number; onChange: (i: number, f: keyof ConteudoPauta, v: any) => void; onRemove: (i: number) => void }) {
   const borderColor = pauta.tipo === "organico" ? "border-l-green-500" : "border-l-blue-500";
+  const refImagens = pauta.imagens_referencia || [];
+  const refInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingRef, setUploadingRef] = useState(false);
+
+  const handleRefUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingRef(true);
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const newUrls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) continue;
+        const ext = file.name.split(".").pop() || "png";
+        const path = `pauta-refs/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("followup-assets").upload(path, file);
+        if (error) { console.error(error); continue; }
+        const { data: urlData } = supabase.storage.from("followup-assets").getPublicUrl(path);
+        if (urlData?.publicUrl) newUrls.push(urlData.publicUrl);
+      }
+      if (newUrls.length > 0) {
+        onChange(idx, "imagens_referencia", [...refImagens, ...newUrls]);
+      }
+    } catch (err) {
+      console.error("Upload de referência falhou", err);
+    } finally {
+      setUploadingRef(false);
+      if (refInputRef.current) refInputRef.current.value = "";
+    }
+  };
+
+  const removeRef = (i: number) => {
+    onChange(idx, "imagens_referencia", refImagens.filter((_, j) => j !== i));
+  };
+
   return (
     <Card className={`mb-3 border-l-4 ${borderColor}`}>
       <CardHeader className="pb-2 pt-3">
@@ -1138,10 +1173,44 @@ function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; i
             <Input value={pauta.cta} onChange={(e) => onChange(idx, "cta", e.target.value)} placeholder="Ex: Agende sua consulta" className="text-xs" />
           </div>
           <div>
-            <label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1 mb-1"><Link2 className="w-3 h-3" /> Referências</label>
-            <Input value={pauta.referencias} onChange={(e) => onChange(idx, "referencias", e.target.value)} placeholder="Links ou referências visuais" className="text-xs" />
+            <label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1 mb-1"><Link2 className="w-3 h-3" /> Referências (link)</label>
+            <Input value={pauta.referencias} onChange={(e) => onChange(idx, "referencias", e.target.value)} placeholder="Cole um link de referência (uso interno)" className="text-xs" />
+            <p className="text-[10px] text-muted-foreground mt-1">Uso interno — o link não aparece como clicável na apresentação ao cliente.</p>
           </div>
         </div>
+
+        {/* Referências visuais (imagens) — aparecem para o cliente na apresentação */}
+        <div className="rounded-lg border bg-muted/20 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] uppercase text-muted-foreground font-bold flex items-center gap-1.5">
+              <ImageIcon className="w-3 h-3" />
+              Referências Visuais (imagens)
+            </label>
+            <Button type="button" variant="outline" size="sm" disabled={uploadingRef}
+              onClick={() => refInputRef.current?.click()}>
+              {uploadingRef ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+              {uploadingRef ? "Enviando..." : "Adicionar"}
+            </Button>
+            <input ref={refInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp"
+              multiple className="hidden" onChange={handleRefUpload} />
+          </div>
+          {refImagens.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {refImagens.map((url, i) => (
+                <div key={i} className="relative group rounded-md overflow-hidden border bg-muted aspect-square">
+                  <img src={url} alt={`Referência ${i + 1}`} className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => removeRef(i)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground italic">Nenhuma referência visual enviada.</p>
+          )}
+        </div>
+
         <div>
           <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1 block">Necessidades do Cliente</label>
           <Input value={pauta.necessidades_cliente} onChange={(e) => onChange(idx, "necessidades_cliente", e.target.value)} placeholder="O que precisa do cliente para produzir?" className="text-xs" />
