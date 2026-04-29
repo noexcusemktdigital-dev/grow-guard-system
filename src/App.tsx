@@ -280,6 +280,7 @@ function App() {
                   <Route path="marketing-hub" element={<ClienteMarketingHub />} />
                   <Route path="comunicados" element={<ClienteComunicados />} />
                   <Route path="faq" element={<ClienteFaq />} />
+                  <Route path="acompanhamento" element={<PageBoundary><ClienteAcompanhamento /></PageBoundary>} />
                   <Route path="contas-sociais" element={<Navigate to="/cliente/redes-sociais?tab=contas" replace />} />
                   <Route path="analytics-social" element={<Navigate to="/cliente/redes-sociais?tab=analytics" replace />} />
                 </Route>
