@@ -792,31 +792,84 @@ export default function Apresentacao() {
   const analise = (followup.analise || {}) as FollowupAnalise;
   const plano = (followup.plano_proximo || {}) as FollowupPlano;
 
-  const sections = [
-    { id: "analise", label: "Análise" },
-    { id: "conteudo", label: "Conteúdo" },
-    { id: "trafego", label: "Tráfego" },
-    { id: "web", label: "Web" },
-    { id: "vendas", label: "Vendas" },
-    { id: "resumo", label: "Resumo" },
-  ];
-
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white scroll-smooth">
-      <NavDots sections={sections} />
+      <NavDots sections={[
+        { id: "score", label: "Score" },
+        { id: "analise-criativos", label: "Criativos" },
+        { id: "analise-trafego", label: "Tráfego" },
+        { id: "analise-web", label: "Web" },
+        { id: "analise-vendas", label: "Vendas" },
+        { id: "resumo", label: "Resumo" },
+        { id: "parte2", label: "Estratégia" },
+        { id: "conteudo", label: "Conteúdo" },
+        { id: "trafego", label: "Campanhas" },
+        { id: "web", label: "Páginas" },
+        { id: "vendas", label: "Vendas" },
+      ]} />
 
+      {/* ── CAPA ── */}
       <HeroSection clientName={followup.client_name} monthRef={followup.month_ref} />
 
       <div className="w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
 
-      <AnaliseSection analise={analise} />
+      {/* ══════════════════════════════════ */}
+      {/* PARTE 1 — ANÁLISE                 */}
+      {/* ══════════════════════════════════ */}
+      <ParteDivisor
+        numero="1"
+        titulo="Análise de Performance"
+        descricao="O que aconteceu — métricas, indicadores, pontos fortes e oportunidades de melhoria."
+      />
 
-      {/* PARTE 2 — Próximas ações */}
-      <div className="page-break my-12 border-t-4 border-violet-500/30 relative max-w-[1400px] mx-auto">
-        <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#0a0a0f] px-4 text-sm font-semibold text-gray-400 uppercase tracking-widest">
-          Parte 2 — Próximas Ações
-        </span>
-      </div>
+      <ScoreSection analise={analise} />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-criativos" label="Criativos"
+        color="#8b5cf6" icon={Megaphone}
+        section={analise.conteudo}
+        isConteudo
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-trafego" label="Tráfego Pago"
+        color="#3b82f6" icon={TrendingUp}
+        section={analise.trafego}
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-web" label="Web"
+        color="#22c55e" icon={Globe}
+        section={analise.web}
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
+
+      <AnaliseAreaSection
+        id="analise-vendas" label="Vendas"
+        color="#f97316" icon={ShoppingCart}
+        section={analise.vendas}
+      />
+
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+      <ResumoSection analise={analise} />
+
+      {/* ══════════════════════════════════ */}
+      {/* PARTE 2 — ESTRATÉGIA              */}
+      {/* ══════════════════════════════════ */}
+      <ParteDivisor
+        id="parte2"
+        numero="2"
+        titulo="Estratégia & Próximas Ações"
+        descricao="O que faremos — plano de criativos, campanhas, web e comercial para o próximo ciclo."
+      />
 
       <ConteudoSection plano={plano} analise={analise} />
 
@@ -832,13 +885,9 @@ export default function Apresentacao() {
 
       <VendasSectionComp plano={plano} />
 
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent" />
-
-      <ResumoSection analise={analise} />
-
-      {/* Footer */}
       <footer className="py-12 flex flex-col items-center gap-4 border-t border-white/5">
-        <img src="/lovable-uploads/5765bdd4-e02b-42f0-b942-ad992bf21b09.png" alt="Logo" className="h-8 opacity-40" />
+        <img src="/lovable-uploads/5765bdd4-e02b-42f0-b942-ad992bf21b09.png"
+          alt="Logo" className="h-8 opacity-40" />
         <p className="text-gray-600 text-xs">Powered by No Excuse Digital</p>
       </footer>
     </div>
