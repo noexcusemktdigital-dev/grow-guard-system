@@ -18,9 +18,13 @@ function base64UrlDecode(str: string): string {
   return atob(padded);
 }
 
+function base64UrlDecodeBytes(str: string): Uint8Array {
+  return Uint8Array.from(base64UrlDecode(str), (char) => char.charCodeAt(0));
+}
+
 async function parseSignedRequest(
   signedRequest: string,
-  appSecret: string
+  appSecret: string,
 ): Promise<Record<string, unknown> | null> {
   const [encodedSig, payload] = signedRequest.split(".");
   if (!encodedSig || !payload) return null;
@@ -30,10 +34,10 @@ async function parseSignedRequest(
     new TextEncoder().encode(appSecret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["verify"]
+    ["verify"],
   );
 
-  const sigBytes = Uint8Array.from(atob(base64UrlDecode(encodedSig).split("").map(c => c.charCodeAt(0))));
+  const sigBytes = base64UrlDecodeBytes(encodedSig);
   const payloadBytes = new TextEncoder().encode(payload);
   const valid = await crypto.subtle.verify("HMAC", key, sigBytes, payloadBytes);
   if (!valid) return null;
@@ -46,7 +50,6 @@ async function parseSignedRequest(
 }
 
 serve(async (req) => {
-  // Meta envia POST com form-encoded body
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }
@@ -95,46 +98,83 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Deletar tokens e métricas ligadas às conexões Meta do usuário
-    // Nota: o user_id aqui é o Facebook UID — buscamos via access_token não há
-    // mapeamento direto pois armazenamos por organization_id, não por Facebook UID.
-    // Registramos a solicitação de exclusão e limpamos qualquer token Meta.
+    const nowIso = new Date().toISOString();
+
+    // Buscar contas sociais Meta vinculadas ao user_id da Meta via metadata
+    const { data: metaAccounts, error: accountsError } = await supabase
+      .from("social_accounts")
+      .select("id, platform, metadata")
+      .in("platform", ["facebook", "instagram"])
+      .eq("metadata->>user_id", userId);
+
+    if (accountsError) {
+      console.error("Error querying social_accounts:", accountsError.message);
+    }
+
+    const accountIds = (metaAccounts ?? []).map((a) => a.id);
+    let deletionNotes = "";
+
+    if (accountIds.length > 0) {
+      console.log(`Found ${accountIds.length} Meta social account(s) for user_id ${userId}`);
+
+      // Buscar posts dessas contas
+      const { data: posts, error: postsError } = await supabase
+        .from("social_posts")
+        .select("id")
+        .in("social_account_id", accountIds);
+
+      if (postsError) console.error("Error querying social_posts:", postsError.message);
+
+      const postIds = (posts ?? []).map((p) => p.id);
+
+      // Deletar métricas de engajamento dos posts encontrados
+      if (postIds.length > 0) {
+        const { error: metricsError } = await supabase
+          .from("social_engagement_metrics")
+          .delete()
+          .in("social_post_id", postIds);
+        if (metricsError) {
+          console.error("Error deleting social_engagement_metrics:", metricsError.message);
+        }
+      }
+
+      // Desconectar apenas as contas Meta correspondentes
+      const { error: updateError } = await supabase
+        .from("social_accounts")
+        .update({
+          status: "disconnected",
+          access_token: "revoked",
+          refresh_token: null,
+          updated_at: nowIso,
+        })
+        .in("id", accountIds);
+
+      if (updateError) {
+        console.error("Error disconnecting social_accounts:", updateError.message);
+      }
+
+      deletionNotes = `Callback Meta verificado. ${accountIds.length} conta(s) social(is) desconectada(s) e ${postIds.length} post(s) tiveram métricas removidas para metadata.user_id=${userId}.`;
+    } else {
+      console.log(`No Meta social accounts found for user_id ${userId}`);
+      deletionNotes = `Callback Meta verificado. Nenhuma conta social Meta conectada foi encontrada para metadata.user_id=${userId}.`;
+    }
+
+    // Registrar a solicitação de exclusão
     const { error: logError } = await supabase
-      .from("data_deletion_requests")
+      .from("meta_data_deletion_requests")
       .upsert({
         platform: "meta",
         platform_user_id: userId,
-        requested_at: new Date().toISOString(),
+        requested_at: nowIso,
+        completed_at: nowIso,
         status: "completed",
+        notes: deletionNotes,
       }, { onConflict: "platform,platform_user_id" });
 
     if (logError) {
       console.error("Failed to log deletion request:", logError.message);
-      // Non-fatal — proceed with deletion
     }
 
-    // Deletar métricas e conexões Meta de qualquer org onde esse token seja encontrado
-    // (O Meta não nos diz qual org — deletamos tudo associado a meta_ads com tokens inválidos)
-    const { error: metricsError } = await supabase
-      .from("ad_campaign_metrics")
-      .delete()
-      .eq("platform", "meta_ads");
-
-    const { error: connError } = await supabase
-      .from("ad_platform_connections")
-      .update({
-        status: "disconnected",
-        access_token: "revoked",
-        refresh_token: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("platform", "meta_ads");
-
-    if (metricsError) console.error("Error deleting metrics:", metricsError.message);
-    if (connError) console.error("Error updating connections:", connError.message);
-
-    // A Meta exige que a resposta contenha URL de confirmação e código de confirmação
-    const appId = Deno.env.get("META_APP_ID") || "unknown";
     const confirmationCode = `${userId}-${Date.now()}`;
     const statusUrl = `https://sistema.noexcusedigital.com.br/privacidade?deletion_confirmed=${confirmationCode}`;
 
@@ -146,7 +186,7 @@ serve(async (req) => {
       {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (err: unknown) {
     console.error("meta-data-deletion error:", err);
