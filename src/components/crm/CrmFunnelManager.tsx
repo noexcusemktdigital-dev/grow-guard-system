@@ -287,50 +287,6 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
               </RadioGroup>
             </div>
 
-            {/* Custom Fields */}
-            <div className="flex items-center justify-between mt-4">
-              <Label className="text-xs font-semibold">Campos adicionais do lead</Label>
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => {
-                const newField = { key: `field_${Date.now()}_${customFieldsSchema.length}`, label: "Novo campo", type: "text", required: false, placeholder: "" };
-                setCustomFieldsSchema([...customFieldsSchema, newField]);
-              }}>
-                <Plus className="w-3 h-3" /> Adicionar campo
-              </Button>
-            </div>
-            {customFieldsSchema.length === 0 && (
-              <p className="text-[10px] text-muted-foreground">Nenhum campo adicional. Clique em "+ Adicionar campo" para criar.</p>
-            )}
-            {customFieldsSchema.map((field: any, idx: number) => (
-              <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/20">
-                <Input
-                  value={field.label}
-                  onChange={e => {
-                    const updated = [...customFieldsSchema];
-                    // IMPORTANTE: não regerar a `key` a partir do label — isso fazia campos
-                    // com o mesmo nome compartilharem a mesma chave e duplicarem valores.
-                    updated[idx] = { ...field, label: e.target.value };
-                    setCustomFieldsSchema(updated);
-                  }}
-                  className="h-7 text-xs flex-1"
-                  placeholder="Nome do campo"
-                />
-                <Select value={field.type} onValueChange={v => {
-                  const updated = [...customFieldsSchema];
-                  updated[idx] = { ...field, type: v };
-                  setCustomFieldsSchema(updated);
-                }}>
-                  <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text" className="text-xs">Texto</SelectItem>
-                    <SelectItem value="number" className="text-xs">Número</SelectItem>
-                    <SelectItem value="select" className="text-xs">Seleção</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setCustomFieldsSchema(customFieldsSchema.filter((_: any, i: number) => i !== idx))}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStageDialogOpen(false)}>Cancelar</Button>
