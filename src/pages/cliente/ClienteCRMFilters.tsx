@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -131,11 +132,11 @@ export function CrmFilterBar({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">Valor mín</Label>
-                <Input type="number" value={filters.filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 text-xs" placeholder="0" />
+                <NumericInput value={filters.filterValueMin === "" ? null : Number(filters.filterValueMin)} onChange={v => setFilterValueMin(v === null ? "" : String(v))} prefix="R$ " decimals={2} className="h-8 text-xs" placeholder="0" />
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">Valor máx</Label>
-                <Input type="number" value={filters.filterValueMax} onChange={e => setFilterValueMax(e.target.value)} className="h-8 text-xs" placeholder="∞" />
+                <NumericInput value={filters.filterValueMax === "" ? null : Number(filters.filterValueMax)} onChange={v => setFilterValueMax(v === null ? "" : String(v))} prefix="R$ " decimals={2} className="h-8 text-xs" placeholder="∞" />
               </div>
             </div>
           </div>
