@@ -304,7 +304,7 @@ export default function PlataformaDoEmpresario() {
   ];
 
   return (
-    <div style={{ background: "#0a0a0a", color: "#f5f5f5", minHeight: "100vh", ...fontBody }}>
+    <div style={{ background: "#0a0a0f", color: "#fff", minHeight: "100vh", ...fontBody }}>
       <style>{`
         [data-reveal]{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
         [data-reveal].noe-revealed{opacity:1;transform:none}
