@@ -243,6 +243,19 @@ Deno.serve(async (req) => {
               payment_method: "asaas",
             });
 
+            // Notificar o franqueado da confirmação do pagamento
+            try {
+              await adminClient.from("client_notifications").insert({
+                organization_id: franchiseeCharge.franchisee_org_id,
+                title: "Mensalidade do sistema confirmada",
+                message: `Pagamento de R$ ${Number(franchiseeCharge.total_amount).toFixed(2)} confirmado para o mês ${franchiseeCharge.month}.`,
+                type: "payment",
+                action_url: "/franqueado/financeiro",
+              });
+            } catch (notifErr) {
+              console.error("Failed to notify franchisee:", notifErr);
+            }
+
             console.log(`Franchisee charge ${franchiseeCharge.id} marked as paid`);
             return jsonOk({ success: true, event, type: "franchisee_charge", charge_id: franchiseeCharge.id });
           }
