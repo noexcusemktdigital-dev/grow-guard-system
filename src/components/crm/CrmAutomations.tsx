@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -433,14 +434,12 @@ export function CrmAutomations() {
                 <div className="space-y-2">
                   <Label className="text-xs">Lead parado há quantos dias?</Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={90}
-                      value={triggerConfig.days || 3}
-                      onChange={e => setTriggerConfig({
+                    <NumericInput
+                      value={triggerConfig.days ?? 3}
+                      decimals={0}
+                      onChange={v => setTriggerConfig({
                         ...triggerConfig,
-                        days: Math.max(1, parseInt(e.target.value) || 3),
+                        days: Math.max(1, v ?? 3),
                       })}
                       className="h-8 text-xs w-24"
                     />
@@ -455,14 +454,12 @@ export function CrmAutomations() {
                 <div className="space-y-2">
                   <Label className="text-xs">Sem contato há quantas horas?</Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={168}
-                      value={triggerConfig.hours || 24}
-                      onChange={e => setTriggerConfig({
+                    <NumericInput
+                      value={triggerConfig.hours ?? 24}
+                      decimals={0}
+                      onChange={v => setTriggerConfig({
                         ...triggerConfig,
-                        hours: Math.max(1, parseInt(e.target.value) || 24),
+                        hours: Math.max(1, v ?? 24),
                       })}
                       className="h-8 text-xs w-24"
                     />
@@ -538,7 +535,7 @@ export function CrmAutomations() {
                 <div className="space-y-2">
                   <div><Label className="text-xs">Título da tarefa</Label><Input value={actionConfig.task_title || ""} onChange={e => setActionConfig({ ...actionConfig, task_title: e.target.value })} placeholder="Ex: Fazer follow-up" className="h-8 text-xs" /></div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div><Label className="text-xs">Prazo</Label><Input type="number" value={actionConfig.due_value || actionConfig.due_days || 1} onChange={e => setActionConfig({ ...actionConfig, due_value: Number(e.target.value), due_days: actionConfig.due_unit === "hours" ? undefined : Number(e.target.value) })} className="h-8 text-xs" min={1} /></div>
+                    <div><Label className="text-xs">Prazo</Label><NumericInput value={actionConfig.due_value ?? actionConfig.due_days ?? 1} decimals={0} onChange={v => setActionConfig({ ...actionConfig, due_value: v ?? 1, due_days: actionConfig.due_unit === "hours" ? undefined : (v ?? 1) })} className="h-8 text-xs" /></div>
                     <div>
                       <Label className="text-xs">Unidade</Label>
                       <Select value={actionConfig.due_unit || "days"} onValueChange={v => setActionConfig({ ...actionConfig, due_unit: v, due_days: v === "days" ? (actionConfig.due_value || 1) : undefined })}>
@@ -706,7 +703,7 @@ export function CrmAutomations() {
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> Delay</Label>
-                        <Input type="number" value={actionConfig.delay_value || actionConfig.delay_hours || 24} onChange={e => setActionConfig({ ...actionConfig, delay_value: Number(e.target.value), delay_hours: actionConfig.delay_unit === "days" ? Number(e.target.value) * 24 : Number(e.target.value) })} className="h-8 text-xs" min={1} />
+                        <NumericInput value={actionConfig.delay_value ?? actionConfig.delay_hours ?? 24} decimals={0} onChange={v => setActionConfig({ ...actionConfig, delay_value: v ?? 24, delay_hours: actionConfig.delay_unit === "days" ? (v ?? 24) * 24 : (v ?? 24) })} className="h-8 text-xs" />
                       </div>
                       <div>
                         <Label className="text-xs">Unidade</Label>
@@ -720,7 +717,7 @@ export function CrmAutomations() {
                       </div>
                       <div>
                         <Label className="text-xs">Máx. tentativas</Label>
-                        <Input type="number" value={actionConfig.max_attempts || 3} onChange={e => setActionConfig({ ...actionConfig, max_attempts: Number(e.target.value) })} className="h-8 text-xs" />
+                        <NumericInput value={actionConfig.max_attempts ?? 3} decimals={0} onChange={v => setActionConfig({ ...actionConfig, max_attempts: v ?? 3 })} className="h-8 text-xs" />
                       </div>
                     </div>
                   )}

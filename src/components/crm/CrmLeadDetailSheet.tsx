@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -265,7 +266,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Empresa</Label><Input value={editCompany} onChange={e => setEditCompany(e.target.value)} className="h-8 text-sm" /></div>
-              <div><Label className="text-xs">Valor (R$)</Label><Input type="number" value={editValue} onChange={e => setEditValue(e.target.value)} className="h-8 text-sm" /></div>
+              <div><Label className="text-xs">Valor (R$)</Label><NumericInput value={editValue === "" ? null : Number(editValue)} onChange={v => setEditValue(v === null ? "" : String(v))} prefix="R$ " decimals={2} className="h-8 text-sm" /></div>
             </div>
             <div>
               <Label className="text-xs">Etapa</Label>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { KpiCard } from "@/components/KpiCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinanceExpenses, useFinanceMutations } from "@/hooks/useFinance";
@@ -96,7 +97,7 @@ export default function FinanceiroDespesas() {
           <DialogHeader><DialogTitle>Nova Despesa</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Descrição *</Label><Input value={desc} onChange={e => setDesc(e.target.value)} /></div>
-            <div><Label>Valor (R$)</Label><Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} /></div>
+            <div><Label>Valor (R$)</Label><NumericInput value={amount ?? null} onChange={v => setAmount(v ?? 0)} prefix="R$ " decimals={2} /></div>
             <div><Label>Data</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
             <div><Label>Categoria</Label>
               <Select value={category} onValueChange={setCategory}>

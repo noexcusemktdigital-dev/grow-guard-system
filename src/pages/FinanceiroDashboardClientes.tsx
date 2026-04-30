@@ -5,6 +5,7 @@ import { ArrowRight, Pencil, Trash2, Search, CreditCard, Copy, ExternalLink, Loa
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -304,7 +305,7 @@ export function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, sel
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Valor (R$)</Label>
-              <Input type="number" step="0.01" min="0" value={editValue} onChange={e => setEditValue(e.target.value)} />
+              <NumericInput value={editValue === "" ? null : Number(editValue)} onChange={v => setEditValue(v === null ? "" : String(v))} prefix="R$ " decimals={2} />
             </div>
             <div className="space-y-1.5">
               <Label>Vencimento</Label>

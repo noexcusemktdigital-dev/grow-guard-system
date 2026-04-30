@@ -22,6 +22,7 @@ import { generateFollowupPdf } from "@/lib/followupPdfGenerator";
 import { MONTH_NAMES } from "@/lib/formatting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +83,7 @@ function MetricInput({ label, value, onChange }: { label: string; value: number;
     <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
       <div className="flex-1 min-w-0">
         <label className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider block">{label}</label>
-        <Input type="number" value={value || 0} onChange={(e) => onChange(Number(e.target.value))} className="h-8 mt-0.5 text-base font-semibold border-0 bg-transparent p-0 shadow-none focus-visible:ring-0" />
+        <NumericInput value={value ?? null} onChange={(v) => onChange(v ?? 0)} decimals={2} className="h-8 mt-0.5 text-base font-semibold border-0 bg-transparent p-0 shadow-none focus-visible:ring-0" />
       </div>
     </div>
   );
@@ -313,10 +314,10 @@ function AnaliseAreaEditor({
                         <span className="text-sm font-semibold">{ind.ideal} {ind.unidade}</span>
                       ) : (
                         <div className="flex gap-1">
-                          <Input type="number" value={ind.ideal || ""} placeholder="Meta"
-                            onChange={(e) => {
+                          <NumericInput value={ind.ideal ?? null} placeholder="Meta" decimals={2}
+                            onChange={(v) => {
                               const n = [...lista];
-                              n[i] = { ...n[i], ideal: Number(e.target.value) };
+                              n[i] = { ...n[i], ideal: v ?? 0 };
                               persistFixos(n);
                             }}
                             className="h-7 text-xs"
@@ -339,10 +340,10 @@ function AnaliseAreaEditor({
                       {readOnly ? (
                         <span className="text-sm font-bold text-primary">{ind.atual} {ind.unidade}</span>
                       ) : (
-                        <Input type="number" value={ind.atual || ""} placeholder="Atual"
-                          onChange={(e) => {
+                        <NumericInput value={ind.atual ?? null} placeholder="Atual" decimals={2}
+                          onChange={(v) => {
                             const n = [...lista];
-                            n[i] = { ...n[i], atual: Number(e.target.value) };
+                            n[i] = { ...n[i], atual: v ?? 0 };
                             persistFixos(n);
                           }}
                           className="h-7 text-xs"
@@ -1320,11 +1321,11 @@ function CampanhaCard({ campanha, idx, onChange, onRemove }: { campanha: Trafego
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">Inv. Diário (R$)</label>
-              <Input type="number" value={campanha.investimento_diario || ""} onChange={(e) => onChange(idx, "investimento_diario", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.investimento_diario ?? null} onChange={(v) => onChange(idx, "investimento_diario", v ?? 0)} prefix="R$ " decimals={2} className="text-xs" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">Inv. Total (R$)</label>
-              <Input type="number" value={campanha.investimento_total || ""} onChange={(e) => onChange(idx, "investimento_total", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.investimento_total ?? null} onChange={(v) => onChange(idx, "investimento_total", v ?? 0)} prefix="R$ " decimals={2} className="text-xs" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">Data Início</label>
@@ -1345,23 +1346,23 @@ function CampanhaCard({ campanha, idx, onChange, onRemove }: { campanha: Trafego
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">CPL (R$)</label>
-              <Input type="number" value={campanha.meta_cpl || ""} onChange={(e) => onChange(idx, "meta_cpl", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.meta_cpl ?? null} onChange={(v) => onChange(idx, "meta_cpl", v ?? 0)} prefix="R$ " decimals={2} className="text-xs" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">CPC (R$)</label>
-              <Input type="number" value={campanha.meta_cpc || ""} onChange={(e) => onChange(idx, "meta_cpc", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.meta_cpc ?? null} onChange={(v) => onChange(idx, "meta_cpc", v ?? 0)} prefix="R$ " decimals={2} className="text-xs" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">CTR (%)</label>
-              <Input type="number" value={campanha.meta_ctr || ""} onChange={(e) => onChange(idx, "meta_ctr", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.meta_ctr ?? null} onChange={(v) => onChange(idx, "meta_ctr", v ?? 0)} suffix="%" decimals={1} className="text-xs" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">Conversões</label>
-              <Input type="number" value={campanha.meta_conversoes || ""} onChange={(e) => onChange(idx, "meta_conversoes", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.meta_conversoes ?? null} onChange={(v) => onChange(idx, "meta_conversoes", v ?? 0)} decimals={0} className="text-xs" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground mb-1 block">ROAS</label>
-              <Input type="number" value={campanha.meta_roas || ""} onChange={(e) => onChange(idx, "meta_roas", Number(e.target.value))} className="text-xs" />
+              <NumericInput value={campanha.meta_roas ?? null} onChange={(v) => onChange(idx, "meta_roas", v ?? 0)} decimals={2} className="text-xs" />
             </div>
           </div>
         </div>

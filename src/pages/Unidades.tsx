@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { useUnits, useUnitMutations } from "@/hooks/useUnits";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -277,8 +278,8 @@ export default function Unidades() {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">Configurações financeiras da unidade.</p>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>% Royalties</Label><Input type="number" value={royaltyPercent} onChange={e => setRoyaltyPercent(e.target.value)} min="0" max="100" /></div>
-                <div><Label>Mensalidade Sistema (R$)</Label><Input type="number" value={systemFee} onChange={e => setSystemFee(e.target.value)} min="0" /></div>
+                <div><Label>% Royalties</Label><NumericInput value={royaltyPercent === "" ? null : Number(royaltyPercent)} onChange={v => setRoyaltyPercent(v === null ? "" : String(v))} suffix="%" decimals={1} /></div>
+                <div><Label>Mensalidade Sistema (R$)</Label><NumericInput value={systemFee === "" ? null : Number(systemFee)} onChange={v => setSystemFee(v === null ? "" : String(v))} prefix="R$ " decimals={2} /></div>
               </div>
             </div>
           )}
