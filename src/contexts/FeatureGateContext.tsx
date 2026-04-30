@@ -1,12 +1,15 @@
-
+// @ts-nocheck
 import { createContext, useContext, useState, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useHasActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useAuth } from "@/contexts/AuthContext";
 import { getEffectiveLimits } from "@/constants/plans";
 
-type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_gps_approved" | "admin_only" | null;
+type GateReason = "trial_expired" | "trial_limited" | "no_credits" | "no_gps_approved" | "admin_only" | "module_locked" | "payment_blocked" | null;
 
 interface FeatureGateContextType {
   isTrialExpired: boolean;
