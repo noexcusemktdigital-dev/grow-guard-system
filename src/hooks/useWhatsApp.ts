@@ -3,6 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 
+export type WhatsAppProvider = "zapi" | "evolution" | "whatsapp_cloud";
+
+export const WHATSAPP_DEFAULT_PROVIDER: WhatsAppProvider = "whatsapp_cloud";
+
 export interface WhatsAppInstance {
   id: string;
   organization_id: string;
@@ -13,8 +17,15 @@ export interface WhatsAppInstance {
   phone_number: string | null;
   webhook_url: string | null;
   label: string | null;
-  provider: "zapi" | "evolution";
+  provider: WhatsAppProvider;
   base_url: string | null;
+  // ── WhatsApp Cloud (Meta) ──
+  waba_id?: string | null;
+  phone_number_id?: string | null;
+  business_account_id?: string | null;
+  verified_name?: string | null;
+  cloud_metadata?: Record<string, unknown> | null;
+  access_token_encrypted?: string | null;
   created_at: string;
   updated_at: string;
 }
