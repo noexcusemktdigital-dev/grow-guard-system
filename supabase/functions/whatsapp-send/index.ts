@@ -169,8 +169,8 @@ Deno.serve(async (req) => {
     // in the same org — the resolveInstance() helper already picks the first
     // connected one, so the circuit state here is informational + enables future
     // automatic failover when multi-instance orgs are supported.
-    const providerType = (instance.provider === "evolution" ? "evolution" : "z-api") as "evolution" | "z-api";
-    if (isOpen(providerType, String(instance.instance_id))) {
+    const providerType = (instance.provider === "evolution" ? "evolution" : instance.provider === "whatsapp_cloud" ? "whatsapp_cloud" : "z-api") as "evolution" | "z-api" | "whatsapp_cloud";
+    if (providerType !== "whatsapp_cloud" && isOpen(providerType as "evolution" | "z-api", String(instance.instance_id))) {
       console.warn(`[CircuitBreaker] Instance ${instance.instance_id} (${providerType}) circuit is OPEN — proceeding with caution`);
     }
 
