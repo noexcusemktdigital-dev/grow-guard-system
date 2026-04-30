@@ -22,6 +22,7 @@ import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { toast } from "@/hooks/use-toast";
 import { playSound } from "@/lib/sounds";
 import { ChatBriefing } from "@/components/cliente/ChatBriefing";
+import { AdaptiveChatBriefing } from "@/components/cliente/AdaptiveChatBriefing";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
 import { AGENTS, GPS_RAFAEL_STEPS, GPS_SOFIA_STEPS } from "@/components/cliente/briefingAgents";
 import { StrategyDashboard, StrategyHistoryItem } from "./ClientePlanoMarketingStrategy";
@@ -615,9 +616,9 @@ export default function ClienteGPSNegocio() {
 
         {phase === "chat-rafael" && (
           <motion.div key="rafael" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ChatBriefing
+            <AdaptiveChatBriefing
               agent={AGENTS.gps_rafael}
-              steps={GPS_RAFAEL_STEPS}
+              section="comercial"
               onComplete={handleRafaelComplete}
               onCancel={() => setPhase("welcome")}
             />
@@ -628,9 +629,10 @@ export default function ClienteGPSNegocio() {
 
         {phase === "chat-sofia" && (
           <motion.div key="sofia" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ChatBriefing
+            <AdaptiveChatBriefing
               agent={AGENTS.gps_sofia}
-              steps={GPS_SOFIA_STEPS}
+              section="marketing"
+              initialAnswers={rafaelAnswers}
               onComplete={handleSofiaComplete}
               onCancel={() => setPhase("chat-rafael")}
             />
