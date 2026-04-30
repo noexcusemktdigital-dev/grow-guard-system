@@ -123,8 +123,8 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
 
   const crmVisibilityLabel = {
     all: "Todos os leads",
-    team: "Só leads do time",
-    own: "Só leads próprios",
+    team: "Próprios + sem dono",
+    own: "Apenas os próprios",
   };
 
   return (
