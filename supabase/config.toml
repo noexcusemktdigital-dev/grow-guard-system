@@ -171,6 +171,9 @@ project_id = "gxrhdpbbxfipeopdyygn"
   [functions.whatsapp-webhook]
     # External webhook from WhatsApp provider — SEC-NOE-002 fixed: mandatory client-token enforcement
     verify_jwt = false
+  [functions.whatsapp-cloud-webhook]
+    # Meta WhatsApp Cloud API webhook — verifies hub.verify_token (GET) and processes entry[] (POST)
+    verify_jwt = false
 
   # --- Google Calendar (require authenticated user session) ---
   [functions.google-calendar-oauth]

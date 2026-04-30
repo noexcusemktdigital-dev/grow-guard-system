@@ -45,7 +45,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { contactPhone, contactId, message, type = "text", mediaUrl, quotedMessageId, action } = await req.json();
+    const {
+      contactPhone,
+      contactId,
+      message,
+      type = "text",
+      mediaUrl,
+      quotedMessageId,
+      action,
+      // Cloud API extras
+      templateName,
+      templateLanguage,
+      templateComponents,
+    } = await req.json();
 
     // ─── Helper: resolve instance from contact or org ───
     async function resolveInstance(cId?: string): Promise<Record<string, unknown> | null> {
