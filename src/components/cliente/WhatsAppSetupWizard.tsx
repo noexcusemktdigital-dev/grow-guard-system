@@ -81,12 +81,18 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const reset = () => {
     stopPolling();
     setStep(1);
+    setProvider("whatsapp_cloud");
     setIzitechName("");
     setIzitechNameError("");
     setIzitechQr(null);
     setIzitechLoading(false);
     setIzitechConnected(false);
     setIzitechPhone(null);
+    setCloudPhoneNumberId("");
+    setCloudWabaId("");
+    setCloudVerifiedName("");
+    setCloudAccessToken("");
+    setCloudSaving(false);
     setBillingType("PIX");
     setPaymentLoading(false);
     setPaymentData(null);
@@ -100,6 +106,45 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   };
 
   const canConnect = izitechName.trim().length >= 3 && !validateName(izitechName.trim());
+
+  const handleConnectCloud = async () => {
+    if (!cloudPhoneNumberId.trim()) {
+      toast({ title: "Phone Number ID obrigatório", variant: "destructive" });
+      return;
+    }
+    setCloudSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
+        body: {
+          provider: "whatsapp_cloud",
+          phoneNumberId: cloudPhoneNumberId.trim(),
+          wabaId: cloudWabaId.trim() || undefined,
+          verifiedName: cloudVerifiedName.trim() || undefined,
+          accessToken: cloudAccessToken.trim() || undefined,
+          label: cloudVerifiedName.trim() || cloudPhoneNumberId.trim(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "WhatsApp Cloud conectado!",
+        description: data?.verification_status === "verified"
+          ? "Número verificado pela Meta."
+          : "Conexão salva. Conclua a verificação no Business Manager se ainda não fez.",
+      });
+      refetch();
+      onOpenChange(false);
+      reset();
+    } catch (err: unknown) {
+      toast({
+        title: "Erro ao conectar WhatsApp Cloud",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setCloudSaving(false);
+    }
+  };
 
   // ── Automatic connect: uses whatsapp-setup (Evolution API) ──
   const handleAutoConnect = async () => {
