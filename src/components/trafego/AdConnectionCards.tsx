@@ -269,6 +269,7 @@ export function AdConnectionCards() {
                         <Unplug className="w-3.5 h-3.5" />
                       </Button>
                     </div>
+                    </div>
                   </div>
                 ) : (
                   <Button
