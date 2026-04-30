@@ -73,6 +73,18 @@ const TermosDeUso = () => (
         </section>
 
         <section>
+          <h2 className="text-xl font-semibold text-foreground">9.1. WhatsApp Business Platform (Meta)</h2>
+          <p>Ao utilizar a integração oficial da WhatsApp Business Platform / WhatsApp Cloud API (Meta) na Plataforma, o usuário declara e se compromete a:</p>
+          <ul className="list-disc pl-5 space-y-2 mt-2">
+            <li><strong>Opt-in obrigatório:</strong> obter e manter registro do consentimento prévio e inequívoco (opt-in) de todos os contatos antes de enviar qualquer mensagem por WhatsApp via Plataforma.</li>
+            <li><strong>Respeito ao opt-out:</strong> respeitar imediatamente qualquer solicitação de descadastro/opt-out, deixando de enviar mensagens ao contato em qualquer canal vinculado ao mesmo número.</li>
+            <li><strong>Templates aprovados:</strong> utilizar exclusivamente templates de mensagem previamente aprovados pela Meta para envios fora da janela de 24 horas, respeitando as categorias e regras da WhatsApp Business Platform.</li>
+            <li><strong>Responsabilidade pelo conteúdo e pela base:</strong> o usuário é o único responsável pelo conteúdo enviado, pela veracidade das informações, pela base de contatos utilizada e pelo cumprimento das políticas da Meta (WhatsApp Business Messaging Policy e WhatsApp Business Solution Terms), da LGPD e demais legislações aplicáveis.</li>
+            <li><strong>Suspensões pela Meta:</strong> a NoExcuse não se responsabiliza por bloqueios, limitações de qualidade (quality rating), suspensões ou descredenciamento da WABA aplicados pela Meta em decorrência do uso indevido pelo usuário.</li>
+          </ul>
+        </section>
+
+        <section>
           <h2 className="text-xl font-semibold text-foreground">10. Conteúdo Gerado por Inteligência Artificial</h2>
           <p>A Plataforma utiliza modelos de inteligência artificial para gerar sugestões de conteúdo, scripts de vendas, estratégias de marketing e outros materiais. O usuário reconhece que:</p>
           <ul className="list-disc pl-5 space-y-2 mt-2">
