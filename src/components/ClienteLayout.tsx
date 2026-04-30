@@ -64,6 +64,7 @@ export function ClienteLayout() {
             <span className="text-sm font-semibold text-white ml-2">NOE</span>
           </div>
 
+          <PaymentBlockedBanner />
           <SupportAccessBanner />
           {tourDone && <TrialCountdownBanner />}
           {tourDone && <CreditAlertBanner />}
