@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
-import { ArrowLeft, GripVertical, Link2, Upload } from "lucide-react";
+import { ArrowLeft, GripVertical, Link2, Upload, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { FRANCHISE_STAGES, CLIENT_STAGES, LEAD_ORIGINS, RESPONSAVEIS } from "@/types/crm";
+import { CrmTagsManager } from "./CrmTagsManager";
 
 interface CrmConfigProps {
   onBack: () => void;
