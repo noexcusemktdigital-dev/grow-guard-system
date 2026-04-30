@@ -145,7 +145,7 @@ export function useInitiateMetaOAuth() {
       const params = new URLSearchParams({
         client_id: appId,
         redirect_uri: redirectUri,
-        scope: "ads_read,ads_management,leads_retrieval",
+        scope: "ads_read,leads_retrieval,pages_show_list,pages_read_engagement,pages_manage_ads,pages_manage_metadata",
         state,
         response_type: "code",
       });
