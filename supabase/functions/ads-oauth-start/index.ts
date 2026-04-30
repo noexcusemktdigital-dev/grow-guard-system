@@ -11,13 +11,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 const META_SCOPES = [
-  "ads_management",
   "ads_read",
+  "leads_retrieval",
   "pages_show_list",
+  "pages_read_engagement",
   "pages_manage_ads",
   "pages_manage_metadata",
-  "leads_retrieval",
-  "business_management",
 ].join(",");
 
 serve(async (req: Request) => {
