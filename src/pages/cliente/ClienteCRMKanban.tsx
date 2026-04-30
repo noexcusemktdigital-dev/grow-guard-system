@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   Phone, Clock, GripVertical, MoreHorizontal,
   MessageCircle, XCircle, Copy, Snowflake, Sun, Flame,
-  AlertCircle, CalendarClock,
+  AlertCircle, CalendarClock, UserRound,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCrmTaskMutations } from "@/hooks/useCrmTasks";
+import { useCrmOrgMembersMap } from "@/hooks/useCrmOrgMembers";
 import { toast } from "sonner";
 
 /* ===== Quick Task Popover ===== */
@@ -110,6 +111,7 @@ export interface LeadRow {
   lost_at?: string | null;
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
+  assigned_to?: string | null;
   crm_tasks?: Array<{ id: string; due_date: string | null; completed_at: string | null }> | null;
   [key: string]: unknown;
 }
@@ -135,6 +137,7 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
   onUpdateTemperature: (temp: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
+  const { data: membersMap } = useCrmOrgMembersMap();
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     opacity: isDragging ? 0.3 : 1,
@@ -266,11 +269,36 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
             </div>
           )}
 
-          <div className="flex items-center gap-2 pt-1.5 border-t border-border/40">
+          <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/40">
             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {new Date(lead.created_at).toLocaleDateString("pt-BR")}
             </span>
+            {lead.assigned_to && membersMap?.[lead.assigned_to] ? (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[10px] text-muted-foreground truncate max-w-[90px]">
+                  {membersMap[lead.assigned_to].name}
+                </span>
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary shrink-0 overflow-hidden">
+                  {membersMap[lead.assigned_to].avatar ? (
+                    <img
+                      src={membersMap[lead.assigned_to].avatar as string}
+                      className="w-full h-full object-cover"
+                      alt=""
+                    />
+                  ) : (
+                    membersMap[lead.assigned_to].name.charAt(0).toUpperCase()
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[10px] text-muted-foreground/50">Sem responsável</span>
+                <div className="w-5 h-5 rounded-full bg-muted border border-dashed border-muted-foreground/30 flex items-center justify-center shrink-0">
+                  <UserRound className="w-3 h-3 text-muted-foreground/40" />
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

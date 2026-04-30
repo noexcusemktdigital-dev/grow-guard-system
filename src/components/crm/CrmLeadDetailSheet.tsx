@@ -31,6 +31,7 @@ import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmLeadHistory } from "@/hooks/useCrmLeadHistory";
 import { useOrgPermissions } from "@/hooks/useOrgPermissions";
 import { LeadProductsTab, ProposalsTab, WhatsAppTab, LeadHistoryTimeline } from "./CrmLeadDetailHelpers";
+import { useCrmOrgMembers, useCrmOrgMembersMap } from "@/hooks/useCrmOrgMembers";
 import { useCrmPartners } from "@/hooks/useCrmPartners";
 import { useWhatsAppMessages, useSendWhatsAppMessage } from "@/hooks/useWhatsApp";
 import { ChatMessageBubble } from "@/components/cliente/ChatMessageBubble";
@@ -56,6 +57,7 @@ interface LeadRow {
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
   funnel_id?: string | null;
+  assigned_to?: string | null;
   custom_fields?: Record<string, any> | null;
 }
 
@@ -132,9 +134,12 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [editStage, setEditStage] = useState(lead.stage);
   const [newTag, setNewTag] = useState("");
   const [editTags, setEditTags] = useState<string[]>(lead.tags || []);
+  const [editAssignedTo, setEditAssignedTo] = useState<string>(lead.assigned_to || "");
   const [editCustomFields, setEditCustomFields] = useState<Record<string, any>>(
     (lead.custom_fields as Record<string, any>) || {}
   );
+  const { data: members } = useCrmOrgMembers();
+  const { data: membersMap } = useCrmOrgMembersMap();
 
   // Schema de campos adicionais do funil atual (deduplicado contra dados legados)
   const currentFunnel = funnels?.find(f => f.id === (lead as any).funnel_id) ||
@@ -177,6 +182,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
       id: lead.id, name: editName, phone: editPhone || null,
       email: editEmail || null, company: editCompany || null,
       value: editValue ? parseFloat(editValue) : null, stage: editStage, tags: editTags,
+      assigned_to: editAssignedTo || null,
       // Preserva campos legados não exibidos no schema atual e mescla os editados
       custom_fields: { ...((lead.custom_fields as Record<string, any>) || {}), ...editCustomFields },
     } as any);
@@ -300,6 +306,37 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
                 </Select>
               </div>
             )}
+            <div>
+              <Label className="text-xs">Responsável</Label>
+              <Select
+                value={editAssignedTo || "__none__"}
+                onValueChange={(v) => setEditAssignedTo(v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Selecionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem responsável</SelectItem>
+                  {members?.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id} className="text-sm">
+                      {m.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editAssignedTo && membersMap?.[editAssignedTo] && (
+                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
+                  <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-[9px] font-bold text-primary overflow-hidden">
+                    {membersMap[editAssignedTo].avatar ? (
+                      <img src={membersMap[editAssignedTo].avatar as string} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      membersMap[editAssignedTo].name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span>Atribuído a {membersMap[editAssignedTo].name}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {customFieldsSchema.length > 0 && (

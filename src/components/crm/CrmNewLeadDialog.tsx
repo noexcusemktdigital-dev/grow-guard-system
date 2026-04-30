@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
+import { Shuffle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
+import { useCrmOrgMembers } from "@/hooks/useCrmOrgMembers";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,7 +28,12 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: funnelsData } = useCrmFunnels();
+  const { data: crmSettings } = useCrmSettings();
+  const { data: members } = useCrmOrgMembers();
+  const { user } = useAuth();
   const { maxLeads, atLimit } = useLeadQuota();
+
+  const rouletteEnabled = !!(crmSettings as any)?.lead_roulette_enabled;
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -33,6 +42,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [value, setValue] = useState("");
   const [source, setSource] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [assignedTo, setAssignedTo] = useState<string>(rouletteEnabled ? "" : (user?.id ?? ""));
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
 
   const selectedFunnelData = funnelsData?.find(f => f.id === funnelId);
@@ -65,6 +75,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
 
   const reset = () => {
     setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput(""); setCustomFields({});
+    setAssignedTo(rouletteEnabled ? "" : (user?.id ?? ""));
   };
 
   const handleCreate = () => {
@@ -91,6 +102,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       stage: defaultStage,
       funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      assigned_to: rouletteEnabled ? undefined : (assignedTo || undefined),
       custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
       _maxLeads: maxLeads,
     } as any);
@@ -122,6 +134,33 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
             </div>
           </div>
           <div><Label className="text-xs">Tags (separadas por vírgula)</Label><Input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="tag1, tag2" /></div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Responsável</Label>
+            {rouletteEnabled ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-md border bg-muted/30 text-sm text-muted-foreground">
+                <Shuffle className="w-3.5 h-3.5" />
+                Será atribuído pela roleta automaticamente
+              </div>
+            ) : (
+              <Select
+                value={assignedTo || "__none__"}
+                onValueChange={(v) => setAssignedTo(v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecionar responsável..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem responsável</SelectItem>
+                  {members?.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
           {customFieldsSchema.length > 0 && (
             <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
