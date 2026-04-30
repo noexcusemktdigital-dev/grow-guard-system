@@ -173,6 +173,7 @@ const DEFAULT_GATE: FeatureGateContextType = {
   hasAiAgent: false,
   hasWhatsApp: false,
   hasDispatches: false,
+  isPaymentBlocked: false,
   getGateReason: () => null,
   simulateTrialExpired: false,
   setSimulateTrialExpired: () => {},
