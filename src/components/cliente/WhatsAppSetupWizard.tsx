@@ -35,14 +35,21 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const { isAdmin } = useMemberPermissions();
   const canSetup = isAdmin;
   const [step, setStep] = useState(1);
+  const [provider, setProvider] = useState<"whatsapp_cloud" | "evolution">("whatsapp_cloud");
   const [izitechName, setIzitechName] = useState("");
   const [izitechNameError, setIzitechNameError] = useState("");
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
-  // QR flow state
+  // QR flow state (Evolution)
   const [izitechQr, setIzitechQr] = useState<string | null>(null);
   const [izitechLoading, setIzitechLoading] = useState(false);
   const [izitechConnected, setIzitechConnected] = useState(false);
   const [izitechPhone, setIzitechPhone] = useState<string | null>(null);
+  // WhatsApp Cloud (Meta) state
+  const [cloudPhoneNumberId, setCloudPhoneNumberId] = useState("");
+  const [cloudWabaId, setCloudWabaId] = useState("");
+  const [cloudVerifiedName, setCloudVerifiedName] = useState("");
+  const [cloudAccessToken, setCloudAccessToken] = useState("");
+  const [cloudSaving, setCloudSaving] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Payment step
   const [billingType, setBillingType] = useState<string>("PIX");
@@ -54,6 +61,9 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     bank_slip_url?: string | null;
   } | null>(null);
   const [paymentDone, setPaymentDone] = useState(false);
+
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const cloudWebhookUrl = `https://${projectId}.supabase.co/functions/v1/whatsapp-cloud-webhook`;
 
   const totalSteps = 4;
 
@@ -71,12 +81,18 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const reset = () => {
     stopPolling();
     setStep(1);
+    setProvider("whatsapp_cloud");
     setIzitechName("");
     setIzitechNameError("");
     setIzitechQr(null);
     setIzitechLoading(false);
     setIzitechConnected(false);
     setIzitechPhone(null);
+    setCloudPhoneNumberId("");
+    setCloudWabaId("");
+    setCloudVerifiedName("");
+    setCloudAccessToken("");
+    setCloudSaving(false);
     setBillingType("PIX");
     setPaymentLoading(false);
     setPaymentData(null);
@@ -90,6 +106,45 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   };
 
   const canConnect = izitechName.trim().length >= 3 && !validateName(izitechName.trim());
+
+  const handleConnectCloud = async () => {
+    if (!cloudPhoneNumberId.trim()) {
+      toast({ title: "Phone Number ID obrigatório", variant: "destructive" });
+      return;
+    }
+    setCloudSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
+        body: {
+          provider: "whatsapp_cloud",
+          phoneNumberId: cloudPhoneNumberId.trim(),
+          wabaId: cloudWabaId.trim() || undefined,
+          verifiedName: cloudVerifiedName.trim() || undefined,
+          accessToken: cloudAccessToken.trim() || undefined,
+          label: cloudVerifiedName.trim() || cloudPhoneNumberId.trim(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "WhatsApp Cloud conectado!",
+        description: data?.verification_status === "verified"
+          ? "Número verificado pela Meta."
+          : "Conexão salva. Conclua a verificação no Business Manager se ainda não fez.",
+      });
+      refetch();
+      onOpenChange(false);
+      reset();
+    } catch (err: unknown) {
+      toast({
+        title: "Erro ao conectar WhatsApp Cloud",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    } finally {
+      setCloudSaving(false);
+    }
+  };
 
   // ── Automatic connect: uses whatsapp-setup (Evolution API) ──
   const handleAutoConnect = async () => {
