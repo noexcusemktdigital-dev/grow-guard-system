@@ -123,7 +123,21 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground">11. Exclusão de Dados de Integrações</h2>
+            <h2 className="text-xl font-semibold text-foreground">11. Integração com WhatsApp Business Platform (Meta)</h2>
+            <p>Quando você conecta seu número comercial à Plataforma utilizando a WhatsApp Business Platform / WhatsApp Cloud API (Meta), processamos os seguintes dados:</p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li><strong>Dados acessados:</strong> WABA ID (WhatsApp Business Account ID), Phone Number ID, número comercial, nome verificado da conta, lista e status de templates aprovados pela Meta, mensagens enviadas e recebidas, contatos com os quais houve troca de mensagens e eventos de status/webhook (entregue, lido, falha, opt-in/opt-out).</li>
+              <li><strong>Permissões/escopos utilizados:</strong> <code>whatsapp_business_messaging</code>, <code>whatsapp_business_management</code> e, quando necessário para a integração, <code>business_management</code>.</li>
+              <li><strong>Finalidade:</strong> receber mensagens de usuários finais, responder em nome do cliente, enviar templates previamente aprovados pela Meta, registrar histórico de conversas e status da integração para auditoria, métricas e suporte.</li>
+              <li><strong>Opt-in / consentimento:</strong> o cliente da Plataforma é o responsável por obter consentimento prévio (opt-in) dos contatos antes de qualquer envio. A Plataforma não envia mensagens a contatos sem que o cliente declare possuir o opt-in.</li>
+              <li><strong>Revogação / descadastro:</strong> contatos podem solicitar opt-out a qualquer momento; o cliente é responsável por respeitar e registrar o opt-out. A conexão WhatsApp pode ser desconectada na Plataforma em <strong>Integrações &gt; WhatsApp</strong>, o que remove tokens, WABA ID e Phone Number ID armazenados.</li>
+              <li><strong>Não venda de dados:</strong> não vendemos dados recebidos via WhatsApp Business Platform e não os utilizamos para publicidade de terceiros.</li>
+              <li><strong>Armazenamento:</strong> tokens de acesso da Meta são armazenados de forma criptografada no backend, com acesso restrito a Service Role.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground">12. Exclusão de Dados de Integrações</h2>
             <p>Você pode solicitar a exclusão de dados de integrações a qualquer momento enviando um e-mail para <strong>privacidade@noexcuse.com.br</strong>.</p>
             <p className="mt-2">Adicionalmente, a Plataforma implementa o callback oficial de exclusão de dados da Meta: quando a Meta envia uma solicitação assinada de exclusão, o callback é verificado criptograficamente, as contas sociais Meta correspondentes têm seus tokens revogados e as métricas associadas são removidas. A resposta inclui uma URL pública desta política com um <strong>código de confirmação</strong> único, permitindo ao usuário acompanhar a confirmação da exclusão.</p>
           </section>
