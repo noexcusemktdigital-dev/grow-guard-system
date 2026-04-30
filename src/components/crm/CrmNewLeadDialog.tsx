@@ -135,6 +135,33 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
           </div>
           <div><Label className="text-xs">Tags (separadas por vírgula)</Label><Input value={tagInput} onChange={e => setTagInput(e.target.value)} placeholder="tag1, tag2" /></div>
 
+          <div className="space-y-1.5">
+            <Label className="text-xs">Responsável</Label>
+            {rouletteEnabled ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-md border bg-muted/30 text-sm text-muted-foreground">
+                <Shuffle className="w-3.5 h-3.5" />
+                Será atribuído pela roleta automaticamente
+              </div>
+            ) : (
+              <Select
+                value={assignedTo || "__none__"}
+                onValueChange={(v) => setAssignedTo(v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecionar responsável..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem responsável</SelectItem>
+                  {members?.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           {customFieldsSchema.length > 0 && (
             <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
               <Label className="text-xs font-semibold">Campos adicionais</Label>
