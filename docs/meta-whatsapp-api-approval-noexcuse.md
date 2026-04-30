@@ -17,9 +17,9 @@ Documento interno para preparação do processo de App Review da Meta para uso d
 - [ ] Display Name aprovado para o número comercial.
 - [ ] Método de pagamento configurado na WABA.
 - [ ] Política de Privacidade pública e atualizada
-  (`https://sistema.noexcuse.com.br/politica-privacidade`).
+  (`https://sistema.noexcusedigital.com.br/privacidade`).
 - [ ] Termos de Uso públicos e atualizados
-  (`https://sistema.noexcuse.com.br/termos-de-uso`).
+  (`https://sistema.noexcusedigital.com.br/termos`).
 - [ ] URL de exclusão de dados (Data Deletion) ativa no app Meta.
 
 ### 1.2. Configuração do App Meta
@@ -92,7 +92,7 @@ real em produção/preview.
 
 | Tempo | Cena | O que mostrar |
 |-------|------|---------------|
-| 00:00 – 00:20 | **Login** | Abrir `https://sistema.noexcuse.com.br`, mostrar a tela de login e entrar com a conta de teste do revisor. |
+| 00:00 – 00:20 | **Login** | Abrir `https://sistema.noexcusedigital.com.br`, mostrar a tela de login e entrar com a conta de teste do revisor. |
 | 00:20 – 00:50 | **Tour rápido** | Mostrar o dashboard do cliente final e navegar até **Integrações → WhatsApp**. Explicar que a plataforma é um SaaS de gestão comercial e que a integração WhatsApp é usada para conversar com leads do CRM. |
 | 00:50 – 01:30 | **Conexão WhatsApp / Meta (Embedded Signup ou credenciais)** | Selecionar o provider **WhatsApp Cloud API (oficial)**, abrir o fluxo de conexão, mostrar a **consent screen** da Meta com as permissões `whatsapp_business_messaging`, `whatsapp_business_management` e `business_management`, autorizar e voltar para a plataforma com a WABA conectada (WABA ID + Phone Number ID + nome verificado exibidos). |
 | 01:30 – 02:00 | **Webhook** | Abrir o painel do app Meta e mostrar a URL do webhook configurada (`/functions/v1/whatsapp-cloud-webhook`) com os campos `messages` e `message_template_status_update` assinados. Mostrar o status “verificado”. |
@@ -121,7 +121,7 @@ Use quando o revisor pedir esclarecimentos ou um link adicional do vídeo.
 > Hi Meta Review Team,
 >
 > Thank you for reviewing our submission. NoExcuse
-> (https://sistema.noexcuse.com.br) is a B2B SaaS for sales and marketing
+> (https://sistema.noexcusedigital.com.br) is a B2B SaaS for sales and marketing
 > management used by Brazilian SMBs. Our WhatsApp Business Platform
 > integration lets each customer connect their own WABA to talk with leads
 > stored in our CRM, send approved templates and track delivery status.
