@@ -56,6 +56,7 @@ interface LeadRow {
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
   funnel_id?: string | null;
+  assigned_to?: string | null;
   custom_fields?: Record<string, any> | null;
 }
 
