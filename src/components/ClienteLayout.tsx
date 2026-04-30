@@ -12,6 +12,7 @@ import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
 import { PaymentBlockedBanner } from "./cliente/PaymentBlockedBanner";
 import { OnboardingTour } from "./cliente/OnboardingTour";
 import { TrialWelcomeModal } from "./cliente/TrialWelcomeModal";
+import { GpsCompletedModal } from "./cliente/GpsCompletedModal";
 import { CelebrationEffect } from "./CelebrationEffect";
 import { AnnouncementPopupDialog } from "./AnnouncementPopupDialog";
 import { SystemAlertBanner } from "./SystemAlertBanner";
@@ -82,6 +83,7 @@ export function ClienteLayout() {
         </main>
       </div>
       <TrialWelcomeModal onComplete={handleWelcomeDone} />
+      <GpsCompletedModal />
       <OnboardingTour enabled={welcomeDone} onComplete={handleTourDone} />
       <CelebrationEffect />
       <AnnouncementPopupDialog enabled={tourDone} />
