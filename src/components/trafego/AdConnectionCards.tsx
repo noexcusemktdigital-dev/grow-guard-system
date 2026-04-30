@@ -48,6 +48,7 @@ export function AdConnectionCards() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerConnectionId, setPickerConnectionId] = useState<string | null>(null);
   const [pickerAccounts, setPickerAccounts] = useState<AdAccountOption[]>([]);
+  const [syncPeriodByConn, setSyncPeriodByConn] = useState<Record<string, number>>({});
 
   const handleConnect = async (platform: "google_ads" | "meta_ads") => {
     if (!orgId) {
