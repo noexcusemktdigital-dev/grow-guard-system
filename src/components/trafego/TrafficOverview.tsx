@@ -40,10 +40,11 @@ function statusBadge(status: string) {
 
 interface Props {
   metaConnection: AdConnection | undefined;
+  period?: number;
 }
 
-export function TrafficOverview({ metaConnection }: Props) {
-  const { data: metrics, isLoading } = useAdMetrics(30);
+export function TrafficOverview({ metaConnection, period = 30 }: Props) {
+  const { data: metrics, isLoading } = useAdMetrics(period);
   const syncMutation = useSyncMetrics();
 
   // Agregação diária para o gráfico
