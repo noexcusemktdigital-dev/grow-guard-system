@@ -2,6 +2,7 @@
 import { formatBRL } from "@/lib/formatting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -243,7 +244,7 @@ export function ContratosGeradorGestaoTab({
           <div className="space-y-4">
             <div><Label>Cliente (Signatário)</Label><Input value={editForm.signer_name} onChange={e => setEditForm(f => ({ ...f, signer_name: e.target.value }))} /></div>
             <div><Label>E-mail</Label><Input value={editForm.signer_email} onChange={e => setEditForm(f => ({ ...f, signer_email: e.target.value }))} /></div>
-            <div><Label>Valor Mensal (R$)</Label><Input type="number" value={editForm.monthly_value} onChange={e => setEditForm(f => ({ ...f, monthly_value: Number(e.target.value) }))} /></div>
+            <div><Label>Valor Mensal (R$)</Label><NumericInput value={editForm.monthly_value ?? null} onChange={v => setEditForm(f => ({ ...f, monthly_value: v ?? 0 }))} prefix="R$ " decimals={2} /></div>
             <div><Label>Status</Label>
               <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>

@@ -305,7 +305,7 @@ export function ClientesTab({ asaasPayments, la, refetchAsaas, chargeClient, sel
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Valor (R$)</Label>
-              <Input type="number" step="0.01" min="0" value={editValue} onChange={e => setEditValue(e.target.value)} />
+              <NumericInput value={editValue === "" ? null : Number(editValue)} onChange={v => setEditValue(v === null ? "" : String(v))} prefix="R$ " decimals={2} />
             </div>
             <div className="space-y-1.5">
               <Label>Vencimento</Label>
