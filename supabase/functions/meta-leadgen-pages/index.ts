@@ -85,7 +85,8 @@ Deno.serve(async (req) => {
     if (!accessToken) {
       return new Response(
         JSON.stringify({
-          error: "Conecte o Facebook em Redes Sociais ou Meta Ads primeiro.",
+          error:
+            "Sem permissão da Meta. Reconecte em CRM > Integrações > Meta Lead Ads autorizando os escopos leads_retrieval, pages_manage_ads e pages_manage_metadata.",
         }),
         { status: 400, headers },
       );
