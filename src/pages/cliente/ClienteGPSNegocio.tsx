@@ -616,9 +616,9 @@ export default function ClienteGPSNegocio() {
 
         {phase === "chat-rafael" && (
           <motion.div key="rafael" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ChatBriefing
+            <AdaptiveChatBriefing
               agent={AGENTS.gps_rafael}
-              steps={GPS_RAFAEL_STEPS}
+              section="comercial"
               onComplete={handleRafaelComplete}
               onCancel={() => setPhase("welcome")}
             />
@@ -629,9 +629,10 @@ export default function ClienteGPSNegocio() {
 
         {phase === "chat-sofia" && (
           <motion.div key="sofia" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ChatBriefing
+            <AdaptiveChatBriefing
               agent={AGENTS.gps_sofia}
-              steps={GPS_SOFIA_STEPS}
+              section="marketing"
+              initialAnswers={rafaelAnswers}
               onComplete={handleSofiaComplete}
               onCancel={() => setPhase("chat-rafael")}
             />
