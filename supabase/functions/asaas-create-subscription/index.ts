@@ -189,6 +189,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // externalReference padrão: "{orgId}|sub|{planSlug}"
+    // Esse formato é reconhecido pelo asaas-webhook (refParts[1] === "sub")
+    const externalReference = `${org.id}|sub|${plan}`;
+
+    // Validação defensiva: orgId precisa ser UUID e plan precisa ser conhecido
+    const validPlans = ["starter", "pro", "enterprise", "whatsapp", "trial"];
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(org.id)) {
+      console.error("[asaas-create-subscription] Invalid org.id (not UUID):", org.id);
+    }
+    if (!validPlans.includes(plan)) {
+      console.warn("[asaas-create-subscription] Unknown plan slug:", plan, "— webhook may not recognize it");
+    }
+
     const subscriptionBody: Record<string, unknown> = {
       customer: asaasCustomerId,
       billingType: billing_type,
@@ -196,12 +210,23 @@ Deno.serve(async (req) => {
       cycle: "MONTHLY",
       nextDueDate,
       description: `Plano ${plan.charAt(0).toUpperCase() + plan.slice(1)} — NOE`,
-      externalReference: `${org.id}|sub|${plan}`,
+      externalReference,
     };
 
     if (splitConfig.length > 0) {
       subscriptionBody.split = splitConfig;
     }
+
+    console.log("[asaas-create-subscription] Creating subscription:", {
+      org_id: org.id,
+      plan,
+      externalReference,
+      value: finalPrice,
+      billing_type,
+      next_due_date: nextDueDate,
+      split_count: splitConfig.length,
+      customer: asaasCustomerId,
+    });
 
     const subscriptionRes = await asaasFetch(`${ASAAS_BASE}/subscriptions`, {
       method: "POST",
