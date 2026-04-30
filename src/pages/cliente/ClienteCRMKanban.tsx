@@ -300,6 +300,7 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
               </div>
             )}
           </div>
+        </CardContent>
       </Card>
     </div>
   );
