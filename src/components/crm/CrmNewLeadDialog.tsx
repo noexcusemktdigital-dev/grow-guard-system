@@ -28,7 +28,12 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const { toast } = useToast();
   const { createLead } = useCrmLeadMutations();
   const { data: funnelsData } = useCrmFunnels();
+  const { data: crmSettings } = useCrmSettings();
+  const { data: members } = useCrmOrgMembers();
+  const { user } = useAuth();
   const { maxLeads, atLimit } = useLeadQuota();
+
+  const rouletteEnabled = !!(crmSettings as any)?.lead_roulette_enabled;
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,6 +42,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [value, setValue] = useState("");
   const [source, setSource] = useState("");
   const [tagInput, setTagInput] = useState("");
+  const [assignedTo, setAssignedTo] = useState<string>(rouletteEnabled ? "" : (user?.id ?? ""));
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
 
   const selectedFunnelData = funnelsData?.find(f => f.id === funnelId);
