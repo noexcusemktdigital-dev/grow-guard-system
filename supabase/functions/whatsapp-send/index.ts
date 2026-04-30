@@ -323,9 +323,9 @@ Deno.serve(async (req) => {
 
     // ─── INT-004: Record circuit breaker outcome ───
     if (apiRes.ok) {
-      recordSuccess(providerType, String(instance.instance_id));
+      if (providerType !== "whatsapp_cloud") recordSuccess(providerType as "evolution" | "z-api", String(instance.instance_id));
     } else {
-      recordFailure(providerType, String(instance.instance_id));
+      if (providerType !== "whatsapp_cloud") recordFailure(providerType as "evolution" | "z-api", String(instance.instance_id));
     }
 
     const messageStatus = apiRes.ok ? "sent" : "failed";
