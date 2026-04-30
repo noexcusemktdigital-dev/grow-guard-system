@@ -208,6 +208,10 @@ export function useSendWhatsAppMessage() {
       type?: string;
       mediaUrl?: string;
       quotedMessageId?: string;
+      // WhatsApp Cloud (Meta) — template messages
+      templateName?: string;
+      templateLanguage?: string;
+      templateComponents?: unknown[];
     }) => {
       const { data, error } = await supabase.functions.invoke("whatsapp-send", {
         body: params,
