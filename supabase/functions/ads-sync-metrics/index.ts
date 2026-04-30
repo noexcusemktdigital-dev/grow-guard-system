@@ -110,7 +110,7 @@ interface AdAction {
   value: string;
 }
 
-async function syncGoogleAds(connection: Record<string, any>, supabase: any) {
+async function syncGoogleAds(connection: Record<string, any>, supabase: any, periodDays = 30) {
   let accessToken = connection.access_token;
   const devToken = Deno.env.get("GOOGLE_ADS_DEVELOPER_TOKEN");
   if (!devToken) throw new Error("GOOGLE_ADS_DEVELOPER_TOKEN not configured");
@@ -133,17 +133,24 @@ async function syncGoogleAds(connection: Record<string, any>, supabase: any) {
   const customerId = connection.account_id;
   if (!customerId) throw new Error("No Google Ads customer ID");
 
+  // Período customizado: até 365 dias atrás
+  const safeDays = Math.max(1, Math.min(365, Number(periodDays) || 30));
+  const todayG = new Date();
+  const startG = new Date(todayG.getTime() - safeDays * 86400000);
+  const sinceG = startG.toISOString().split("T")[0];
+  const untilG = todayG.toISOString().split("T")[0];
+
   const query = `
     SELECT campaign.id, campaign.name, campaign.status,
            segments.date,
            metrics.impressions, metrics.clicks, metrics.cost_micros,
            metrics.conversions, metrics.ctr, metrics.average_cpc
     FROM campaign
-    WHERE segments.date DURING LAST_30_DAYS
+    WHERE segments.date BETWEEN '${sinceG}' AND '${untilG}'
     ORDER BY segments.date DESC
   `;
 
-  console.log(`[Google] Syncing customer ${customerId}...`);
+  console.log(`[Google] Syncing customer ${customerId}, period ${sinceG} to ${untilG} (${safeDays}d)...`);
 
   const res = await fetch(
     `https://googleads.googleapis.com/v16/customers/${customerId}/googleAds:searchStream`,
@@ -197,7 +204,7 @@ async function syncGoogleAds(connection: Record<string, any>, supabase: any) {
   return metrics;
 }
 
-async function syncMetaAds(connection: Record<string, any>, supabase: any) {
+async function syncMetaAds(connection: Record<string, any>, supabase: any, periodDays = 30) {
   const accessToken = connection.access_token;
   let accountId = connection.account_id;
   if (!accountId) throw new Error("No Meta ad account ID");
@@ -206,9 +213,11 @@ async function syncMetaAds(connection: Record<string, any>, supabase: any) {
   accountId = accountId.replace(/^act_/, "").replace(/\D/g, "") || accountId.replace(/^act_/, "");
   if (!accountId) throw new Error("Invalid Meta ad account ID format");
 
+  // Período customizado: até 365 dias atrás (limite Meta Insights API)
+  const safeDays = Math.max(1, Math.min(365, Number(periodDays) || 30));
   const today = new Date();
-  const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000);
-  const since = thirtyDaysAgo.toISOString().split("T")[0];
+  const startDate = new Date(today.getTime() - safeDays * 86400000);
+  const since = startDate.toISOString().split("T")[0];
   const until = today.toISOString().split("T")[0];
 
   // DATA-ADS-001: effective_status NÃO é válido em /insights — buscar via /campaigns separadamente
