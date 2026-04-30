@@ -622,7 +622,7 @@ export default function ClienteTrafegoPago() {
 
         {/* ═══ VISÃO GERAL — gráfico + tabela campanhas ═══ */}
         <TabsContent value="anuncios" className="space-y-6 mt-4">
-          <TrafficOverview metaConnection={metaConnection} />
+          <TrafficOverview metaConnection={metaConnection} period={selectedPeriod} />
           {metaConnection && hasMetrics && <AdAIAnalysis />}
         </TabsContent>
 
