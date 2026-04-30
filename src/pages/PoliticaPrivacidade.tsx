@@ -143,12 +143,12 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground">12. Cookies</h2>
+            <h2 className="text-xl font-semibold text-foreground">13. Cookies</h2>
             <p>Utilizamos cookies essenciais para o funcionamento da Plataforma (autenticação e sessão). Não utilizamos cookies de rastreamento de terceiros.</p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground">13. Contato do Encarregado (DPO)</h2>
+            <h2 className="text-xl font-semibold text-foreground">14. Contato do Encarregado (DPO)</h2>
             <p>Para questões relacionadas à proteção de dados, entre em contato: privacidade@noexcuse.com.br</p>
           </section>
         </div>
