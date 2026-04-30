@@ -236,8 +236,33 @@ export default function ClienteTrafegoPago() {
         </CardContent>
       </Card>
 
+      {/* Seletor de período de análise */}
+      {(metaConnection || googleConnection) && hasMetrics && (
+        <Card>
+          <CardContent className="py-3 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs font-semibold">Período de análise</p>
+              <p className="text-[10px] text-muted-foreground">Aplicado a KPIs, gráficos e tabela de campanhas</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {[7, 30, 90, 180, 365].map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={selectedPeriod === p ? "default" : "outline"}
+                  className="text-[10px] h-7 px-2"
+                  onClick={() => setSelectedPeriod(p)}
+                >
+                  {p === 7 ? "7d" : p === 30 ? "30d" : p === 90 ? "90d" : p === 180 ? "6m" : "1 ano"}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPIs principais (Meta Ads conectado + dados disponíveis) */}
-      {metaConnection && hasMetrics && <TrafficKPICards />}
+      {metaConnection && hasMetrics && <TrafficKPICards period={selectedPeriod} />}
 
       {/* Conta conectada mas sem métricas */}
       {metaConnection && !hasMetrics && (
