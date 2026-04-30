@@ -110,15 +110,15 @@ export default function PoliticaPrivacidade() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground">10. Integração com Meta (Facebook e Instagram)</h2>
-            <p>Quando você autoriza a conexão com Meta na Plataforma, acessamos e processamos os seguintes dados:</p>
+            <h2 className="text-xl font-semibold text-foreground">10. Integração com Meta (Facebook, Instagram, Ads e Lead Ads)</h2>
+            <p>Quando você autoriza a conexão com Meta na Plataforma — para Redes Sociais (Facebook/Instagram), Meta Ads ou Meta Lead Ads — acessamos e processamos os seguintes dados:</p>
             <ul className="list-disc pl-6 space-y-1 mt-2">
-              <li><strong>Dados acessados:</strong> Páginas do Facebook administradas pelo usuário, conta profissional do Instagram vinculada à Página, nome de perfil, identificadores da conta, tokens OAuth, publicações criadas pela Plataforma e métricas como alcance, impressões e engajamento.</li>
-              <li><strong>Permissões utilizadas:</strong> <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>instagram_manage_insights</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code> e <code>pages_manage_posts</code>.</li>
-              <li><strong>Uso:</strong> conectar a conta escolhida pelo usuário, publicar conteúdo previamente aprovado pelo usuário e apresentar relatórios de desempenho das publicações.</li>
-              <li><strong>O que não fazemos:</strong> não vendemos dados recebidos da Meta, não usamos esses dados para publicidade de terceiros e não publicamos sem ação ou aprovação explícita do usuário.</li>
-              <li><strong>Armazenamento:</strong> tokens OAuth e identificadores ficam armazenados exclusivamente no backend da Plataforma com controles de acesso restritos.</li>
-              <li><strong>Revogação:</strong> a qualquer momento em <strong>Redes Sociais &gt; Contas</strong> dentro da Plataforma, ou diretamente nas configurações da Meta em <a href="https://www.facebook.com/settings?tab=business_tools" target="_blank" rel="noopener noreferrer" className="text-primary underline">Ferramentas de Negócios</a>.</li>
+              <li><strong>Dados acessados:</strong> Páginas do Facebook administradas pelo usuário, conta profissional do Instagram vinculada à Página, nome de perfil e identificadores das contas, tokens OAuth de usuário e de página, publicações criadas pela Plataforma, formulários de Lead Ads vinculados à Página, leads gerados por esses formulários e métricas de desempenho de publicações, anúncios e campanhas (alcance, impressões, cliques, gasto, conversões, engajamento).</li>
+              <li><strong>Permissões utilizadas:</strong> <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>instagram_manage_insights</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_posts</code>, <code>leads_retrieval</code>, <code>pages_manage_ads</code>, <code>pages_manage_metadata</code> e <code>ads_read</code>.</li>
+              <li><strong>Uso:</strong> conectar a conta escolhida pelo usuário; publicar conteúdo previamente aprovado pelo usuário no Facebook e Instagram; receber e exibir leads enviados via formulários Meta Lead Ads vinculados às Páginas autorizadas; assinar/desassinar Páginas ao webhook leadgen do app; e apresentar relatórios de desempenho de publicações orgânicas, anúncios e campanhas.</li>
+              <li><strong>O que não fazemos:</strong> não vendemos dados recebidos da Meta, não usamos esses dados para publicidade de terceiros, não publicamos sem ação ou aprovação explícita do usuário e não criamos/editamos/pausamos campanhas pagas sem ação direta do usuário (não solicitamos <code>ads_management</code>).</li>
+              <li><strong>Armazenamento:</strong> tokens OAuth, page access tokens e identificadores ficam armazenados exclusivamente no backend da Plataforma com controles de acesso restritos (Service Role).</li>
+              <li><strong>Revogação:</strong> a qualquer momento dentro da Plataforma em <strong>Redes Sociais &gt; Contas</strong> (publicações Facebook/Instagram) ou em <strong>CRM &gt; Integrações &gt; Meta Lead Ads</strong> (assinatura de leadgen). Também é possível revogar diretamente nas configurações da Meta em <a href="https://www.facebook.com/settings?tab=business_tools" target="_blank" rel="noopener noreferrer" className="text-primary underline">Ferramentas de Negócios Meta</a>.</li>
             </ul>
           </section>
 

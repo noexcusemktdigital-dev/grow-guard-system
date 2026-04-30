@@ -250,7 +250,8 @@ serve(async (req) => {
       }
 
       // Step 4: Buscar Pages do usuário (com page_access_token e instagram_business_account)
-      const scopes = [
+      const redirectToScopes = (payload as any).redirect_to as string | null | undefined;
+      const baseScopes = [
         "instagram_basic",
         "instagram_content_publish",
         "instagram_manage_insights",
@@ -258,6 +259,9 @@ serve(async (req) => {
         "pages_read_engagement",
         "pages_manage_posts",
       ];
+      const scopes = redirectToScopes === "crm-leads"
+        ? [...baseScopes, "leads_retrieval", "pages_manage_ads", "pages_manage_metadata"]
+        : baseScopes;
 
       let pages: Array<{
         id: string;
