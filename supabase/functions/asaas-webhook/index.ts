@@ -368,22 +368,51 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Trigger first_payment campaign email (idempotent — only fires once per org+event)
+        // Detectar primeiro pagamento — checa se só existe 1 purchase em credit_transactions
         try {
-          await fetch(`${supabaseUrl}/functions/v1/send-campaign-email`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${serviceRoleKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              trigger_event: "first_payment",
-              organization_id: org.id,
-              metadata: { plan: planSlug, value: paymentValue },
-            }),
-          });
+          const { count: purchaseCount } = await adminClient
+            .from("credit_transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", org.id)
+            .eq("type", "purchase");
+
+          const isFirstPayment = (purchaseCount ?? 0) === 1;
+          console.log(`First-payment check org=${org.id}: purchaseCount=${purchaseCount}, isFirst=${isFirstPayment}`);
+
+          if (isFirstPayment) {
+            // Email de boas-vindas / primeiro pagamento (idempotente — dedup_key inclui evento+org)
+            try {
+              await fetch(`${supabaseUrl}/functions/v1/send-campaign-email`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${serviceRoleKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  trigger_event: "first_payment",
+                  organization_id: org.id,
+                  metadata: { plan: planSlug, value: paymentValue, credits: totalCredits },
+                }),
+              });
+            } catch (e) {
+              console.error("first_payment campaign trigger failed:", e);
+            }
+
+            // Notificação interna no sistema
+            try {
+              await adminClient.from("client_notifications").insert({
+                organization_id: org.id,
+                title: "Pagamento confirmado! ✅",
+                message: `Seu plano ${planSlug} foi ativado com ${totalCredits} créditos.`,
+                type: "payment",
+                action_url: "/cliente/configuracoes",
+              });
+            } catch (e) {
+              console.error("first_payment notification insert failed:", e);
+            }
+          }
         } catch (e) {
-          console.error("first_payment campaign trigger failed:", e);
+          console.error("first_payment detection failed:", e);
         }
 
         return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: totalCredits });
