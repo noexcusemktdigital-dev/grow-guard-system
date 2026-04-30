@@ -699,7 +699,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const userPrompt = buildUserPrompt(answers, section);
+      const userPrompt = buildUserPrompt(answers, section) + siteContextBlock;
       const { result, tokensUsed } = await callAI(LOVABLE_API_KEY, config.prompt, userPrompt, config.schema);
 
       if (!result) {
@@ -732,7 +732,7 @@ Deno.serve(async (req) => {
       s === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO (com scores automáticos de marketing e comercial, persona e análise de concorrência)" :
       s === "strategic" ? "PLANEJAMENTO ESTRATÉGICO DAS 5 ETAPAS" :
       "PROJEÇÕES FINANCEIRAS E ENTREGÁVEIS"
-    }.\n\nRESPOSTAS DO BRIEFING:\n${userPromptBase}\n\nUse a ferramenta generate_strategy para retornar.`;
+    }.\n\nRESPOSTAS DO BRIEFING:\n${userPromptBase}${siteContextBlock}\n\nUse a ferramenta generate_strategy para retornar.`;
 
     const [gpsResult, strategicResult, projectionsResult] = await Promise.all([
       callAI(LOVABLE_API_KEY, GPS_PROMPT, makePrompt("gps"), GPS_DIAGNOSIS_SCHEMA),
