@@ -172,10 +172,18 @@ export function useSetupWhatsApp() {
       clientToken?: string;
       action?: string;
       label?: string;
-      provider?: "zapi" | "evolution";
+      provider?: WhatsAppProvider;
       baseUrl?: string;
       apiKey?: string;
       instanceName?: string;
+      // WhatsApp Cloud (Meta)
+      wabaId?: string;
+      phoneNumberId?: string;
+      businessAccountId?: string;
+      verifiedName?: string;
+      displayName?: string;
+      accessToken?: string;
+      cloudMetadata?: Record<string, unknown>;
     }) => {
       const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
         body: params,
