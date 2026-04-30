@@ -5,6 +5,7 @@ import { Inbox, Plus, Pencil, Trash2, Search, ExternalLink, RefreshCw } from "lu
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -179,7 +180,7 @@ export function ReceitasTab({ asaasPayments, revenues, selectedMonth, la, refetc
           <DialogHeader><DialogTitle>{editingRev ? "Editar Receita" : "Nova Receita"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Descrição *</Label><Input value={revForm.description} onChange={e => setRevForm(f => ({ ...f, description: e.target.value }))} /></div>
-            <div><Label>Valor (R$)</Label><Input type="number" value={revForm.amount} onChange={e => setRevForm(f => ({ ...f, amount: Number(e.target.value) }))} /></div>
+            <div><Label>Valor (R$)</Label><NumericInput value={revForm.amount ?? null} onChange={v => setRevForm(f => ({ ...f, amount: v ?? 0 }))} prefix="R$ " decimals={2} /></div>
             <div><Label>Data</Label><Input type="date" value={revForm.date} onChange={e => setRevForm(f => ({ ...f, date: e.target.value }))} /></div>
             <div><Label>Categoria</Label>
               <Select value={revForm.category} onValueChange={v => setRevForm(f => ({ ...f, category: v }))}>

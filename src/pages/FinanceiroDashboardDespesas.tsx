@@ -5,6 +5,7 @@ import { Inbox, Plus, Pencil, Trash2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -138,7 +139,7 @@ export function DespesasTab({ expenses, selectedMonth, createExpense, updateExpe
           <DialogHeader><DialogTitle>{editingExp ? "Editar Despesa" : "Nova Despesa"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Descrição *</Label><Input value={expForm.description} onChange={e => setExpForm(f => ({ ...f, description: e.target.value }))} /></div>
-            <div><Label>Valor (R$)</Label><Input type="number" value={expForm.amount} onChange={e => setExpForm(f => ({ ...f, amount: Number(e.target.value) }))} /></div>
+            <div><Label>Valor (R$)</Label><NumericInput value={expForm.amount ?? null} onChange={v => setExpForm(f => ({ ...f, amount: v ?? 0 }))} prefix="R$ " decimals={2} /></div>
             <div><Label>Data</Label><Input type="date" value={expForm.date} onChange={e => setExpForm(f => ({ ...f, date: e.target.value }))} /></div>
             <div><Label>Categoria</Label>
               <Select value={expForm.category} onValueChange={v => setExpForm(f => ({ ...f, category: v }))}>

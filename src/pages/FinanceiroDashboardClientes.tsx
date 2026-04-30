@@ -5,6 +5,7 @@ import { ArrowRight, Pencil, Trash2, Search, CreditCard, Copy, ExternalLink, Loa
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
