@@ -51,22 +51,28 @@ function pctDelta(curr: number, prev: number): number | null {
   return ((curr - prev) / prev) * 100;
 }
 
-export function TrafficKPICards() {
-  // Período atual: últimos 30 dias
-  const { data: current } = useAdMetrics(30);
-  // Período anterior: últimos 60 dias (para extrair o intervalo 30-60d atrás)
-  const { data: full60 } = useAdMetrics(60);
+interface TrafficKPICardsProps {
+  period?: number;
+}
+
+export function TrafficKPICards({ period = 30 }: TrafficKPICardsProps) {
+  // Período atual
+  const { data: current } = useAdMetrics(period);
+  // Período anterior: dobro do atual (para extrair janela equivalente anterior)
+  const { data: fullDouble } = useAdMetrics(period * 2);
 
   const summaryCurrent = useAdMetricsSummary(current);
 
-  // Calcular janela 30-60d atrás
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
-  const previous = (full60 || []).filter((m) => m.date < thirtyDaysAgo);
+  // Calcular janela anterior (período atrás de "period" dias)
+  const cutoff = new Date(Date.now() - period * 86400000).toISOString().split("T")[0];
+  const previous = (fullDouble || []).filter((m) => m.date < cutoff);
   const summaryPrevious = useAdMetricsSummary(previous);
+
+  const periodLabel = period === 7 ? "7d" : period === 30 ? "30d" : period === 90 ? "90d" : period === 180 ? "6m" : period === 365 ? "1 ano" : `${period}d`;
 
   const kpis: KPI[] = [
     {
-      label: "Total investido (30d)",
+      label: `Total investido (${periodLabel})`,
       value: formatBRL(summaryCurrent.totalSpend),
       icon: DollarSign,
       delta: pctDelta(summaryCurrent.totalSpend, summaryPrevious.totalSpend),

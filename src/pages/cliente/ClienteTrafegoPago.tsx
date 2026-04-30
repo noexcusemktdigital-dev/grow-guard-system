@@ -4,11 +4,11 @@ import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButto
 import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import {
   DollarSign, Sparkles, Target,
-  Loader2, History, Folder,
+  Loader2, History, Folder, RefreshCw,
   ArrowLeft, ArrowRight, ChevronRight, BarChart2,
 } from "lucide-react";
 import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
-import { useAdConnections, useAdMetrics, useAdMetricsSummary } from "@/hooks/useAdPlatforms";
+import { useAdConnections, useAdMetrics, useAdMetricsSummary, useSyncMetrics } from "@/hooks/useAdPlatforms";
 import { Facebook, Search, CheckCircle2, AlertCircle, Link2 } from "lucide-react";
 import { AdMetricsDashboard } from "@/components/trafego/AdMetricsDashboard";
 import { AdAIAnalysis } from "@/components/trafego/AdAIAnalysis";
@@ -63,9 +63,16 @@ export default function ClienteTrafegoPago() {
   const { data: adConnections } = useAdConnections();
   const metaConnection = adConnections?.find((c) => c.platform === "meta_ads" && c.status === "active");
   const googleConnection = adConnections?.find((c) => c.platform === "google_ads" && c.status === "active");
-  const { data: adMetrics } = useAdMetrics(30);
+  const [selectedPeriod, setSelectedPeriod] = useState<number>(30);
+  const { data: adMetrics } = useAdMetrics(selectedPeriod);
   const adSummary = useAdMetricsSummary(adMetrics);
   const hasMetrics = (adMetrics?.length ?? 0) > 0;
+  const syncMutationPage = useSyncMetrics();
+
+  const handleSyncAllForPeriod = () => {
+    if (metaConnection) syncMutationPage.mutate({ connectionId: metaConnection.id, periodDays: selectedPeriod });
+    if (googleConnection) syncMutationPage.mutate({ connectionId: googleConnection.id, periodDays: selectedPeriod });
+  };
 
   const [activeTab, setActiveTab] = useState("anuncios");
   const [step, setStep] = useState(0);
@@ -235,8 +242,48 @@ export default function ClienteTrafegoPago() {
         </CardContent>
       </Card>
 
+      {/* Seletor de período de análise */}
+      {(metaConnection || googleConnection) && (
+        <Card>
+          <CardContent className="py-3 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-xs font-semibold">Período de análise</p>
+              <p className="text-[10px] text-muted-foreground">
+                Selecione e clique em "Sincronizar período" para puxar os dados do intervalo escolhido
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[7, 30, 90, 180, 365].map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={selectedPeriod === p ? "default" : "outline"}
+                  className="text-[10px] h-7 px-2"
+                  onClick={() => setSelectedPeriod(p)}
+                >
+                  {p === 7 ? "7d" : p === 30 ? "30d" : p === 90 ? "90d" : p === 180 ? "6m" : "1 ano"}
+                </Button>
+              ))}
+              <Button
+                size="sm"
+                className="text-[10px] h-7 px-2 gap-1.5"
+                onClick={handleSyncAllForPeriod}
+                disabled={syncMutationPage.isPending}
+              >
+                {syncMutationPage.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )}
+                Sincronizar período
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPIs principais (Meta Ads conectado + dados disponíveis) */}
-      {metaConnection && hasMetrics && <TrafficKPICards />}
+      {metaConnection && hasMetrics && <TrafficKPICards period={selectedPeriod} />}
 
       {/* Conta conectada mas sem métricas */}
       {metaConnection && !hasMetrics && (
@@ -596,7 +643,7 @@ export default function ClienteTrafegoPago() {
 
         {/* ═══ VISÃO GERAL — gráfico + tabela campanhas ═══ */}
         <TabsContent value="anuncios" className="space-y-6 mt-4">
-          <TrafficOverview metaConnection={metaConnection} />
+          <TrafficOverview metaConnection={metaConnection} period={selectedPeriod} />
           {metaConnection && hasMetrics && <AdAIAnalysis />}
         </TabsContent>
 

@@ -40,10 +40,11 @@ function statusBadge(status: string) {
 
 interface Props {
   metaConnection: AdConnection | undefined;
+  period?: number;
 }
 
-export function TrafficOverview({ metaConnection }: Props) {
-  const { data: metrics, isLoading } = useAdMetrics(30);
+export function TrafficOverview({ metaConnection, period = 30 }: Props) {
+  const { data: metrics, isLoading } = useAdMetrics(period);
   const syncMutation = useSyncMetrics();
 
   // Agregação diária para o gráfico
@@ -154,7 +155,7 @@ export function TrafficOverview({ metaConnection }: Props) {
       {dailyData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Investimento × Leads (últimos 30 dias)</CardTitle>
+            <CardTitle className="text-sm">Investimento × Leads ({period === 7 ? "últimos 7 dias" : period === 30 ? "últimos 30 dias" : period === 90 ? "últimos 90 dias" : period === 180 ? "últimos 6 meses" : period === 365 ? "último 1 ano" : `últimos ${period} dias`})</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[280px] w-full">
