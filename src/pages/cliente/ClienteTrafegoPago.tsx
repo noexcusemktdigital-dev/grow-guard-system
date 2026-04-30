@@ -243,14 +243,16 @@ export default function ClienteTrafegoPago() {
       </Card>
 
       {/* Seletor de período de análise */}
-      {(metaConnection || googleConnection) && hasMetrics && (
+      {(metaConnection || googleConnection) && (
         <Card>
           <CardContent className="py-3 flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="text-xs font-semibold">Período de análise</p>
-              <p className="text-[10px] text-muted-foreground">Aplicado a KPIs, gráficos e tabela de campanhas</p>
+              <p className="text-[10px] text-muted-foreground">
+                Selecione e clique em "Sincronizar período" para puxar os dados do intervalo escolhido
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {[7, 30, 90, 180, 365].map((p) => (
                 <Button
                   key={p}
@@ -262,6 +264,19 @@ export default function ClienteTrafegoPago() {
                   {p === 7 ? "7d" : p === 30 ? "30d" : p === 90 ? "90d" : p === 180 ? "6m" : "1 ano"}
                 </Button>
               ))}
+              <Button
+                size="sm"
+                className="text-[10px] h-7 px-2 gap-1.5"
+                onClick={handleSyncAllForPeriod}
+                disabled={syncMutationPage.isPending}
+              >
+                {syncMutationPage.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )}
+                Sincronizar período
+              </Button>
             </div>
           </CardContent>
         </Card>
