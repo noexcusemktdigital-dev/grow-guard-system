@@ -75,6 +75,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
 
   const reset = () => {
     setName(""); setPhone(""); setEmail(""); setCompany(""); setValue(""); setSource(""); setTagInput(""); setCustomFields({});
+    setAssignedTo(rouletteEnabled ? "" : (user?.id ?? ""));
   };
 
   const handleCreate = () => {
@@ -101,6 +102,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       stage: defaultStage,
       funnel_id: funnelId || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      assigned_to: rouletteEnabled ? undefined : (assignedTo || undefined),
       custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
       _maxLeads: maxLeads,
     } as any);
