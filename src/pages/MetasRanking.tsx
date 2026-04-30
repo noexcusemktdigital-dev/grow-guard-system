@@ -51,6 +51,7 @@ const trophyDefs: { id: TrophyId; title: string; icon: React.ElementType }[] = [
 
 export default function MetasRanking() {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { user, role } = useAuth();
   const { data: goals, isLoading: loadingGoals } = useGoals();
   const now = new Date();
   const { data: rankings, isLoading: loadingRankings } = useRankings(now.getMonth() + 1, now.getFullYear());
