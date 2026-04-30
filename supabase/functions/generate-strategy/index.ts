@@ -655,6 +655,34 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // ── Enrich answers with site content (if URL provided) ──────────
+    const siteUrl = (answers?.website_url || answers?.site_url || answers?.website || answers?.site || "").toString().trim();
+    let siteContent = "";
+    if (siteUrl && /^https?:\/\//i.test(siteUrl)) {
+      try {
+        const siteRes = await fetch(siteUrl, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; NOEXCUSE-Bot/1.0)" },
+          signal: AbortSignal.timeout(8000),
+        });
+        const html = await siteRes.text();
+        siteContent = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 3000);
+        console.log("Site content extracted:", siteContent.length, "chars from", siteUrl);
+      } catch (e) {
+        console.warn("Failed to fetch site:", siteUrl, (e as Error)?.message);
+      }
+    }
+    const siteContextBlock = siteContent
+      ? `\n\nCONTEÚDO DO SITE DO CLIENTE (${siteUrl}):\n${siteContent}\n`
+      : "";
+
     if (section) {
       const configs: Record<string, { schema: any; prompt: string }> = {
         "gps": { schema: GPS_DIAGNOSIS_SCHEMA, prompt: GPS_PROMPT },
@@ -671,7 +699,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const userPrompt = buildUserPrompt(answers, section);
+      const userPrompt = buildUserPrompt(answers, section) + siteContextBlock;
       const { result, tokensUsed } = await callAI(LOVABLE_API_KEY, config.prompt, userPrompt, config.schema);
 
       if (!result) {
@@ -704,7 +732,7 @@ Deno.serve(async (req) => {
       s === "gps" ? "DIAGNÓSTICO GPS DO NEGÓCIO (com scores automáticos de marketing e comercial, persona e análise de concorrência)" :
       s === "strategic" ? "PLANEJAMENTO ESTRATÉGICO DAS 5 ETAPAS" :
       "PROJEÇÕES FINANCEIRAS E ENTREGÁVEIS"
-    }.\n\nRESPOSTAS DO BRIEFING:\n${userPromptBase}\n\nUse a ferramenta generate_strategy para retornar.`;
+    }.\n\nRESPOSTAS DO BRIEFING:\n${userPromptBase}${siteContextBlock}\n\nUse a ferramenta generate_strategy para retornar.`;
 
     const [gpsResult, strategicResult, projectionsResult] = await Promise.all([
       callAI(LOVABLE_API_KEY, GPS_PROMPT, makePrompt("gps"), GPS_DIAGNOSIS_SCHEMA),
