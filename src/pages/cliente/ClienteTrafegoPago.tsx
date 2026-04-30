@@ -67,6 +67,12 @@ export default function ClienteTrafegoPago() {
   const { data: adMetrics } = useAdMetrics(selectedPeriod);
   const adSummary = useAdMetricsSummary(adMetrics);
   const hasMetrics = (adMetrics?.length ?? 0) > 0;
+  const syncMutationPage = useSyncMetrics();
+
+  const handleSyncAllForPeriod = () => {
+    if (metaConnection) syncMutationPage.mutate({ connectionId: metaConnection.id, periodDays: selectedPeriod });
+    if (googleConnection) syncMutationPage.mutate({ connectionId: googleConnection.id, periodDays: selectedPeriod });
+  };
 
   const [activeTab, setActiveTab] = useState("anuncios");
   const [step, setStep] = useState(0);
