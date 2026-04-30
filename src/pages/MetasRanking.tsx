@@ -407,6 +407,117 @@ export default function MetasRanking() {
         </div>
       </div>
 
+      {/* Minhas Metas — visível para usuários não-admin */}
+      {role !== "cliente_admin" && role !== "admin" && role !== "super_admin" && (() => {
+        const myGoals = activeGoals.filter((g: any) => g.assigned_to === user?.id);
+        const myCompletedGoals = myGoals.filter((g: any) => {
+          const gp = goalProgress?.[g.id];
+          return gp && gp.percent >= 100;
+        });
+
+        if (myGoals.length === 0) {
+          return (
+            <div className="text-center py-8 text-muted-foreground text-sm mb-2 border border-dashed rounded-lg">
+              <Target className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p>Nenhuma meta atribuída a você ainda.</p>
+              <p className="text-xs mt-1">Fale com o administrador para criar suas metas.</p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">Minhas Metas</h2>
+              <Badge variant="outline">{myCompletedGoals.length}/{myGoals.length} concluídas</Badge>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {myGoals.map((goal: any) => {
+                const gp = goalProgress?.[goal.id];
+                const progress = Math.min(gp?.percent ?? 0, 100);
+                const currentValue = gp?.currentValue ?? 0;
+                const isCompleted = progress >= 100;
+                const deadlineRaw = goal.deadline || goal.period_end;
+                const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+                const isOverdue = deadline && deadline < new Date() && !isCompleted;
+                const metricType = goal.metric || goal.type || "";
+
+                return (
+                  <Card key={goal.id} className={cn(
+                    "border",
+                    isCompleted && "border-green-500/30 bg-green-500/5",
+                    isOverdue && "border-red-500/30 bg-red-500/5"
+                  )}>
+                    <CardContent className="pt-4 pb-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-sm">{goal.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {goal.metric_label || metricType}
+                          </p>
+                        </div>
+                        {isCompleted && (
+                          <Badge className="bg-green-500 text-white shrink-0">✓ Concluída</Badge>
+                        )}
+                        {isOverdue && (
+                          <Badge variant="destructive" className="shrink-0">Atrasada</Badge>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className="text-muted-foreground">Progresso</span>
+                          <span className="font-bold text-primary">{progress.toFixed(0)}%</span>
+                        </div>
+                        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              isCompleted ? "bg-green-500" :
+                              progress >= 70 ? "bg-primary" :
+                              progress >= 40 ? "bg-amber-500" : "bg-red-500"
+                            )}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <div className="text-center p-2 bg-muted/40 rounded-lg">
+                          <p className="text-[10px] text-muted-foreground mb-0.5">Atual</p>
+                          <p className="text-lg font-bold text-primary">
+                            {formatMetricValue(currentValue, metricType)}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 bg-muted/40 rounded-lg">
+                          <p className="text-[10px] text-muted-foreground mb-0.5">Meta</p>
+                          <p className="text-lg font-bold">
+                            {formatMetricValue(goal.target_value || 0, metricType)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {deadline && (
+                        <p className={cn(
+                          "text-xs",
+                          isOverdue ? "text-red-500" : "text-muted-foreground"
+                        )}>
+                          {isOverdue ? "⚠ " : "🗓 "}
+                          Prazo: {format(deadline, "dd/MM/yyyy", { locale: ptBR })}
+                          {!isCompleted && !isOverdue && ` (${formatDistanceToNow(deadline, { locale: ptBR, addSuffix: true })})`}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.map(tab => {
           const Icon = tab.icon;
