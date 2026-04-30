@@ -306,6 +306,37 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
                 </Select>
               </div>
             )}
+            <div>
+              <Label className="text-xs">Responsável</Label>
+              <Select
+                value={editAssignedTo || "__none__"}
+                onValueChange={(v) => setEditAssignedTo(v === "__none__" ? "" : v)}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Selecionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sem responsável</SelectItem>
+                  {members?.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id} className="text-sm">
+                      {m.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editAssignedTo && membersMap?.[editAssignedTo] && (
+                <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground">
+                  <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-[9px] font-bold text-primary overflow-hidden">
+                    {membersMap[editAssignedTo].avatar ? (
+                      <img src={membersMap[editAssignedTo].avatar as string} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      membersMap[editAssignedTo].name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <span>Atribuído a {membersMap[editAssignedTo].name}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {customFieldsSchema.length > 0 && (
