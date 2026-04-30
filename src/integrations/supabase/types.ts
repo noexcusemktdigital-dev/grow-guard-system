@@ -7257,6 +7257,129 @@ export type Database = {
           },
         ]
       }
+      whatsapp_cloud_templates: {
+        Row: {
+          category: string | null
+          components: Json
+          created_at: string
+          id: string
+          instance_id: string | null
+          language: string
+          meta_template_id: string | null
+          metadata: Json
+          organization_id: string
+          quality_score: Json | null
+          rejection_reason: string | null
+          status: string
+          template_name: string
+          updated_at: string
+          waba_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          components?: Json
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          language?: string
+          meta_template_id?: string | null
+          metadata?: Json
+          organization_id: string
+          quality_score?: Json | null
+          rejection_reason?: string | null
+          status?: string
+          template_name: string
+          updated_at?: string
+          waba_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          components?: Json
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          language?: string
+          meta_template_id?: string | null
+          metadata?: Json
+          organization_id?: string
+          quality_score?: Json | null
+          rejection_reason?: string | null
+          status?: string
+          template_name?: string
+          updated_at?: string
+          waba_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_cloud_templates_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_cloud_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_cloud_webhook_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          event_type: string | null
+          id: string
+          instance_id: string | null
+          organization_id: string | null
+          payload: Json
+          phone_number_id: string | null
+          processed: boolean
+          signature_valid: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          instance_id?: string | null
+          organization_id?: string | null
+          payload: Json
+          phone_number_id?: string | null
+          processed?: boolean
+          signature_valid?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          instance_id?: string | null
+          organization_id?: string | null
+          payload?: Json
+          phone_number_id?: string | null
+          processed?: boolean
+          signature_valid?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_cloud_webhook_logs_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_cloud_webhook_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_contacts: {
         Row: {
           agent_id: string | null
@@ -7353,60 +7476,78 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          access_token_encrypted: string | null
           anti_ban_settings: Json
           asaas_subscription_id: string | null
           base_url: string | null
           billing_status: string | null
+          business_account_id: string | null
           client_token: string
+          cloud_metadata: Json
           created_at: string
           id: string
           instance_id: string
           label: string | null
           organization_id: string
           phone_number: string | null
+          phone_number_id: string | null
           provider: string
           send_stats: Json
           status: string
           token: string
           updated_at: string
+          verified_name: string | null
+          waba_id: string | null
           webhook_url: string | null
         }
         Insert: {
+          access_token_encrypted?: string | null
           anti_ban_settings?: Json
           asaas_subscription_id?: string | null
           base_url?: string | null
           billing_status?: string | null
+          business_account_id?: string | null
           client_token: string
+          cloud_metadata?: Json
           created_at?: string
           id?: string
           instance_id: string
           label?: string | null
           organization_id: string
           phone_number?: string | null
+          phone_number_id?: string | null
           provider?: string
           send_stats?: Json
           status?: string
           token: string
           updated_at?: string
+          verified_name?: string | null
+          waba_id?: string | null
           webhook_url?: string | null
         }
         Update: {
+          access_token_encrypted?: string | null
           anti_ban_settings?: Json
           asaas_subscription_id?: string | null
           base_url?: string | null
           billing_status?: string | null
+          business_account_id?: string | null
           client_token?: string
+          cloud_metadata?: Json
           created_at?: string
           id?: string
           instance_id?: string
           label?: string | null
           organization_id?: string
           phone_number?: string | null
+          phone_number_id?: string | null
           provider?: string
           send_stats?: Json
           status?: string
           token?: string
           updated_at?: string
+          verified_name?: string | null
+          waba_id?: string | null
           webhook_url?: string | null
         }
         Relationships: [
