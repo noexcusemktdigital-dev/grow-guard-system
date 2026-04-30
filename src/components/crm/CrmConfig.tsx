@@ -98,6 +98,14 @@ export function CrmConfig({ onBack }: CrmConfigProps) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="tags">
+          <Card>
+            <CardContent className="pt-6">
+              <CrmTagsManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="sla">
           <Card>
             <CardHeader><CardTitle className="text-base">Regras de SLA</CardTitle></CardHeader>
