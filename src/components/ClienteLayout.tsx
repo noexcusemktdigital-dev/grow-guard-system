@@ -9,6 +9,7 @@ import { CreditAlertBanner } from "./cliente/CreditAlertBanner";
 import { TrialCountdownBanner } from "./cliente/TrialCountdownBanner";
 import { SupportAccessBanner } from "./cliente/SupportAccessBanner";
 import { ActionAlertsBanner } from "./cliente/ActionAlertsBanner";
+import { PaymentBlockedBanner } from "./cliente/PaymentBlockedBanner";
 import { OnboardingTour } from "./cliente/OnboardingTour";
 import { TrialWelcomeModal } from "./cliente/TrialWelcomeModal";
 import { CelebrationEffect } from "./CelebrationEffect";
@@ -63,6 +64,7 @@ export function ClienteLayout() {
             <span className="text-sm font-semibold text-white ml-2">NOE</span>
           </div>
 
+          <PaymentBlockedBanner />
           <SupportAccessBanner />
           {tourDone && <TrialCountdownBanner />}
           {tourDone && <CreditAlertBanner />}

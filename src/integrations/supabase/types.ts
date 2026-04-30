@@ -3345,6 +3345,44 @@ export type Database = {
         }
         Relationships: []
       }
+      email_campaigns: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          recipient_email: string
+          status: string
+          trigger_event: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          recipient_email: string
+          status?: string
+          trigger_event: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          recipient_email?: string
+          status?: string
+          trigger_event?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -5434,6 +5472,9 @@ export type Database = {
           name: string
           onboarding_completed: boolean | null
           parent_org_id: string | null
+          payment_blocked: boolean | null
+          payment_blocked_at: string | null
+          payment_blocked_reason: string | null
           phone: string | null
           product_types: string[] | null
           referral_code: string | null
@@ -5465,6 +5506,9 @@ export type Database = {
           name: string
           onboarding_completed?: boolean | null
           parent_org_id?: string | null
+          payment_blocked?: boolean | null
+          payment_blocked_at?: string | null
+          payment_blocked_reason?: string | null
           phone?: string | null
           product_types?: string[] | null
           referral_code?: string | null
@@ -5496,6 +5540,9 @@ export type Database = {
           name?: string
           onboarding_completed?: boolean | null
           parent_org_id?: string | null
+          payment_blocked?: boolean | null
+          payment_blocked_at?: string | null
+          payment_blocked_reason?: string | null
           phone?: string | null
           product_types?: string[] | null
           referral_code?: string | null

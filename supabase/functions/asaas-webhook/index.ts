@@ -142,6 +142,30 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+      // Desbloquear workspace se estava bloqueado por inadimplência
+      try {
+        const { data: orgRow } = await adminClient
+          .from("organizations")
+          .select("payment_blocked")
+          .eq("id", org.id)
+          .maybeSingle();
+
+        if ((orgRow as any)?.payment_blocked) {
+          await adminClient
+            .from("organizations")
+            .update({ payment_blocked: false, payment_blocked_at: null, payment_blocked_reason: null })
+            .eq("id", org.id);
+
+          await notifyOrgMembers(adminClient, org.id, {
+            title: "✅ Acesso restaurado!",
+            message: "Seu pagamento foi confirmado e o acesso à plataforma foi restaurado.",
+            type: "success",
+          });
+          console.log(`Workspace unblocked for org ${org.id}`);
+        }
+      } catch (e) {
+        console.error("Failed to unblock workspace", e);
+      }
 
       // Route by externalReference prefix
       // system_fee|{orgId}|{month}
@@ -500,10 +524,51 @@ Deno.serve(async (req) => {
     // ── PAYMENT_OVERDUE ──
     if (event === "PAYMENT_OVERDUE") {
       await notifyOrgMembers(adminClient, org.id, {
-        title: "Pagamento em atraso",
-        message: `A cobrança de R$ ${paymentValue.toFixed(2)} está vencida. Regularize para manter seus créditos.`,
+        title: "⚠️ Pagamento em atraso",
+        message: `Sua mensalidade de R$ ${paymentValue.toFixed(2)} está vencida. Regularize para manter o acesso à plataforma.`,
         type: "warning",
       });
+
+      // Bloquear workspace após 2 dias de atraso
+      const dueDateRaw = payment.dueDate ? new Date(payment.dueDate) : new Date();
+      const diffDays = Math.floor((Date.now() - dueDateRaw.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays >= 2) {
+        await adminClient
+          .from("organizations")
+          .update({
+            payment_blocked: true,
+            payment_blocked_at: new Date().toISOString(),
+            payment_blocked_reason: "overdue_2_days",
+          })
+          .eq("id", org.id);
+
+        // Buscar e-mail do admin para enviar aviso de bloqueio
+        try {
+          const { data: members } = await adminClient.rpc("get_org_members_with_email", { _org_id: org.id });
+          const target = (members || []).find((m: any) => m.role === "cliente_admin") || (members || [])[0];
+          if (target?.email) {
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-billing-reminder`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                type: "blocked",
+                org_id: org.id,
+                amount: paymentValue,
+                user_email: target.email,
+                user_name: target.full_name || "",
+              }),
+            });
+          }
+        } catch (e) {
+          console.error("Failed to send blocked email", e);
+        }
+
+        console.log(`Workspace blocked for org ${org.id} — ${diffDays} days overdue`);
+      }
 
       // Update system fee if applicable
       if (externalRef.startsWith("system_fee|") && payment.id) {

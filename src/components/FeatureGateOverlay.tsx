@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
-import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert, MessageSquare, Users, BarChart3, PenTool, Globe, Send, Bot, Navigation } from "lucide-react";
+import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert, MessageSquare, Users, BarChart3, PenTool, Globe, Send, Bot, Navigation, AlertOctagon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const toolDescriptions: Record<string, { label: string; desc: string; icon: any }> = {
@@ -118,6 +118,16 @@ export function FeatureGateOverlay() {
       ctaPath: "/cliente/plano-creditos",
       accent: "from-primary/90 to-primary/70",
       iconBg: "bg-primary/15 text-primary",
+    },
+    payment_blocked: {
+      icon: AlertOctagon,
+      title: "Acesso suspenso por pagamento em atraso",
+      description:
+        "Sua mensalidade está em atraso há mais de 2 dias. Regularize o pagamento para restaurar o acesso completo a todas as ferramentas. O acesso é restaurado automaticamente em até 1 hora após a confirmação.",
+      cta: "Regularizar pagamento agora",
+      ctaPath: "/cliente/plano-creditos",
+      accent: "from-red-500/90 to-red-600/70",
+      iconBg: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
     },
   }[reason];
 
