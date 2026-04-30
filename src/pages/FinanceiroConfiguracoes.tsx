@@ -5,6 +5,7 @@ import { Save, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NumericInput } from "@/components/ui/NumericInput";
 
 interface FinanceSettings {
   impostoPercent: number;

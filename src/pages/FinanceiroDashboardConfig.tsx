@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface FinanceSettings {
