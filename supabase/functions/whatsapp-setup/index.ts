@@ -434,7 +434,9 @@ Deno.serve(async (req) => {
                 let findData: Record<string, unknown> | string = rawFindBody;
                 try {
                   findData = rawFindBody ? JSON.parse(rawFindBody) : null;
-                } catch {}
+                } catch {
+                  // Mantém rawFindBody como string se JSON inválido
+                }
 
                 configuredWebhookUrl = findData?.url || findData?.webhook?.url || null;
                 webhookSynced = configuredWebhookUrl === expectedWebhookUrl;
@@ -468,7 +470,9 @@ Deno.serve(async (req) => {
                 );
                 const deviceData = await deviceRes.json();
                 if (deviceData.phone) phoneNumber = deviceData.phone;
-              } catch {}
+              } catch {
+                // /device opcional — segue para fallback /phone
+              }
               if (!phoneNumber) {
                 try {
                   const phoneRes = await fetch(
@@ -477,7 +481,9 @@ Deno.serve(async (req) => {
                   );
                   const phoneData = await phoneRes.json();
                   if (phoneData.phone) phoneNumber = phoneData.phone;
-                } catch {}
+                } catch {
+                  // Sem telefone disponível — manter null
+                }
               }
             }
           }
@@ -748,7 +754,9 @@ Deno.serve(async (req) => {
           let parsedSetBody: Record<string, unknown> | string = rawSetBody;
           try {
             parsedSetBody = rawSetBody ? JSON.parse(rawSetBody) : null;
-          } catch {}
+          } catch {
+            // Mantém rawSetBody bruto se não for JSON
+          }
 
           console.log("[connect] Evolution webhook set response:", setRes.status, JSON.stringify(parsedSetBody));
           if (setRes.ok) break;
@@ -953,9 +961,13 @@ Deno.serve(async (req) => {
           );
           const deviceData = await deviceRes.json();
           if (deviceData.phone) phoneNumber = deviceData.phone;
-        } catch {}
+        } catch {
+          // /device opcional — telefone permanece null
+        }
       }
-    } catch {}
+    } catch {
+      // Falha na obtenção opcional do telefone — segue upsert
+    }
 
     // Upsert by instance_id
     const { data: existing } = await adminClient

@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const cleanReadPhone = readPhone.replace(/[\s\-\+\(\)]/g, "");
+      const cleanReadPhone = readPhone.replace(/[\s\-+()]/g, "");
 
       if (readInstance.provider === "evolution") {
         // Evolution doesn't have a direct read-message endpoint commonly — skip gracefully
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const cleanCloudPhone = phone.replace(/[\s\-\+\(\)]/g, "").replace(/@.*$/, "");
+      const cleanCloudPhone = phone.replace(/[\s\-+()]/g, "").replace(/@.*$/, "");
 
       let cloudBody: Record<string, unknown>;
       if (templateName) {
@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
       const isGroupPhone = phone.endsWith("-group");
       const cleanEvPhone = isGroupPhone
         ? phone.replace(/-group$/, "") + "@g.us"
-        : phone.replace(/[\s\-\+\(\)]/g, "");
+        : phone.replace(/[\s\-+()]/g, "");
 
       if (mediaUrl) {
         resolvedType = type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a|mp4)(\?|$)/i) ? "audio" : (type || "image");

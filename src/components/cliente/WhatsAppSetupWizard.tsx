@@ -616,7 +616,9 @@ function PaymentPolling({ orgId, onConfirmed }: { orgId: string | null | undefin
           if (intervalRef.current) clearInterval(intervalRef.current);
           onConfirmed();
         }
-      } catch {} finally { setChecking(false); }
+      } catch {
+        // Silenciar erros de polling — próxima iteração tentará novamente
+      } finally { setChecking(false); }
     }, 5000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [orgId, onConfirmed]);
