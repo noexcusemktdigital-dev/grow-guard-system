@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -433,14 +434,12 @@ export function CrmAutomations() {
                 <div className="space-y-2">
                   <Label className="text-xs">Lead parado há quantos dias?</Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={90}
-                      value={triggerConfig.days || 3}
-                      onChange={e => setTriggerConfig({
+                    <NumericInput
+                      value={triggerConfig.days ?? 3}
+                      decimals={0}
+                      onChange={v => setTriggerConfig({
                         ...triggerConfig,
-                        days: Math.max(1, parseInt(e.target.value) || 3),
+                        days: Math.max(1, v ?? 3),
                       })}
                       className="h-8 text-xs w-24"
                     />
@@ -455,14 +454,12 @@ export function CrmAutomations() {
                 <div className="space-y-2">
                   <Label className="text-xs">Sem contato há quantas horas?</Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={168}
-                      value={triggerConfig.hours || 24}
-                      onChange={e => setTriggerConfig({
+                    <NumericInput
+                      value={triggerConfig.hours ?? 24}
+                      decimals={0}
+                      onChange={v => setTriggerConfig({
                         ...triggerConfig,
-                        hours: Math.max(1, parseInt(e.target.value) || 24),
+                        hours: Math.max(1, v ?? 24),
                       })}
                       className="h-8 text-xs w-24"
                     />
