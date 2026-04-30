@@ -2,11 +2,27 @@ import { useEffect, useRef, useState } from "react";
 
 const SISTEMA_URL = "https://sistema.noexcusedigital.com.br/";
 const WHATSAPP_URL = "https://wa.me/5511999999999?text=Quero%20falar%20com%20um%20especialista%20NOEXCUSE";
-const RED = "#E8192C";
+// Match /crescimento (SaasLanding) visual identity
+const RED = "hsl(355,78%,55%)";
 
-const fontHead: React.CSSProperties = { fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.01em" };
-const fontBody: React.CSSProperties = { fontFamily: "'DM Sans', sans-serif" };
-const fontMono: React.CSSProperties = { fontFamily: "'DM Mono', monospace" };
+const INTER_STACK = "'Inter', system-ui, -apple-system, sans-serif";
+// Headlines: Inter 900 italic uppercase tight tracking (matches SaasLanding's font-black tracking-tight)
+const fontHead: React.CSSProperties = {
+  fontFamily: INTER_STACK,
+  fontWeight: 900,
+  letterSpacing: "-0.025em",
+};
+const fontBody: React.CSSProperties = {
+  fontFamily: INTER_STACK,
+  fontWeight: 400,
+  letterSpacing: "-0.011em",
+};
+const fontMono: React.CSSProperties = {
+  fontFamily: INTER_STACK,
+  fontWeight: 600,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+};
 
 type Answers = {
   segmento: string;
