@@ -78,7 +78,7 @@ export default function FinanceiroConfiguracoes() {
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Percentual de imposto</label>
             <div className="flex items-center gap-2">
-              <input type="number" value={settings.impostoPercent} onChange={(e) => set("impostoPercent", Number(e.target.value))} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-24 text-foreground" />
+              <NumericInput value={settings.impostoPercent} onChange={(v) => set("impostoPercent", v ?? 0)} suffix="%" decimals={1} className="w-24" />
               <span className="text-sm text-muted-foreground">%</span>
             </div>
           </div>
@@ -95,14 +95,14 @@ export default function FinanceiroConfiguracoes() {
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">% Repasse Franqueado</label>
             <div className="flex items-center gap-2">
-              <input type="number" value={settings.repasseFranqueado} onChange={(e) => set("repasseFranqueado", Number(e.target.value))} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-24 text-foreground" />
+              <NumericInput value={settings.repasseFranqueado} onChange={(v) => set("repasseFranqueado", v ?? 0)} suffix="%" decimals={1} className="w-24" />
               <span className="text-sm text-muted-foreground">%</span>
             </div>
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">% Repasse Parceiro</label>
             <div className="flex items-center gap-2">
-              <input type="number" value={settings.repasseParceiro} onChange={(e) => set("repasseParceiro", Number(e.target.value))} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-24 text-foreground" />
+              <NumericInput value={settings.repasseParceiro} onChange={(v) => set("repasseParceiro", v ?? 0)} suffix="%" decimals={1} className="w-24" />
               <span className="text-sm text-muted-foreground">%</span>
             </div>
           </div>
@@ -114,15 +114,15 @@ export default function FinanceiroConfiguracoes() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Capacidade máxima clientes</label>
-            <input type="number" value={settings.capacidade} onChange={(e) => set("capacidade", Number(e.target.value))} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-32 text-foreground" />
+            <NumericInput value={settings.capacidade} onChange={(v) => set("capacidade", v ?? 0)} decimals={0} className="w-32" />
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Runway mínimo (meses)</label>
-            <input type="number" value={settings.runwayMinimo} onChange={(e) => set("runwayMinimo", Number(e.target.value))} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-24 text-foreground" />
+            <NumericInput value={settings.runwayMinimo} onChange={(v) => set("runwayMinimo", v ?? 0)} decimals={0} className="w-24" />
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1.5">Margem mínima (%)</label>
-            <input type="number" value={settings.margemMinima} onChange={(e) => set("margemMinima", Number(e.target.value))} className="bg-secondary border border-border rounded-lg px-3 py-2 text-sm w-24 text-foreground" />
+            <NumericInput value={settings.margemMinima} onChange={(v) => set("margemMinima", v ?? 0)} suffix="%" decimals={1} className="w-24" />
           </div>
         </div>
       </div>
