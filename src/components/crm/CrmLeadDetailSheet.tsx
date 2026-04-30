@@ -182,6 +182,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
       id: lead.id, name: editName, phone: editPhone || null,
       email: editEmail || null, company: editCompany || null,
       value: editValue ? parseFloat(editValue) : null, stage: editStage, tags: editTags,
+      assigned_to: editAssignedTo || null,
       // Preserva campos legados não exibidos no schema atual e mescla os editados
       custom_fields: { ...((lead.custom_fields as Record<string, any>) || {}), ...editCustomFields },
     } as any);
