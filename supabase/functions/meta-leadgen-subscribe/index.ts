@@ -86,7 +86,10 @@ Deno.serve(async (req) => {
 
     if (!accessToken) {
       return new Response(
-        JSON.stringify({ error: "Conecte o Facebook em Redes Sociais primeiro." }),
+        JSON.stringify({
+          error:
+            "Sem permissão da Meta. Reconecte em CRM > Integrações > Meta Lead Ads autorizando os escopos leads_retrieval, pages_manage_ads e pages_manage_metadata.",
+        }),
         { status: 400, headers },
       );
     }
@@ -104,7 +107,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           error:
-            "Página não encontrada ou sem acesso. Verifique se você é administrador da página.",
+            "Página não encontrada ou sem permissão da Meta. Reconecte em CRM > Integrações > Meta Lead Ads autorizando os escopos leads_retrieval, pages_manage_ads e pages_manage_metadata, e confirme que você é administrador da página.",
         }),
         { status: 403, headers },
       );
