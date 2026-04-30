@@ -4,7 +4,7 @@ import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButto
 import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import {
   DollarSign, Sparkles, Target,
-  Loader2, History, Folder,
+  Loader2, History, Folder, RefreshCw,
   ArrowLeft, ArrowRight, ChevronRight, BarChart2,
 } from "lucide-react";
 import { AdConnectionCards } from "@/components/trafego/AdConnectionCards";
