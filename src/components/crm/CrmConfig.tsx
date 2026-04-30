@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
-import { ArrowLeft, GripVertical, Link2, Upload } from "lucide-react";
+import { ArrowLeft, GripVertical, Link2, Upload, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { FRANCHISE_STAGES, CLIENT_STAGES, LEAD_ORIGINS, RESPONSAVEIS } from "@/types/crm";
+import { CrmTagsManager } from "./CrmTagsManager";
 
 interface CrmConfigProps {
   onBack: () => void;
@@ -34,6 +35,7 @@ export function CrmConfig({ onBack }: CrmConfigProps) {
           <TabsTrigger value="etapas">Etapas</TabsTrigger>
           <TabsTrigger value="origens">Origens</TabsTrigger>
           <TabsTrigger value="responsaveis">Responsáveis</TabsTrigger>
+          <TabsTrigger value="tags" className="gap-1.5"><Tag className="w-3.5 h-3.5" />Tags</TabsTrigger>
           <TabsTrigger value="sla">SLA & Alertas</TabsTrigger>
           <TabsTrigger value="integracoes">Integrações</TabsTrigger>
         </TabsList>
@@ -92,6 +94,14 @@ export function CrmConfig({ onBack }: CrmConfigProps) {
                   <Badge variant="secondary" className="text-xs">Ativo</Badge>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tags">
+          <Card>
+            <CardContent className="pt-6">
+              <CrmTagsManager />
             </CardContent>
           </Card>
         </TabsContent>
