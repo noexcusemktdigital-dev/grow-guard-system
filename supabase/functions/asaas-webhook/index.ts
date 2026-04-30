@@ -354,6 +354,25 @@ Deno.serve(async (req) => {
             console.log(`Subscription renewed for org ${org.id}: plan=${planSlug}, credits=${totalCredits}`);
           }
         }
+
+        // Trigger first_payment campaign email (idempotent — only fires once per org+event)
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-campaign-email`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${serviceRoleKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              trigger_event: "first_payment",
+              organization_id: org.id,
+              metadata: { plan: planSlug, value: paymentValue },
+            }),
+          });
+        } catch (e) {
+          console.error("first_payment campaign trigger failed:", e);
+        }
+
         return jsonOk({ success: true, event, type: "subscription_renewal", plan: planSlug, credits: totalCredits });
       }
 

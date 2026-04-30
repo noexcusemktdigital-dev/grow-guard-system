@@ -3351,27 +3351,33 @@ export type Database = {
           id: string
           metadata: Json | null
           organization_id: string | null
-          recipient_email: string
+          recipient_email: string | null
+          sent_at: string | null
           status: string
           trigger_event: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           metadata?: Json | null
           organization_id?: string | null
-          recipient_email: string
+          recipient_email?: string | null
+          sent_at?: string | null
           status?: string
           trigger_event: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           metadata?: Json | null
           organization_id?: string | null
-          recipient_email?: string
+          recipient_email?: string | null
+          sent_at?: string | null
           status?: string
           trigger_event?: string
+          user_id?: string | null
         }
         Relationships: [
           {
