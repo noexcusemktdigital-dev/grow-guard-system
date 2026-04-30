@@ -4,6 +4,7 @@ import { ArrowLeft, Phone, MessageSquare, Video, Mail, Plus, Check, AlertTriangl
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/NumericInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -219,7 +220,7 @@ export function CrmLeadDetail({
               <>
                 <div><Label>Empresa</Label><Input value={editData.empresa || ""} onChange={(e) => setEditData({ ...editData, empresa: e.target.value })} /></div>
                 <div><Label>Segmento</Label><Input value={editData.segmento || ""} onChange={(e) => setEditData({ ...editData, segmento: e.target.value })} /></div>
-                <div><Label>Ticket Potencial</Label><Input type="number" value={editData.ticketPotencial || ""} onChange={(e) => setEditData({ ...editData, ticketPotencial: Number(e.target.value) })} /></div>
+                <div><Label>Ticket Potencial</Label><NumericInput value={editData.ticketPotencial ?? null} onChange={v => setEditData({ ...editData, ticketPotencial: v ?? 0 })} prefix="R$ " decimals={2} /></div>
                 <div className="col-span-full"><Label>Dor Principal</Label><Textarea value={editData.dorPrincipal || ""} onChange={(e) => setEditData({ ...editData, dorPrincipal: e.target.value })} /></div>
               </>
             )}
@@ -372,7 +373,7 @@ export function CrmLeadDetail({
         <DialogContent>
           <DialogHeader><DialogTitle>Nova Proposta</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Valor (R$)</Label><Input type="number" value={propValue} onChange={(e) => setPropValue(e.target.value)} /></div>
+            <div><Label>Valor (R$)</Label><NumericInput value={propValue === "" ? null : Number(propValue)} onChange={v => setPropValue(v === null ? "" : String(v))} prefix="R$ " decimals={2} /></div>
             <div><Label>Status</Label>
               <Select value={propStatus} onValueChange={(v) => setPropStatus(v as "rascunho" | "enviada" | "aceita")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>

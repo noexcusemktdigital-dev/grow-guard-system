@@ -244,11 +244,11 @@ export function ClienteCRMPipelineFilters({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <Label className="text-[10px] text-muted-foreground">Valor mín</Label>
-                  <Input type="number" value={filterValueMin} onChange={e => setFilterValueMin(e.target.value)} className="h-8 text-xs" placeholder="0" />
+                  <NumericInput value={filterValueMin === "" ? null : Number(filterValueMin)} onChange={v => setFilterValueMin(v === null ? "" : String(v))} prefix="R$ " decimals={2} className="h-8 text-xs" placeholder="0" />
                 </div>
                 <div>
                   <Label className="text-[10px] text-muted-foreground">Valor máx</Label>
-                  <Input type="number" value={filterValueMax} onChange={e => setFilterValueMax(e.target.value)} className="h-8 text-xs" placeholder="∞" />
+                  <NumericInput value={filterValueMax === "" ? null : Number(filterValueMax)} onChange={v => setFilterValueMax(v === null ? "" : String(v))} prefix="R$ " decimals={2} className="h-8 text-xs" placeholder="∞" />
                 </div>
               </div>
             </div>
