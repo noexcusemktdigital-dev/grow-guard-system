@@ -100,21 +100,24 @@ export function useAdMetricsSummary(metrics: AdMetric[] | undefined) {
 export function useSyncMetrics() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (connectionId: string) => {
+    mutationFn: async (params: string | { connectionId: string; periodDays?: number }) => {
+      const connectionId = typeof params === "string" ? params : params.connectionId;
+      const periodDays = typeof params === "string" ? 30 : (params.periodDays ?? 30);
       const { data, error } = await supabase.functions.invoke("ads-sync-metrics", {
-        body: { connection_id: connectionId },
+        body: { connection_id: connectionId, period_days: periodDays },
       });
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, vars) => {
+      const periodDays = typeof vars === "string" ? 30 : (vars.periodDays ?? 30);
       qc.invalidateQueries({ queryKey: ["ad-metrics"] });
       qc.invalidateQueries({ queryKey: ["ad-connections"] });
       const synced = data?.synced ?? 0;
       if (synced === 0) {
-        toast({ title: "Sincronização concluída", description: "Nenhuma métrica encontrada no período. Verifique se há campanhas ativas na conta." });
+        toast({ title: "Sincronização concluída", description: `Nenhuma métrica encontrada nos últimos ${periodDays} dias. Verifique se há campanhas ativas na conta.` });
       } else {
-        toast({ title: "Métricas sincronizadas!", description: `${synced} registros importados.` });
+        toast({ title: "Métricas sincronizadas!", description: `${synced} registros importados (período: ${periodDays} dias).` });
       }
     },
     onError: (err: unknown) => {

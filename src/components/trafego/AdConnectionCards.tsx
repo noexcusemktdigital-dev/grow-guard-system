@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAdConnections, useSyncMetrics, useDisconnectAd, useSelectAdAccount, getOAuthUrl, AdConnection } from "@/hooks/useAdPlatforms";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -47,6 +48,7 @@ export function AdConnectionCards() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerConnectionId, setPickerConnectionId] = useState<string | null>(null);
   const [pickerAccounts, setPickerAccounts] = useState<AdAccountOption[]>([]);
+  const [syncPeriodByConn, setSyncPeriodByConn] = useState<Record<string, number>>({});
 
   const handleConnect = async (platform: "google_ads" | "meta_ads") => {
     if (!orgId) {
@@ -192,36 +194,58 @@ export function AdConnectionCards() {
                         Último sync: {format(new Date(conn.last_synced_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                       </p>
                     )}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs gap-1.5"
-                        onClick={() =>
-                          syncMutation.mutate(conn.id, {
-                            onError: (err: unknown) => {
-                              const msg = err instanceof Error ? err.message : String(err);
-                              if (/permiss[ãa]o|permission|code":200/i.test(msg)) {
-                                toast({
-                                  title: "Sem permissão para esta conta",
-                                  description: 'Clique em "Trocar" para selecionar outra conta de anúncios.',
-                                  variant: "destructive",
-                                });
-                              } else {
-                                toast({ title: "Erro ao sincronizar", description: msg, variant: "destructive" });
-                              }
-                            },
-                          })
-                        }
-                        disabled={syncMutation.isPending}
-                      >
-                        {syncMutation.isPending ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        )}
-                        Sincronizar
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">Período:</span>
+                        <Select
+                          value={String(syncPeriodByConn[conn.id] ?? 30)}
+                          onValueChange={(v) => setSyncPeriodByConn((p) => ({ ...p, [conn.id]: Number(v) }))}
+                        >
+                          <SelectTrigger className="h-7 text-xs flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="7">Últimos 7 dias</SelectItem>
+                            <SelectItem value="30">Últimos 30 dias</SelectItem>
+                            <SelectItem value="90">Últimos 90 dias</SelectItem>
+                            <SelectItem value="180">Últimos 6 meses</SelectItem>
+                            <SelectItem value="365">Último 1 ano</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 text-xs gap-1.5"
+                          onClick={() =>
+                            syncMutation.mutate(
+                              { connectionId: conn.id, periodDays: syncPeriodByConn[conn.id] ?? 30 },
+                              {
+                                onError: (err: unknown) => {
+                                  const msg = err instanceof Error ? err.message : String(err);
+                                  if (/permiss[ãa]o|permission|code":200/i.test(msg)) {
+                                    toast({
+                                      title: "Sem permissão para esta conta",
+                                      description: 'Clique em "Trocar" para selecionar outra conta de anúncios.',
+                                      variant: "destructive",
+                                    });
+                                  } else {
+                                    toast({ title: "Erro ao sincronizar", description: msg, variant: "destructive" });
+                                  }
+                                },
+                              },
+                            )
+                          }
+                          disabled={syncMutation.isPending}
+                        >
+                          {syncMutation.isPending ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          )}
+                          Sincronizar
+                        </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -244,6 +268,7 @@ export function AdConnectionCards() {
                       >
                         <Unplug className="w-3.5 h-3.5" />
                       </Button>
+                    </div>
                     </div>
                   </div>
                 ) : (
