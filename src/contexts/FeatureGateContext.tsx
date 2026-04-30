@@ -81,11 +81,28 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const [simulateTrialExpired, setSimulateTrialExpired] = useState(false);
   const [simulateNoCredits, setSimulateNoCredits] = useState(false);
   const { role } = useAuth();
+  const { data: orgId } = useUserOrgId();
 
   const { data: subscription, isLoading: isLoadingSub } = useClienteSubscription();
   const { data: wallet, isLoading: isLoadingWallet } = useClienteWallet();
   const { hasStrategy: hasApprovedGPS, isLoading: isLoadingStrategy } = useHasActiveStrategy();
   const isTrial = subscription?.status === "trial";
+
+  const { data: orgPaymentData } = useQuery({
+    queryKey: ["org-payment-status", orgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organizations")
+        .select("payment_blocked, payment_blocked_at")
+        .eq("id", orgId!)
+        .maybeSingle();
+      return data as { payment_blocked: boolean | null; payment_blocked_at: string | null } | null;
+    },
+    enabled: !!orgId,
+    refetchInterval: 60_000,
+  });
+
+  const isPaymentBlocked = orgPaymentData?.payment_blocked === true;
 
   const planId = subscription?.plan as string | null;
   const limits = getEffectiveLimits(planId, isTrial);
@@ -108,6 +125,9 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
 
     // Don't gate anything while data is still loading to prevent flash
     if (isDataLoading) return null;
+
+    // Bloqueio por inadimplência tem prioridade máxima
+    if (isPaymentBlocked) return "payment_blocked";
 
     // Admin-only check
     if (isClienteUser && ADMIN_ONLY_ROUTES.some((r) => feature.startsWith(r)))
@@ -133,6 +153,7 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
         hasAiAgent: limits.hasAiAgent,
         hasWhatsApp: limits.hasWhatsApp,
         hasDispatches: limits.hasDispatches,
+        isPaymentBlocked,
         getGateReason,
         simulateTrialExpired,
         setSimulateTrialExpired,
