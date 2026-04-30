@@ -18,6 +18,10 @@ import { useUnits } from "@/hooks/useUnits";
 import { useOrgMembers } from "@/hooks/useOrgMembers";
 import { useNetworkTrophies } from "@/hooks/useNetworkTrophies";
 import type { TrophyId } from "@/hooks/useTrophyProgress";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { format, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 const MONETARY_TYPES = ["faturamento", "avg_ticket", "revenue"];
