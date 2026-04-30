@@ -79,7 +79,9 @@ Deno.serve(async (req) => {
           processed: false,
           error: String((err as Error)?.message || err),
         });
-      } catch {}
+      } catch {
+        // Logging best-effort — ignora falha de auditoria
+      }
     }
   }
 
