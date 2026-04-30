@@ -31,6 +31,7 @@ import { useCrmTasks, useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmLeadHistory } from "@/hooks/useCrmLeadHistory";
 import { useOrgPermissions } from "@/hooks/useOrgPermissions";
 import { LeadProductsTab, ProposalsTab, WhatsAppTab, LeadHistoryTimeline } from "./CrmLeadDetailHelpers";
+import { useCrmOrgMembers, useCrmOrgMembersMap } from "@/hooks/useCrmOrgMembers";
 import { useCrmPartners } from "@/hooks/useCrmPartners";
 import { useWhatsAppMessages, useSendWhatsAppMessage } from "@/hooks/useWhatsApp";
 import { ChatMessageBubble } from "@/components/cliente/ChatMessageBubble";
