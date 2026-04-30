@@ -22,6 +22,27 @@ interface MemberPermissionsEditorProps {
   userName: string;
 }
 
+const VISIBILITY_OPTIONS = [
+  {
+    value: "all" as const,
+    label: "Todos os leads",
+    desc: "Vê todos os leads da organização",
+    icon: Users,
+  },
+  {
+    value: "own" as const,
+    label: "Apenas os próprios",
+    desc: "Vê somente leads atribuídos a ele",
+    icon: User,
+  },
+  {
+    value: "team" as const,
+    label: "Próprios + sem dono",
+    desc: "Vê os seus leads e leads sem responsável",
+    icon: UserCheck,
+  },
+];
+
 const DEFAULT_PERMISSIONS: MemberPermissions = {
   crm_visibility: "own",
   can_generate_content: false,
