@@ -341,7 +341,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json().catch(() => ({}));
-    const { connection_id, mode, period } = body;
+    const { connection_id, mode, period, period_days } = body;
 
     // ── NOE_INSIGHTS mode: busca direto na conta central NOE via META_ACCESS_TOKEN ──
     // Substitui meta-ads-insights enquanto o deploy da edge fn não está disponível.
@@ -443,7 +443,7 @@ serve(async (req) => {
 
     let metrics: AdMetricRow[];
     if (connection.platform === "google_ads") {
-      metrics = await syncGoogleAds(connection, supabase);
+      metrics = await syncGoogleAds(connection, supabase, period_days);
     } else if (connection.platform === "meta_ads") {
       // BUG-001: Check Meta token expiration (mirrors Google Ads logic)
       if (connection.token_expires_at && new Date(connection.token_expires_at) < new Date()) {
@@ -455,7 +455,7 @@ serve(async (req) => {
           status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
-      metrics = await syncMetaAds(connection, supabase);
+      metrics = await syncMetaAds(connection, supabase, period_days);
     } else {
       return new Response(JSON.stringify({ error: "Unknown platform" }), {
         status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
