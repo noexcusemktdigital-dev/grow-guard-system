@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   Phone, Clock, GripVertical, MoreHorizontal,
   MessageCircle, XCircle, Copy, Snowflake, Sun, Flame,
-  AlertCircle, CalendarClock,
+  AlertCircle, CalendarClock, UserRound,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCrmTaskMutations } from "@/hooks/useCrmTasks";
+import { useCrmOrgMembersMap } from "@/hooks/useCrmOrgMembers";
 import { toast } from "sonner";
 
 /* ===== Quick Task Popover ===== */
