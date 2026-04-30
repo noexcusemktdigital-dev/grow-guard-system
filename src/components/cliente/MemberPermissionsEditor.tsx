@@ -180,21 +180,38 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
                 <span className="text-sm font-semibold">CRM</span>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <Label className="text-xs">Visibilidade de leads</Label>
-                <Select
+                <RadioGroup
                   value={perms.crm_visibility}
                   onValueChange={(v: "all" | "team" | "own") => handlePermChange("crm_visibility", v)}
+                  className="grid gap-2"
                 >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os leads da organização</SelectItem>
-                    <SelectItem value="team">Apenas leads do seu time</SelectItem>
-                    <SelectItem value="own">Apenas leads atribuídos a ele</SelectItem>
-                  </SelectContent>
-                </Select>
+                  {VISIBILITY_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const selected = perms.crm_visibility === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        htmlFor={`vis-${opt.value}`}
+                        className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                          selected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                            : "border-border hover:border-primary/40 hover:bg-muted/40"
+                        }`}
+                      >
+                        <RadioGroupItem id={`vis-${opt.value}`} value={opt.value} className="mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                            <span className="text-sm font-medium">{opt.label}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </RadioGroup>
               </div>
 
               <div className="flex items-center justify-between">
