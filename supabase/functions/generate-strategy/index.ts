@@ -744,17 +744,44 @@ Deno.serve(async (req) => {
 
     console.log(`Full strategy generated. Total tokens: ${totalTokens}`);
 
-    const { data: orgData } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "franchise" });
+    // Resolve org for logging + campaign trigger (try saas first, fallback to franchise)
+    let { data: orgData } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "saas" });
+    if (!orgData) {
+      const fb = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: "franchise" });
+      orgData = fb.data;
+    }
+
     if (orgData) {
       await serviceClient.from("ai_conversation_logs").insert({
         organization_id: orgData,
         agent_id: "00000000-0000-0000-0000-000000000000",
         contact_id: "00000000-0000-0000-0000-000000000000",
-        input_message: `[Estratégia Franqueado] Briefing com ${Object.keys(answers).length} respostas`,
+        input_message: `[Estratégia] Briefing com ${Object.keys(answers).length} respostas`,
         output_message: JSON.stringify(mergedResult).substring(0, 500),
         tokens_used: totalTokens,
         model: "google/gemini-2.5-flash",
       });
+
+      // Trigger gps_completed campaign email (idempotent — once per org)
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        await fetch(`${supabaseUrl}/functions/v1/send-campaign-email`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${serviceRoleKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            trigger_event: "gps_completed",
+            organization_id: orgData,
+            user_id: userId,
+            metadata: { tokens_used: totalTokens },
+          }),
+        });
+      } catch (e) {
+        console.error("gps_completed campaign trigger failed:", e);
+      }
     }
 
     return new Response(
