@@ -179,7 +179,75 @@ Deno.serve(async (req) => {
     let apiData: Record<string, unknown>;
     let resolvedType = type;
 
-    if (instance.provider === "evolution") {
+    if (instance.provider === "whatsapp_cloud") {
+      // ─── WhatsApp Cloud API (Meta Graph) ───
+      const phoneNumberId = String(instance.phone_number_id || instance.instance_id);
+      const orgToken = (instance as any).access_token_encrypted as string | null;
+      const cloudToken = orgToken || Deno.env.get("WHATSAPP_CLOUD_ACCESS_TOKEN") || "";
+      if (!cloudToken) {
+        return new Response(
+          JSON.stringify({ error: "WhatsApp Cloud access token not configured" }),
+          { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
+        );
+      }
+
+      const cleanCloudPhone = phone.replace(/[\s\-\+\(\)]/g, "").replace(/@.*$/, "");
+
+      let cloudBody: Record<string, unknown>;
+      if (templateName) {
+        cloudBody = {
+          messaging_product: "whatsapp",
+          to: cleanCloudPhone,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: templateLanguage || "pt_BR" },
+            ...(templateComponents ? { components: templateComponents } : {}),
+          },
+        };
+        resolvedType = "template";
+      } else if (mediaUrl) {
+        const isAudio = type === "audio" || mediaUrl.match(/\.(webm|ogg|mp3|m4a)(\?|$)/i);
+        const isVideo = type === "video" || mediaUrl.match(/\.(mp4|mov)(\?|$)/i);
+        const isDoc = type === "document";
+        const mediaType = isAudio ? "audio" : isVideo ? "video" : isDoc ? "document" : "image";
+        resolvedType = mediaType;
+        cloudBody = {
+          messaging_product: "whatsapp",
+          to: cleanCloudPhone,
+          type: mediaType,
+          [mediaType]: {
+            link: mediaUrl,
+            ...(message && mediaType !== "audio" ? { caption: message } : {}),
+          },
+        };
+      } else {
+        cloudBody = {
+          messaging_product: "whatsapp",
+          to: cleanCloudPhone,
+          type: "text",
+          text: { body: message, preview_url: false },
+        };
+        resolvedType = "text";
+      }
+
+      apiRes = await fetch(
+        `https://graph.facebook.com/v20.0/${encodeURIComponent(phoneNumberId)}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${cloudToken}`,
+          },
+          body: JSON.stringify(cloudBody),
+        },
+      );
+      apiData = await apiRes.json().catch(() => ({}));
+      // Normalize message id for downstream insert
+      if (apiData?.messages?.[0]?.id) {
+        (apiData as any).messageId = apiData.messages[0].id;
+      }
+    } else if (instance.provider === "evolution") {
       // Evolution API v1 send
       const baseUrl = (instance.base_url || "").replace(/\/+$/, "");
       const evHeaders = { "Content-Type": "application/json", apikey: instance.client_token };
