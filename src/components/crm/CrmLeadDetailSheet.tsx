@@ -134,9 +134,12 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [editStage, setEditStage] = useState(lead.stage);
   const [newTag, setNewTag] = useState("");
   const [editTags, setEditTags] = useState<string[]>(lead.tags || []);
+  const [editAssignedTo, setEditAssignedTo] = useState<string>(lead.assigned_to || "");
   const [editCustomFields, setEditCustomFields] = useState<Record<string, any>>(
     (lead.custom_fields as Record<string, any>) || {}
   );
+  const { data: members } = useCrmOrgMembers();
+  const { data: membersMap } = useCrmOrgMembersMap();
 
   // Schema de campos adicionais do funil atual (deduplicado contra dados legados)
   const currentFunnel = funnels?.find(f => f.id === (lead as any).funnel_id) ||
