@@ -18,6 +18,7 @@ interface FeatureGateContextType {
   hasAiAgent: boolean;
   hasWhatsApp: boolean;
   hasDispatches: boolean;
+  isPaymentBlocked: boolean;
   getGateReason: (feature: string) => GateReason;
   simulateTrialExpired: boolean;
   setSimulateTrialExpired: (v: boolean) => void;
