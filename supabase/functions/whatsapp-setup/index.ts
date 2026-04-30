@@ -46,9 +46,167 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { instanceId, instanceToken, clientToken, action, label, provider = "zapi", baseUrl, apiKey, instanceName } = body;
+    const {
+      instanceId,
+      instanceToken,
+      clientToken,
+      action,
+      label,
+      provider = "zapi",
+      baseUrl,
+      apiKey,
+      instanceName,
+      // ── WhatsApp Cloud (Meta) ──
+      wabaId,
+      phoneNumberId,
+      businessAccountId,
+      verifiedName,
+      displayName,
+      accessToken,
+      cloudMetadata,
+    } = body;
 
     const isEvolution = provider === "evolution";
+    const isCloud = provider === "whatsapp_cloud";
+
+    // ─── WhatsApp Cloud API (Meta) branch ───
+    if (isCloud) {
+      const projectUrl = supabaseUrl;
+      const webhookUrl = `${projectUrl}/functions/v1/whatsapp-cloud-webhook`;
+
+      // disconnect
+      if (action === "disconnect") {
+        if (instanceId || phoneNumberId) {
+          await adminClient
+            .from("whatsapp_instances")
+            .delete()
+            .eq("organization_id", orgId)
+            .eq("provider", "whatsapp_cloud")
+            .or(`instance_id.eq.${instanceId || phoneNumberId},phone_number_id.eq.${phoneNumberId || instanceId}`);
+        } else {
+          await adminClient
+            .from("whatsapp_instances")
+            .delete()
+            .eq("organization_id", orgId)
+            .eq("provider", "whatsapp_cloud");
+        }
+        return new Response(JSON.stringify({ success: true, status: "disconnected" }), {
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
+
+      // check-status — just returns the current row
+      if (action === "check-status") {
+        const { data: insts } = await adminClient
+          .from("whatsapp_instances")
+          .select("*")
+          .eq("organization_id", orgId)
+          .eq("provider", "whatsapp_cloud");
+        return new Response(
+          JSON.stringify({
+            status: insts?.[0]?.status || "not_configured",
+            results: (insts || []).map((i: Record<string, unknown>) => ({
+              id: i.id,
+              instance_id: i.instance_id,
+              status: i.status,
+              phone: i.phone_number,
+              provider: i.provider,
+              waba_id: i.waba_id,
+              phone_number_id: i.phone_number_id,
+              business_account_id: i.business_account_id,
+              verified_name: i.verified_name,
+            })),
+          }),
+          { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
+        );
+      }
+
+      // default: connect / upsert
+      if (!phoneNumberId) {
+        return new Response(
+          JSON.stringify({ error: "phoneNumberId is required for WhatsApp Cloud (Meta)" }),
+          { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
+        );
+      }
+
+      // Optional: validate token by hitting Graph API if access token provided
+      let detectedDisplayPhone: string | null = null;
+      let verifiedNameApi: string | null = null;
+      const effectiveToken = accessToken || Deno.env.get("WHATSAPP_CLOUD_ACCESS_TOKEN") || "";
+      let verificationStatus: "verified" | "pending" | "unknown" = "unknown";
+
+      if (effectiveToken) {
+        try {
+          const ghRes = await fetch(
+            `https://graph.facebook.com/v20.0/${encodeURIComponent(phoneNumberId)}?fields=display_phone_number,verified_name,code_verification_status,quality_rating`,
+            { headers: { Authorization: `Bearer ${effectiveToken}` } },
+          );
+          const ghData = await ghRes.json();
+          console.log("[whatsapp-cloud connect] phone number info:", ghRes.status, JSON.stringify(ghData));
+          if (ghRes.ok) {
+            detectedDisplayPhone = ghData?.display_phone_number || null;
+            verifiedNameApi = ghData?.verified_name || null;
+            verificationStatus = ghData?.code_verification_status === "VERIFIED" ? "verified" : "pending";
+          }
+        } catch (err) {
+          console.error("[whatsapp-cloud connect] Graph API check failed:", err);
+        }
+      }
+
+      const cloudData = {
+        provider: "whatsapp_cloud",
+        instance_id: phoneNumberId,
+        phone_number_id: phoneNumberId,
+        waba_id: wabaId || null,
+        business_account_id: businessAccountId || wabaId || null,
+        verified_name: verifiedName || verifiedNameApi || displayName || null,
+        phone_number: detectedDisplayPhone,
+        webhook_url: webhookUrl,
+        status: "connected",
+        label: label || verifiedName || displayName || phoneNumberId,
+        cloud_metadata: {
+          ...(cloudMetadata || {}),
+          verification_status: verificationStatus,
+          last_synced_at: new Date().toISOString(),
+        },
+        access_token_encrypted: accessToken || null, // TODO: encrypt server-side; storing per-org token
+        token: "cloud", // unused — required NOT NULL? keep placeholder
+        client_token: "cloud",
+        base_url: "https://graph.facebook.com/v20.0",
+      };
+
+      const { data: existing } = await adminClient
+        .from("whatsapp_instances")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("provider", "whatsapp_cloud")
+        .eq("phone_number_id", phoneNumberId)
+        .maybeSingle();
+
+      if (existing) {
+        await adminClient.from("whatsapp_instances").update(cloudData).eq("id", existing.id);
+      } else {
+        await adminClient.from("whatsapp_instances").insert({
+          ...cloudData,
+          organization_id: orgId,
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: "connected",
+          provider: "whatsapp_cloud",
+          phone: detectedDisplayPhone,
+          phone_number_id: phoneNumberId,
+          waba_id: wabaId,
+          verified_name: verifiedName || verifiedNameApi,
+          verification_status: verificationStatus,
+          webhookUrl,
+        }),
+        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
+      );
+    }
 
     // ─── Action: get-qr (Evolution only) ───
     if (action === "get-qr") {
