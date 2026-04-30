@@ -35,6 +35,7 @@ export function CrmConfig({ onBack }: CrmConfigProps) {
           <TabsTrigger value="etapas">Etapas</TabsTrigger>
           <TabsTrigger value="origens">Origens</TabsTrigger>
           <TabsTrigger value="responsaveis">Responsáveis</TabsTrigger>
+          <TabsTrigger value="tags" className="gap-1.5"><Tag className="w-3.5 h-3.5" />Tags</TabsTrigger>
           <TabsTrigger value="sla">SLA & Alertas</TabsTrigger>
           <TabsTrigger value="integracoes">Integrações</TabsTrigger>
         </TabsList>
