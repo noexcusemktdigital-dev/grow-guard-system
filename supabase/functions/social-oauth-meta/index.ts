@@ -92,14 +92,20 @@ serve(async (req) => {
     const state = await signState(statePayload, stateSecret);
 
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/social-oauth-callback`;
-    const scopes = [
+    const baseScopes = [
       "instagram_basic",
       "instagram_content_publish",
       "instagram_manage_insights",
       "pages_show_list",
       "pages_read_engagement",
       "pages_manage_posts",
-    ].join(",");
+    ];
+    // Lead Ads scopes só são solicitados quando o usuário inicia o fluxo a partir de CRM > Integrações > Meta Lead Ads.
+    const leadAdsScopes = ["leads_retrieval", "pages_manage_ads", "pages_manage_metadata"];
+    const scopes = (redirectTo === "crm-leads"
+      ? [...baseScopes, ...leadAdsScopes]
+      : baseScopes
+    ).join(",");
 
     const authUrl = new URL("https://www.facebook.com/v25.0/dialog/oauth");
     authUrl.searchParams.set("client_id", clientId);
