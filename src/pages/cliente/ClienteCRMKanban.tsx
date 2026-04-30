@@ -137,6 +137,7 @@ export function DraggableLeadCard({ lead, onClick, stageColor, onCopyPhone, onMa
   onUpdateTemperature: (temp: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id });
+  const { data: membersMap } = useCrmOrgMembersMap();
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     opacity: isDragging ? 0.3 : 1,
