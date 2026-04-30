@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
+import { Shuffle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCrmLeadMutations } from "@/hooks/useCrmLeads";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
+import { useCrmSettings } from "@/hooks/useCrmSettings";
+import { useCrmOrgMembers } from "@/hooks/useCrmOrgMembers";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { useToast } from "@/hooks/use-toast";
 
