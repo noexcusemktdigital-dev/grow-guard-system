@@ -5434,6 +5434,9 @@ export type Database = {
           name: string
           onboarding_completed: boolean | null
           parent_org_id: string | null
+          payment_blocked: boolean | null
+          payment_blocked_at: string | null
+          payment_blocked_reason: string | null
           phone: string | null
           product_types: string[] | null
           referral_code: string | null
@@ -5465,6 +5468,9 @@ export type Database = {
           name: string
           onboarding_completed?: boolean | null
           parent_org_id?: string | null
+          payment_blocked?: boolean | null
+          payment_blocked_at?: string | null
+          payment_blocked_reason?: string | null
           phone?: string | null
           product_types?: string[] | null
           referral_code?: string | null
@@ -5496,6 +5502,9 @@ export type Database = {
           name?: string
           onboarding_completed?: boolean | null
           parent_org_id?: string | null
+          payment_blocked?: boolean | null
+          payment_blocked_at?: string | null
+          payment_blocked_reason?: string | null
           phone?: string | null
           product_types?: string[] | null
           referral_code?: string | null
