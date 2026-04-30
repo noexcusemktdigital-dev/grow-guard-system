@@ -35,14 +35,21 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   const { isAdmin } = useMemberPermissions();
   const canSetup = isAdmin;
   const [step, setStep] = useState(1);
+  const [provider, setProvider] = useState<"whatsapp_cloud" | "evolution">("whatsapp_cloud");
   const [izitechName, setIzitechName] = useState("");
   const [izitechNameError, setIzitechNameError] = useState("");
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
-  // QR flow state
+  // QR flow state (Evolution)
   const [izitechQr, setIzitechQr] = useState<string | null>(null);
   const [izitechLoading, setIzitechLoading] = useState(false);
   const [izitechConnected, setIzitechConnected] = useState(false);
   const [izitechPhone, setIzitechPhone] = useState<string | null>(null);
+  // WhatsApp Cloud (Meta) state
+  const [cloudPhoneNumberId, setCloudPhoneNumberId] = useState("");
+  const [cloudWabaId, setCloudWabaId] = useState("");
+  const [cloudVerifiedName, setCloudVerifiedName] = useState("");
+  const [cloudAccessToken, setCloudAccessToken] = useState("");
+  const [cloudSaving, setCloudSaving] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Payment step
   const [billingType, setBillingType] = useState<string>("PIX");
@@ -54,6 +61,9 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     bank_slip_url?: string | null;
   } | null>(null);
   const [paymentDone, setPaymentDone] = useState(false);
+
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const cloudWebhookUrl = `https://${projectId}.supabase.co/functions/v1/whatsapp-cloud-webhook`;
 
   const totalSteps = 4;
 
