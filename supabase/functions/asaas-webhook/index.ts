@@ -142,6 +142,30 @@ Deno.serve(async (req) => {
 
     // ── PAYMENT_CONFIRMED / PAYMENT_RECEIVED ──
     if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+      // Desbloquear workspace se estava bloqueado por inadimplência
+      try {
+        const { data: orgRow } = await adminClient
+          .from("organizations")
+          .select("payment_blocked")
+          .eq("id", org.id)
+          .maybeSingle();
+
+        if ((orgRow as any)?.payment_blocked) {
+          await adminClient
+            .from("organizations")
+            .update({ payment_blocked: false, payment_blocked_at: null, payment_blocked_reason: null })
+            .eq("id", org.id);
+
+          await notifyOrgMembers(adminClient, org.id, {
+            title: "✅ Acesso restaurado!",
+            message: "Seu pagamento foi confirmado e o acesso à plataforma foi restaurado.",
+            type: "success",
+          });
+          console.log(`Workspace unblocked for org ${org.id}`);
+        }
+      } catch (e) {
+        console.error("Failed to unblock workspace", e);
+      }
 
       // Route by externalReference prefix
       // system_fee|{orgId}|{month}
