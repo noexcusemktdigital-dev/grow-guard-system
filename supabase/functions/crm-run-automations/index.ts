@@ -39,6 +39,17 @@ Deno.serve(async (req) => {
 
     // Periodic scans only run in batch mode (cron / manual "Executar agora")
     if (!targetEventId) {
+      // PERF early-exit: if there is no pending automation queue at all,
+      // skip the heavy stuck-lead / no-contact-SLA detectors entirely.
+      const { count: queueCount } = await admin
+        .from("crm_automation_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("processed", false);
+      if (!queueCount || queueCount === 0) {
+        return new Response(JSON.stringify({ ok: true, skipped: true, reason: "empty_queue" }), {
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
       if (timeLeft()) await detectStuckLeads(admin);
       if (timeLeft()) await detectNoContactSla(admin);
     }
