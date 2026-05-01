@@ -11,10 +11,10 @@
 
 | Status | Achado | PR | Pré-req deploy |
 |--------|--------|----|---------------:|
-| ✅ PR aberto | INT-001 Meta Leadgen HMAC | [#2](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/2) | secret `META_APP_SECRET` |
-| ✅ PR aberto | INT-002 WhatsApp Cloud HMAC | [#3](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/3) | secret `WHATSAPP_APP_SECRET` |
-| ✅ PR aberto | DX-001 `.env.example` | [#4](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/4) | — |
-| ✅ PR aberto | SUPPLY-002/003 CODEOWNERS + Renovate | [#5](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/5) | branch protection + Renovate App |
+| ✅ PR aberto | INT-001 Meta Leadgen HMAC | [#5](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/5) | secret `META_APP_SECRET` |
+| ✅ PR aberto | INT-002 WhatsApp Cloud HMAC | [#4](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/4) | secret `WHATSAPP_APP_SECRET` |
+| ✅ PR aberto | DX-001 `.env.example` | [#3](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/3) | — |
+| ✅ PR aberto | SUPPLY-002/003 CODEOWNERS + Renovate | [#2](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/2) | branch protection + Renovate App |
 | ✅ PR aberto | API-004 Asaas idempotência | [#6](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/6) | aplicar migration |
 | ✅ PR aberto | LGPD-001 PII redact em logs | [#7](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/7) | — |
 | ✅ PR aberto | SEC-002/API-006 BOLA helper (parcial) | [#8](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/8) | — |
@@ -37,8 +37,8 @@
 
 | # | Achado | PR | Cobertura |
 |---|--------|----|----- |
-| 🔴 INT-001 | Meta Leadgen webhook sem HMAC | #2 | 100% (1 fn) |
-| 🔴 INT-002 | WhatsApp Cloud webhook sem HMAC | #3 | 100% (1 fn) |
+| 🔴 INT-001 | Meta Leadgen webhook sem HMAC | #5 | 100% (1 fn) |
+| 🔴 INT-002 | WhatsApp Cloud webhook sem HMAC | #4 | 100% (1 fn) |
 | 🔴 API-004 | Asaas pagamentos sem idempotência | #6 | 100% (3 fns) + dedup webhook (asaas-webhook) |
 | 🔴 LGPD-001 | 21 console.log com PII | #7 | 100% (~24 logs em 15 fns) |
 | 🔴 SEC-002 | Padrão BOLA em 20+ pontos | #8 | parcial (3 fns financeiras) — 90+ fns no rollout gradual usando o helper |
@@ -54,7 +54,7 @@ PRs introduziram 8 helpers reutilizáveis em `supabase/functions/_shared/`:
 | Helper | PR | Uso |
 |--------|----|----|
 | `redact.ts` | #7 | mascarar email/CPF/phone/tokens em logs |
-| `hmac.ts` | #2 | validar `x-hub-signature-256` (Meta) |
+| `hmac.ts` | #4 / #5 | validar `x-hub-signature-256` (Meta) |
 | `idempotency.ts` | #6 | `withIdempotency()` em mutações + dedup webhooks |
 | `auth.ts` | #8 | `requireAuth()` + `assertOrgMember()` anti-BOLA |
 | `rate-limit.ts` | #11 | `checkRateLimit()` + 429 padronizada |
@@ -93,7 +93,7 @@ SELECT cron.schedule('cleanup-job-failures', '30 6 * * *', $$ SELECT public.clea
 
 ## Pré-requisitos de deploy (Lovable Secrets)
 
-**Antes de mergear** PRs #2, #3, #13:
+**Antes de mergear** PRs #4, #5, #13:
 
 ```bash
 TOKEN=$(curl -s -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyBQNjlw9Vp4tP4VVeANzyPJnqbG2wLbYPw" \
@@ -125,7 +125,7 @@ Sem isso:
 1. **#7 LGPD-001** (PII redact) — só código, alto impacto legal
 2. **#9 DX-003** README
 3. **#10 DX-002** ADRs
-4. **#4 DX-001** `.env.example`
+4. **#3 DX-001** `.env.example`
 
 ### Round 2 — Migrations + helpers (aplicar SQL antes/depois)
 5. **#6 API-004** Asaas idempotência (aplicar migration `20260501231255` ANTES do merge ou logo após)
@@ -134,12 +134,12 @@ Sem isso:
 8. **#8 SEC-002** BOLA helper
 
 ### Round 3 — Precisa secret no Lovable
-9. **#2 INT-001** Meta HMAC (configurar `META_APP_SECRET` antes)
-10. **#3 INT-002** WhatsApp HMAC (configurar `WHATSAPP_APP_SECRET`) — vai ter conflito trivial em `_shared/hmac.ts` com #2 (mesmo arquivo, conteúdo idêntico)
+9. **#5 INT-001** Meta HMAC (configurar `META_APP_SECRET` antes)
+10. **#4 INT-002** WhatsApp HMAC (configurar `WHATSAPP_APP_SECRET`) — vai ter conflito trivial em `_shared/hmac.ts` com #5 (mesmo arquivo, conteúdo idêntico)
 11. **#13 API-008** CORS hardening (configurar `FRONTEND_URL`)
 
 ### Round 4 — CI/Supply
-12. **#5 SUPPLY** CODEOWNERS + Renovate (ativar branch protection + instalar Renovate App após merge)
+12. **#2 SUPPLY** CODEOWNERS + Renovate (ativar branch protection + instalar Renovate App após merge)
 13. **#12 OPS** correlation_id
 
 ---
@@ -150,8 +150,8 @@ PRs que tocam mesmas fns (todas branches partem de `origin/main` na hora do work
 - `asaas-buy-credits/index.ts` — modificado por #6, #8, #12
 - `asaas-create-charge/index.ts` — #6, #8
 - `recharge-credits/index.ts` — #6, #8
-- `meta-leadgen-webhook/index.ts` — #2, #7, #12
-- `whatsapp-cloud-webhook/index.ts` — #3, #7, #12
+- `meta-leadgen-webhook/index.ts` — #5, #7, #12
+- `whatsapp-cloud-webhook/index.ts` — #4, #7, #12
 - `evolution-webhook/index.ts` — #7, #12
 - `_shared/hmac.ts` — criado idêntico em #2 e #3
 - `_shared/cors.ts` — modificado em #13
