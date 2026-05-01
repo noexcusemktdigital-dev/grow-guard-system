@@ -7765,6 +7765,10 @@ export type Database = {
       }
     }
     Functions: {
+      _chunked_delete_old_automation_logs: {
+        Args: { _chunk?: number; _days?: number; _max_iters?: number }
+        Returns: number
+      }
       assign_lead_round_robin: {
         Args: {
           p_lead_id: string
