@@ -118,11 +118,11 @@ const ClientePostagem = lazy(() => import("./pages/cliente/ClientePostagem"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2,         // 2min default
+      staleTime: 1000 * 60 * 5,         // 5min default global
       gcTime: 1000 * 60 * 15,           // 15min em memória
       retry: 1,
       refetchOnWindowFocus: false,      // Evita refetch ao voltar pra aba
-      refetchOnReconnect: 'always',     // Mas refetch ao reconectar internet
+      refetchOnReconnect: false,        // Evita tempestade de refetch ao reconectar
     },
   },
 });
