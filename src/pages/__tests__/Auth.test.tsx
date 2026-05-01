@@ -84,7 +84,7 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
   });
 
   it("shows error toast on login failure", async () => {
-    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid" } });
+    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid login credentials" } });
     renderAuth();
 
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "bad@test.com" } });
@@ -92,7 +92,7 @@ describe("Auth (Franqueadora/Franqueado login)", () => {
     fireEvent.click(screen.getByRole("button", { name: /entrar/i }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Credenciais inválidas. Verifique seu email e senha.");
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining("E-mail ou senha incorretos"));
     });
   });
 
