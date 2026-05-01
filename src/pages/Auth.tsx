@@ -58,7 +58,18 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    let signInResult;
+    try {
+      signInResult = await supabase.auth.signInWithPassword({ email, password });
+    } catch (networkErr) {
+      setLoading(false);
+      console.error("[Auth] login network error", networkErr);
+      toast.error("Não conseguimos contatar o servidor. Verifique sua conexão e tente novamente.");
+      return;
+    }
+
+    const { data, error } = signInResult;
     if (error) {
       setLoading(false);
       const msg = (error.message || "").toLowerCase();
@@ -75,6 +86,8 @@ const Auth = () => {
         toast.error("Nenhuma conta encontrada com esse e-mail.");
       } else if (msg.includes("user disabled") || msg.includes("banned")) {
         toast.error("Esta conta está bloqueada. Entre em contato com o suporte.");
+      } else if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
+        toast.error("Serviço temporariamente lento. Aguarde alguns segundos e tente novamente.");
       } else if (status && status >= 500) {
         toast.error("Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.");
       } else {
@@ -82,42 +95,45 @@ const Auth = () => {
       }
       return;
     }
-    // Block SaaS users from franchise portal (with timeout fallback)
-    try {
-      const check = await Promise.race([
-        validatePortalAccess(data.user.id, "franchise"),
-        new Promise<{ allowed: boolean }>((resolve) =>
-          setTimeout(() => resolve({ allowed: true }), 3000)
-        ),
-      ]);
-      if (!check.allowed) {
-        setLoading(false);
-        await supabase.auth.signOut({ scope: 'local' });
-        toast.error((check as unknown as { message?: string }).message || "Acesso negado.");
-        if ((check as unknown as { redirect?: string }).redirect) navigate((check as unknown as { redirect?: string }).redirect);
-        return;
-      }
-    } catch (err) {
-      // Portal validation failed, proceeding
-    }
-    // Determine redirect based on user role
+
+    // Sign-in succeeded — navigate immediately. Heavy role/portal checks
+    // run in background so DB slowness can't masquerade as a credential error.
+    setLoading(false);
+
+    // Best-effort role lookup with short timeout — falls back to franqueado portal.
     let destination = "/franqueado/inicio";
     try {
-      const { data: roleData } = await supabase
+      const rolePromise = supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user.id);
+      const { data: roleData } = (await Promise.race([
+        rolePromise,
+        new Promise((resolve) => setTimeout(() => resolve({ data: null }), 2000)),
+      ])) as { data: { role: string }[] | null };
       if (roleData && roleData.length > 0) {
         const roles = roleData.map((r) => r.role as string);
         if (roles.includes("super_admin") || roles.includes("admin")) {
           destination = "/franqueadora/inicio";
         }
       }
-    } catch (err) {
-      // Role fetch failed, using default redirect
+    } catch {
+      // ignore — fallback destination already set
     }
-    setLoading(false);
     navigate(destination);
+
+    // Background portal validation: only acts on explicit deny.
+    validatePortalAccess(data.user.id, "franchise")
+      .then(async (check) => {
+        if (!check.allowed) {
+          await supabase.auth.signOut({ scope: "local" });
+          toast.error((check as { message?: string }).message || "Acesso negado.");
+          if ((check as { redirect?: string }).redirect) {
+            navigate((check as { redirect?: string }).redirect!);
+          }
+        }
+      })
+      .catch(() => {/* deferred — ignore */});
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

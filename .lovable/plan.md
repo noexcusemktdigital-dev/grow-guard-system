@@ -1,78 +1,68 @@
 Objetivo
-Restaurar o login sem mudar funcionalidades do sistema e separar definitivamente o que é problema de autenticação do que é problema de performance/carga.
+Restaurar o acesso ao sistema e separar o problema atual de infraestrutura/backend do problema já tratado de otimização de queries no app.
 
-Leitura atual
-- Subir recursos não resolveu porque o sintoma atual mudou: agora o erro aparece no próprio login como usuário/senha inválidos.
-- Isso indica que o bloqueio atual não está mais no I/O das queries pesadas do CRM/dashboard.
-- No código, o login acontece antes de qualquer query pesada:
-  - `src/pages/SaasAuth.tsx`
-  - `src/pages/Auth.tsx`
-  Ambos chamam `signInWithPassword(...)` e, se qualquer erro vier do backend, exibem quase sempre a mesma mensagem genérica: `Credenciais inválidas`.
-- Ou seja: hoje o app está mascarando a causa real. Pode ser senha errada, e-mail não confirmado, conta criada só via Google, conta de convite ainda sem senha, bloqueio de portal, ou outro erro de auth.
-- O warning atual do console sobre `GoogleButton`/`ref` é secundário e não explica falha de login por e-mail e senha.
-
-Conclusão prática
-- Não: o problema atual não parece mais ser espaço nem otimização de query.
-- As otimizações ajudam o sistema a parar de travar depois do login, mas não corrigem `invalid credentials`.
-- A próxima ação correta é depurar o fluxo de autenticação e expor o erro real.
+Diagnóstico atual
+- O frontend ainda abre e renderiza a tela de login, então o app não está “quebrado” na camada React.
+- O backend está com sintoma de indisponibilidade mais amplo do que apenas performance do CRM:
+  - a tela de Users do Cloud aparece sem dados e com erro de chart;
+  - até uma leitura mínima no banco (`select 1`) está expirando com timeout;
+  - sem banco/auth saudáveis, o login não consegue validar conta, restaurar sessão nem carregar roles.
+- Portanto, neste momento, não é mais um problema isolado de JOIN pesado. As otimizações anteriores ajudam, mas não resolvem sozinhas um backend que ainda responde com timeout.
 
 Plano
-1. Instrumentar o login para revelar a causa real
-- Ajustar `SaasAuth` e `Auth` para não tratar todo erro como “credenciais inválidas”.
-- Mapear mensagens/status distintos para casos reais:
-  - e-mail não confirmado
-  - conta sem senha definida
-  - conta de provedor social tentando entrar por senha
-  - sessão/bloqueio temporário
-  - credencial realmente inválida
-- Registrar o erro técnico no logger sem expor detalhes inseguros na UI.
+1. Confirmar e estabilizar o backend primeiro
+- Verificar o estado real do backend gerenciado antes de mexer mais no app.
+- Se ainda estiver em recuperação após resize/pressão de disco, aguardar a instância voltar ao estado saudável.
+- Se permanecer com timeout mesmo após o aumento de disco/instância, tratar como incidente de backend e não como bug do login.
 
-2. Validar os estados reais das contas no backend
-- Verificar, para os usuários afetados, se a conta existe e em qual estado está:
-  - confirmada ou não
-  - criada por senha ou por Google
-  - conta de convite aguardando definição de senha
-  - bloqueada/desabilitada
-- Conferir se o fluxo de criação atual (`signup-saas`) e o fluxo de convite geram usuários coerentes com o tipo de login esperado.
+2. Tornar o login tolerante a banco lento
+- Ajustar `AuthContext` para separar “sessão autenticada” de “perfil/role carregados”.
+- Não deixar o login parecer inválido quando o problema real for timeout ao buscar role/perfil.
+- Se `signInWithPassword` passar, preservar a sessão e mostrar estado de “acesso em preparação” em vez de derrubar o usuário por falha temporária do banco.
 
-3. Revisar coerência entre os três fluxos de entrada
-- Fluxo SaaS (`/`)
-- Fluxo Franquia (`/acessofranquia`)
-- Fluxo de convite/boas-vindas (`/welcome`) e redefinição (`/reset-password`)
-- Garantir que cada tipo de conta termina com um método de acesso válido:
-  - usuário SaaS com senha
-  - convidado com senha criada no primeiro acesso
-  - usuário Google orientado a entrar com Google
-
-4. Corrigir mensagens e fallback de UX
-- Exibir mensagens úteis sem confundir o usuário final.
-- Se a conta existir mas estiver sem confirmação/senha, direcionar para a ação correta:
-  - reenviar confirmação
-  - redefinir senha
-  - usar Google
-- Evitar falso diagnóstico de “usuário errado” quando o problema for outro.
-
-5. Validar ponta a ponta
-- Testar login por senha no SaaS
-- Testar login por senha na Franquia
-- Testar conta não confirmada
-- Testar recuperação de senha
-- Testar conta Google
-- Confirmar que, após autenticar, as otimizações de performance mantêm o sistema responsivo
-
-Detalhes técnicos
-- Arquivos principais envolvidos:
+3. Remover pontos de bloqueio síncrono logo após autenticar
+- Revisar o fluxo de pós-login em:
   - `src/pages/SaasAuth.tsx`
   - `src/pages/Auth.tsx`
   - `src/contexts/AuthContext.tsx`
   - `src/lib/portalRoleGuard.ts`
-  - `supabase/functions/signup-saas/index.ts`
-  - `supabase/functions/request-password-reset/index.ts`
-- Evidência central do diagnóstico:
-  - o `signInWithPassword` falha antes de qualquer carregamento pesado do CRM;
-  - portanto, o erro atual não é explicado por JOIN, cache, cron ou tamanho da instância.
+- Evitar que validação de portal e busca de role imediatamente após login transformem lentidão do banco em falso “usuário errado”.
+- Fazer fallback seguro: manter sessão, tentar resolver role em background e só bloquear acesso quando houver resposta definitiva de permissão negada.
+
+4. Reduzir dependência do banco no primeiro carregamento
+- Revisar `ProtectedRoute` para não prender toda a navegação numa única busca de role quando o backend estiver lento.
+- Exibir mensagens específicas:
+  - “autenticação indisponível temporariamente”
+  - “não foi possível carregar permissões agora”
+  - “credenciais inválidas” apenas quando o backend realmente devolver esse caso.
+
+5. Validar os fluxos de recuperação
+- Conferir os fluxos já existentes de:
+  - login SaaS
+  - login franquia
+  - redefinição de senha
+  - login Google
+- Garantir que, quando o backend normalizar, cada fluxo volte a responder com mensagens corretas sem mascarar timeout como erro de credencial.
+
+6. Reavaliar a carga depois da recuperação
+- Com o backend estável novamente, revisar se ainda existem consultas críticas que podem continuar pressionando I/O/memória.
+- Se necessário, ampliar as otimizações já iniciadas nos hooks mais pesados, mas somente depois de separar o que é gargalo estrutural do que é indisponibilidade temporária.
+
+Detalhes técnicos
+- Evidência principal: até consulta simples de banco expirou por timeout, o que indica problema de disponibilidade/saúde do backend, não apenas erro de tela de login.
+- Arquivos principais a ajustar na implementação:
+  - `src/contexts/AuthContext.tsx`
+  - `src/pages/SaasAuth.tsx`
+  - `src/pages/Auth.tsx`
+  - `src/components/ProtectedRoute.tsx`
+  - `src/lib/portalRoleGuard.ts`
+- Estratégia de código:
+  - session-first
+  - role/profile deferred
+  - bloqueio apenas com negação explícita
+  - mensagens de erro distintas para timeout, indisponibilidade e credencial inválida
 
 Resultado esperado
-- Saber exatamente por que o login está falhando.
-- Corrigir a causa real no fluxo de auth.
-- Manter as otimizações de performance como melhoria separada, sem confundir com o problema de acesso.
+- O sistema deixa de transformar indisponibilidade do backend em “usuário errado”.
+- Quando o backend voltar ao normal, o login volta a funcionar sem travar na carga inicial.
+- Se o backend continuar falhando, fica claro que a ação necessária é estabilização da instância/backend, e não mais otimização cega do app.
