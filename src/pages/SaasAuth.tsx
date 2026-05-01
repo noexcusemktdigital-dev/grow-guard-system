@@ -91,10 +91,26 @@ const SaasAuth = () => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setLoading(false);
-      if (error.message.includes("Email not confirmed")) {
-        toast.error("Confirme seu email antes de entrar. Verifique sua caixa de entrada.");
+      const msg = (error.message || "").toLowerCase();
+      const status = (error as { status?: number }).status;
+      logger.error("[SaasAuth] login error", { message: error.message, status });
+
+      if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
+        toast.error("Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada e o spam.");
+        setVerificationContext("existing");
+        setMode("verify-email");
+      } else if (msg.includes("invalid login") || msg.includes("invalid credentials") || msg.includes("invalid_grant")) {
+        toast.error("E-mail ou senha incorretos. Se entrou pelo Google antes, use 'Entrar com Google' ou 'Esqueci minha senha'.");
+      } else if (status === 429 || msg.includes("rate limit") || msg.includes("too many")) {
+        toast.error("Muitas tentativas em pouco tempo. Aguarde 1 minuto e tente novamente.");
+      } else if (msg.includes("user not found")) {
+        toast.error("Nenhuma conta encontrada com esse e-mail. Verifique o endereço ou crie uma conta.");
+      } else if (msg.includes("user disabled") || msg.includes("banned")) {
+        toast.error("Esta conta está bloqueada. Entre em contato com o suporte.");
+      } else if (status && status >= 500) {
+        toast.error("Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.");
       } else {
-        toast.error("Credenciais inválidas. Verifique seu email e senha.");
+        toast.error(error.message || "Não foi possível entrar. Tente novamente.");
       }
       return;
     }

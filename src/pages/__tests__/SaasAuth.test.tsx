@@ -116,7 +116,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
   });
 
   it("shows error toast on login failure", async () => {
-    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid" } });
+    mockSignIn.mockResolvedValue({ data: { user: null }, error: { message: "Invalid login credentials" } });
     renderSaas();
 
     const emailInputs = screen.getAllByLabelText("Email");
@@ -126,7 +126,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^entrar$/i }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Credenciais inválidas. Verifique seu email e senha.");
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining("E-mail ou senha incorretos"));
     });
   });
 
@@ -141,7 +141,7 @@ describe("SaasAuth (Cliente SaaS)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^entrar$/i }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Confirme seu email antes de entrar. Verifique sua caixa de entrada.");
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringContaining("Confirme seu e-mail"));
     });
   });
 
