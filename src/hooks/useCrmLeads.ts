@@ -69,6 +69,91 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
   };
 }
 
+// ─── Per-stage paginated fetch (Kanban scalability) ─────────────────────
+export const COLUMN_PAGE_SIZE = 30;
+
+export function useCrmLeadsByStage({
+  orgId, funnelId, stage, enabled = true,
+}: { orgId: string; funnelId: string; stage: string; enabled?: boolean }) {
+  const { user } = useAuth();
+  const { permissions, isAdmin } = useMemberPermissions();
+  const [page, setPage] = useState(0);
+
+  const query = useQuery({
+    queryKey: ["crm-leads-by-stage", orgId, funnelId, stage, page],
+    queryFn: async () => {
+      let q = supabase
+        .from("crm_leads")
+        .select(
+          "id, name, phone, email, value, stage, source, tags, " +
+          "created_at, won_at, lost_at, assigned_to, funnel_id, " +
+          "temperature, whatsapp_contact_id, updated_at",
+          { count: "exact" }
+        )
+        .eq("organization_id", orgId)
+        .eq("funnel_id", funnelId)
+        .eq("stage", stage)
+        .is("archived_at", null)
+        .order("updated_at", { ascending: false })
+        .range(page * COLUMN_PAGE_SIZE, (page + 1) * COLUMN_PAGE_SIZE - 1);
+
+      if (!isAdmin && permissions?.crm_visibility === "own") {
+        q = q.eq("assigned_to", user?.id ?? "");
+      } else if (!isAdmin && permissions?.crm_visibility === "team") {
+        q = q.or(`assigned_to.eq.${user?.id},assigned_to.is.null`);
+      }
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { data: data ?? [], count: count ?? 0 };
+    },
+    enabled: !!orgId && !!funnelId && !!stage && enabled,
+    staleTime: 1000 * 60 * 3,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+  });
+
+  const allLeads = query.data?.data ?? [];
+  const total = query.data?.count ?? 0;
+  const hasMore = (page + 1) * COLUMN_PAGE_SIZE < total;
+  const loadMore = useCallback(() => { if (hasMore) setPage(p => p + 1); }, [hasMore]);
+
+  return {
+    leads: allLeads,
+    total,
+    hasMore,
+    loadMore,
+    isLoading: query.isLoading,
+    page,
+  };
+}
+
+export function useCrmLeadTaskCounts(leadIds: string[]) {
+  return useQuery({
+    queryKey: ["crm-task-counts", [...leadIds].sort().join(",")],
+    queryFn: async () => {
+      if (!leadIds.length) return {} as Record<string, { total: number; overdue: number }>;
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("crm_tasks")
+        .select("lead_id, due_date, completed_at")
+        .in("lead_id", leadIds)
+        .is("completed_at", null);
+
+      const counts: Record<string, { total: number; overdue: number }> = {};
+      (data || []).forEach((t: { lead_id: string; due_date: string | null }) => {
+        if (!counts[t.lead_id]) counts[t.lead_id] = { total: 0, overdue: 0 };
+        counts[t.lead_id].total++;
+        if (t.due_date && t.due_date < today) counts[t.lead_id].overdue++;
+      });
+      return counts;
+    },
+    enabled: leadIds.length > 0,
+    staleTime: 1000 * 60 * 2,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useCrmLeadById(id: string | undefined) {
   const { data: orgId } = useUserOrgId();
 
