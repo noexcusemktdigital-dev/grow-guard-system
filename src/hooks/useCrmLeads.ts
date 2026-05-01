@@ -278,6 +278,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
       qc.invalidateQueries({ queryKey: ["lead-quota"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
@@ -298,6 +300,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
@@ -316,6 +320,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
@@ -334,6 +340,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
@@ -346,6 +354,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
@@ -358,6 +368,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
@@ -370,6 +382,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
@@ -382,6 +396,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
   });
@@ -400,6 +416,8 @@ export function useCrmLeadMutations() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
+      qc.invalidateQueries({ queryKey: ["crm-task-counts"] });
       qc.invalidateQueries({ queryKey: ["crm-lead-count"] });
       qc.invalidateQueries({ queryKey: ["goal-progress"] });
     },
