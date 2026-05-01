@@ -802,13 +802,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "automation_execution_log_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "crm_automation_queue"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "automation_execution_log_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -855,67 +848,6 @@ export type Database = {
           status?: string
         }
         Relationships: []
-      }
-      automation_execution_logs_old: {
-        Row: {
-          action_type: string | null
-          automation_id: string | null
-          created_at: string
-          error_message: string | null
-          event_id: string | null
-          id: string
-          lead_id: string | null
-          metadata: Json | null
-          organization_id: string
-          status: string
-        }
-        Insert: {
-          action_type?: string | null
-          automation_id?: string | null
-          created_at?: string
-          error_message?: string | null
-          event_id?: string | null
-          id?: string
-          lead_id?: string | null
-          metadata?: Json | null
-          organization_id: string
-          status?: string
-        }
-        Update: {
-          action_type?: string | null
-          automation_id?: string | null
-          created_at?: string
-          error_message?: string | null
-          event_id?: string | null
-          id?: string
-          lead_id?: string | null
-          metadata?: Json | null
-          organization_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "automation_execution_logs_automation_id_fkey"
-            columns: ["automation_id"]
-            isOneToOne: false
-            referencedRelation: "crm_automations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "automation_execution_logs_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "crm_leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "automation_execution_logs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       automation_execution_logs_recent: {
         Row: {
@@ -2387,49 +2319,41 @@ export type Database = {
       crm_automation_queue: {
         Row: {
           created_at: string | null
-          error_count: number
-          id: string
+          error_count: number | null
+          id: string | null
           last_error: string | null
-          lead_id: string
+          lead_id: string | null
           next_retry_at: string | null
-          organization_id: string
+          organization_id: string | null
           processed: boolean | null
           trigger_data: Json | null
-          trigger_type: string
+          trigger_type: string | null
         }
         Insert: {
           created_at?: string | null
-          error_count?: number
-          id?: string
+          error_count?: number | null
+          id?: string | null
           last_error?: string | null
-          lead_id: string
+          lead_id?: string | null
           next_retry_at?: string | null
-          organization_id: string
+          organization_id?: string | null
           processed?: boolean | null
           trigger_data?: Json | null
-          trigger_type: string
+          trigger_type?: string | null
         }
         Update: {
           created_at?: string | null
-          error_count?: number
-          id?: string
+          error_count?: number | null
+          id?: string | null
           last_error?: string | null
-          lead_id?: string
+          lead_id?: string | null
           next_retry_at?: string | null
-          organization_id?: string
+          organization_id?: string | null
           processed?: boolean | null
           trigger_data?: Json | null
-          trigger_type?: string
+          trigger_type?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "crm_automation_queue_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "crm_leads"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       crm_automations: {
         Row: {
@@ -2698,44 +2622,36 @@ export type Database = {
       }
       crm_lead_history: {
         Row: {
-          created_at: string
-          description: string
-          event_type: string
-          id: string
-          lead_id: string
+          created_at: string | null
+          description: string | null
+          event_type: string | null
+          id: string | null
+          lead_id: string | null
           metadata: Json | null
-          organization_id: string
+          organization_id: string | null
           user_id: string | null
         }
         Insert: {
-          created_at?: string
-          description: string
-          event_type: string
-          id?: string
-          lead_id: string
+          created_at?: string | null
+          description?: string | null
+          event_type?: string | null
+          id?: string | null
+          lead_id?: string | null
           metadata?: Json | null
-          organization_id: string
+          organization_id?: string | null
           user_id?: string | null
         }
         Update: {
-          created_at?: string
-          description?: string
-          event_type?: string
-          id?: string
-          lead_id?: string
+          created_at?: string | null
+          description?: string | null
+          event_type?: string | null
+          id?: string | null
+          lead_id?: string | null
           metadata?: Json | null
-          organization_id?: string
+          organization_id?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "crm_lead_history_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "crm_leads"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       crm_lead_notes: {
         Row: {
@@ -7875,6 +7791,7 @@ export type Database = {
         }
         Returns: Json
       }
+      daily_retention_cleanup: { Args: never; Returns: Json }
       debit_credits: {
         Args: {
           _amount: number
