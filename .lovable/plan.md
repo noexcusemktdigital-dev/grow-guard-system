@@ -1,126 +1,50 @@
-## Plano de limpeza + otimização (versão conservadora)
+# Otimização CRM — Performance sem refatoração
 
-Zero perda de dado visível ao usuário. Só lixo técnico (logs internos) é apagado.
+Aplicar apenas otimizações de baixo risco que mantêm a arquitetura atual de leads centralizados (`ClienteCRM.tsx`), preservando 100% de `selectionMode`, `bulkActions`, `toggleAllLeads` e a distribuição atual de `stageLeads` por coluna.
 
----
+## 1. Migrações de banco — 3 índices parciais
 
-### Etapa 1 — Diagnóstico (read-only, ~10s)
+Cada índice em uma migração separada (necessário para `CREATE INDEX CONCURRENTLY`, que não roda dentro de transação).
 
-Listar tamanho real de cada tabela com `pg_total_relation_size` pra confirmar onde está o inchaço antes de apagar qualquer coisa. Resultado vira tabela no chat.
-
-### Etapa 2 — Limpeza cirúrgica (libera 5–8 GB)
-
-Migration única, conservadora:
-
+**Migração A** — Kanban principal (leads ativos por funil/stage, ordenados por updated_at):
 ```sql
--- Logs de execução de automação (lixo técnico, ninguém consulta) — 30 dias
-DELETE FROM automation_execution_logs WHERE created_at < now() - interval '30 days';
-
--- Fila de automação já processada — 7 dias
-DELETE FROM crm_automation_queue 
-WHERE status IN ('completed','failed') AND created_at < now() - interval '7 days';
-
--- Histórico de leads (timeline) — 180 dias (conservador)
-DELETE FROM crm_lead_history WHERE created_at < now() - interval '180 days';
-
--- Notificações já lidas — 60 dias
-DELETE FROM client_notifications 
-WHERE read_at IS NOT NULL AND created_at < now() - interval '60 days';
-
--- Logs de email enviado — 30 dias
-DELETE FROM email_logs WHERE created_at < now() - interval '30 days';
-
--- Mensagens WhatsApp arquivadas — 180 dias (conservador)
-DELETE FROM whatsapp_messages WHERE created_at < now() - interval '180 days';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_leads_kanban_v2
+ON crm_leads(organization_id, funnel_id, stage, updated_at DESC)
+WHERE archived_at IS NULL;
 ```
 
-Mensagens recentes, leads, contratos, pagamentos, perfis, organizações: **nada disso é tocado**.
-
-### Etapa 3 — Índices compostos (reduz I/O 60–80%)
-
-Criados com `CONCURRENTLY` (sem travar nada, app fica no ar):
-
+**Migração B** — Tasks pendentes por lead (badges de contagem em cada card):
 ```sql
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_leads_org_stage_updated
-  ON crm_leads (organization_id, stage_id, updated_at DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_roles_user_role
-  ON user_roles (user_id, role);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_org_members_user_org
-  ON org_members (user_id, organization_id);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_client_notifications_user_unread
-  ON client_notifications (user_id, created_at DESC) WHERE read_at IS NULL;
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_whatsapp_messages_contact_created
-  ON whatsapp_messages (contact_id, created_at DESC);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_automation_logs_org_created
-  ON automation_execution_logs (organization_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_tasks_lead_pending
+ON crm_tasks(lead_id, due_date)
+WHERE completed_at IS NULL;
 ```
 
-### Etapa 4 — VACUUM FULL (libera espaço físico de verdade)
-
-Após DELETE, espaço fica "marcado livre" mas Postgres não devolve ao SO. `VACUUM FULL` reescreve a tabela. Trava cada tabela 2–8 min.
-
+**Migração C** — Lookup de lead por org (consultas de detalhe e contagens):
 ```sql
-VACUUM FULL automation_execution_logs;
-VACUUM FULL crm_automation_queue;
-VACUUM FULL crm_lead_history;
-VACUUM FULL client_notifications;
-VACUUM FULL email_logs;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_leads_org_active
+ON crm_leads(organization_id, created_at DESC)
+WHERE archived_at IS NULL;
 ```
 
-Vou rodar **agora** já que você está com Medium ativo (folga de I/O) — fica rápido e janela ruim de pico passa logo.
+## 2. Frontend — `src/hooks/useCrmLeads.ts`
 
-### Etapa 5 — Retention automática (impede recaída)
+Adicionar `gcTime: 1000 * 60 * 10` (10 min) à query principal `useCrmLeads` para evitar limpeza prematura do cache ao trocar de aba/funil. Confirmar `staleTime` em 3 min e `refetchOnWindowFocus: false` (já presentes).
 
-`pg_cron` job rodando 03:00 diariamente, repetindo Etapa 2. Nunca mais o disco enche por log esquecido.
+Também remover a definição duplicada de `useCrmLeadTaskCounts` que existe no arquivo (há duas declarações idênticas — manter apenas a primeira).
 
-```sql
-SELECT cron.schedule('daily-retention-v2', '0 3 * * *', $$
-  DELETE FROM automation_execution_logs WHERE created_at < now() - interval '30 days';
-  DELETE FROM crm_automation_queue WHERE status IN ('completed','failed') AND created_at < now() - interval '7 days';
-  DELETE FROM crm_lead_history WHERE created_at < now() - interval '180 days';
-  DELETE FROM client_notifications WHERE read_at IS NOT NULL AND created_at < now() - interval '60 days';
-  DELETE FROM email_logs WHERE created_at < now() - interval '30 days';
-$$);
-```
+## O que NÃO será alterado
 
-### Etapa 6 — Reduzir frequência de crons pesados
+- PAGE_SIZE (mantém 50)
+- Arquitetura centralizada de leads em `ClienteCRM.tsx`
+- Lógica de `selectionMode`, `toggleAllLeads`, `bulkActions`
+- Distribuição de `stageLeads` para cada `KanbanColumn`
+- Índices existentes (mantidos para evitar regressão; podem ser auditados depois)
 
-Via SQL no scheduler:
-- `crm-run-automations`: 5 min → 10 min
-- `process-email-queue`: 5 min → 10 min  
-- `agent-followup-cron`: 15 min → 30 min
+## Impacto esperado
 
-Os early-exits no código já fazem cada execução custar ~1 query leve quando não há trabalho. Reduzir frequência corta ainda mais carga.
-
----
-
-### Resultado esperado
-
-| Métrica | Hoje (Medium) | Após plano |
-|---|---|---|
-| Disk usage | 90% | 30–40% |
-| Disk I/O | 60–80% | 20–35% |
-| Memory | 70–85% | 50–60% |
-| Login p95 | 1–3s | <500ms |
-| Capacidade | ~150 ativos | 300–400 ativos |
-
-### Voltar pra Small?
-
-**Sim, com segurança**, após Etapas 2–5 concluídas e disco em 30–40%. O combo (índices + retention + crons mais lentos) deixa Small confortável pra 300–400 workspaces ativos.
-
-Recomendo: rodar tudo agora no Medium → esperar 24h observando métricas → se ficar estável <50% I/O, downgrade pra Small.
-
-### O que NÃO vai ser tocado
-
-- Schemas `auth`, `storage`, `realtime` (proibido).
-- Qualquer dado operacional (leads, contratos, pagamentos, perfis, mensagens recentes).
-- Lógica de billing, Asaas, integrações.
-- Código frontend (já otimizado nas rodadas anteriores).
-
-### Ordem de execução
-
-1. Diagnóstico (read-only) — te mostro os tamanhos
-2. Migration: DELETE + CREATE INDEX CONCURRENTLY (paralelo, ~3 min, sem downtime)
-3. VACUUM FULL (sequencial, ~10–15 min, locks curtos por tabela)
-4. pg_cron retention + ajuste de schedules (instantâneo)
-5. Validação: rodar `pg_total_relation_size` de novo e te mostrar o antes/depois
+- Kanban com muitos leads: scan via índice + ordenação "grátis" por `updated_at`.
+- Badges de tarefas: índice 5–10× menor (só pendentes).
+- Cache mais resiliente entre navegações curtas.
+- Zero risco de quebra de features existentes.
+- Sem perda de dados.
