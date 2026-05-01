@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useCrmLeads, useCrmLeadMutations } from "@/hooks/useClienteCrm";
+import { useCrmLeadTaskCounts } from "@/hooks/useCrmLeads";
 import { useCrmFunnels, useEnsureDefaultFunnel } from "@/hooks/useClienteCrm";
 import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
