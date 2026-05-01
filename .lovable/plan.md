@@ -1,102 +1,180 @@
-# Estabilização da Cloud + Roadmap de Otimização
+# Plano de Otimização Avançada — Capacidade Máxima sem Travar
 
-## 1. Estado atual (diagnóstico)
+## Objetivo
 
-- O banco continua retornando **timeout 544** ("Connection terminated due to connection timeout") em consultas mínimas.
-- Logs de Postgres/Auth/Edge estão **vazios via API** — sinal claro que a instância ainda está em janela de manutenção/resize, não acessível ao serviço de logs.
-- A UI da Cloud (Users, Advanced) mostra "carregando" pelo mesmo motivo: o painel depende da mesma instância.
+Tornar a infra atual (Small/Medium) capaz de servir **muitos usuários e workspaces simultâneos sem travar, sem login lento e sem perda de performance** nas ferramentas e gerações — sem trocar de plano.
 
-**Conclusão:** o sistema não está "quebrado" por bug — está num período de **propagação do upgrade**. Não há nada a fazer no código enquanto a instância não voltar a `ACTIVE_HEALTHY`.
+---
 
-## 2. Tempo esperado do upgrade
+## 1. Auditoria do que encontrei (gargalos reais)
 
-- **Resize de disco/compute na Cloud**: tipicamente **5 a 15 minutos**, mas pode chegar a **30–45 min** em casos de WAL/replicação grandes.
-- Sinais de que terminou:
-  1. Aba **Advanced settings** carrega métricas (CPU, RAM, disco) sem erro.
-  2. Aba **Users** lista os usuários.
-  3. Login funciona sem cair em "serviço lento".
-- **Ação imediata**: aguardar mais 10–15 min e recarregar. Se passar de 45 min sem voltar, é caso de suporte (instância travada em `UPGRADING`).
+| Área | Achado | Impacto |
+|---|---|---|
+| Realtime | **6 telas abrem `supabase.channel()` direto** (FranqueadoSuporte, Atendimento, ChatConversation, ClienteIntegracoes, ClienteChat) — ignoram o `realtimeManager` | Cada usuário abre 3–6 conexões WebSocket em vez de 1 |
+| Queries | **117 `select('*')`** na codebase | Lê 30+ colunas quando precisa de 3, satura I/O |
+| Queries | **`crm_leads`** é a tabela mais consultada (23 pontos) — sem índice composto adequado | Toda navegação em CRM faz seq-scan |
+| Polling | `FeatureGateContext` faz poll a cada **60s** em TODA tela autenticada | 1 query por usuário ativo por minuto, sem necessidade |
+| Hotspots | `useFinance` (8 queries), `useTeamChat` (6), `ClienteDashboard` (6), `ClienteGamificacao` (6) | Página dispara 6–8 round-trips paralelos |
+| Edge Funcs | 100 funções, várias com conexão direta (5432) em vez de pooler | Esgota slots de conexão sob carga |
+| Bootstrap | Auth faz 2 round-trips em série (`profiles` + `get_user_role`) | +400ms no login |
+| RLS | Policies sem índices de suporte em `user_roles`/`org_members` | RLS executa subselect sem índice em toda query |
+| Logs | `audit_log`, `notifications`, `email_logs`, `whatsapp_messages` sem retention | Disco enche → autovacuum trava → incidente atual |
 
-## 3. Capacidade real da instância (resposta direta)
+---
 
-Sim, a sua leitura está correta: **temos poucos usuários e bastante espaço**, então o gargalo **não é volume de dados** — é **I/O e conexões concorrentes** mal distribuídas.
+## 2. Estratégia de execução em 4 ondas
 
-Estimativa por tamanho de instância (assumindo o app atual com realtime ativo, RLS, ~30 tabelas):
+### Onda 1 — Backend (impacto: 5–10x na capacidade)
+Migration única e segura, que multiplica capacidade do banco sem mudar UI.
 
-| Instância | RAM | Conexões diretas seguras | Usuários simultâneos ativos | Workspaces saudáveis |
-|-----------|-----|--------------------------|------------------------------|----------------------|
-| Micro (1GB)  | 1GB | ~30  | ~20–40  | ~5–10  |
-| Small (2GB)  | 2GB | ~60  | ~50–100 | ~15–25 |
-| Medium (4GB) | 4GB | ~120 | ~150–300| ~40–70 |
-| Large (8GB)  | 8GB | ~200 | ~400–800| ~100–180 |
-| XL (16GB)    |16GB | ~400 | ~1k–2k  | ~250–400 |
+**1.1 Índices compostos críticos:**
+```sql
+-- CRM (mais consultada)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_leads_org_stage_updated
+  ON crm_leads (organization_id, stage_id, updated_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_leads_org_assigned
+  ON crm_leads (organization_id, assigned_to) WHERE assigned_to IS NOT NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_crm_contacts_org_email
+  ON crm_contacts (organization_id, email);
 
-"Usuário simultâneo ativo" = sessão logada fazendo requisições nos últimos 60s. A maioria dos usuários reais fica idle, então **a capacidade total cadastrada é ~10x maior**.
+-- Auth/RLS hot path
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_roles_user_role
+  ON user_roles (user_id, role);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_org_members_user_org
+  ON org_members (user_id, organization_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_org_user_permissions_lookup
+  ON org_user_permissions (user_id, organization_id);
 
-**O que derruba esses números rápido:**
-- Queries sem índice (sequential scan em tabela grande).
-- Realtime com muitos canais por usuário.
-- Edge functions chamando o DB em loop.
-- Pooler PgBouncer mal usado (conexões longas em vez de transação).
+-- Listagens com .order() sem limit
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_whatsapp_messages_contact_created
+  ON whatsapp_messages (contact_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_notifications_user_created_unread
+  ON notifications (user_id, created_at DESC) WHERE read_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_client_tasks_org_due
+  ON client_tasks (organization_id, due_date) WHERE status != 'done';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_client_followups_unit_created
+  ON client_followups (unit_org_id, created_at DESC);
+```
 
-## 4. Otimizações que multiplicam a capacidade (sem trocar de plano)
+**1.2 RPC consolidado de bootstrap:**
+`bootstrap_user_session(_user_id, _portal)` retorna em UMA chamada: `{role, org_id, profile_minimal, feature_flags, permissions}`. Reduz 4 round-trips → 1 no login.
 
-Ordenadas por impacto estimado:
+**1.3 Retention automática (pg_cron):**
+- `audit_log` > 90 dias → delete
+- `notifications` > 60 dias e lidas → delete
+- `email_logs` > 30 dias → delete
+- `whatsapp_messages` arquivar > 180 dias
+- `automation_logs` > 30 dias → delete
 
-### 4.1. Índices e RLS (ganho 3–10x no I/O)
-- Auditar policies RLS que fazem subselect em `user_roles` / `org_members` sem índice composto.
-- Garantir índices em: `user_roles(user_id, role)`, `org_user_permissions(user_id, org_id)`, `messages(conversation_id, created_at desc)`, `notifications(user_id, created_at desc, read)`, `crm_leads(org_id, stage_id, updated_at)`, `tasks(org_id, assigned_to, due_date)`.
-- Substituir `select *` por colunas específicas no AuthContext (hoje busca `profiles.*`).
+Roda diariamente às 03:00. Libera disco constantemente, evita autovacuum stalls.
 
-### 4.2. Realtime sob controle (ganho 2–5x em conexões)
-Hoje há **9+ pontos** abrindo canais (`NotificationBell`, `useTeamChat`, `ClienteChat`, `Atendimento`, `ClienteIntegracoes`, `FranqueadoSuporte`...).
-- Centralizar via `realtimeManager` (já existe) e **proibir** `supabase.channel()` direto nos componentes.
-- Reduzir escopo: usar filtros `filter: 'org_id=eq.X'` em todos os canais para o servidor não fazer broadcast geral.
-- Cleanup garantido em `useEffect` return.
+**1.4 Segurança RLS via `SECURITY DEFINER`:**
+Garantir que `has_role()`, `get_user_org_id()`, etc. usem `SET search_path = public` e sejam `STABLE` — para o Postgres cachear o resultado dentro da mesma query.
 
-### 4.3. Bootstrap de Auth mais leve (ganho direto no login)
-- AuthContext faz hoje em sequência: `profiles.select(*)` → `get_user_role` → eventualmente `get_user_org_id` + `user_roles.select`. São 3–4 round-trips antes da UI liberar.
-- Consolidar em **uma única RPC** `bootstrap_user_session(_user_id, _portal)` que retorna `{role, org_id, profile_minimal, permissions}` em um round-trip.
-- Cachear resultado em `localStorage` por 5 min (já temos `noe-cached-role`, expandir).
+---
 
-### 4.4. React Query com staleTime agressivo (ganho 2–3x menos requisições)
-- Padrão global: `staleTime: 2min`, `gcTime: 10min`, `refetchOnWindowFocus: false`.
-- Hoje muitas listas reconsultam a cada foco da aba — multiplica I/O sem ganho.
+### Onda 2 — Realtime sob controle (impacto: 3x menos conexões)
 
-### 4.5. Edge Functions com connection pool
-- Funções que rodam em loop (cron, webhooks Asaas, notificações) devem usar **service role + pooler transacional** (porta 6543), não conexão direta (5432).
-- Verificar `process-asaas-webhook`, `send-email-resend`, jobs de CRM.
+**2.1 Migrar 6 telas para `realtimeManager`:**
+- `src/pages/franqueado/FranqueadoSuporte.tsx`
+- `src/pages/franqueado/FranqueadoSuporteComponents.tsx`
+- `src/pages/Atendimento.tsx`
+- `src/components/cliente/ChatConversation.tsx`
+- `src/pages/cliente/ClienteIntegracoes.tsx`
+- `src/pages/cliente/ClienteChat.tsx`
 
-### 4.6. Limpeza de tabelas crescendo silenciosamente
-- `audit_log`, `notifications`, `email_logs`, `whatsapp_messages`: criar **retention policy** (delete > 90 dias) via `pg_cron`.
-- Hoje sem isso o disco enche e o `autovacuum` trava — foi provavelmente o gatilho do incidente atual.
+Cada uma passa a usar `subscribeToTable(orgId, ...)` — múltiplas tabelas no mesmo channel.
 
-### 4.7. Paginação obrigatória
-- Auditar telas de listagem (CRM, Tasks, Leads, Mensagens) e garantir `.range()` ou `.limit()` sempre. Sem isso, um usuário com 5k leads derruba a tela e prende uma conexão.
+**2.2 Lint guard:**
+Adicionar comentário-regra no topo do `realtimeManager.ts` proibindo `supabase.channel()` direto fora dele. Próximas PRs devem seguir.
 
-## 5. Ordem sugerida de execução (após Cloud voltar)
+**2.3 Filtro estrito no servidor:**
+Todo channel novo carrega `filter: 'organization_id=eq.X'` — Postgres só envia o que importa, em vez de broadcast geral.
 
-1. **Hoje** (assim que voltar): rodar `supabase--linter` para listar índices faltantes e queries lentas reais.
-2. **Sprint 1** (alto ROI): consolidar bootstrap em RPC única + cache localStorage + staleTime global. → Resolve 80% do "login lento" mesmo sob carga.
-3. **Sprint 2**: auditoria RLS + índices compostos faltantes + retention de logs.
-4. **Sprint 3**: centralizar realtime no `realtimeManager` e migrar todos os 9 pontos.
-5. **Sprint 4**: paginação obrigatória nas listas grandes.
+---
 
-## 6. Detalhes técnicos
+### Onda 3 — Eliminar desperdício no frontend (impacto: 2–3x menos queries)
 
-**Arquivos que serão tocados nas sprints:**
-- `src/contexts/AuthContext.tsx` — bootstrap consolidado
-- `src/lib/realtimeManager.ts` + componentes que abrem canais direto
-- `src/lib/queryClient.ts` (se não existir, criar) — defaults de React Query
-- `supabase/migrations/*` — RPC `bootstrap_user_session`, índices, `pg_cron` de retenção
-- `src/integrations/supabase/client.ts` — **NÃO TOCAR** (auto-gerado), mas validar se está usando pooler
+**3.1 Substituir `select('*')` por colunas específicas** nos top hotspots:
+- `useFinance.ts` (8 queries) — listar campos reais usados
+- `useTeamChat.ts`, `ClienteDashboard.tsx`, `ClienteGamificacao.tsx`
+- `useClienteContent.ts`, `useWhatsApp.ts`, `useOnboarding.ts`
 
-**Métricas para acompanhar (na aba Advanced da Cloud):**
-- CPU < 60% sustentado
+Meta: reduzir de 117 → < 30 (mantendo `*` só onde realmente todas as colunas são exibidas).
+
+**3.2 FeatureGateContext — backoff inteligente:**
+Hoje: refetch fixo a cada 60s.
+Novo: 60s nos primeiros 5min de sessão (provisionamento ainda pode rolar), depois sobe pra 5min. Plano aprovado vira `staleTime: Infinity` até signOut.
+
+**3.3 Paginação obrigatória:**
+Auditar listas (`useClientePosts`, `useClienteScripts`, `useUnits`, `useClienteDispatches`, `useAutomationLogs`, `useWhatsApp`) e adicionar `.range(0, 49)` ou `.limit(50)` por padrão. Sem isso um workspace com 5k registros derruba a tela.
+
+**3.4 Bootstrap consolidado no AuthContext:**
+Substituir as 2 chamadas paralelas por uma única `rpc('bootstrap_user_session')`. Cache em localStorage (já temos `noe-cached-role` e `noe-cached-profile`, expandir pra `noe-cached-bootstrap` com TTL 5min).
+
+---
+
+### Onda 4 — Edge Functions e jobs (impacto: estabilidade sob carga)
+
+**4.1 Auditar conexão DB nas 100 funções:**
+Webhooks de alta frequência (`process-asaas-webhook`, `evolution-webhook`, `receive-candidate`, `crm-webhook-receive`) devem usar **service role + porta 6543 (pooler transacional)** — não conexão direta na 5432.
+
+**4.2 Cron jobs com lock:**
+Jobs longos (relatórios, sync Asaas) devem usar `pg_advisory_lock` para não rodar 2x em paralelo se demorarem.
+
+**4.3 Timeouts agressivos:**
+Toda edge function com `EdgeRuntime.waitUntil` ou timeout máx de 25s. Função travada hoje prende worker.
+
+---
+
+## 3. Capacidade esperada após as 4 ondas
+
+| Plano | Hoje (sem otimizar) | Pós-Onda 1+2 | Pós-Onda 3+4 |
+|---|---|---|---|
+| Small (2GB)  | ~50 ativos / 15 workspaces  | ~150 / 40  | **~250 / 70** |
+| Medium (4GB) | ~150 ativos / 40 workspaces | ~400 / 100 | **~700 / 180** |
+| Large (8GB)  | ~400 ativos / 100 workspaces| ~1000 / 250| **~1800 / 450** |
+
+"Ativo" = usuário com sessão fazendo request nos últimos 60s. Total cadastrado é ~10x maior (a maioria fica idle).
+
+---
+
+## 4. Ordem de execução proposta
+
+1. **Onda 1 (HOJE, assim que DB estabilizar)** — uma migration com índices + RPC bootstrap + cron de retention. Risco baixo, ganho enorme. ~30 min.
+2. **Onda 2** — migrar 6 telas para realtimeManager. ~45 min, sem migration.
+3. **Onda 3** — refactor de hotspots (`useFinance`, `ClienteDashboard`, FeatureGate, paginação). ~60 min.
+4. **Onda 4** — auditoria edge functions e cron locks. Iterativo, conforme aparecerem warnings.
+
+Cada onda é **independente e reversível**. Posso parar entre elas se quiser validar.
+
+---
+
+## 5. Detalhes técnicos
+
+**Arquivos editados:**
+- `supabase/migrations/<timestamp>_perf_optimization.sql` (Onda 1)
+- `src/contexts/AuthContext.tsx` (Onda 1 — bootstrap consolidado)
+- `src/contexts/FeatureGateContext.tsx` (Onda 3 — backoff)
+- `src/pages/franqueado/FranqueadoSuporte.tsx` + 5 telas chat (Onda 2)
+- `src/hooks/useFinance.ts`, `useTeamChat.ts`, `useClienteContent.ts`, `useWhatsApp.ts`, `useOnboarding.ts`, `useClienteAgents.ts`, `useClientePosts.ts`, `useClienteScripts.ts`, `useUnits.ts`, `useClienteDispatches.ts`, `useAutomationLogs.ts` (Onda 3)
+- `src/lib/realtimeManager.ts` (Onda 2 — comentário lint guard)
+- `supabase/functions/process-asaas-webhook/`, `evolution-webhook/`, `receive-candidate/` (Onda 4 — pooler)
+
+**Métricas a acompanhar (aba Advanced):**
+- CPU sustentado < 60%
 - RAM < 75%
-- Disk I/O budget > 40% disponível
-- Conexões ativas < 50% do limite do plano
+- Disk I/O budget > 50% disponível
+- Conexões ativas < 50% do limite
+- p95 de query < 200ms
 
-## 7. Próximo passo agora
+**O que NÃO vou tocar:**
+- `src/integrations/supabase/client.ts` (auto-gerado)
+- Schemas reservados (`auth`, `storage`, `realtime`)
+- Lógica de billing/Asaas (intocável)
 
-Aguardar mais ~15 min e recarregar a Cloud. Quando os Users e métricas voltarem, **me avisa** e eu já começo pela Sprint 1 (bootstrap consolidado) — é a mudança que mais alivia o login sob carga.
+---
+
+## 6. Próximo passo
+
+Aguardando o DB estabilizar (`cloud_status` diz OK mas queries diretas ainda timeout = propagação rolando). Assim que a primeira `read_query` voltar com sucesso, **disparo a Onda 1 imediatamente**. Você quer que eu execute as 4 ondas em sequência ou paro entre cada uma para você validar?
