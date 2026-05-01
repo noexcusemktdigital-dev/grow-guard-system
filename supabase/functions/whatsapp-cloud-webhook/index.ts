@@ -6,6 +6,7 @@
 // =============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { verifyMetaWebhook } from "../_shared/hmac.ts";
 
 const VERSION = "v21.0";
 
@@ -49,9 +50,24 @@ Deno.serve(async (req) => {
   }
 
   // ─── POST: Webhook payload ───
+  // OBRIGATÓRIO: ler raw body ANTES de JSON.parse para validar HMAC
+  const rawBody = await req.text();
+
+  // Validação HMAC SHA-256 (header x-hub-signature-256)
+  // Tenta WHATSAPP_APP_SECRET primeiro, fallback META_APP_SECRET (caso seja mesmo Meta App)
+  const appSecret = Deno.env.get("WHATSAPP_APP_SECRET") ?? Deno.env.get("META_APP_SECRET");
+  const validation = await verifyMetaWebhook(req, rawBody, appSecret);
+  if (!validation.valid) {
+    console.warn(`[whatsapp-cloud-webhook] HMAC validation failed: ${validation.reason}`);
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
+  }
+
   let body: any;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch (e) {
     console.error("[whatsapp-cloud-webhook] Invalid JSON:", e);
     // Sempre responder 200 para a Meta não reentregar em loop, mas logar.
