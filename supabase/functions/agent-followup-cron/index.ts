@@ -37,6 +37,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // PERF early-exit: if there are no active WhatsApp agents at all, skip the
+    // expensive batch pre-fetch (wallets + instances) and message scans.
+    const { count: activeAgentsCount } = await adminClient
+      .from("client_ai_agents")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active")
+      .eq("channel", "whatsapp");
+    if (!activeAgentsCount || activeAgentsCount === 0) {
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: "no_active_agents" }), {
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      });
+    }
+
     // Find all active agents with followup enabled
     const { data: agents, error: agentsErr } = await adminClient
       .from("client_ai_agents")
