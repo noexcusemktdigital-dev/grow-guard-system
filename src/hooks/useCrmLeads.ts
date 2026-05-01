@@ -88,6 +88,34 @@ export function useCrmLeadById(id: string | undefined) {
   });
 }
 
+export function useCrmLeadTaskCounts(leadIds: string[]) {
+  return useQuery({
+    queryKey: ["crm-task-counts", leadIds.slice().sort().join(",")],
+    queryFn: async () => {
+      if (!leadIds.length) return {} as Record<string, { total: number; overdue: number }>;
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("crm_tasks")
+        .select("lead_id, due_date, completed_at")
+        .in("lead_id", leadIds)
+        .is("completed_at", null);
+      const counts: Record<string, { total: number; overdue: number }> = {};
+      (data || []).forEach((task: any) => {
+        if (!task.lead_id) return;
+        if (!counts[task.lead_id]) counts[task.lead_id] = { total: 0, overdue: 0 };
+        counts[task.lead_id].total++;
+        if (task.due_date && String(task.due_date).slice(0, 10) < today) {
+          counts[task.lead_id].overdue++;
+        }
+      });
+      return counts;
+    },
+    enabled: leadIds.length > 0,
+    staleTime: 1000 * 60 * 2,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useCrmLeadMutations() {
   const qc = useQueryClient();
   const { data: orgId } = useUserOrgId();
