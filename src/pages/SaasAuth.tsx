@@ -88,7 +88,18 @@ const SaasAuth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    let signInResult;
+    try {
+      signInResult = await supabase.auth.signInWithPassword({ email, password });
+    } catch (networkErr) {
+      setLoading(false);
+      logger.error("[SaasAuth] login network error", networkErr);
+      toast.error("Não conseguimos contatar o servidor. Verifique sua conexão e tente novamente em instantes.");
+      return;
+    }
+
+    const { data, error } = signInResult;
     if (error) {
       setLoading(false);
       const msg = (error.message || "").toLowerCase();
@@ -107,6 +118,8 @@ const SaasAuth = () => {
         toast.error("Nenhuma conta encontrada com esse e-mail. Verifique o endereço ou crie uma conta.");
       } else if (msg.includes("user disabled") || msg.includes("banned")) {
         toast.error("Esta conta está bloqueada. Entre em contato com o suporte.");
+      } else if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
+        toast.error("Serviço temporariamente lento. Aguarde alguns segundos e tente novamente.");
       } else if (status && status >= 500) {
         toast.error("Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.");
       } else {
@@ -114,26 +127,21 @@ const SaasAuth = () => {
       }
       return;
     }
-    // Block franchise users from SaaS portal (with timeout fallback)
-    try {
-      const check = await Promise.race([
-        validatePortalAccess(data.user.id, "saas"),
-        new Promise<{ allowed: boolean }>((resolve) =>
-          setTimeout(() => resolve({ allowed: true }), 3000)
-        ),
-      ]);
-      if (!check.allowed) {
-        setLoading(false);
-        await supabase.auth.signOut({ scope: 'local' });
-        toast.error((check as unknown as { message?: string }).message || "Acesso negado.");
-        if ((check as unknown as { redirect?: string }).redirect) navigate((check as unknown as { redirect?: string }).redirect);
-        return;
-      }
-    } catch (err) {
-      // Portal validation failed, proceeding
-    }
+
+    // Sign-in succeeded — navigate immediately. Portal validation runs in background
+    // and only acts if it returns an explicit deny. DB slowness must NOT block login.
     setLoading(false);
     navigate("/cliente/inicio");
+
+    validatePortalAccess(data.user.id, "saas")
+      .then(async (check) => {
+        if (!check.allowed) {
+          await supabase.auth.signOut({ scope: "local" });
+          toast.error(check.message || "Acesso negado.");
+          if (check.redirect) navigate(check.redirect);
+        }
+      })
+      .catch((err) => logger.warn("[SaasAuth] portal validation deferred error", err));
   };
 
   const passwordChecks = [
