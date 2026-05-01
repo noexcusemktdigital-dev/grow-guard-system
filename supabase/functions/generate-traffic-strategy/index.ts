@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { debitIfGPSDone } from '../_shared/credits.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
@@ -56,19 +57,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Pre-check credits (200 for traffic strategy)
-    const CREDIT_COST = 50;
+    // Pre-check + débito condicional ao GPS aprovado
+    const CREDIT_COST = 25;
     {
-      const { data: wallet } = await adminClient
-        .from("credit_wallets")
-        .select("balance")
-        .eq("organization_id", organization_id)
-        .maybeSingle();
-      if (!wallet || wallet.balance < CREDIT_COST) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos.", code: "INSUFFICIENT_CREDITS" }),
-          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
+      const debited = await debitIfGPSDone(
+        adminClient, organization_id, CREDIT_COST, "Estratégia de tráfego", "generate-traffic-strategy",
+        supabaseUrl, serviceRoleKey
+      );
+      if (debited === false) {
+        const { data: wallet } = await adminClient
+          .from("credit_wallets")
+          .select("balance")
+          .eq("organization_id", organization_id)
+          .maybeSingle();
+        if (!wallet || wallet.balance < CREDIT_COST) {
+          return new Response(
+            JSON.stringify({ error: "Créditos insuficientes. Você precisa de " + CREDIT_COST + " créditos.", code: "INSUFFICIENT_CREDITS" }),
+            { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 

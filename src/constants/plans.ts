@@ -23,14 +23,14 @@ export const UNIFIED_PLANS: UnifiedPlan[] = [
     name: "Starter",
     price: 349,
     credits: 500,
-    maxUsers: 10,
-    maxPipelines: 10,
+    maxUsers: 5,
+    maxPipelines: 5,
     hasAiAgent: true,
     hasWhatsApp: true,
     hasDispatches: true,
     popular: false,
     features: [
-      "CRM completo (10 pipelines)",
+      "CRM completo (5 pipelines)",
       "Scripts de vendas",
       "Relatórios comerciais",
       "Marketing completo (conteúdos, artes, sites, tráfego)",
@@ -38,15 +38,15 @@ export const UNIFIED_PLANS: UnifiedPlan[] = [
       "Chat WhatsApp",
       "Disparos em massa",
       "500 créditos/mês",
-      "Até 10 usuários",
+      "Até 5 usuários",
     ],
   },
   {
     id: "pro",
     name: "Pro",
     price: 739,
-    credits: 1000,
-    maxUsers: 20,
+    credits: 1500,
+    maxUsers: 15,
     maxPipelines: 20,
     hasAiAgent: true,
     hasWhatsApp: true,
@@ -55,15 +55,15 @@ export const UNIFIED_PLANS: UnifiedPlan[] = [
     features: [
       "Tudo do Starter",
       "CRM com 20 pipelines",
-      "1.000 créditos/mês",
-      "Até 20 usuários",
+      "1.500 créditos/mês",
+      "Até 15 usuários",
     ],
   },
   {
     id: "enterprise",
     name: "Enterprise",
     price: 1429,
-    credits: 2000,
+    credits: 3000,
     maxUsers: 9999,
     maxPipelines: 50,
     hasAiAgent: true,
@@ -74,7 +74,7 @@ export const UNIFIED_PLANS: UnifiedPlan[] = [
       "Tudo do Pro",
       "Usuários ilimitados",
       "Pipelines ilimitados",
-      "2.000 créditos/mês",
+      "3.000 créditos/mês",
       "Gerente dedicado",
       "API avançada",
       "Suporte prioritário",
@@ -134,9 +134,9 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack-200",  credits: 200,  price: 49,  popular: false },
-  { id: "pack-500",  credits: 500,  price: 99,  popular: true },
-  { id: "pack-1000", credits: 1000, price: 179, popular: false },
+  { id: "pack-200",  credits: 200,  price: 69,  popular: false },
+  { id: "pack-500",  credits: 500,  price: 149, popular: true },
+  { id: "pack-1000", credits: 1000, price: 279, popular: false },
 ];
 
 // ── Extra User ──────────────────────────────────────────────────
@@ -161,9 +161,9 @@ export interface EffectiveLimits {
 
 // ── CRM Lead Limits per plan ────────────────────────────────────
 export const CRM_LEAD_LIMITS: Record<string, number> = {
-  starter: 500,
-  pro: 8000,
-  enterprise: 8000,
+  starter: 800,
+  pro: 5000,
+  enterprise: 999999,
 };
 
 export function getEffectiveLimits(
@@ -188,8 +188,8 @@ export function getEffectiveLimits(
   const plan = UNIFIED_PLANS.find((p) => p.id === planId);
 
   const siteLimits: Record<string, number> = {
-    starter: 1,
-    pro: 3,
+    starter: 2,
+    pro: 5,
     enterprise: 9999,
   };
 

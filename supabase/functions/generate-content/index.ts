@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { debitIfGPSDone } from '../_shared/credits.ts';
 
 const CREDIT_COST_PER_CONTENT = 30;
 
@@ -43,19 +44,26 @@ serve(async (req) => {
     const count = Number(quantidade) || 8;
     const totalCreditCost = CREDIT_COST_PER_CONTENT * count;
 
-    // Pre-check credits
+    // Pre-check + débito condicional ao GPS aprovado
     if (organization_id) {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      const { data: wallet } = await adminClient
-        .from("credit_wallets")
-        .select("balance")
-        .eq("organization_id", organization_id)
-        .maybeSingle();
-      if (!wallet || wallet.balance < totalCreditCost) {
-        return new Response(
-          JSON.stringify({ error: `Créditos insuficientes. Você precisa de ${totalCreditCost} créditos para ${count} conteúdos.`, code: "INSUFFICIENT_CREDITS" }),
-          { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-        );
+      const debited = await debitIfGPSDone(
+        adminClient, organization_id, totalCreditCost, `Geração de ${count} conteúdo(s)`, "generate-content",
+        Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      if (debited === false) {
+        // GPS ainda não aprovado: não debita, mas valida saldo mínimo
+        const { data: wallet } = await adminClient
+          .from("credit_wallets")
+          .select("balance")
+          .eq("organization_id", organization_id)
+          .maybeSingle();
+        if (!wallet || wallet.balance < totalCreditCost) {
+          return new Response(
+            JSON.stringify({ error: `Créditos insuficientes. Você precisa de ${totalCreditCost} créditos para ${count} conteúdos.`, code: "INSUFFICIENT_CREDITS" }),
+            { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          );
+        }
       }
     }
 

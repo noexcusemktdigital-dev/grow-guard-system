@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { debitIfGPSDone } from '../_shared/credits.ts';
 
 const CREDIT_COST = 50;
 
@@ -654,6 +655,27 @@ Deno.serve(async (req) => {
     }
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Débito condicional ao GPS aprovado (no-op no primeiro GPS; debita em regenerações)
+    if (organization_id) {
+      const debited = await debitIfGPSDone(
+        serviceClient, organization_id, CREDIT_COST, "Estratégia de marketing", "generate-strategy",
+        Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      if (debited === false) {
+        const { data: wallet } = await serviceClient
+          .from("credit_wallets")
+          .select("balance")
+          .eq("organization_id", organization_id)
+          .maybeSingle();
+        if (wallet && wallet.balance < CREDIT_COST) {
+          return new Response(
+            JSON.stringify({ error: `Créditos insuficientes. Você precisa de ${CREDIT_COST} créditos.`, code: "INSUFFICIENT_CREDITS" }),
+            { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
 
     // ── Enrich answers with site content (if URL provided) ──────────
     const siteUrl = (answers?.website_url || answers?.site_url || answers?.website || answers?.site || "").toString().trim();
