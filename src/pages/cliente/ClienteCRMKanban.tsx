@@ -32,6 +32,12 @@ function QuickTaskPopover({ lead, children }: { lead: LeadRow; children: React.R
   const [dueDate, setDueDate] = useState(initialDate);
 
   if (!task) return <>{children}</>;
+  const isSynthetic = typeof task.id === "string" && task.id.startsWith("syn-");
+  if (isSynthetic) {
+    // Task counts are derived from a lightweight aggregate query (performance);
+    // detailed editing is available from the lead detail drawer.
+    return <>{children}</>;
+  }
 
   const handleSave = async () => {
     if (!dueDate) return;

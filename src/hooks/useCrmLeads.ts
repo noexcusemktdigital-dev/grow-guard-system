@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
 import { useState, useCallback } from "react";
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 50;
 
 export function useCrmLeads(funnelId?: string, stage?: string) {
   const { data: orgId } = useUserOrgId();
@@ -20,7 +20,7 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
     queryFn: async () => {
       let q = supabase
         .from("crm_leads")
-        .select("id, name, phone, email, company, value, stage, source, tags, created_at, won_at, lost_at, lost_reason, assigned_to, funnel_id, temperature, whatsapp_contact_id, updated_at, crm_tasks(id, due_date, completed_at)", { count: "exact" })
+        .select("id, name, phone, email, company, value, stage, source, tags, created_at, won_at, lost_at, lost_reason, assigned_to, funnel_id, temperature, whatsapp_contact_id, updated_at", { count: "exact" })
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -38,7 +38,8 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
       return { data: data ?? [], count: count ?? 0, page, pageSize: PAGE_SIZE };
     },
     enabled: !!orgId,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 3,
+    refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
 
@@ -84,6 +85,34 @@ export function useCrmLeadById(id: string | undefined) {
       return data;
     },
     enabled: !!id && !!orgId,
+  });
+}
+
+export function useCrmLeadTaskCounts(leadIds: string[]) {
+  return useQuery({
+    queryKey: ["crm-task-counts", leadIds.slice().sort().join(",")],
+    queryFn: async () => {
+      if (!leadIds.length) return {} as Record<string, { total: number; overdue: number }>;
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("crm_tasks")
+        .select("lead_id, due_date, completed_at")
+        .in("lead_id", leadIds)
+        .is("completed_at", null);
+      const counts: Record<string, { total: number; overdue: number }> = {};
+      (data || []).forEach((task: any) => {
+        if (!task.lead_id) return;
+        if (!counts[task.lead_id]) counts[task.lead_id] = { total: 0, overdue: 0 };
+        counts[task.lead_id].total++;
+        if (task.due_date && String(task.due_date).slice(0, 10) < today) {
+          counts[task.lead_id].overdue++;
+        }
+      });
+      return counts;
+    },
+    enabled: leadIds.length > 0,
+    staleTime: 1000 * 60 * 2,
+    refetchOnWindowFocus: false,
   });
 }
 
