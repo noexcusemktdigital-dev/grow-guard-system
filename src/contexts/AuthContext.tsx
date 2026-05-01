@@ -47,9 +47,16 @@ function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number, fallback: T): P
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  // Hydrate role from cache to keep app usable when DB is slow/unavailable.
-  // Real role is re-fetched in background; cache is only a fallback.
+  // Hydrate profile + role from cache to keep app usable when DB is slow/unavailable.
+  // Real values re-fetched in background; cache is only a fallback to avoid blank UI.
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    try {
+      const cached = localStorage.getItem("noe-cached-profile");
+      return cached ? (JSON.parse(cached) as Profile) : null;
+    } catch {
+      return null;
+    }
+  });
   const [role, setRole] = useState<AppRole | null>(() => {
     try {
       const cached = localStorage.getItem("noe-cached-role");
@@ -98,7 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const [profileResult, roleResult] = await Promise.all([
         fetchWithRetry(
-          () => supabase.from("profiles").select("*").eq("id", currentUser.id).single(),
+          // PERF: only fetch the columns the AuthContext exposes — avoids reading
+          // every profile column on every login (lighter on DB I/O).
+          () => supabase.from("profiles").select("id,full_name,avatar_url,phone,job_title").eq("id", currentUser.id).single(),
           "Profile fetch"
         ),
         fetchWithRetry(
@@ -109,7 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Handle profile
       if (profileResult?.data) {
-        setProfile(profileResult.data as Profile);
+        const p = profileResult.data as Profile;
+        setProfile(p);
+        try { localStorage.setItem("noe-cached-profile", JSON.stringify(p)); } catch {}
       }
 
       // Handle roles
@@ -326,6 +337,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setRole(null);
     lastFetchedUserRef.current = null;
+    try {
+      localStorage.removeItem("noe-cached-role");
+      localStorage.removeItem("noe-cached-profile");
+    } catch {}
     window.location.href = target;
   };
 
@@ -333,11 +348,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id,full_name,avatar_url,phone,job_title")
         .eq("id", user.id)
         .single();
       if (profileData) {
-        setProfile(profileData as Profile);
+        const p = profileData as Profile;
+        setProfile(p);
+        try { localStorage.setItem("noe-cached-profile", JSON.stringify(p)); } catch {}
       }
     }
   };
