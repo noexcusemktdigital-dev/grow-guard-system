@@ -26,6 +26,7 @@ import { useCrmLeads } from "@/hooks/useClienteCrm";
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useLinkContactToCrmLead } from "@/hooks/useWhatsApp";
 import { supabase } from "@/lib/supabase";
+import { subscribeToTable } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -147,48 +148,52 @@ export default function ClienteChat() {
   const selectedContactIdRef = useRef<string | null>(null);
   useEffect(() => { selectedContactIdRef.current = selectedContactId; }, [selectedContactId]);
 
-  // Realtime subscriptions with connection tracking
+  // PERF: usa o realtimeManager (singleton por org) para compartilhar uma única
+  // conexão WebSocket entre múltiplas tabelas (whatsapp_messages, whatsapp_contacts).
+  // Mantém o fallback de polling quando o realtime desconecta por mais de 10s.
   useEffect(() => {
-    if (!instance?.organization_id) return;
+    const orgIdScoped = instance?.organization_id;
+    if (!orgIdScoped) return;
 
-    const channel = supabase
-      .channel(`whatsapp-realtime-${instance.organization_id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter: `organization_id=eq.${instance.organization_id}` }, (payload: Record<string, unknown>) => {
-        const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
-        if (changedContactId && changedContactId === selectedContactIdRef.current) {
-          queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+    const handleMessages = (payload: { new?: { contact_id?: string }; old?: { contact_id?: string } }) => {
+      const changedContactId = payload.new?.contact_id || payload.old?.contact_id;
+      if (changedContactId && changedContactId === selectedContactIdRef.current) {
+        queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    };
+    const handleContacts = () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+    };
+
+    const handleStatus = (status: string) => {
+      if (status === "SUBSCRIBED") {
+        setRealtimeConnected(true);
+        disconnectedAtRef.current = null;
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
         }
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_contacts", filter: `organization_id=eq.${instance.organization_id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          setRealtimeConnected(true);
-          disconnectedAtRef.current = null;
-          // Stop polling if active
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (!disconnectedAtRef.current) disconnectedAtRef.current = Date.now();
+        setTimeout(() => {
+          if (disconnectedAtRef.current && Date.now() - disconnectedAtRef.current >= 10000 && !pollingRef.current) {
+            setRealtimeConnected(false);
+            pollingRef.current = setInterval(() => {
+              queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
+              queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
+            }, 5000);
           }
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          if (!disconnectedAtRef.current) disconnectedAtRef.current = Date.now();
-          // Start polling fallback after 10s disconnected
-          setTimeout(() => {
-            if (disconnectedAtRef.current && Date.now() - disconnectedAtRef.current >= 10000 && !pollingRef.current) {
-              setRealtimeConnected(false);
-              pollingRef.current = setInterval(() => {
-                queryClient.invalidateQueries({ queryKey: ["whatsapp-messages"] });
-                queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
-              }, 5000);
-            }
-          }, 10000);
-        }
-      });
+        }, 10000);
+      }
+    };
+
+    const unsubMessages = subscribeToTable(orgIdScoped, "whatsapp_messages", handleMessages, "organization_id", handleStatus);
+    const unsubContacts = subscribeToTable(orgIdScoped, "whatsapp_contacts", handleContacts);
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubMessages();
+      unsubContacts();
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
     };
   }, [instance?.organization_id, queryClient]);

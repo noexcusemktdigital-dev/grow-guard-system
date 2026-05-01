@@ -18,6 +18,7 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmSettings, useCrmSettingsMutations } from "@/hooks/useCrmSettings";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { subscribeToTable } from "@/lib/realtimeManager";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -59,16 +60,15 @@ export default function ClienteIntegracoes() {
     }
   }, [settings]);
 
-  // Realtime subscription for whatsapp_instances billing_status updates
+  // PERF: usa o realtimeManager (singleton por org) em vez de abrir um channel dedicado.
+  // Isso compartilha a conexão WebSocket com outras telas do mesmo workspace
+  // (ClienteChat, etc.), reduzindo conexões e carga no servidor.
   useEffect(() => {
     if (!orgId) return;
-    const channel = supabase
-      .channel(`whatsapp-billing-${orgId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_instances", filter: `organization_id=eq.${orgId}` }, () => {
-        refetch();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const unsub = subscribeToTable(orgId, "whatsapp_instances", () => {
+      refetch();
+    });
+    return unsub;
   }, [orgId, refetch]);
 
   const generateApiKey = useMutation({

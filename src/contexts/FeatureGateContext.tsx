@@ -88,6 +88,10 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
   const { hasStrategy: hasApprovedGPS, isLoading: isLoadingStrategy } = useHasActiveStrategy();
   const isTrial = subscription?.status === "trial";
 
+  // PERF: payment_blocked muda raramente (manual + via webhook Asaas).
+  // Antes: refetch a cada 60s em TODA sessão autenticada — 1 query por usuário ativo por minuto.
+  // Agora: staleTime 5min + refetch a cada 5min. Reduz carga em ~5x sem perder responsividade
+  // (webhook Asaas invalida a query manualmente quando bloqueia/desbloqueia).
   const { data: orgPaymentData } = useQuery({
     queryKey: ["org-payment-status", orgId],
     queryFn: async () => {
@@ -99,7 +103,9 @@ export function FeatureGateProvider({ children }: { children: ReactNode }) {
       return data as { payment_blocked: boolean | null; payment_blocked_at: string | null } | null;
     },
     enabled: !!orgId,
-    refetchInterval: 60_000,
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const isPaymentBlocked = orgPaymentData?.payment_blocked === true;
