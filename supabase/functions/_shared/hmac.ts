@@ -13,6 +13,7 @@ export async function computeMetaSignature(secret: string, rawBody: string): Pro
   return 'sha256=' + Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Constant-time comparison. */
 export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let result = 0;
@@ -25,6 +26,7 @@ export interface MetaWebhookValidation {
   reason?: string;
 }
 
+/** Valida x-hub-signature-256 com APP_SECRET. */
 export async function verifyMetaWebhook(
   req: Request, rawBody: string, secret: string | undefined
 ): Promise<MetaWebhookValidation> {
