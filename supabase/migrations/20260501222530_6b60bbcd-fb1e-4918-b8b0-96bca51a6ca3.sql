@@ -1,0 +1,1 @@
+SELECT public._chunked_delete_old_automation_logs(30, 100000, 2) AS deleted;
