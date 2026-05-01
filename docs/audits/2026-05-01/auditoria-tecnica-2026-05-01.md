@@ -496,11 +496,11 @@ browser ↔ edge fn (74 com `verify_jwt=false`) · edge fn ↔ Supabase DB (RLS 
 
 ## AGENTE 16 — A11Y (Acessibilidade) {#a16-a11y}
 
-**Aplicabilidade:** Aplicável | **Maturidade:** 6.5/10 | **Risco:** 4/10 | **Confiança:** Média
+**Aplicabilidade:** Aplicável | **Maturidade:** 7.0/10 (revisada após verificação) | **Risco:** 3/10 | **Confiança:** Média
 
 ### Achados
 - **A11Y-001 [P2]** Sem axe-core/jest-axe no CI. 125+ páginas sem gate automático
-- **A11Y-002 [P3]** 7 imagens sem `alt`. Catalogar
+- **A11Y-002 [FALSO POSITIVO — verificado 2026-05-01]** ~~7 imagens sem `alt`. Catalogar~~ — **Revalidação detectou: regex multi-linha do auditor original errou. Todas 7 imagens TÊM alt apropriado** (Logo, QR Code PIX, QR Code WhatsApp, Imagem ampliada, Avatar acessório com alt="", \\{name\\} dinâmico). Validado com `grep -Pzo` e leitura manual.
 - **A11Y-003 [P3]** Não auditado: contraste em 370 cores customizadas
 
 ---
@@ -598,6 +598,24 @@ browser ↔ edge fn (74 com `verify_jwt=false`) · edge fn ↔ Supabase DB (RLS 
 **Bloqueadores legais:** LGPD-001, LGPD-002
 
 **Próximo ciclo recomendado:** após implementação dos 4 itens 24h (INT-001, INT-002, API-004, LGPD-001), reauditar com cobertura dinâmica (Playwright multi-perfil) e validação RLS exaustiva.
+
+---
+
+## Status de Remediação — atualizado 2026-05-01 21:30 BRT
+
+**15 PRs criados nesta data atacando os achados.** Ver [`remediacao-status.md`](./remediacao-status.md) para tabela completa, ordem de merge, conflitos esperados e ações pendentes.
+
+### P0 (24h SLA) — cobertura
+| Achado | PR | Cobertura |
+|--------|----|-----------|
+| INT-001 Meta HMAC | [#2](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/2) | 100% |
+| INT-002 WhatsApp HMAC | [#3](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/3) | 100% |
+| API-004 Asaas idempotência | [#6](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/6) | 100% (3 fns + dedup webhook) |
+| LGPD-001 PII redact | [#7](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/7) | 100% (~24 logs em 15 fns) |
+| SEC-002/API-006 BOLA | [#8](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/8) | parcial (3 fns financeiras + helper) |
+
+### Estruturais P1/P2 atacados
+DX-001 [#4] · SUPPLY-002/003 [#5] · DX-003 [#9] · DX-002 [#10] · API-005 [#11] (parcial) · OPS-CRITICAL-01 [#12] (parcial) · API-008 [#13] · INT-005 [#14] (parcial) · AI-001 [#15] (parcial) · API-001 [#16] (parcial)
 
 ---
 
