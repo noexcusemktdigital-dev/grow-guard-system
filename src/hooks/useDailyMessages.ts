@@ -15,6 +15,9 @@ export function useDailyMessages() {
       return (data as Record<string, unknown>[])?.[0] ?? null;
     },
     enabled: !!orgId,
+    // PERF: muda no máximo 1x por dia
+    staleTime: 1000 * 60 * 60 * 4, // 4h
+    refetchOnWindowFocus: false,
   });
 }
 

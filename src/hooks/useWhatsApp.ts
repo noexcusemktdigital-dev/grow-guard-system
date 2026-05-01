@@ -77,6 +77,9 @@ export function useWhatsAppInstances() {
       return (data || []) as unknown as WhatsAppInstance[];
     },
     enabled: !!orgId,
+    // PERF: status de instância raramente muda; refresh por evento de conexão
+    staleTime: 1000 * 60 * 30, // 30min
+    refetchOnWindowFocus: false,
   });
 }
 
