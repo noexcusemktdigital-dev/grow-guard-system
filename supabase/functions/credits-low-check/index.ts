@@ -5,10 +5,14 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkCronSecret } from '../_shared/cron-auth.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: getCorsHeaders(req) });
   const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' };
+
+  const authError = checkCronSecret(req);
+  if (authError) return authError;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
