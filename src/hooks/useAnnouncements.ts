@@ -21,6 +21,9 @@ export function useAnnouncements(filterByRole?: string) {
       return data;
     },
     enabled: !!orgId,
+    // PERF: anúncios raramente mudam
+    staleTime: 1000 * 60 * 60, // 1h
+    refetchOnWindowFocus: false,
   });
 }
 
