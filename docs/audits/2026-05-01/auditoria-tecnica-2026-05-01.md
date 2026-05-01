@@ -608,8 +608,8 @@ browser ↔ edge fn (74 com `verify_jwt=false`) · edge fn ↔ Supabase DB (RLS 
 ### P0 (24h SLA) — cobertura
 | Achado | PR | Cobertura |
 |--------|----|-----------|
-| INT-001 Meta HMAC | [#2](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/2) | 100% |
-| INT-002 WhatsApp HMAC | [#3](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/3) | 100% |
+| INT-001 Meta HMAC | [#5](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/5) | 100% |
+| INT-002 WhatsApp HMAC | [#4](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/4) | 100% |
 | API-004 Asaas idempotência | [#6](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/6) | 100% (3 fns + dedup webhook) |
 | LGPD-001 PII redact | [#7](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/7) | 100% (~24 logs em 15 fns) |
 | SEC-002/API-006 BOLA | [#8](https://github.com/noexcusemktdigital-dev/grow-guard-system/pull/8) | parcial (3 fns financeiras + helper) |
