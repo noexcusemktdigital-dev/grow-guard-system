@@ -127,7 +127,24 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
     return DEFAULT_STAGES;
   }, [selectedFunnel]);
 
-  const allLeads = leads ?? [];
+  const rawLeads = leads ?? [];
+  const leadIds = useMemo(() => rawLeads.map((l: any) => l.id), [rawLeads]);
+  const { data: taskCounts } = useCrmLeadTaskCounts(leadIds);
+  const allLeads = useMemo(() => {
+    if (!taskCounts) return rawLeads;
+    const todayStr = new Date().toISOString().split("T")[0];
+    const yesterday = `${todayStr}T00:00:00.000Z`;
+    const tomorrow = `${todayStr}T23:59:59.999Z`;
+    return rawLeads.map((l: any) => {
+      const c = taskCounts[l.id];
+      if (!c || c.total === 0) return { ...l, crm_tasks: [] };
+      // Synthesize minimal crm_tasks entries for backward compatibility with card UI
+      const tasks: any[] = [];
+      for (let i = 0; i < c.overdue; i++) tasks.push({ id: `syn-o-${l.id}-${i}`, due_date: yesterday, completed_at: null });
+      for (let i = 0; i < c.total - c.overdue; i++) tasks.push({ id: `syn-p-${l.id}-${i}`, due_date: tomorrow, completed_at: null });
+      return { ...l, crm_tasks: tasks };
+    });
+  }, [rawLeads, taskCounts]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
