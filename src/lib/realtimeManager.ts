@@ -33,6 +33,10 @@ interface ManagedChannel {
   handlers: Map<string, TableChangeHandler[]>;
   /** Count of active subscriptions — channel is removed when this reaches 0. */
   refCount: number;
+  /** Status listeners (e.g. for polling fallback when realtime drops). */
+  statusListeners: Array<(status: string) => void>;
+  /** Last known channel status, replayed to new listeners. */
+  lastStatus?: string;
 }
 
 // Module-level singletons — one channel per "scope key" (org or user ID).
@@ -61,6 +65,7 @@ export function subscribeToTable(
   table: string,
   handler: TableChangeHandler,
   filterCol = "organization_id",
+  onStatus?: (status: string) => void,
 ): () => void {
   if (!scopeId) {
     // Guard: don't create channels for unauthenticated renders
@@ -76,20 +81,24 @@ export function subscribeToTable(
       channel,
       handlers: new Map(),
       refCount: 0,
+      statusListeners: [],
     });
   }
 
   const entry = managed.get(key)!;
+
+  // Register status listener if provided (shared across all subscribers of this scope)
+  if (onStatus) {
+    entry.statusListeners.push(onStatus);
+    // If channel already has a known status, fire immediately
+    if (entry.lastStatus) onStatus(entry.lastStatus);
+  }
 
   // Register handler
   if (!entry.handlers.has(table)) {
     entry.handlers.set(table, []);
 
     // Add a single postgres_changes listener for this table on the shared channel.
-    // Supabase allows multiple .on() calls before .subscribe().
-    // If the channel is already subscribed, calling .on() again does NOT add a
-    // new listener at the socket level — we therefore fan-out in userland via
-    // the handlers Map below.
     entry.channel.on(
       "postgres_changes",
       {
@@ -114,8 +123,15 @@ export function subscribeToTable(
   entry.handlers.get(table)!.push(handler);
   entry.refCount += 1;
 
-  // Subscribe (idempotent — Supabase ignores re-subscribe on an already-subscribed channel)
-  entry.channel.subscribe();
+  // Subscribe with status fan-out (idempotent — Supabase ignores re-subscribe)
+  entry.channel.subscribe((status) => {
+    entry.lastStatus = status;
+    for (const listener of entry.statusListeners) {
+      try { listener(status); } catch (err) {
+        console.error("[RealtimeManager] Status listener error:", err);
+      }
+    }
+  });
 
   // Return cleanup function
   return () => {
@@ -126,6 +142,12 @@ export function subscribeToTable(
     const tableHandlers = current.handlers.get(table) ?? [];
     const idx = tableHandlers.indexOf(handler);
     if (idx !== -1) tableHandlers.splice(idx, 1);
+
+    // Remove status listener if registered
+    if (onStatus) {
+      const sIdx = current.statusListeners.indexOf(onStatus);
+      if (sIdx !== -1) current.statusListeners.splice(sIdx, 1);
+    }
 
     current.refCount -= 1;
 
