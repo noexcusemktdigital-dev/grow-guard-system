@@ -39,6 +39,7 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
     },
     enabled: !!orgId,
     staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
