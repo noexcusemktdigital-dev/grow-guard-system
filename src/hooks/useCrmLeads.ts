@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
 import { useState, useCallback } from "react";
 
-const PAGE_SIZE = 200;
+const PAGE_SIZE = 50;
 
 export function useCrmLeads(funnelId?: string, stage?: string) {
   const { data: orgId } = useUserOrgId();
@@ -20,7 +20,7 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
     queryFn: async () => {
       let q = supabase
         .from("crm_leads")
-        .select("id, name, phone, email, company, value, stage, source, tags, created_at, won_at, lost_at, lost_reason, assigned_to, funnel_id, temperature, whatsapp_contact_id, updated_at, crm_tasks(id, due_date, completed_at)", { count: "exact" })
+        .select("id, name, phone, email, company, value, stage, source, tags, created_at, won_at, lost_at, lost_reason, assigned_to, funnel_id, temperature, whatsapp_contact_id, updated_at", { count: "exact" })
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -38,7 +38,8 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
       return { data: data ?? [], count: count ?? 0, page, pageSize: PAGE_SIZE };
     },
     enabled: !!orgId,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 3,
+    refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
 
