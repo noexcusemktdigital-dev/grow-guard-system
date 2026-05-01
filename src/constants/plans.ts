@@ -161,9 +161,9 @@ export interface EffectiveLimits {
 
 // ── CRM Lead Limits per plan ────────────────────────────────────
 export const CRM_LEAD_LIMITS: Record<string, number> = {
-  starter: 500,
-  pro: 8000,
-  enterprise: 8000,
+  starter: 800,
+  pro: 5000,
+  enterprise: 999999,
 };
 
 export function getEffectiveLimits(
