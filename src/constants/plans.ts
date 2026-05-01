@@ -188,8 +188,8 @@ export function getEffectiveLimits(
   const plan = UNIFIED_PLANS.find((p) => p.id === planId);
 
   const siteLimits: Record<string, number> = {
-    starter: 1,
-    pro: 3,
+    starter: 2,
+    pro: 5,
     enterprise: 9999,
   };
 
