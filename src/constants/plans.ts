@@ -134,9 +134,9 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "pack-200",  credits: 200,  price: 49,  popular: false },
-  { id: "pack-500",  credits: 500,  price: 99,  popular: true },
-  { id: "pack-1000", credits: 1000, price: 179, popular: false },
+  { id: "pack-200",  credits: 200,  price: 69,  popular: false },
+  { id: "pack-500",  credits: 500,  price: 149, popular: true },
+  { id: "pack-1000", credits: 1000, price: 279, popular: false },
 ];
 
 // ── Extra User ──────────────────────────────────────────────────
