@@ -854,6 +854,45 @@ export type Database = {
           organization_id?: string
           status?: string
         }
+        Relationships: []
+      }
+      automation_execution_logs_old: {
+        Row: {
+          action_type: string | null
+          automation_id: string | null
+          created_at: string
+          error_message: string | null
+          event_id: string | null
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          organization_id: string
+          status: string
+        }
+        Insert: {
+          action_type?: string | null
+          automation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id: string
+          status?: string
+        }
+        Update: {
+          action_type?: string | null
+          automation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_id?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string
+          status?: string
+        }
         Relationships: [
           {
             foreignKeyName: "automation_execution_logs_automation_id_fkey"
@@ -877,6 +916,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      automation_execution_logs_recent: {
+        Row: {
+          action_type: string | null
+          automation_id: string | null
+          created_at: string | null
+          error_message: string | null
+          event_id: string | null
+          id: string | null
+          lead_id: string | null
+          metadata: Json | null
+          organization_id: string | null
+          status: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          automation_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_id?: string | null
+          id?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          automation_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_id?: string | null
+          id?: string | null
+          lead_id?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          status?: string | null
+        }
+        Relationships: []
       }
       calculator_settings: {
         Row: {
