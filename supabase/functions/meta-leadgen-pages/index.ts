@@ -3,6 +3,7 @@
 // Requer JWT do usuário (a função busca a conexão ads ativa da org).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { redact } from "../_shared/redact.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -166,7 +167,7 @@ Deno.serve(async (req) => {
         `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${pageAccessToken}`,
       );
       let j = await r.json();
-      console.log("[meta-leadgen-pages] leadgen_forms (page token):", JSON.stringify(j));
+      console.log("[meta-leadgen-pages] leadgen_forms (page token):", JSON.stringify(redact(j)));
 
       // Fallback: tenta com user token se page token falhar por permissão
       if (j.error) {
@@ -175,7 +176,7 @@ Deno.serve(async (req) => {
           `https://graph.facebook.com/v21.0/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time&limit=100&access_token=${accessToken}`,
         );
         j = await r.json();
-        console.log("[meta-leadgen-pages] leadgen_forms (user token):", JSON.stringify(j));
+        console.log("[meta-leadgen-pages] leadgen_forms (user token):", JSON.stringify(redact(j)));
       }
 
       if (j.error) {

@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { redact } from "../_shared/redact.ts";
 
 // ============================================================
 // HMAC-SHA256 state verification
@@ -234,7 +235,7 @@ serve(async (req) => {
             `https://graph.facebook.com/v25.0/debug_token?input_token=${encodeURIComponent(accessToken)}&access_token=${encodeURIComponent(`${clientId}|${clientSecret}`)}`,
           );
           const dbgData = await dbgRes.json();
-          console.log("Meta debug_token response:", JSON.stringify(dbgData));
+          console.log("Meta debug_token response:", JSON.stringify(redact(dbgData)));
           if (dbgData?.data?.user_id) userId = String(dbgData.data.user_id);
         } catch (e) {
           console.warn("Meta debug_token fetch failed:", e);

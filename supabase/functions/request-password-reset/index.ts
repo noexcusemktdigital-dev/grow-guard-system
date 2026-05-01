@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskEmail } from '../_shared/redact.ts';
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
@@ -78,11 +79,11 @@ Deno.serve(async (req) => {
       // Safe URL: token is only verified when the user loads the page
       const encodedEmail = encodeURIComponent(email);
       resetUrl = `${siteUrl}/reset-password?token_hash=${hashedToken}&type=recovery&email=${encodedEmail}&portal=${portalParam}`;
-      console.log("[request-password-reset] Using hashed_token pattern for", email);
+      console.log("[request-password-reset] Using hashed_token pattern for", maskEmail(email));
     } else if (actionLink) {
       // Fallback to action_link (less safe but functional)
       resetUrl = actionLink;
-      console.warn("[request-password-reset] Falling back to action_link for", email);
+      console.warn("[request-password-reset] Falling back to action_link for", maskEmail(email));
     } else {
       console.error("[request-password-reset] No hashed_token or action_link returned");
       return new Response(JSON.stringify({ success: true }), { headers });
@@ -107,7 +108,7 @@ Deno.serve(async (req) => {
       const errorBody = await response.text();
       console.error("[request-password-reset] Resend error:", response.status, errorBody);
     } else {
-      console.log("[request-password-reset] Recovery email sent to", email);
+      console.log("[request-password-reset] Recovery email sent to", maskEmail(email));
     }
 
     return new Response(JSON.stringify({ success: true }), { headers });

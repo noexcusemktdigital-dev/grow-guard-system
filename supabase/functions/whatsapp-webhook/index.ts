@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { redact } from '../_shared/redact.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    console.log("Webhook payload:", JSON.stringify(body).slice(0, 500));
+    console.log("Webhook payload:", JSON.stringify(redact(body)).slice(0, 500));
 
     // Typing indicator detection — broadcast via Realtime, don't save
     const chatState = body.chatstate || body.type;

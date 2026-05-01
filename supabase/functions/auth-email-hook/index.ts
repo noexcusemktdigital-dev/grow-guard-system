@@ -10,6 +10,7 @@ import { MagicLinkEmail } from '../_shared/email-templates/magic-link.tsx'
 import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
+import { maskEmail } from '../_shared/redact.ts'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const SITE_NAME = "NoExcuse Digital"
@@ -205,7 +206,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   const emailType = payload.data.action_type
-  console.log('Received auth event', { emailType, email: payload.data.email, run_id })
+  console.log('Received auth event', { emailType, email: maskEmail(payload.data.email), run_id })
 
   // Skip types already handled by dedicated Edge Functions
   if (SKIP_TYPES.has(emailType)) {
@@ -277,7 +278,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     status: 'sent',
   })
 
-  console.log('Auth email sent via Resend', { emailType, email: payload.data.email, resendId: result.id, run_id })
+  console.log('Auth email sent via Resend', { emailType, email: maskEmail(payload.data.email), resendId: result.id, run_id })
 
   return new Response(
     JSON.stringify({ success: true, sent: true }),

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskEmail } from '../_shared/redact.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
       if (!email) {
         return new Response(JSON.stringify({ error: "email required" }), { status: 200, headers: responseHeaders });
       }
-      console.log("[manage-member] Accepting invitation for", email);
+      console.log("[manage-member] Accepting invitation for", maskEmail(email));
       const { error: upErr } = await admin
         .from("pending_invitations")
         .update({ accepted_at: new Date().toISOString() })
@@ -144,7 +145,7 @@ Deno.serve(async (req) => {
             .delete()
             .eq("email", userData.user.email.toLowerCase())
             .eq("organization_id", organization_id);
-          console.log("[manage-member] Cleaned pending_invitations for", userData.user.email);
+          console.log("[manage-member] Cleaned pending_invitations for", maskEmail(userData.user.email));
         }
       } catch (cleanupErr) {
         console.warn("[manage-member] Failed to clean pending_invitations:", cleanupErr);
