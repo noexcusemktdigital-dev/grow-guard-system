@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logJobFailure } from "../_shared/job-failures.ts";
 
 // ============================================================
 // social-metrics-sync
@@ -455,6 +456,7 @@ serve(async (req) => {
     );
   } catch (err) {
     console.error("social-metrics-sync unexpected error:", err);
+    await logJobFailure({ jobName: 'social-metrics-sync', jobKind: 'cron' }, err);
     return new Response(
       JSON.stringify({ error: "Unexpected error", detail: String(err) }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
