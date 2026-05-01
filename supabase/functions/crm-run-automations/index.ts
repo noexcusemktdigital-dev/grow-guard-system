@@ -267,6 +267,19 @@ async function executeAction(
         Date.now() + (actionConfig.due_days || 1) * 86400000
       ).toISOString();
 
+      // Resolver responsável: lead.assigned_to → fallback para um cliente_admin da org
+      let taskAssignedTo: string | null = lead.assigned_to || null;
+      if (!taskAssignedTo) {
+        const { data: adminMember } = await admin
+          .from("organization_memberships")
+          .select("user_id")
+          .eq("organization_id", orgId)
+          .eq("role", "cliente_admin")
+          .limit(1)
+          .maybeSingle();
+        taskAssignedTo = adminMember?.user_id || null;
+      }
+
       // Inserir na tabela do CRM
       const { data: crmTask } = await admin
         .from("crm_tasks")
@@ -276,7 +289,7 @@ async function executeAction(
           title: actionConfig.task_title || `Tarefa: ${automation.name}`,
           task_type: actionConfig.task_type || "follow_up",
           due_date: dueDate,
-          assigned_to: lead.assigned_to || null,
+          assigned_to: taskAssignedTo,
         })
         .select()
         .single();
@@ -290,7 +303,7 @@ async function executeAction(
         priority: actionConfig.priority || "medium",
         status: "pending",
         source: "crm_automation",
-        assigned_to: lead.assigned_to || null,
+        assigned_to: taskAssignedTo,
         created_by: null,
         metadata: {
           crm_task_id: crmTask?.id,
