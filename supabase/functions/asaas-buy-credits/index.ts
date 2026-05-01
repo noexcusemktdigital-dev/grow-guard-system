@@ -2,7 +2,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOrCreateAsaasCustomer } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
-import { getCorsHeaders } from '../_shared/cors.ts';
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { withIdempotency } from "../_shared/idempotency.ts";
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -13,9 +14,16 @@ const PACK_PRICES: Record<string, { credits: number; price: number }> = {
 };
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: cors });
   }
+
+  const respond = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -27,145 +35,146 @@ Deno.serve(async (req) => {
     // Auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
+      return respond(401, { error: "Unauthorized" });
     }
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: authError } = await userClient.auth.getUser();
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
+      return respond(401, { error: "Unauthorized" });
     }
 
-    const { organization_id, pack_id, billing_type } = await req.json();
+    // Parse body once and clone request for idempotency
+    const rawBody = await req.text();
+    const parsed = JSON.parse(rawBody || "{}");
+    const { organization_id, pack_id, billing_type } = parsed;
 
     if (!organization_id || !pack_id || !billing_type) {
-      return new Response(JSON.stringify({ error: "organization_id, pack_id and billing_type are required" }), {
-        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
+      return respond(400, { error: "organization_id, pack_id and billing_type are required" });
     }
-
     const pack = PACK_PRICES[pack_id];
-    if (!pack) {
-      return new Response(JSON.stringify({ error: "Invalid pack_id" }), {
-        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    if (!pack) return respond(400, { error: "Invalid pack_id" });
 
     const validBillingTypes = ["CREDIT_CARD", "BOLETO", "PIX"];
     if (!validBillingTypes.includes(billing_type)) {
-      return new Response(JSON.stringify({ error: "Invalid billing_type" }), {
-        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
+      return respond(400, { error: "Invalid billing_type" });
     }
 
-    const { data: org, error: orgError } = await adminClient
-      .from("organizations")
-      .select("id, name, cnpj, email, phone, parent_org_id")
-      .eq("id", organization_id)
-      .single();
-
-    if (orgError || !org) {
-      return new Response(JSON.stringify({ error: "Organization not found" }), {
-        status: 404, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-
-    const asaasCustomerId = await getOrCreateAsaasCustomer(adminClient, asaasApiKey, {
-      orgId: org.id,
-      name: org.name,
-      cpfCnpj: org.cnpj,
-      email: org.email,
-      phone: org.phone,
+    // Reconstruct a request whose body is the parsed JSON, so withIdempotency can hash it.
+    const reqForIdem = new Request(req.url, {
+      method: req.method,
+      headers: req.headers,
+      body: rawBody,
     });
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 1);
+    const result = await withIdempotency(
+      reqForIdem,
+      "asaas-buy-credits",
+      { orgId: organization_id, userId: user.id },
+      async () => {
+        const { data: org, error: orgError } = await adminClient
+          .from("organizations")
+          .select("id, name, cnpj, email, phone, parent_org_id")
+          .eq("id", organization_id)
+          .single();
 
-    // Build split if linked to franchisee
-    const splitConfig: { walletId: string; fixedValue: number }[] = [];
-    if (org.parent_org_id) {
-      const { data: parentOrg } = await adminClient
-        .from("organizations")
-        .select("saas_commission_percent, asaas_wallet_id")
-        .eq("id", org.parent_org_id)
-        .maybeSingle();
-
-      if (parentOrg?.asaas_wallet_id) {
-        const commissionPercent = parentOrg.saas_commission_percent || 20;
-        const commissionValue = Math.round(pack.price * commissionPercent / 100 * 100) / 100;
-        if (commissionValue > 0) {
-          splitConfig.push({
-            walletId: parentOrg.asaas_wallet_id,
-            fixedValue: commissionValue,
-          });
+        if (orgError || !org) {
+          return { status: 404, body: { error: "Organization not found" } };
         }
-      }
-    }
 
-    const chargeBody: Record<string, unknown> = {
-      customer: asaasCustomerId,
-      billingType: billing_type,
-      value: pack.price,
-      dueDate: dueDate.toISOString().split("T")[0],
-      description: `Pacote ${pack.credits.toLocaleString()} créditos — NOE`,
-      externalReference: `${org.id}|credits|${pack_id}`,
-    };
-
-    if (splitConfig.length > 0) {
-      chargeBody.split = splitConfig;
-    }
-
-    const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
-      body: JSON.stringify(chargeBody),
-    });
-
-    const chargeData = await chargeRes.json();
-    if (!chargeRes.ok) {
-      console.error("Asaas credit charge failed:", chargeData);
-      return new Response(JSON.stringify({ error: "Failed to create charge", details: chargeData }), {
-        status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
-
-    // Get PIX data if billing_type is PIX
-    let pixData: Record<string, unknown> | null = null;
-    if (billing_type === "PIX" && chargeData.id) {
-      try {
-        const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
-          method: "GET",
-          headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
+        const asaasCustomerId = await getOrCreateAsaasCustomer(adminClient, asaasApiKey, {
+          orgId: org.id,
+          name: org.name,
+          cpfCnpj: org.cnpj,
+          email: org.email,
+          phone: org.phone,
         });
-        if (pixRes.ok) pixData = await pixRes.json();
-      } catch (e) {
-        console.warn("Failed to get PIX QR code:", e);
-      }
-    }
 
-    console.log(`Credit pack charge created: org=${org.id}, pack=${pack_id}, payment=${chargeData.id}`);
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 1);
 
-    return new Response(JSON.stringify({
-      success: true,
-      asaas_payment_id: chargeData.id,
-      invoice_url: chargeData.invoiceUrl || null,
-      bank_slip_url: chargeData.bankSlipUrl || null,
-      value: pack.price,
-      pix_qr_code: pixData?.encodedImage ? `data:image/png;base64,${pixData.encodedImage}` : null,
-      pix_qr_code_base64: pixData?.encodedImage || null,
-      pix_copy_paste: pixData?.payload || null,
-    }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+        // Build split if linked to franchisee
+        const splitConfig: { walletId: string; fixedValue: number }[] = [];
+        if (org.parent_org_id) {
+          const { data: parentOrg } = await adminClient
+            .from("organizations")
+            .select("saas_commission_percent, asaas_wallet_id")
+            .eq("id", org.parent_org_id)
+            .maybeSingle();
+
+          if (parentOrg?.asaas_wallet_id) {
+            const commissionPercent = parentOrg.saas_commission_percent || 20;
+            const commissionValue = Math.round(pack.price * commissionPercent / 100 * 100) / 100;
+            if (commissionValue > 0) {
+              splitConfig.push({
+                walletId: parentOrg.asaas_wallet_id,
+                fixedValue: commissionValue,
+              });
+            }
+          }
+        }
+
+        const chargeBody: Record<string, unknown> = {
+          customer: asaasCustomerId,
+          billingType: billing_type,
+          value: pack.price,
+          dueDate: dueDate.toISOString().split("T")[0],
+          description: `Pacote ${pack.credits.toLocaleString()} créditos — NOE`,
+          externalReference: `${org.id}|credits|${pack_id}`,
+        };
+
+        if (splitConfig.length > 0) {
+          chargeBody.split = splitConfig;
+        }
+
+        const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
+          body: JSON.stringify(chargeBody),
+        });
+
+        const chargeData = await chargeRes.json();
+        if (!chargeRes.ok) {
+          console.error("Asaas credit charge failed:", chargeData);
+          return { status: 500, body: { error: "Failed to create charge", details: chargeData } };
+        }
+
+        // Get PIX data if billing_type is PIX
+        let pixData: Record<string, unknown> | null = null;
+        if (billing_type === "PIX" && chargeData.id) {
+          try {
+            const pixRes = await asaasFetch(`${ASAAS_BASE}/payments/${chargeData.id}/pixQrCode`, {
+              method: "GET",
+              headers: { access_token: asaasApiKey, "User-Agent": "NOE-Platform" },
+            });
+            if (pixRes.ok) pixData = await pixRes.json();
+          } catch (e) {
+            console.warn("Failed to get PIX QR code:", e);
+          }
+        }
+
+        console.log(`Credit pack charge created: org=${org.id}, pack=${pack_id}, payment=${chargeData.id}`);
+
+        return {
+          status: 200,
+          body: {
+            success: true,
+            asaas_payment_id: chargeData.id,
+            invoice_url: chargeData.invoiceUrl || null,
+            bank_slip_url: chargeData.bankSlipUrl || null,
+            value: pack.price,
+            pix_qr_code: pixData?.encodedImage ? `data:image/png;base64,${pixData.encodedImage}` : null,
+            pix_qr_code_base64: pixData?.encodedImage || null,
+            pix_copy_paste: pixData?.payload || null,
+          },
+        };
+      },
+    );
+
+    return respond(result.status, result.body);
   } catch (err: unknown) {
     console.error("asaas-buy-credits error:", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return respond(500, { error: err instanceof Error ? err.message : String(err) });
   }
 });

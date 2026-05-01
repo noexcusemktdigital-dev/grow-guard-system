@@ -3,11 +3,24 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  // Estes dois sao definidos depois e usados por jsonOk para marcar processed_at.
+  let _eventIdForProcessed: string | null = null;
+  let _adminClientForProcessed: any = null;
   // jsonOk must be inside handler so req is in scope
-  const jsonOk = (data: Record<string, unknown>) =>
-    new Response(JSON.stringify(data), {
+  const jsonOk = (data: Record<string, unknown>) => {
+    if (_eventIdForProcessed && _adminClientForProcessed) {
+      // fire-and-forget
+      _adminClientForProcessed
+        .from("webhook_events")
+        .update({ processed_at: new Date().toISOString() })
+        .eq("provider", "asaas")
+        .eq("external_event_id", _eventIdForProcessed)
+        .then(() => {}, (e: any) => console.warn("[asaas-webhook] failed to mark processed_at:", e));
+    }
+    return new Response(JSON.stringify(data), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
+  };
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
@@ -38,13 +51,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    const rawBodyText = await req.text();
+    const body = JSON.parse(rawBodyText || "{}");
     const event = body.event;
     const payment = body.payment;
 
     console.log("Asaas webhook received:", event, payment?.id);
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    _adminClientForProcessed = adminClient;
+
+    // Idempotência inbound: dedupe por external_event_id (id do evento Asaas).
+    // Asaas envia body.id como ID único do evento; fallback: combinar event+payment.id.
+    const externalEventId = body.id || (payment?.id ? `${event}:${payment.id}` : null);
+    if (externalEventId) {
+      _eventIdForProcessed = String(externalEventId);
+      try {
+        const payloadHash = await (async () => {
+          const data = new TextEncoder().encode(rawBodyText);
+          const buf = await crypto.subtle.digest("SHA-256", data);
+          return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+        })();
+        const { error: dupError } = await adminClient.from("webhook_events").insert({
+          provider: "asaas",
+          external_event_id: String(externalEventId),
+          payload_hash: payloadHash,
+        });
+        if (dupError && (dupError.code === "23505" || /duplicate/i.test(dupError.message || ""))) {
+          console.log(`[asaas-webhook] duplicate event ignored: ${externalEventId}`);
+          return jsonOk({ ok: true, note: "already_processed", event_id: externalEventId });
+        }
+      } catch (e) {
+        console.warn("[asaas-webhook] dedup check failed (continuing):", e);
+      }
+    }
 
     const handledEvents = [
       "PAYMENT_CONFIRMED",
