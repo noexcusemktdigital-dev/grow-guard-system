@@ -48,7 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [role, setRole] = useState<AppRole | null>(null);
+  // Hydrate role from cache to keep app usable when DB is slow/unavailable.
+  // Real role is re-fetched in background; cache is only a fallback.
+  const [role, setRole] = useState<AppRole | null>(() => {
+    try {
+      const cached = localStorage.getItem("noe-cached-role");
+      return (cached as AppRole) || null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   // Guard against concurrent fetchProfileAndRole calls
