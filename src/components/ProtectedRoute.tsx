@@ -1,4 +1,4 @@
-// @ts-nocheck
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PORTAL_STORAGE_KEY } from "@/lib/supabase";
 import { Navigate, useLocation } from "react-router-dom";
