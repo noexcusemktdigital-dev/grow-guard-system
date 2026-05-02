@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { useMemo, useEffect, useState, useCallback } from "react";
-import { format, startOfMonth, subMonths, isAfter, subHours } from "date-fns";
+import { useMemo, useState, useCallback } from "react";
+import { format, subHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   DollarSign, Users, TrendingUp, Target, AlertTriangle,
@@ -25,20 +25,10 @@ import { ClienteInicioHero } from "./ClienteInicioHero";
 import { ClienteInicioAlerts } from "./ClienteInicioAlerts";
 import { ClienteInicioProgress } from "./ClienteInicioProgress";
 import { triggerCelebration } from "@/components/CelebrationEffect";
-import { useClienteChecklist, useClienteGamification, useClienteContentMutations } from "@/hooks/useClienteContent";
-import { useCrmLeads } from "@/hooks/useCrmLeads";
-import { useActiveGoals } from "@/hooks/useGoals";
-import { useGoalProgress } from "@/hooks/useGoalProgress";
-import { useWhatsAppInstance, useWhatsAppContacts } from "@/hooks/useWhatsApp";
-import { useClienteAgents } from "@/hooks/useClienteAgents";
-import { useDailyMessages } from "@/hooks/useDailyMessages";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useOrgProfile } from "@/hooks/useOrgProfile";
+import { useClienteContentMutations } from "@/hooks/useClienteContent";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { useAnnouncements } from "@/hooks/useAnnouncements";
-import { useAnnouncementViews } from "@/hooks/useAnnouncementViews";
-import { useClienteTasks } from "@/hooks/useClienteTasks";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInicioData } from "@/hooks/useInicioData";
 
 const adminKpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
@@ -84,7 +74,6 @@ function getLevelInfo(xp: number) {
   return { level: 1, title: "Novato", nextTitle: "Aprendiz", xpToNext: 500, progress: 0 };
 }
 
-
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(value);
 }
@@ -92,131 +81,114 @@ function formatCurrency(value: number) {
 export default function ClienteInicio() {
   const { isAdmin } = useRoleAccess();
   const { user } = useAuth();
-  const { data: announcements } = useAnnouncements();
-  const { data: announcementViews } = useAnnouncementViews();
-  const { data: myTasks } = useClienteTasks({ assigned_to: user?.id });
   const navigate = useNavigate();
-  const { data: profile } = useUserProfile();
-  const { data: orgData, isLoading: orgLoading } = useOrgProfile();
-  const { data: gamification } = useClienteGamification();
   const { toggleChecklistItem } = useClienteContentMutations();
 
-  // Onboarding redirect is now handled in ClienteLayout
+  // Single consolidated request — replaces 13 parallel hooks.
+  const { data: inicio, isLoading: inicioLoading } = useInicioData();
+
+  const profile = inicio?.profile ?? null;
+  const orgData = inicio?.org ?? null;
+  const gamification = inicio?.gamification ?? null;
+  const summary = inicio?.leads_summary ?? null;
+  const activeGoals = inicio?.active_goals ?? [];
+  const goalProgress = inicio?.goal_progress ?? {};
+  const checklistItems = inicio?.checklist_today ?? [];
+  const announcementsUnread = inicio?.announcements_unread ?? [];
+  const dailyMessage = inicio?.daily_message ?? null;
 
   const firstName = profile?.full_name?.split(" ")[0] || "";
   const today = format(new Date(), "yyyy-MM-dd");
-  const { data: checklistItems } = useClienteChecklist(today);
-  const { data: leads, isLoading: leadsLoading } = useCrmLeads();
-  const { data: activeGoals } = useActiveGoals();
-  const { data: goalProgress } = useGoalProgress(activeGoals);
-  const { data: waInstance } = useWhatsAppInstance();
-  const { data: waContacts = [] } = useWhatsAppContacts();
-  const { data: agentsData } = useClienteAgents();
-  const { data: dailyMessage } = useDailyMessages();
-
-  const checklist = checklistItems ?? [];
-  const allLeads = leads ?? [];
+  const checklist = checklistItems;
 
   // Gamification data
-  const xp = (gamification as unknown as { xp?: number } | null)?.xp ?? 0;
+  const xp = gamification?.xp ?? 0;
   const streakDays = gamification?.streak_days ?? 0;
   const levelInfo = getLevelInfo(xp);
 
   const now = new Date();
-  const monthStart = startOfMonth(now);
-  const prevMonthStart = startOfMonth(subMonths(now, 1));
-  const prevMonthEnd = monthStart;
 
-  const thisMonthLeads = useMemo(() => allLeads.filter(l => isAfter(new Date(l.created_at), monthStart)), [allLeads, monthStart]);
-  const prevMonthLeads = useMemo(() => allLeads.filter(l => {
-    const d = new Date(l.created_at);
-    return isAfter(d, prevMonthStart) && !isAfter(d, prevMonthEnd);
-  }), [allLeads, prevMonthStart, prevMonthEnd]);
+  const revenueThisMonth = summary?.revenue_this_month ?? 0;
+  const revenuePrevMonth = summary?.revenue_prev_month ?? 0;
+  const thisMonthCount = summary?.this_month ?? 0;
+  const prevMonthCount = summary?.prev_month ?? 0;
+  const wonThisMonthCount = summary?.won_this_month ?? 0;
+  const wonPrevMonthCount = summary?.won_prev_month ?? 0;
+  const myLeadsCount = summary?.my_count ?? 0;
+  const myWonCount = summary?.my_won ?? 0;
+  const myPendingTasks = inicio?.my_pending_tasks ?? 0;
+  const todayLeadsCount = summary?.today_count ?? 0;
 
-  const wonThisMonth = useMemo(() => allLeads.filter(l => l.won_at && isAfter(new Date(l.won_at), monthStart)), [allLeads, monthStart]);
-  const wonPrevMonth = useMemo(() => allLeads.filter(l => l.won_at && isAfter(new Date(l.won_at), prevMonthStart) && !isAfter(new Date(l.won_at), prevMonthEnd)), [allLeads, prevMonthStart, prevMonthEnd]);
+  const conversionRate = thisMonthCount > 0 ? (wonThisMonthCount / thisMonthCount) * 100 : 0;
+  const prevConversionRate = prevMonthCount > 0 ? (wonPrevMonthCount / prevMonthCount) * 100 : 0;
 
-  // User-specific leads
-  const myLeads = useMemo(() => allLeads.filter(l => l.assigned_to === user?.id), [allLeads, user?.id]);
-  const myWonLeads = useMemo(() => myLeads.filter(l => !!l.won_at), [myLeads]);
-  const myPendingTasks = (myTasks ?? []).filter(t => t.status === "pending").length;
+  const primaryGoal = activeGoals[0] ?? null;
+  const primaryProgressRaw = primaryGoal ? goalProgress[primaryGoal.id] : null;
+  const goalPercent = primaryProgressRaw?.percent ?? 0;
 
-  const revenueThisMonth = wonThisMonth.reduce((s, l) => s + (Number(l.value) || 0), 0);
-  const revenuePrevMonth = wonPrevMonth.reduce((s, l) => s + (Number(l.value) || 0), 0);
-  const conversionRate = thisMonthLeads.length > 0 ? (wonThisMonth.length / thisMonthLeads.length) * 100 : 0;
-  const prevConversionRate = prevMonthLeads.length > 0 ? (wonPrevMonth.length / prevMonthLeads.length) * 100 : 0;
-
-  const primaryGoal = activeGoals?.[0];
-  const primaryProgress = primaryGoal && goalProgress ? goalProgress[primaryGoal.id] : null;
-  const goalPercent = primaryProgress?.percent ?? 0;
+  // Synthesize fields downstream cards still expect.
+  const primaryProgress = useMemo(() => {
+    if (!primaryGoal || !primaryProgressRaw) return null;
+    const periodStart = new Date(primaryGoal.period_start);
+    const periodEnd = new Date(primaryGoal.period_end);
+    const totalDays = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysElapsed = Math.max(0, Math.ceil((now.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysLeft = Math.max(0, totalDays - daysElapsed);
+    const pacePerDay = daysElapsed > 0 ? primaryProgressRaw.currentValue / daysElapsed : 0;
+    const requiredPacePerDay = daysLeft > 0 ? primaryProgressRaw.remaining / daysLeft : 0;
+    const status = primaryProgressRaw.percent >= 100
+      ? "batida"
+      : pacePerDay >= requiredPacePerDay
+        ? "no_ritmo"
+        : "abaixo";
+    return {
+      ...primaryProgressRaw,
+      pacePerDay,
+      requiredPacePerDay,
+      daysLeft,
+      status,
+    };
+  }, [primaryGoal, primaryProgressRaw, now]);
 
   const revenueTrend = revenuePrevMonth > 0 ? ((revenueThisMonth - revenuePrevMonth) / revenuePrevMonth * 100) : 0;
-  const leadsTrend = prevMonthLeads.length > 0 ? ((thisMonthLeads.length - prevMonthLeads.length) / prevMonthLeads.length * 100) : 0;
+  const leadsTrend = prevMonthCount > 0 ? ((thisMonthCount - prevMonthCount) / prevMonthCount * 100) : 0;
   const convTrend = conversionRate - prevConversionRate;
 
   // Role-based KPI values
   const kpiConfig = isAdmin ? adminKpiConfig : userKpiConfig;
   const kpiValues = isAdmin ? [
     { value: formatCurrency(revenueThisMonth), rawValue: revenueThisMonth, sublabel: revenueTrend !== 0 ? `${revenueTrend > 0 ? "+" : ""}${revenueTrend.toFixed(0)}% vs mês anterior` : "sem dados anteriores", trend: revenueTrend > 0 ? "up" as const : revenueTrend < 0 ? "down" as const : "neutral" as const },
-    { value: String(thisMonthLeads.length), rawValue: thisMonthLeads.length, sublabel: leadsTrend !== 0 ? `${leadsTrend > 0 ? "+" : ""}${leadsTrend.toFixed(0)}% vs mês anterior` : `${thisMonthLeads.length} leads no CRM`, trend: leadsTrend > 0 ? "up" as const : leadsTrend < 0 ? "down" as const : "neutral" as const },
+    { value: String(thisMonthCount), rawValue: thisMonthCount, sublabel: leadsTrend !== 0 ? `${leadsTrend > 0 ? "+" : ""}${leadsTrend.toFixed(0)}% vs mês anterior` : `${thisMonthCount} leads no CRM`, trend: leadsTrend > 0 ? "up" as const : leadsTrend < 0 ? "down" as const : "neutral" as const },
     { value: `${conversionRate.toFixed(1)}%`, rawValue: conversionRate, sublabel: convTrend !== 0 ? `${convTrend > 0 ? "+" : ""}${convTrend.toFixed(1)}pp` : "taxa do mês", trend: convTrend > 0 ? "up" as const : convTrend < 0 ? "down" as const : "neutral" as const },
-    { value: `${Math.min(goalPercent, 100).toFixed(0)}%`, rawValue: Math.min(goalPercent, 100), sublabel: primaryGoal ? `${formatCurrency(primaryProgress?.currentValue ?? 0)} / ${formatCurrency(primaryGoal.target_value)}` : "sem meta ativa", trend: goalPercent >= 70 ? "up" as const : goalPercent >= 40 ? "neutral" as const : "down" as const },
+    { value: `${Math.min(goalPercent, 100).toFixed(0)}%`, rawValue: Math.min(goalPercent, 100), sublabel: primaryGoal ? `${formatCurrency(primaryProgressRaw?.currentValue ?? 0)} / ${formatCurrency(primaryGoal.target_value)}` : "sem meta ativa", trend: goalPercent >= 70 ? "up" as const : goalPercent >= 40 ? "neutral" as const : "down" as const },
   ] : [
-    { value: String(myLeads.length), rawValue: myLeads.length, sublabel: `${myLeads.filter(l => !l.won_at && !l.lost_at).length} ativos`, trend: myLeads.length > 0 ? "up" as const : "neutral" as const },
-    { value: String(myWonLeads.length), rawValue: myWonLeads.length, sublabel: `${myLeads.length > 0 ? ((myWonLeads.length / myLeads.length) * 100).toFixed(0) : 0}% de conversão`, trend: myWonLeads.length > 0 ? "up" as const : "neutral" as const },
+    { value: String(myLeadsCount), rawValue: myLeadsCount, sublabel: `${myLeadsCount - myWonCount} ativos`, trend: myLeadsCount > 0 ? "up" as const : "neutral" as const },
+    { value: String(myWonCount), rawValue: myWonCount, sublabel: `${myLeadsCount > 0 ? ((myWonCount / myLeadsCount) * 100).toFixed(0) : 0}% de conversão`, trend: myWonCount > 0 ? "up" as const : "neutral" as const },
     { value: `${xp.toLocaleString()}`, rawValue: xp, sublabel: `Nível ${levelInfo.level} · ${levelInfo.title}`, trend: "up" as const },
     { value: String(myPendingTasks), rawValue: myPendingTasks, sublabel: myPendingTasks === 0 ? "Tudo em dia! ✅" : `${myPendingTasks} pendente${myPendingTasks > 1 ? "s" : ""}`, trend: myPendingTasks === 0 ? "up" as const : myPendingTasks > 5 ? "down" as const : "neutral" as const },
   ];
 
-  // Unread announcements for inline display
-  const unreadAnnouncements = useMemo(() => {
-    if (!announcements || !announcementViews) return [];
-    const viewedIds = new Set((announcementViews as { announcement_id: string }[]).map((v) => v.announcement_id));
-    return (announcements as { id: string; priority?: string; published_at?: string }[]).filter((a) =>
-      a.status === "active" && a.published_at && !viewedIds.has(a.id)
-    ).slice(0, 3);
-  }, [announcements, announcementViews]);
-
-  const revenueData = useMemo(() => {
-    const weeks = [
-      { label: "Sem 1", start: 1, end: 7 },
-      { label: "Sem 2", start: 8, end: 14 },
-      { label: "Sem 3", start: 15, end: 21 },
-      { label: "Sem 4", start: 22, end: 31 },
-    ];
-    return weeks.map(w => {
-      const total = wonThisMonth.filter(l => {
-        const day = new Date(l.won_at!).getDate();
-        return day >= w.start && day <= w.end;
-      }).reduce((s, l) => s + (Number(l.value) || 0), 0);
-      return { week: w.label, receita: total };
-    });
-  }, [wonThisMonth]);
-
-  const leadsWithoutContact48h = useMemo(() => {
-    const threshold = subHours(now, 48);
-    return allLeads.filter(l => !l.won_at && !l.lost_at && isAfter(threshold, new Date(l.updated_at)));
-  }, [allLeads]);
-
-  const unreadConversations = waContacts.filter(c => c.unread_count > 0).length;
+  const revenueData = summary?.weekly_revenue ?? [];
 
   const insights = useMemo(() => {
     const items: { label: string; type: "urgent" | "warning" | "info"; path: string; icon: React.ElementType }[] = [];
-    if (leadsWithoutContact48h.length > 0) {
-      items.push({ label: `${leadsWithoutContact48h.length} leads sem contato há +48h`, type: "urgent", path: "/cliente/crm", icon: AlertTriangle });
+    const without48 = summary?.leads_without_contact_48h ?? 0;
+    if (without48 > 0) {
+      items.push({ label: `${without48} leads sem contato há +48h`, type: "urgent", path: "/cliente/crm", icon: AlertTriangle });
     }
     if (primaryProgress && goalPercent < 100) {
       items.push({ label: `Meta mensal em ${goalPercent.toFixed(0)}%`, type: goalPercent < 50 ? "urgent" : "warning", path: "/cliente/plano-vendas", icon: Target });
     }
-    if (unreadConversations > 0) {
-      items.push({ label: `${unreadConversations} conversas aguardando resposta`, type: "warning", path: "/cliente/chat", icon: MessageCircle });
+    const unread = inicio?.wa_unread_conversations ?? 0;
+    if (unread > 0) {
+      items.push({ label: `${unread} conversas aguardando resposta`, type: "warning", path: "/cliente/chat", icon: MessageCircle });
     }
     return items;
-  }, [leadsWithoutContact48h, goalPercent, unreadConversations]);
+  }, [summary, goalPercent, primaryProgress, inicio]);
 
-  const isWAConnected = waInstance?.status === "connected";
-  const hasAgents = (agentsData || []).filter(a => a.status === "active").length > 0;
-  const hasGoals = (activeGoals ?? []).length > 0;
+  const isWAConnected = inicio?.wa_status === "connected";
+  const hasAgents = (inicio?.active_agents_count ?? 0) > 0;
+  const hasGoals = activeGoals.length > 0;
 
   const nextSteps = useMemo(() => {
     const steps: { title: string; description: string; icon: React.ElementType; path: string; done: boolean }[] = [];
@@ -238,7 +210,6 @@ export default function ClienteInicio() {
   const dailyPhrase = dailyMessage?.message || defaultPhrases[now.getDay()];
 
   const goalsDisplay = useMemo(() => {
-    if (!activeGoals || !goalProgress) return [];
     return activeGoals.slice(0, 3).map(g => {
       const p = goalProgress[g.id];
       return { label: g.title, current: p?.currentValue ?? 0, target: g.target_value, percent: p?.percent ?? 0, metric: g.metric || "revenue" };
@@ -246,11 +217,10 @@ export default function ClienteInicio() {
   }, [activeGoals, goalProgress]);
 
   // Daily score combining checklist + goals + CRM activity (today)
-  const todayLeadsCount = useMemo(() => allLeads.filter(l => l.created_at.startsWith(today)).length, [allLeads, today]);
   const dailyScore = useMemo(() => {
-    const checklistScore = taskProgress * 0.4; // 40% weight
-    const goalScore = Math.min(goalPercent, 100) * 0.35; // 35% weight
-    const crmScore = Math.min(todayLeadsCount * 20, 100) * 0.25; // 25% weight — 5 leads/day = 100%
+    const checklistScore = taskProgress * 0.4;
+    const goalScore = Math.min(goalPercent, 100) * 0.35;
+    const crmScore = Math.min(todayLeadsCount * 20, 100) * 0.25;
     return Math.round(checklistScore + goalScore + crmScore);
   }, [taskProgress, goalPercent, todayLeadsCount]);
 
@@ -280,16 +250,16 @@ export default function ClienteInicio() {
         dailyPhrase={dailyPhrase}
         dailyMessageAuthor={dailyMessage?.author}
         pendingTasksCount={pendingTasks.length}
-        thisMonthLeadsCount={thisMonthLeads.length}
+        thisMonthLeadsCount={thisMonthCount}
         goalPercent={goalPercent}
         now={now}
       />
 
       {/* Insights + Announcement alerts */}
-      <ClienteInicioAlerts insights={insights} unreadAnnouncements={unreadAnnouncements} />
+      <ClienteInicioAlerts insights={insights} unreadAnnouncements={announcementsUnread} />
 
       {/* KPIs with animated counters */}
-      <ClienteInicioKpis kpiConfig={kpiConfig} kpiValues={kpiValues} leadsLoading={leadsLoading} />
+      <ClienteInicioKpis kpiConfig={kpiConfig} kpiValues={kpiValues} leadsLoading={inicioLoading} />
 
       {/* Gamified Daily Progress Bar */}
       <ClienteInicioProgress
