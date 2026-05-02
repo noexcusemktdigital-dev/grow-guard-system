@@ -33,6 +33,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useSearchParams } from "react-router-dom";
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
@@ -192,7 +193,7 @@ export default function Agenda() {
       handleGooglePull();
     }
     if (searchParams.get("google_error")) {
-      toast.error("Erro ao conectar Google Agenda: " + searchParams.get("google_error"));
+      reportError(new Error(searchParams.get("google_error") || "Erro desconhecido"), { title: "Erro ao conectar Google Agenda", category: "agenda.google_connect" });
       setSearchParams({});
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -202,7 +203,7 @@ export default function Agenda() {
     try {
       const result = await syncGoogle.mutateAsync("pull" as Parameters<typeof syncGoogle.mutateAsync>[0]);
       toast.success(`Sincronizado! ${(result as Record<string, unknown>)?.imported || 0} novos eventos importados.`);
-    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
+    } catch (e: unknown) { reportError(e, { title: "Erro ao sincronizar", category: "agenda.google_sync" }); }
     setSyncing(false);
   }
 
@@ -268,8 +269,8 @@ export default function Agenda() {
   }
 
   function handleSave() {
-    if (!title.trim()) { toast.error("Informe o título"); return; }
-    if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
+    if (!title.trim()) { reportError(new Error("Informe o título"), { title: "Informe o título", category: "agenda.validation" }); return; }
+    if (!startAt || !endAt) { reportError(new Error("Informe data/hora"), { title: "Informe data/hora", category: "agenda.validation" }); return; }
     const payload: Record<string, unknown> = {
       title, description: description || undefined,
       start_at: new Date(startAt).toISOString(), end_at: new Date(endAt).toISOString(),

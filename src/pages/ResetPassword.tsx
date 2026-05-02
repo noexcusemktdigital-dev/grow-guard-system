@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Loader2, CheckCircle, X, Check } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
@@ -102,11 +103,11 @@ const ResetPassword = () => {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allRulesPass) {
-      toast.error("A senha não atende todos os requisitos.");
+      reportError(new Error("A senha não atende todos os requisitos."), { title: "A senha não atende todos os requisitos.", category: "reset_password.validation" });
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem");
+      reportError(new Error("As senhas não coincidem"), { title: "As senhas não coincidem", category: "reset_password.validation" });
       return;
     }
 
@@ -121,15 +122,15 @@ const ResetPassword = () => {
     if (error) {
       console.error("[ResetPassword] updateUser error:", error.message, error.status, error);
       if (error.message?.includes("same_password")) {
-        toast.error("A nova senha deve ser diferente da senha atual.");
+        reportError(error, { title: "A nova senha deve ser diferente da senha atual.", category: "reset_password.auth" });
       } else if (error.message?.includes("Password should be")) {
-        toast.error("A senha não atende os requisitos mínimos de segurança.");
+        reportError(error, { title: "A senha não atende os requisitos mínimos de segurança.", category: "reset_password.auth" });
       } else if (error.status === 422) {
-        toast.error("Sessão de recuperação inválida ou expirada. Solicite um novo link de recuperação.");
+        reportError(error, { title: "Sessão de recuperação inválida ou expirada. Solicite um novo link de recuperação.", category: "reset_password.auth" });
       } else if (error.status === 403) {
-        toast.error("Sessão expirada. Solicite um novo link de recuperação.");
+        reportError(error, { title: "Sessão expirada. Solicite um novo link de recuperação.", category: "reset_password.auth" });
       } else {
-        toast.error(error.message || "Erro ao redefinir senha. Tente novamente.");
+        reportError(error, { title: error.message || "Erro ao redefinir senha. Tente novamente.", category: "reset_password.auth" });
       }
     } else {
       setSuccess(true);
