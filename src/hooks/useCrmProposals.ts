@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export interface ProposalItem {
   product_id: string | null;
@@ -67,14 +67,15 @@ export function useCrmProposalMutations() {
 
   const createProposal = useMutation({
     mutationFn: async (proposal: Partial<CrmProposal> & { title: string }) => {
+      const payload: TablesInsert<"crm_proposals"> = {
+        ...proposal,
+        organization_id: orgId!,
+        created_by: user?.id ?? null,
+        items: JSON.stringify(proposal.items ?? []) as TablesInsert<"crm_proposals">["items"],
+      };
       const { data, error } = await supabase
         .from("crm_proposals")
-        .insert({
-          ...proposal,
-          organization_id: orgId!,
-          created_by: user?.id ?? null,
-          items: JSON.stringify(proposal.items ?? []),
-        } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -117,14 +118,14 @@ export function useCrmProposalMutations() {
           title: `${proposal.title} (cópia)`,
           value: proposal.value,
           status: "draft",
-          items: JSON.stringify(proposal.items),
+          items: JSON.stringify(proposal.items) as TablesInsert<"crm_proposals">["items"],
           partner_company_id: proposal.partner_company_id,
           notes: proposal.notes,
           valid_until: proposal.valid_until,
           payment_terms: proposal.payment_terms,
           discount_total: proposal.discount_total,
           created_by: user?.id ?? null,
-        } as any)
+        } satisfies TablesInsert<"crm_proposals">)
         .select()
         .single();
       if (error) throw error;

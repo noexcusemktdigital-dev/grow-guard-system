@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
 export interface CrmTeam {
   id: string;
@@ -42,9 +42,10 @@ export function useCrmTeamMutations() {
 
   const createTeam = useMutation({
     mutationFn: async (team: { name: string; description?: string; members?: string[]; funnel_ids?: string[] }) => {
+      const payload: TablesInsert<"crm_teams"> = { ...team, organization_id: orgId ?? "" };
       const { data, error } = await supabase
         .from("crm_teams")
-        .insert({ ...team, organization_id: orgId ?? "" } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -54,7 +55,7 @@ export function useCrmTeamMutations() {
   });
 
   const updateTeam = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & TablesUpdate<"crm_teams">) => {
       const { data, error } = await supabase
         .from("crm_teams")
         .update(updates)

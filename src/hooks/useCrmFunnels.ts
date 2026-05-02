@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { DEFAULT_STAGES, FunnelStage } from "@/components/crm/CrmStageSystem";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
 // ─── Stage format normalization ──────────────────────────────────────────────
 // Old format: { name: string, color: string (hex), order: number }
@@ -125,13 +125,14 @@ export function useCrmFunnelMutations() {
           .update({ is_default: false })
           .eq("organization_id", orgId);
       }
+      const payload: TablesInsert<"crm_funnels"> = {
+        ...funnel,
+        organization_id: orgId!,
+        stages: (funnel.stages ?? DEFAULT_STAGES) as TablesInsert<"crm_funnels">["stages"],
+      };
       const { data, error } = await supabase
         .from("crm_funnels")
-        .insert({
-          ...funnel,
-          organization_id: orgId!,
-          stages: (funnel.stages ?? DEFAULT_STAGES) as any,
-        } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -154,7 +155,7 @@ export function useCrmFunnelMutations() {
       }
       const { data, error } = await supabase
         .from("crm_funnels")
-        .update(updates as any)
+        .update(updates as TablesUpdate<"crm_funnels">)
         .eq("id", id)
         .select()
         .single();

@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
 export interface CrmProduct {
   id: string;
@@ -42,9 +42,10 @@ export function useCrmProductMutations() {
 
   const createProduct = useMutation({
     mutationFn: async (product: Partial<CrmProduct> & { name: string }) => {
+      const payload: TablesInsert<"crm_products"> = { ...product, organization_id: orgId ?? "" };
       const { data, error } = await supabase
         .from("crm_products")
-        .insert({ ...product, organization_id: orgId ?? "" } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -54,7 +55,7 @@ export function useCrmProductMutations() {
   });
 
   const updateProduct = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & TablesUpdate<"crm_products">) => {
       const { data, error } = await supabase
         .from("crm_products")
         .update(updates)

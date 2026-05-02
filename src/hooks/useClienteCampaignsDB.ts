@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export function useClienteCampaignsDB() {
   const { data: orgId } = useUserOrgId();
@@ -30,16 +30,17 @@ export function useCreateClientCampaign() {
   return useMutation({
     mutationFn: async ({ name, type, content }: { name: string; type?: string; content: Record<string, unknown> }) => {
       if (!orgId) throw new Error("No org");
+      const payload: TablesInsert<"client_campaigns"> = {
+        organization_id: orgId,
+        name,
+        type: type || "content",
+        status: "active",
+        content: content as TablesInsert<"client_campaigns">["content"],
+        created_by: user?.id,
+      };
       const { data, error } = await supabase
         .from("client_campaigns")
-        .insert({
-          organization_id: orgId,
-          name,
-          type: type || "content",
-          status: "active",
-          content: content as any,
-          created_by: user?.id,
-        } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -58,7 +59,7 @@ export function useUpdateClientCampaign() {
     mutationFn: async ({ id, content }: { id: string; content: Record<string, unknown> }) => {
       const { data, error } = await supabase
         .from("client_campaigns")
-        .update({ content: content as any })
+        .update({ content: content as TablesInsert<"client_campaigns">["content"] })
         .eq("id", id)
         .select()
         .single();
