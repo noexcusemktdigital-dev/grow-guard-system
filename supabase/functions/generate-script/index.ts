@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { SYSTEM_PROMPT, STAGE_PROMPTS, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-script.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { parseOrThrow, validationErrorResponse, GenerateExtendedSchemas } from '../_shared/schemas.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 // Fixed credit cost per script generation
 const CREDIT_COST = 20;
@@ -60,6 +61,12 @@ serve(async (req) => {
           headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
+    }
+
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    if (organization_id) {
+      const guardClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      await assertOrgMember(guardClient, userId, organization_id);
     }
 
     // Check if trial — GPS auto-generated scripts are free for trial users
@@ -233,13 +240,6 @@ serve(async (req) => {
     const valRes = validationErrorResponse(e, getCorsHeaders(req));
     if (valRes) return valRes;
     log.error("generate-script error", { error: String(e) });
-    return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Erro desconhecido",
-      }),
-      {
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      }
-    );
+    return authErrorResponse(e, getCorsHeaders(req));
   }
 });

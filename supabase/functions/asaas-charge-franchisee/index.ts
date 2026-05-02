@@ -4,6 +4,7 @@ import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 const SYSTEM_FEE = 250;
@@ -50,6 +51,9 @@ Deno.serve(async (req) => {
         headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    await assertOrgMember(adminClient, user.id, organization_id);
 
     const billingType = billing_type || "BOLETO";
 
@@ -198,9 +202,6 @@ Deno.serve(async (req) => {
     });
   } catch (err: unknown) {
     log.error("asaas-charge-franchisee error", { error: String(err) });
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return authErrorResponse(err, getCorsHeaders(req));
   }
 });

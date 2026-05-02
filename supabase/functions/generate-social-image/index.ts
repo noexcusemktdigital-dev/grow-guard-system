@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 const CREDIT_COST = 25;
 
@@ -911,6 +912,11 @@ Output ONLY the extracted logo image.`,
       });
     }
 
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    if (organization_id) {
+      await assertOrgMember(supabase, _authUser.id, organization_id);
+    }
+
     // Debit credits BEFORE generation (skip for test orgs and before GPS is approved)
     const isTestOrg = typeof organization_id === "string" && organization_id.startsWith("test-");
     if (organization_id && !isTestOrg) {
@@ -1349,8 +1355,6 @@ OUTPUT: The same design with the real brand logo composited in, fully legible.`,
     });
   } catch (e) {
     log.error("generate-social-image error", { error: String(e) });
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return authErrorResponse(e, getCorsHeaders(req));
   }
 });
