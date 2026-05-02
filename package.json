@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "react-snap",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -107,7 +106,6 @@
     "jsdom": "^20.0.3",
     "lovable-tagger": "^1.1.13",
     "postcss": "^8.5.6",
-    "react-snap": "^1.23.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
@@ -116,25 +114,6 @@
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^3.2.4",
     "workbox-window": "^7.4.0"
-  },
-  "reactSnap": {
-    "source": "dist",
-    "include": [
-      "/",
-      "/crescimento",
-      "/landing",
-      "/plataformadoempresario",
-      "/termos",
-      "/privacidade"
-    ],
-    "skipThirdPartyRequests": true,
-    "headless": true,
-    "puppeteerArgs": [
-      "--no-sandbox",
-      "--disable-setuid-sandbox"
-    ],
-    "inlineCss": false,
-    "saveAs": "html"
   },
   "overrides": {
     "serialize-javascript": "^7.0.5"
