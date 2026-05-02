@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
@@ -107,7 +108,7 @@ export function useGenerateContent() {
     }) => {
       if (!orgId) throw new Error("Org not found");
 
-      const resp = await supabase.functions.invoke("generate-content", {
+      const resp = await invokeEdge("generate-content", {
         body: {
           organization_id: orgId,
           quantidade: payload.quantidade,

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -34,7 +35,7 @@ export function useGoogleCalendarConnect(portal?: string) {
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
+      const { data, error } = await invokeEdge("google-calendar-oauth", {
         body: { action: "get_auth_url", portal: resolvedPortal },
       });
       if (error) throw error;
@@ -49,7 +50,7 @@ export function useGoogleCalendarDisconnect() {
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("google-calendar-oauth", {
+      const { data, error } = await invokeEdge("google-calendar-oauth", {
         body: { action: "disconnect" },
       });
       if (error) throw error;
@@ -70,7 +71,7 @@ export function useGoogleCalendarSync(portal?: string) {
     mutationFn: async (vars: { action: "pull" | "push" | "delete"; event?: Record<string, unknown> } | "pull" | "push" | "delete") => {
       const action = typeof vars === "string" ? vars : vars.action;
       const event = typeof vars === "string" ? undefined : vars.event;
-      const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
+      const { data, error } = await invokeEdge("google-calendar-sync", {
         body: { action, event, portal: resolvedPortal },
       });
       if (error) throw error;

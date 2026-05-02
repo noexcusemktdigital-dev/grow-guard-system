@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
 
@@ -164,9 +165,9 @@ export function useGenerateStrategy() {
       const token = session?.session?.access_token;
       if (!token) throw new Error("Not authenticated");
 
-      const resp = await supabase.functions.invoke("generate-strategy", {
-        body: { 
-          answers: payload.answers, 
+      const resp = await invokeEdge("generate-strategy", {
+        body: {
+          answers: payload.answers,
           organization_id: payload.organization_id,
           ...(payload.section ? { section: payload.section } : {}),
         },

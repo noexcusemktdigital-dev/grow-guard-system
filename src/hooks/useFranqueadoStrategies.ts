@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -250,7 +251,7 @@ export function useCreateStrategy() {
         .single();
       if (insertErr) throw insertErr;
 
-      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+      const { data: fnData, error: fnError, requestId } = await invokeEdge(
         "generate-strategy",
         { body: { answers } }
       );
@@ -260,7 +261,7 @@ export function useCreateStrategy() {
           .from("franqueado_strategies")
           .update({ status: "error" })
           .eq("id", row.id);
-        throw new Error(fnError.message || "Erro ao gerar estratégia");
+        throw new Error(`${fnError.message || "Erro ao gerar estratégia"} (id: ${requestId.slice(0, 8)})`);
       }
 
       if (fnData?.error) {
@@ -268,7 +269,7 @@ export function useCreateStrategy() {
           .from("franqueado_strategies")
           .update({ status: "error" })
           .eq("id", row.id);
-        throw new Error(fnData.error);
+        throw new Error(`${fnData.error} (id: ${requestId.slice(0, 8)})`);
       }
 
       const { data: updated, error: updateErr } = await supabase
@@ -332,7 +333,7 @@ export function useRegenerateStrategy() {
         })
         .eq("id", id);
 
-      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+      const { data: fnData, error: fnError, requestId } = await invokeEdge(
         "generate-strategy",
         { body: { answers } }
       );
@@ -342,7 +343,7 @@ export function useRegenerateStrategy() {
           .from("franqueado_strategies")
           .update({ status: "error" })
           .eq("id", id);
-        throw new Error(fnError.message || "Erro ao regenerar estratégia");
+        throw new Error(`${fnError.message || "Erro ao regenerar estratégia"} (id: ${requestId.slice(0, 8)})`);
       }
 
       if (fnData?.error) {
@@ -350,7 +351,7 @@ export function useRegenerateStrategy() {
           .from("franqueado_strategies")
           .update({ status: "error" })
           .eq("id", id);
-        throw new Error(fnData.error);
+        throw new Error(`${fnData.error} (id: ${requestId.slice(0, 8)})`);
       }
 
       const { data: updated, error: updateErr } = await supabase

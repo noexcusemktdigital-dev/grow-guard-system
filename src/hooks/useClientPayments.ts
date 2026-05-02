@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 import { startOfMonth, endOfMonth, format } from "date-fns";
@@ -68,11 +69,11 @@ export function useChargeClient() {
       // Refresh session to ensure fresh token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
-      const { data, error } = await supabase.functions.invoke("asaas-charge-client", {
+      const { data, error, requestId } = await invokeEdge("asaas-charge-client", {
         body: { organization_id: organization_id || orgId, contract_id, billing_type },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) throw Object.assign(error, { requestId });
+      if (data?.error) throw new Error(`${data.error} (id: ${requestId.slice(0, 8)})`);
       return data;
     },
     onSuccess: () => {
@@ -121,11 +122,11 @@ export function useAsaasNetworkPayments() {
   return useQuery({
     queryKey: ["asaas-network-payments", start],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("asaas-list-payments", {
+      const { data, error, requestId } = await invokeEdge("asaas-list-payments", {
         body: { all: true, startDate: start, endDate: end },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) throw new Error(`${data.error} (id: ${requestId.slice(0, 8)})`);
       return (data?.payments || []) as AsaasPayment[];
     },
     staleTime: 1000 * 60 * 2,
@@ -139,9 +140,9 @@ export function useManagePayment() {
     mutationFn: async (params: { action: "cancel" | "update"; payment_id: string; value?: number; dueDate?: string; description?: string }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
-      const { data, error } = await supabase.functions.invoke("asaas-manage-payment", { body: params });
+      const { data, error, requestId } = await invokeEdge("asaas-manage-payment", { body: params });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) throw new Error(`${data.error} (id: ${requestId.slice(0, 8)})`);
       return data;
     },
     onSuccess: (_data, variables) => {

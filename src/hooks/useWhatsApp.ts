@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 
 export type WhatsAppProvider = "zapi" | "evolution" | "whatsapp_cloud";
@@ -188,7 +189,7 @@ export function useSetupWhatsApp() {
       accessToken?: string;
       cloudMetadata?: Record<string, unknown>;
     }) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
+      const { data, error } = await invokeEdge("whatsapp-setup", {
         body: params,
       });
       if (error) throw error;
@@ -216,7 +217,7 @@ export function useSendWhatsAppMessage() {
       templateLanguage?: string;
       templateComponents?: unknown[];
     }) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+      const { data, error } = await invokeEdge("whatsapp-send", {
         body: params,
       });
       if (error) throw error;
@@ -339,7 +340,7 @@ export function useFindLeadByPhone(phone: string | null) {
 export function useSendTypingIndicator() {
   return useMutation({
     mutationFn: async (contactPhone: string) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-typing", {
+      const { data, error } = await invokeEdge("whatsapp-typing", {
         body: { contactPhone },
       });
       if (error) throw error;
@@ -352,7 +353,7 @@ export function useSendTypingIndicator() {
 export function useMarkWhatsAppRead() {
   return useMutation({
     mutationFn: async (params: { contactPhone?: string; contactId?: string }) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+      const { data, error } = await invokeEdge("whatsapp-send", {
         body: { ...params, action: "read", message: "" },
       });
       if (error) throw error;
