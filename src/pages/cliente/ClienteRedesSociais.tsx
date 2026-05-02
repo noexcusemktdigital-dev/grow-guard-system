@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -83,7 +83,7 @@ export default function ClienteRedesSociais() {
   const [view, setView] = useState<MainView>("gallery");
 
   const [contentId, setContentId] = useState<string | null>(null);
-  const [contentData, setContentData] = useState<any>(null);
+  const [contentData, setContentData] = useState<Tables<'client_content'> | null>(null);
   const [briefingFilled, setBriefingFilled] = useState(false);
   const [generatedResult, setGeneratedResult] = useState<{ post: PostItem; result_url: string | null; result_data: Record<string, unknown> } | null>(null);
   const [batchResults, setBatchResults] = useState<{ post: PostItem; result_url: string | null; result_data: Record<string, unknown> }[]>([]);

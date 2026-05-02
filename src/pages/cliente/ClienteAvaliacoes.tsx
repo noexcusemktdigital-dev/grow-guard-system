@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { useState, useMemo } from "react";
 import { Star, ClipboardCheck, User, ChevronRight, TrendingUp, TrendingDown, Minus, FolderOpen, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -15,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
-import { useCrmTeam } from "@/hooks/useCrmTeam";
+import { useCrmTeam, type TeamMember } from "@/hooks/useCrmTeam";
 import { useEvaluations, useEvaluationMutations } from "@/hooks/useEvaluations";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -132,7 +130,7 @@ export default function ClienteAvaliacoes() {
   const [generalScore, setGeneralScore] = useState(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [comment, setComment] = useState("");
-  const [sheetMember, setSheetMember] = useState<any>(null);
+  const [sheetMember, setSheetMember] = useState<TeamMember | null>(null);
 
   // Include self for self-evaluation
   const allMembers = team ?? [];

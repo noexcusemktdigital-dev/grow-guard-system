@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { formatBRL } from "@/lib/formatting";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -41,9 +41,9 @@ export default function ContratosGerador() {
   const [filterType, setFilterType] = useState("all");
   const [filterOwner, setFilterOwner] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [detailContract, setDetailContract] = useState<any>(null);
+  const [detailContract, setDetailContract] = useState<Tables<'contracts'> | null>(null);
   const [editDialog, setEditDialog] = useState(false);
-  const [editingContract, setEditingContract] = useState<any>(null);
+  const [editingContract, setEditingContract] = useState<Tables<'contracts'> | null>(null);
   const [editForm, setEditForm] = useState({ status: "active", monthly_value: 0, signer_name: "", signer_email: "", start_date: "", end_date: "" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
 

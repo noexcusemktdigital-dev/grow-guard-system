@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Building2, Phone, MapPin, Users, Globe, Briefcase, ArrowRight, ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
@@ -78,7 +78,7 @@ export default function ClienteOnboardingCompany() {
   // Pre-fill when org loads
   const [prefilled, setPrefilled] = useState(false);
   if (org && !prefilled) {
-    const o = org as Record<string, any>;
+    const o = org as Tables<'organizations'>;
     setForm(prev => ({
       ...prev,
       name: (o.name && !String(o.name).includes("'s Company")) ? String(o.name) : "",
@@ -138,7 +138,7 @@ export default function ClienteOnboardingCompany() {
 
   // Redirect if onboarding already completed
   useEffect(() => {
-    if (!isLoading && org && (org as any).onboarding_completed === true) {
+    if (!isLoading && org && (org as Tables<'organizations'>).onboarding_completed === true) {
       navigate("/cliente/inicio", { replace: true });
     }
   }, [org, isLoading, navigate]);
