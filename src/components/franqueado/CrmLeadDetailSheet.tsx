@@ -20,7 +20,7 @@ import { useCrmSettings } from "@/hooks/useCrmSettings";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useProspections } from "@/hooks/useFranqueadoProspections";
 import { useStrategies } from "@/hooks/useFranqueadoStrategies";
-import { useCrmProposals } from "@/hooks/useCrmProposals";
+import { useCrmProposals, type CrmProposal } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -235,7 +235,7 @@ export function CrmLeadDetailSheet({ lead, open, onOpenChange, activities: propA
                 </Button>
               </div>
             ) : (
-              leadProposals.map((p: any) => {
+              leadProposals.map((p: CrmProposal) => {
                 const statusColors: Record<string, string> = {
                   draft: "bg-muted text-muted-foreground",
                   sent: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",

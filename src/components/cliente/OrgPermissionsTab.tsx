@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Shield, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -16,6 +15,13 @@ import {
   PERMISSION_GROUPS,
   useOrgPermissionsAdmin,
 } from "@/hooks/useOrgPermissions";
+
+interface OrgMember {
+  user_id: string;
+  role: string;
+  full_name: string | null;
+  email: string | null;
+}
 
 const ROLE_LABELS: Record<string, string> = {
   cliente_admin: "Admin",
@@ -97,7 +103,7 @@ export function OrgPermissionsTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u: any) => {
+                {(users as OrgMember[]).map((u) => {
                   const isAdmin =
                     u.role === "cliente_admin" ||
                     u.role === "admin" ||

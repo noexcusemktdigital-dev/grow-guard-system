@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -736,12 +735,12 @@ function PaymentPolling({ orgId, onConfirmed }: { orgId: string | null | undefin
       try {
         setChecking(true);
         const { data } = await supabase
-          .from("whatsapp_instances" as any)
+          .from("whatsapp_instances")
           .select("billing_status")
           .eq("organization_id", orgId)
           .limit(1)
           .single();
-        if ((data as any)?.billing_status === "active") {
+        if (data?.billing_status === "active") {
           if (intervalRef.current) clearInterval(intervalRef.current);
           onConfirmed();
         }

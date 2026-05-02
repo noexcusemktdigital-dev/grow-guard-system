@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { FolderOpen, ChevronDown, ChevronRight, Copy, ExternalLink, Search, Filter, Eye, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +23,7 @@ export function BatchFolderView({ history, navigate, onDelete }: BatchFolderView
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [formatFilter, setFormatFilter] = useState<string>("all");
-  const [expandedContent, setExpandedContent] = useState<any>(null);
+  const [expandedContent, setExpandedContent] = useState<ContentItem | null>(null);
 
   // Filter items
   const filtered = useMemo(() => {
