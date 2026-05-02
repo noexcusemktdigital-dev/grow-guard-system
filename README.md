@@ -1,73 +1,120 @@
-# Welcome to your Lovable project
+# Sistema Noé (grow-guard-system)
 
-## Project info
+> Plataforma de marketing digital para redes de franquias.
+> Cliente principal: NOEXCUSE (Davi Tesch).
+> Operada via Lovable Cloud.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Visão geral
 
-## How can I edit this code?
+Sistema Noé é um SaaS multi-tenant para gestão de marketing digital em redes de franquias: campanhas de ads (Meta/Google), CRM, geração de conteúdo por IA, conversas WhatsApp, sites e relatórios consolidados. Atende três personas — franqueadora (rede), franqueado (unidade) e cliente final — em portais segregados por RLS no Supabase.
 
-There are several ways of editing your application.
+## Stack
 
-**Use Lovable**
+- **Frontend:** React 18 + TypeScript + Vite + shadcn-ui + Tailwind + Framer Motion
+- **Backend:** Supabase (PostgreSQL + Edge Functions + Auth + Realtime + Storage) — projeto `gxrhdpbbxfipeopdyygn`
+- **Hosting:** Lovable Cloud (auto-deploy via push em `main`)
+- **AI:** Lovable AI Gateway (Google Gemini)
+- **Integrações:** Asaas (pagamentos), Meta Ads/Leadgen/WhatsApp Cloud, Google Ads/Calendar, Evolution API (WhatsApp via VPS Lamadre)
+- **Estado/Dados:** TanStack Query, Zod, react-hook-form
+- **Testes:** Vitest + Testing Library + jsdom
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Arquitetura — 3 Portais
 
-Changes made via Lovable will be committed automatically to this repo.
+| Portal | Roles | Funcionalidades |
+|--------|-------|-----------------|
+| **Franqueadora** (admin rede) | `super_admin`, `admin` | gestão de unidades, comunicados globais, métricas consolidadas, CRM master |
+| **Franqueado** | `franqueado` | gestão da própria unidade, equipe, métricas locais, ads, conteúdo |
+| **Cliente** | `cliente_admin`, `cliente_user` | dashboard de campanhas, conversas WhatsApp, sites, IA (geração de conteúdo) |
 
-**Use your preferred IDE**
+Multi-tenant via `organization_id` + RLS no Supabase. Toda mutação crítica passa por `assertOrgMember` (anti-BOLA) nas edge functions.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Setup local
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Pré-requisitos
+- Node.js 22+
+- npm (ou bun — `bun.lockb` presente)
+- Acesso ao Supabase do projeto (`gxrhdpbbxfipeopdyygn`)
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Passos
+```bash
+git clone https://github.com/noexcusemktdigital-dev/grow-guard-system.git
+cd grow-guard-system
+cp .env.example .env  # preencher VITE_SUPABASE_PUBLISHABLE_KEY se aplicável
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+App roda em http://localhost:8080.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Comandos principais
 
-**Use GitHub Codespaces**
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | dev server (HMR) |
+| `npm run build` | build de produção |
+| `npm run build:dev` | build em modo development |
+| `npm run preview` | preview do build |
+| `npm run lint` | ESLint (flat config) |
+| `npm test` | Vitest (run único) |
+| `npm run test:watch` | Vitest em watch mode |
+| `npm run coverage` | Cobertura via @vitest/coverage-v8 |
+| `npx tsc --noEmit` | type-check |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Edge Functions (Supabase)
 
-## What technologies are used for this project?
+100+ edge functions em `supabase/functions/`. Categorias:
 
-This project is built with:
+- **Pagamentos:** `asaas-*`, `recharge-credits`, `credits-*`
+- **Webhooks:** `*-webhook` (Asaas, Evolution, Meta Leadgen, WhatsApp Cloud)
+- **IA generativa:** `generate-*` (conteúdo, imagens, vídeos via Gemini)
+- **OAuth:** `*-oauth-*` (Meta, Google, LinkedIn, TikTok)
+- **Crons:** `*-cron`, `*-sync` (rodam via pg_cron)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Helpers compartilhados em `supabase/functions/_shared/`:
+- `cors.ts` — headers CORS
+- `hmac.ts` — validação HMAC de webhooks (Meta)
+- `auth.ts` — `requireAuth` + `assertOrgMember` (anti-BOLA)
+- `idempotency.ts` — wrapper `withIdempotency` para mutações críticas
+- `redact.ts` — sanitização de PII em logs (LGPD)
 
-## How can I deploy this project?
+## Workflow de mudanças
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### Migrations SQL
+1. Criar arquivo em `supabase/migrations/NNNN_verb_subject.sql` (idempotente, RLS junto)
+2. Commit + push em branch
+3. PR + review
+4. Após merge: aplicar via Lovable SQL Editor (NUNCA `supabase db push` direto)
 
-## Can I connect a custom domain to my Lovable project?
+### Edge functions
+1. Editar em `supabase/functions/{nome}/index.ts`
+2. Adicionar entry em `supabase/config.toml` se nova
+3. PR + merge → Lovable sincroniza (até ~10min)
 
-Yes, you can!
+### Frontend
+- Push em branch + PR + merge → Lovable rebuilda automaticamente.
+- **Nunca** usar o preview lento do Lovable como ciclo de desenvolvimento — editar direto no código e empurrar para o GitHub.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Documentação
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `docs/adr/` — Architecture Decision Records (quando aplicável)
+- `docs/auditorias/` — Auditorias técnicas periódicas
+- `docs/guia-credenciais-ads-v2.md` — credenciais e setup de plataformas de ads
+- `docs/meta-app-review-compliance-2026-04-29.md` — compliance Meta App Review
+- `docs/social-integration-plan.md` — plano de integrações sociais
+- `docs/ROLLBACK.md` — procedimentos de rollback
+
+## Auditoria
+
+Auditorias técnicas vivem em `docs/auditorias/`. Itens críticos identificados são endereçados em PRs separados com SLA de 24h (DX, segurança, RLS, compliance LGPD).
+
+## Lovable
+
+Projeto operado pela Lovable Cloud. Para abrir no editor: [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID).
+
+Para conectar domínio customizado: Project → Settings → Domains → Connect Domain. Documentação: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain).
+
+## Contato
+
+- Time: NOEXCUSE / IZITECH
+- Owner: Rafael Marutaka
+- GitHub: [noexcusemktdigital-dev/grow-guard-system](https://github.com/noexcusemktdigital-dev/grow-guard-system)
