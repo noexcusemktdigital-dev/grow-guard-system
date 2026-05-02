@@ -17,7 +17,9 @@
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
     "check:stale-time": "tsx scripts/check-stale-time.ts",
-    "check:stale-time:all": "CHECK_STALE_TIME_MODE=all tsx scripts/check-stale-time.ts"
+    "check:stale-time:all": "CHECK_STALE_TIME_MODE=all tsx scripts/check-stale-time.ts",
+    "types:supabase": "bash scripts/gen-supabase-types.sh",
+    "types:check": "tsc --noEmit"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
