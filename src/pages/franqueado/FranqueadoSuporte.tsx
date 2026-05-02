@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo, useRef, useEffect } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { logger } from "@/lib/logger";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Card } from "@/components/ui/card";
@@ -110,7 +111,7 @@ function FranqueadoSuporteContent() {
   // Sync selected ticket
   useEffect(() => {
     if (selectedTicket && tickets) {
-      const updated = tickets.find((t: any) => t.id === selectedTicket.id);
+      const updated = tickets.find((t: Tables<'support_tickets'>) => t.id === selectedTicket.id);
       if (updated && (updated.status !== selectedTicket.status || updated.updated_at !== selectedTicket.updated_at)) {
         setSelectedTicket(updated as Record<string, unknown>);
       }
@@ -550,7 +551,7 @@ function TicketMessages({ ticketId, userId }: { ticketId: string; userId?: strin
 /* ── Kanban view ──────────────────────────────────────────────── */
 const KANBAN_COLUMNS = ["open", "in_progress", "waiting", "resolved"];
 
-function FranqueadoKanbanView({ tickets, onSelect }: { tickets: any[]; onSelect: (t: any) => void }) {
+function FranqueadoKanbanView({ tickets, onSelect }: { tickets: Tables<'support_tickets'>[]; onSelect: (t: Tables<'support_tickets'>) => void }) {
   const colColors: Record<string, string> = {
     open: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     in_progress: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
@@ -605,10 +606,10 @@ function FranqueadoKanbanView({ tickets, onSelect }: { tickets: any[]; onSelect:
   );
 }
 
-function FranqueadoListView({ tickets, onSelect, selectedId }: { tickets: any[]; onSelect: (t: any) => void; selectedId?: string }) {
+function FranqueadoListView({ tickets, onSelect, selectedId }: { tickets: Tables<'support_tickets'>[]; onSelect: (t: Tables<'support_tickets'>) => void; selectedId?: string }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card divide-y divide-border">
-      {tickets.map((t: any) => (
+      {tickets.map((t: Tables<'support_tickets'>) => (
         <button
           key={t.id}
           onClick={() => onSelect(t)}

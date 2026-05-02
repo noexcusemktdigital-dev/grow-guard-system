@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
+import type { ClientDispatch } from "@/hooks/useClienteDispatches";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Send, Plus, Zap, Settings2, ChevronRight, ChevronLeft,
@@ -88,10 +89,10 @@ export default function ClienteDisparos() {
 
       if (isConnected && result?.id) {
         triggerBulkSend.mutate(result.id, {
-          onSuccess: (data: any) => {
+          onSuccess: (data: Record<string, unknown>) => {
             toast({
               title: "Disparo concluído!",
-              description: `${data?.stats?.sent || 0} mensagens enviadas.`,
+              description: `${(data?.stats as Record<string, unknown>)?.sent || 0} mensagens enviadas.`,
             });
           },
           onError: (err: unknown) => {
@@ -129,8 +130,8 @@ export default function ClienteDisparos() {
       return;
     }
     triggerBulkSend.mutate(id, {
-      onSuccess: (data: any) => {
-        toast({ title: "Disparo enviado!", description: `${data?.stats?.sent || 0} mensagens enviadas.` });
+      onSuccess: (data: Record<string, unknown>) => {
+        toast({ title: "Disparo enviado!", description: `${(data?.stats as Record<string, unknown>)?.sent || 0} mensagens enviadas.` });
       },
       onError: (err: unknown) => {
         toast({ title: "Erro no envio", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
@@ -142,7 +143,7 @@ export default function ClienteDisparos() {
   // KPI calculations
   const totalSent = allDispatches
     .filter((d) => d.stats)
-    .reduce((acc, d) => acc + ((d.stats as any)?.sent as number || 0), 0);
+    .reduce((acc, d) => acc + ((d.stats as Record<string, unknown>)?.sent as number || 0), 0);
 
   if (isLoading) {
     return (
@@ -220,7 +221,7 @@ export default function ClienteDisparos() {
           {allDispatches.map((d, i) => (
             <DisparoDispatchCard
               key={d.id}
-              dispatch={d as any}
+              dispatch={d as ClientDispatch}
               index={i}
               onView={(dispatch) => setDetailDispatch(dispatch)}
               onDelete={(id) => setDeleteId(id)}
@@ -232,7 +233,7 @@ export default function ClienteDisparos() {
 
       {/* Detail sheet */}
       <DisparoDetailSheet
-        dispatch={detailDispatch as any}
+        dispatch={detailDispatch as ClientDispatch}
         open={!!detailDispatch}
         onOpenChange={(open) => { if (!open) setDetailDispatch(null); }}
       />

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -199,15 +200,15 @@ export default function Agenda() {
   async function handleGooglePull() {
     setSyncing(true);
     try {
-      const result = await syncGoogle.mutateAsync("pull" as any);
+      const result = await syncGoogle.mutateAsync("pull" as Parameters<typeof syncGoogle.mutateAsync>[0]);
       toast.success(`Sincronizado! ${(result as Record<string, unknown>)?.imported || 0} novos eventos importados.`);
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
     setSyncing(false);
   }
 
   const [formOpen, setFormOpen] = useState(false);
-  const [detailEvent, setDetailEvent] = useState<any>(null);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [detailEvent, setDetailEvent] = useState<Tables<'calendar_events'> | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Tables<'calendar_events'> | null>(null);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -281,7 +282,7 @@ export default function Agenda() {
         onSuccess: () => { setFormOpen(false); toast.success("Evento atualizado!"); },
       });
     } else {
-      createEvent.mutate(payload as any, {
+      createEvent.mutate(payload as TablesInsert<'calendar_events'>, {
         onSuccess: () => { setFormOpen(false); toast.success("Evento criado!"); },
       });
     }
@@ -446,12 +447,12 @@ export default function Agenda() {
 
           {/* Week View */}
           {viewMode === "week" && (
-            <WeekView currentDate={currentDate} events={(events ?? []) as any} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+            <WeekView currentDate={currentDate} events={(events ?? []) as Tables<'calendar_events'>[]} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
           )}
 
           {/* Day View */}
           {viewMode === "day" && (
-            <DayView currentDate={currentDate} events={(events ?? []) as any} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
+            <DayView currentDate={currentDate} events={(events ?? []) as Tables<'calendar_events'>[]} onEventClick={setDetailEvent} onNewEvent={openNewEvent} />
           )}
         </div>
       </div>

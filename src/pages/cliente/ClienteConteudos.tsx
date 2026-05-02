@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { useState, useEffect } from "react";
+import type { ContentItem } from "@/hooks/useClienteContentV2";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import { FileText, Check, Sparkles, FolderOpen, RotateCcw, Video, Clapperboard } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -56,7 +57,7 @@ export default function ClienteConteudos() {
   const [duracao, setDuracao] = useState("30s");
 
   // Results
-  const [generatedContents, setGeneratedContents] = useState<any[]>([]);
+  const [generatedContents, setGeneratedContents] = useState<ContentItem[]>([]);
   const [generatedIds, setGeneratedIds] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingIdx, setLoadingIdx] = useState(0);
@@ -65,8 +66,8 @@ export default function ClienteConteudos() {
   // Dialogs
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
-  const [expandedContent, setExpandedContent] = useState<any>(null);
-  const [recordingScript, setRecordingScript] = useState<any>(null);
+  const [expandedContent, setExpandedContent] = useState<ContentItem | null>(null);
+  const [recordingScript, setRecordingScript] = useState<ContentItem | null>(null);
 
   useEffect(() => {
     if (hasStrategy && strategy.canalPrioritario) {
@@ -139,8 +140,8 @@ export default function ClienteConteudos() {
     setConfirmApproveAll(false);
     try {
       const result = await approveBatchMutation.mutateAsync(generatedIds);
-      const approved = (result as any)?.approved ?? generatedIds.length;
-      const skipped = (result as any)?.skipped ?? 0;
+      const approved = (result as Record<string, unknown>)?.approved ?? generatedIds.length;
+      const skipped = (result as Record<string, unknown>)?.skipped ?? 0;
 
       if (approved === 0) {
         toast({ title: "Todos já aprovados!", description: "Nenhum crédito debitado." });
