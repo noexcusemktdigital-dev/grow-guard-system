@@ -3,28 +3,29 @@
 Documento interno para preparação do processo de App Review da Meta para uso da
 **WhatsApp Business Platform / WhatsApp Cloud API** dentro da plataforma NoExcuse.
 
-> Status: fundação técnica implementada (provider `whatsapp_cloud`, webhook,
-> envio via Graph API v20.0, schema multi-tenant). Pendente: submissão final
-> à Meta.
+> Status em 2026-05-02: base técnica mergeada na `main`, provider
+> `whatsapp_cloud` separado do provider Izitech, webhook publicado e URLs
+> públicas acessíveis. Pendente operacional: configurar/conferir o verify token
+> real no Meta Dashboard, gravar o vídeo final e responder a Meta com o link.
 
 ---
 
 ## 1. Checklist de aprovação Meta
 
 ### 1.1. Pré-requisitos da conta
-- [ ] Meta Business Manager verificado (Business Verification concluída).
+- [x] Meta Business Manager verificado (Business Verification concluída).
 - [ ] WhatsApp Business Account (WABA) criada dentro do Business Manager.
 - [ ] Display Name aprovado para o número comercial.
 - [ ] Método de pagamento configurado na WABA.
-- [ ] Política de Privacidade pública e atualizada
+- [x] Política de Privacidade pública e atualizada
   (`https://sistema.noexcusedigital.com.br/privacidade`).
-- [ ] Termos de Uso públicos e atualizados
+- [x] Termos de Uso públicos e atualizados
   (`https://sistema.noexcusedigital.com.br/termos`).
-- [ ] URL de exclusão de dados (Data Deletion) ativa no app Meta.
+- [x] URL de exclusão de dados (Data Deletion) ativa no app Meta.
 
 ### 1.2. Configuração do App Meta
-- [ ] App Meta do tipo **Business** criado.
-- [ ] Produto **WhatsApp** adicionado ao app.
+- [x] App Meta do tipo **Business** criado.
+- [x] Produto **WhatsApp** adicionado ao app.
 - [ ] Produto **Webhooks** adicionado e apontando para a URL abaixo.
 - [ ] System User com permissão na WABA criado e access token de longa duração
   gerado (armazenado em `WHATSAPP_CLOUD_ACCESS_TOKEN`).
@@ -45,17 +46,17 @@ Documento interno para preparação do processo de App Review da Meta para uso d
 
 ### 1.5. App Review (submissão)
 - [ ] Caso de uso descrito em português e inglês.
-- [ ] Vídeo demo de 3 a 5 minutos enviado (ver roteiro na seção 4).
+- [ ] Vídeo demo de 3 a 5 minutos enviado (ver roteiro na seção 5).
 - [ ] Instruções de teste para o revisor (login, senha de teste, número
   WhatsApp de teste).
-- [ ] Resposta padrão pronta para perguntas adicionais (seção 5).
+- [ ] Resposta padrão pronta para perguntas adicionais (seção 6).
 
 ---
 
 ## 2. URL do webhook
 
 ```
-https://<VITE_SUPABASE_PROJECT_ID>.supabase.co/functions/v1/whatsapp-cloud-webhook
+https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/whatsapp-cloud-webhook
 ```
 
 - **Verify Token**: valor de `WHATSAPP_CLOUD_VERIFY_TOKEN`.
@@ -64,8 +65,21 @@ https://<VITE_SUPABASE_PROJECT_ID>.supabase.co/functions/v1/whatsapp-cloud-webho
 - **Método GET**: usado pela Meta para o handshake inicial
   (`hub.mode=subscribe`, `hub.verify_token`, `hub.challenge`).
 - **Método POST**: usado pela Meta para entregar eventos. A função valida a
-  assinatura `X-Hub-Signature-256` usando `WHATSAPP_CLOUD_APP_SECRET` e
+  assinatura `X-Hub-Signature-256` usando `WHATSAPP_CLOUD_APP_SECRET`
+  (também aceita os aliases `WHATSAPP_APP_SECRET` e `META_APP_SECRET`) e
   registra o payload em `whatsapp_cloud_webhook_logs`.
+
+### 2.1. URLs finais para o Meta Console
+
+| Campo | Valor |
+|-------|-------|
+| App homepage | `https://sistema.noexcusedigital.com.br` |
+| Privacy Policy URL | `https://sistema.noexcusedigital.com.br/privacidade` |
+| Terms of Service URL | `https://sistema.noexcusedigital.com.br/termos` |
+| Data Deletion Callback | `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/meta-data-deletion` |
+| WhatsApp webhook callback | `https://gxrhdpbbxfipeopdyygn.supabase.co/functions/v1/whatsapp-cloud-webhook` |
+| WhatsApp webhook verify token | valor exato de `WHATSAPP_CLOUD_VERIFY_TOKEN` |
+| WhatsApp webhook fields | `messages`, `message_template_status_update`, `account_update`, `phone_number_quality_update` |
 
 ---
 
@@ -83,9 +97,33 @@ Configurar em **Lovable Cloud → Backend → Secrets**:
 > `access_token_encrypted`, ele é usado; senão, cai no token global do
 > ambiente.
 
+> Compatibilidade: o webhook também aceita `WHATSAPP_APP_SECRET` e
+> `META_APP_SECRET` como aliases do App Secret, mas o nome recomendado para
+> WhatsApp Cloud é `WHATSAPP_CLOUD_APP_SECRET`.
+
 ---
 
-## 4. Roteiro de vídeo demo (3 a 5 minutos)
+## 4. Evidências verificadas em 2026-05-02
+
+- PR GitHub: `#56` mergeado com a separação **WhatsApp Cloud API — Meta oficial**
+  e **WhatsApp via Izitech**.
+- Branch `main`: commits posteriores sincronizados até `4396c6dc`.
+- Checks GitHub no commit `4396c6dc`: `TypeScript`, `Bundle Size`, `Lint`,
+  `Unit Tests` e `Dependency Audit` concluídos com sucesso.
+- Lovable: projeto `1d5802a2-4462-4bb6-a30e-a9b2d444f68e` em estado `ready`.
+- Produção:
+  - `https://sistema.noexcusedigital.com.br/` respondeu HTTP 200.
+  - `https://sistema.noexcusedigital.com.br/privacidade` respondeu HTTP 200.
+  - `https://sistema.noexcusedigital.com.br/termos` respondeu HTTP 200.
+- Webhook:
+  - `OPTIONS /functions/v1/whatsapp-cloud-webhook` respondeu HTTP 200.
+  - `GET` com token falso respondeu HTTP 403, comportamento esperado.
+  - O handshake oficial precisa usar o valor real de
+    `WHATSAPP_CLOUD_VERIFY_TOKEN` cadastrado no Meta Dashboard.
+
+---
+
+## 5. Roteiro de vídeo demo (3 a 5 minutos)
 
 Gravar em 1080p, com narração em inglês (ou legendado), mostrando o app
 real em produção/preview.
@@ -110,7 +148,7 @@ Dicas de gravação:
 
 ---
 
-## 5. E-mail / resposta padrão para a Meta
+## 6. E-mail / resposta padrão para a Meta
 
 Use quando o revisor pedir esclarecimentos ou um link adicional do vídeo.
 
