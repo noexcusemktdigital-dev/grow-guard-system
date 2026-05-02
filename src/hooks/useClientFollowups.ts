@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import type { Tables } from "@/integrations/supabase/typed";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -287,7 +288,7 @@ export function useSaveFollowup() {
       toast.success("Acompanhamento salvo com sucesso!");
     },
     onError: (e: unknown) => {
-      toast.error(e.message || "Erro ao salvar acompanhamento");
+      reportError(e, { title: 'Erro ao salvar acompanhamento', category: 'followup.save' });
     },
   });
 }
@@ -327,7 +328,7 @@ export function useRenameFolder() {
       toast.success("Nome do projeto atualizado!");
     },
     onError: (e: unknown) => {
-      toast.error(e.message || "Erro ao renomear projeto");
+      reportError(e, { title: 'Erro ao renomear projeto', category: 'followup.rename_folder' });
     },
   });
 }

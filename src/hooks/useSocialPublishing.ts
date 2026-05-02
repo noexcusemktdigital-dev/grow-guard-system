@@ -5,6 +5,7 @@ import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export interface SocialInsights {
   account: {
@@ -106,7 +107,7 @@ export function usePublishOrSchedule() {
       else toast.success("Post publicado com sucesso!");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Erro ao publicar.");
+      reportError(err, { title: 'Erro ao publicar post', category: 'social.publish' });
     },
   });
 }
@@ -127,7 +128,7 @@ export function useCancelScheduledPost() {
       toast.success("Agendamento cancelado.");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Erro ao cancelar.");
+      reportError(err, { title: 'Erro ao cancelar agendamento', category: 'social.cancel_scheduled' });
     },
   });
 }
