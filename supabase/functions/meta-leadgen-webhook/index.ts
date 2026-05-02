@@ -3,6 +3,7 @@
 // Configurar no painel Meta App > Webhooks > Page > leadgen com esta URL.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { redact } from "../_shared/redact.ts";
+import { verifyMetaWebhook } from "../_shared/hmac.ts";
 
 const VERIFY_TOKEN = Deno.env.get("META_LEADGEN_VERIFY_TOKEN") || "noexcuse_leadgen_verify";
 
@@ -25,7 +26,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    // INT-001: validar HMAC SHA-256 antes de processar payload.
+    // IMPORTANTE: ler raw body antes de JSON.parse — assinatura é sobre bytes brutos.
+    const rawBody = await req.text();
+    const appSecret = Deno.env.get("META_APP_SECRET");
+    const validation = await verifyMetaWebhook(req, rawBody, appSecret);
+    if (!validation.valid) {
+      console.warn(`[meta-leadgen-webhook] HMAC validation failed: ${validation.reason}`);
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const body = JSON.parse(rawBody);
+    // LGPD-001: redact PII (lead names, emails, phones)
     console.log("[meta-leadgen-webhook] payload:", JSON.stringify(redact(body)));
 
     const supabase = createClient(
