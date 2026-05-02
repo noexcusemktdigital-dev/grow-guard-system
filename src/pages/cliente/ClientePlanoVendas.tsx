@@ -1,5 +1,9 @@
 // @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
+import type { Tables } from "@/integrations/supabase/types";
+import type { SalesPlanHistoryItem } from "@/hooks/useSalesPlan";
+import type { CrmTeam } from "@/hooks/useCrmTeams";
+import type { TeamMember } from "@/hooks/useCrmTeam";
 import { logger } from "@/lib/logger";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
@@ -63,7 +67,7 @@ export default function ClientePlanoVendas() {
   const { data: historicGoals } = useHistoricGoals();
   const { data: goalProgress } = useGoalProgress(activeGoals);
   const { createGoal, updateGoal, archiveGoal } = useGoalMutations();
-  const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [editingGoal, setEditingGoal] = useState<Tables<'goals'> | null>(null);
   const { data: teams } = useCrmTeams();
   const { data: members } = useCrmTeam();
 
@@ -80,7 +84,7 @@ export default function ClientePlanoVendas() {
   const { createScript } = useClienteScriptMutations();
   const { data: orgId } = useUserOrgId();
 
-  const handleChatComplete = async (chatAnswers: Record<string, any>) => {
+  const handleChatComplete = async (chatAnswers: Record<string, unknown>) => {
     const ans = chatAnswers as Answers;
     setAnswers(ans);
     setCompleted(true);
@@ -335,7 +339,7 @@ export default function ClientePlanoVendas() {
 
         <TabsContent value="historico" className="space-y-6 mt-4">
           <ClientePlanoVendasHistorico
-            planHistory={planHistory as any}
+            planHistory={planHistory as SalesPlanHistoryItem[]}
             historyLoading={historyLoading}
           />
         </TabsContent>
@@ -369,8 +373,8 @@ export default function ClientePlanoVendas() {
         isCreating={createGoal.isPending}
         isUpdating={updateGoal.isPending}
         isMonetaryMetric={isMonetaryMetric}
-        teams={teams as any}
-        members={members as any}
+        teams={teams as CrmTeam[]}
+        members={members as TeamMember[]}
       />
     </div>
   );

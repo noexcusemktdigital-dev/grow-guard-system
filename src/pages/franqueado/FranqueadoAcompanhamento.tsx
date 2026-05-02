@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo, useRef } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import {
   useClientFolders,
   useClientFoldersForUnit,
@@ -605,7 +606,7 @@ function TrafegoInvestimentoChart({ campanhas }: { campanhas: TrafegoCampanha[] 
 }
 
 // ─── LEVEL 1: Client Folders ───
-function FolderListView({ folders, onSelect, isMatriz, canEdit, units, onRename }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; canEdit: boolean; units?: any[]; onRename: (oldName: string, newName: string) => void }) {
+function FolderListView({ folders, onSelect, isMatriz, canEdit, units, onRename }: { folders: { name: string; count: number; unit_org_id: string | null }[]; onSelect: (name: string, unitOrgId?: string) => void; isMatriz: boolean; canEdit: boolean; units?: Tables<'units'>[]; onRename: (oldName: string, newName: string) => void }) {
   const [newName, setNewName] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("");
   const [showInput, setShowInput] = useState(false);
@@ -640,7 +641,7 @@ function FolderListView({ folders, onSelect, isMatriz, canEdit, units, onRename 
             <Select value={selectedUnit} onValueChange={setSelectedUnit}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Selecione a unidade..." /></SelectTrigger>
               <SelectContent>
-                {(units || []).map((u: any) => (
+                {(units || []).map((u: Tables<'units'>) => (
                   <SelectItem key={u.id} value={u.unit_org_id || u.id}>{u.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -814,21 +815,21 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
     try {
       await generateFollowupPdf(clientName, monthRef, buildAnalise(), buildPlano());
       toast.success("PDF exportado!");
-    } catch (e: any) {
-      toast.error("Erro ao gerar PDF: " + (e.message || ""));
+    } catch (e: unknown) {
+      toast.error("Erro ao gerar PDF: " + (e instanceof Error ? e.message : ""));
     }
   };
 
   // Pauta helpers
   const addPauta = (tipo: "organico" | "pago") => setPautas([...pautas, { ...EMPTY_PAUTA, tipo }]);
-  const updatePauta = (idx: number, field: keyof ConteudoPauta, value: any) => {
+  const updatePauta = (idx: number, field: keyof ConteudoPauta, value: ConteudoPauta[keyof ConteudoPauta]) => {
     const n = [...pautas]; n[idx] = { ...n[idx], [field]: value }; setPautas(n);
   };
   const removePauta = (idx: number) => setPautas(pautas.filter((_, i) => i !== idx));
 
   // Campanha helpers
   const addCampanha = () => setCampanhas([...campanhas, { ...EMPTY_CAMPANHA }]);
-  const updateCampanha = (idx: number, field: keyof TrafegoCampanha, value: any) => {
+  const updateCampanha = (idx: number, field: keyof TrafegoCampanha, value: TrafegoCampanha[keyof TrafegoCampanha]) => {
     const n = [...campanhas]; n[idx] = { ...n[idx], [field]: value }; setCampanhas(n);
   };
   const removeCampanha = (idx: number) => setCampanhas(campanhas.filter((_, i) => i !== idx));
@@ -1087,7 +1088,7 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
 }
 
 // ─── Pauta Card (content post) ───
-function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; idx: number; onChange: (i: number, f: keyof ConteudoPauta, v: any) => void; onRemove: (i: number) => void }) {
+function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; idx: number; onChange: (i: number, f: keyof ConteudoPauta, v: ConteudoPauta[keyof ConteudoPauta]) => void; onRemove: (i: number) => void }) {
   const borderColor = pauta.tipo === "organico" ? "border-l-green-500" : "border-l-blue-500";
   const refImagens = pauta.imagens_referencia || [];
   const refInputRef = useRef<HTMLInputElement>(null);
@@ -1226,7 +1227,7 @@ function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; i
 }
 
 // ─── Campanha Card (traffic) ───
-function CampanhaCard({ campanha, idx, onChange, onRemove }: { campanha: TrafegoCampanha; idx: number; onChange: (i: number, f: keyof TrafegoCampanha, v: any) => void; onRemove: (i: number) => void }) {
+function CampanhaCard({ campanha, idx, onChange, onRemove }: { campanha: TrafegoCampanha; idx: number; onChange: (i: number, f: keyof TrafegoCampanha, v: TrafegoCampanha[keyof TrafegoCampanha]) => void; onRemove: (i: number) => void }) {
   return (
     <Card className="mb-4 border-l-4 border-l-blue-500">
       <CardHeader className="pb-2 pt-3">

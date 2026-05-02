@@ -1,5 +1,9 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
+import type { Tables } from "@/integrations/supabase/types";
+import type { CrmTeam } from "@/hooks/useCrmTeams";
+import type { TeamMember } from "@/hooks/useCrmTeam";
+import type { HistoryStrategy } from "./ClientePlanoMarketingTypes";
 import { Navigation, Sparkles, Clock, DollarSign, TrendingUp, Target, BarChart3, Users, Bot, BookOpen, Rocket, CheckCircle2, ArrowRight, Trophy, MessageCircle, Globe, Send, Image, Video, PenTool } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
@@ -360,7 +364,7 @@ export default function ClienteGPSNegocio() {
   const [novaMetaOpen, setNovaMetaOpen] = useState(false);
   const [novaMeta, setNovaMeta] = useState<MetaFormState>({ title: "", metric: "revenue", target_value: 0, scope: "company", team_id: "", assigned_to: "", priority: "media", mesRef: "" });
   const [targetDisplay, setTargetDisplay] = useState("");
-  const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [editingGoal, setEditingGoal] = useState<Tables<'goals'> | null>(null);
 
   const { data: activeGoals, isLoading: goalsLoading } = useActiveGoals(scopeFilter);
   const { data: historicGoals } = useHistoricGoals();
@@ -425,11 +429,11 @@ export default function ClienteGPSNegocio() {
 
       });
 
-      const unifiedResult = (gpsResult as any).result || gpsResult || {};
+      const unifiedResult = (gpsResult as Record<string, unknown>).result || gpsResult || {};
 
       await saveStrategy.mutateAsync({
         answers: allAnswers,
-        score_percentage: Math.round(Number((unifiedResult as any)?.diagnostico_gps?.score_geral || (unifiedResult as any)?.diagnostico?.score_geral || 0)),
+        score_percentage: Math.round(Number((unifiedResult as Record<string, unknown>)?.diagnostico_gps?.score_geral || (unifiedResult as Record<string, unknown>)?.diagnostico?.score_geral || 0)),
         nivel: "gerado",
         strategy_result: unifiedResult,
         status: "pending",
@@ -679,7 +683,7 @@ export default function ClienteGPSNegocio() {
             {showHistory && history && history.length > 0 && (
               <div className="space-y-2 mb-4">
                 <p className="text-sm font-semibold text-muted-foreground">Estratégias anteriores</p>
-                {history.map((s) => <StrategyHistoryItem key={s.id} strategy={s as any} />)}
+                {history.map((s) => <StrategyHistoryItem key={s.id} strategy={s as HistoryStrategy} />)}
               </div>
             )}
 
@@ -716,8 +720,8 @@ export default function ClienteGPSNegocio() {
                   isCreating={createGoal.isPending}
                   isUpdating={updateGoal.isPending}
                   isMonetaryMetric={isMonetaryMetric}
-                  teams={teams as any}
-                  members={members as any}
+                  teams={teams as CrmTeam[]}
+                  members={members as TeamMember[]}
                 />
               }
             />

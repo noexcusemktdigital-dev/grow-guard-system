@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
@@ -91,7 +92,7 @@ export default function ClienteDashboard() {
   const allLeadsRaw = useMemo(() => {
     const list = leads ?? [];
     if (selectedFunnelId === "all") return list;
-    return list.filter((l: any) => l.funnel_id === selectedFunnelId);
+    return list.filter((l: Tables<'crm_leads'>) => l.funnel_id === selectedFunnelId);
   }, [leads, selectedFunnelId]);
   const allLeads = useMemo(() => filterByDate(allLeadsRaw, dateFrom, dateTo), [allLeadsRaw, dateFrom, dateTo]);
   const prevLeads = useMemo(() => {
@@ -180,7 +181,7 @@ export default function ClienteDashboard() {
 
   const rankingByMember = useMemo(() => {
     const map: Record<string, { won: number; total: number; revenue: number; name: string }> = {};
-    allLeads.forEach((l: any) => {
+    allLeads.forEach((l: Tables<'crm_leads'>) => {
       const key = l.assigned_to || "sem_responsavel";
       if (!map[key]) map[key] = { won: 0, total: 0, revenue: 0, name: l.assigned_to ? String(key).slice(0, 8) : "Sem responsável" };
       map[key].total++;
@@ -400,11 +401,11 @@ export default function ClienteDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Taxa de Conversão</CardTitle></CardHeader><CardContent className="flex flex-col items-center justify-center"><div className="h-40 w-full max-w-xs"><ResponsiveContainer width="100%" height="100%"><RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: "Conversão", value: Number(conversionRate), fill: conversionGoal ? conversionGoal.status === "batida" || conversionGoal.status === "no_ritmo" ? "hsl(142 76% 36%)" : conversionGoal.status === "em_andamento" ? "hsl(45 93% 47%)" : "hsl(0 84% 60%)" : "hsl(var(--primary))" }]} startAngle={90} endAngle={-270}><RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} /></RadialBarChart></ResponsiveContainer></div><div className="text-center -mt-24 relative z-10"><p className="text-3xl font-bold">{conversionRate}%</p><p className="text-[10px] text-muted-foreground uppercase tracking-wider">de conversão</p></div></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Etapa</CardTitle></CardHeader><CardContent>{leadsByStage.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsByStage}><CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><ReTooltip content={<ChartTooltip />} /><Bar dataKey="value" radius={[6, 6, 0, 0]}>{leadsByStage.map((_: any, i: number) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Etapa</CardTitle></CardHeader><CardContent>{leadsByStage.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsByStage}><CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><ReTooltip content={<ChartTooltip />} /><Bar dataKey="value" radius={[6, 6, 0, 0]}>{leadsByStage.map((_: { name: string; value: number }, i: number) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Origem</CardTitle></CardHeader><CardContent>{leadsBySource.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsBySource} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} horizontal={false} /><XAxis type="number" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} width={90} /><ReTooltip content={<ChartTooltip />} /><Bar dataKey="value" radius={[0, 6, 6, 0]}>{leadsBySource.map((_: any, i: number) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Leads por Origem</CardTitle></CardHeader><CardContent>{leadsBySource.length > 0 ? <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={leadsBySource} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} horizontal={false} /><XAxis type="number" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} /><YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: "#888" }} axisLine={false} tickLine={false} width={90} /><ReTooltip content={<ChartTooltip />} /><Bar dataKey="value" radius={[0, 6, 6, 0]}>{leadsBySource.map((_: { name: string; value: number }, i: number) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}</Bar></BarChart></ResponsiveContainer></div> : <p className="text-xs text-muted-foreground text-center py-8">Sem dados no período</p>}</CardContent></Card>
             <div className="space-y-4">
               <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> Propostas em Aberto</CardTitle></CardHeader><CardContent><div className="flex items-baseline gap-3"><p className="text-2xl font-bold">{openProposals.length}</p><p className="text-xs text-muted-foreground">propostas · R$ {openProposalsValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div></CardContent></Card>
               <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Top Leads por Valor</CardTitle></CardHeader><CardContent className="p-0">{topLeads.length > 0 ? <Table><TableBody>{topLeads.map(l => <TableRow key={l.id}><TableCell className="py-2 text-xs font-medium">{l.name}</TableCell><TableCell className="py-2 text-xs text-right text-primary font-semibold">R$ {(l.value || 0).toLocaleString("pt-BR")}</TableCell></TableRow>)}</TableBody></Table> : <p className="text-xs text-muted-foreground text-center py-4">Sem dados no período</p>}</CardContent></Card>

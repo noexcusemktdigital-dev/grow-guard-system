@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { formatBRL } from "@/lib/formatting";
 import { Trophy, BarChart3, Target, Plus, TrendingUp, Medal, Users, CalendarDays, Inbox, MoreVertical, Pencil, Archive, Star, Flame, Zap, Lock, Crown, Award } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,7 @@ export default function MetasRanking() {
   const { data: goalProgress } = useGoalProgress(activeGoals.length > 0 ? activeGoals : undefined);
 
   const [showGoalDialog, setShowGoalDialog] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [editingGoal, setEditingGoal] = useState<Tables<'goals'> | null>(null);
   const currentYear = new Date().getFullYear();
   const [goalForm, setGoalForm] = useState({ title: "", type: "faturamento", target_value: "", scope: "rede", unit_org_id: "", period_month_num: "", period_year: String(currentYear) });
 
@@ -409,8 +410,8 @@ export default function MetasRanking() {
 
       {/* Minhas Metas — visível para usuários não-admin */}
       {role !== "cliente_admin" && role !== "admin" && role !== "super_admin" && (() => {
-        const myGoals = activeGoals.filter((g: any) => g.assigned_to === user?.id);
-        const myCompletedGoals = myGoals.filter((g: any) => {
+        const myGoals = activeGoals.filter((g: Tables<'goals'>) => g.assigned_to === user?.id);
+        const myCompletedGoals = myGoals.filter((g: Tables<'goals'>) => {
           const gp = goalProgress?.[g.id];
           return gp && gp.percent >= 100;
         });
@@ -434,7 +435,7 @@ export default function MetasRanking() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              {myGoals.map((goal: any) => {
+              {myGoals.map((goal: Tables<'goals'>) => {
                 const gp = goalProgress?.[goal.id];
                 const progress = Math.min(gp?.percent ?? 0, 100);
                 const currentValue = gp?.currentValue ?? 0;
