@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { debitIfGPSDone } from '../_shared/credits.ts';
 
 const CREDIT_COST = 5;
 
@@ -289,22 +290,15 @@ REGRAS:
 
     // Debit credits — only after first GPS is approved
     try {
-      const { data: gpsData } = await supabase
-        .from("marketing_strategies")
-        .select("id")
-        .eq("organization_id", orgId)
-        .eq("status", "approved")
-        .limit(1)
-        .maybeSingle();
-
-      if (gpsData) {
-        await supabase.rpc("debit_credits", {
-          _org_id: orgId,
-          _amount: CREDIT_COST,
-          _description: "Tarefas diárias geradas por IA",
-          _source: "generate-daily-tasks",
-        });
-      }
+      await debitIfGPSDone(
+        supabase,
+        orgId,
+        CREDIT_COST,
+        "Tarefas diárias geradas por IA",
+        "generate-daily-tasks",
+        supabaseUrl,
+        supabaseKey,
+      );
     } catch (debitErr) {
       console.error("Debit error (non-blocking):", debitErr);
     }

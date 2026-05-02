@@ -2,6 +2,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { debitIfGPSDone } from '../_shared/credits.ts';
 
 const rolePrompts: Record<string, string> = {
   sdr: `Você atua como SDR (Sales Development Representative) altamente qualificado. Seu foco EXCLUSIVO é qualificar leads e enviá-los preparados para os vendedores.
@@ -84,28 +85,19 @@ function hoursSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
 }
 
-async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
+async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string, supabaseUrl: string, serviceRoleKey: string) {
   const FIXED_CREDIT_COST = 2;
   try {
-    const { data: gpsApproved } = await adminClient
-      .from("marketing_strategies")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("status", "approved")
-      .limit(1)
-      .maybeSingle();
-
-    if (!gpsApproved) {
-      console.log("GPS not yet approved — skipping credit debit");
-      return;
-    }
-
-    await adminClient.rpc("debit_credits", {
-      _org_id: orgId,
-      _amount: FIXED_CREDIT_COST,
-      _description: `Mensagem IA — ${agentName}`,
-      _source: "ai-agent-reply",
-    });
+    const debited = await debitIfGPSDone(
+      adminClient,
+      orgId,
+      FIXED_CREDIT_COST,
+      `Mensagem IA — ${agentName}`,
+      "ai-agent-reply",
+      supabaseUrl,
+      serviceRoleKey,
+    );
+    if (!debited) console.log("GPS not yet approved — skipping credit debit");
   } catch (e) {
     console.error("Debit credits error (non-blocking):", e);
   }
@@ -802,7 +794,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     });
 
     // ─── Debit credits after successful response ───
-    await debitCredits(adminClient, organization_id, tokensUsed, agent.name);
+    await debitCredits(adminClient, organization_id, tokensUsed, agent.name, supabaseUrl, serviceRoleKey);
 
     return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
