@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export function useOrgProfile() {
   const { data: orgId } = useUserOrgId();
@@ -37,8 +38,7 @@ export function useOrgProfile() {
       toast.success("Dados da organização salvos!");
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : (typeof err === "object" && err !== null && "message" in err) ? String((err as Record<string, unknown>).message) : String(err);
-      toast.error(msg);
+      reportError(err, { title: 'Erro ao salvar organização', category: 'org_profile.update' });
     },
   });
 

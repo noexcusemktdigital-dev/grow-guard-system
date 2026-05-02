@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export function useUserProfile() {
   const { user, refreshProfile } = useAuth();
@@ -37,8 +38,7 @@ export function useUserProfile() {
       toast.success("Perfil salvo com sucesso!");
     },
     onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : (typeof err === "object" && err !== null && "message" in err) ? String((err as Record<string, unknown>).message) : String(err);
-      toast.error(msg);
+      reportError(err, { title: 'Erro ao salvar perfil', category: 'user_profile.update' });
     },
   });
 

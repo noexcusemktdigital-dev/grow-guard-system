@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export interface SocialAccount {
   id: string;
@@ -77,7 +78,7 @@ export function useDisconnectSocialAccount() {
       toast.success("Conta desconectada com sucesso.");
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Erro ao desconectar conta.");
+      reportError(err, { title: 'Erro ao desconectar conta', category: 'social.disconnect' });
     },
   });
 }

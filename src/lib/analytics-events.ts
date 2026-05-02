@@ -45,6 +45,9 @@ export const ANALYTICS_EVENTS = {
   // LGPD
   DSR_EXPORT_REQUESTED: 'dsr_export_requested',
   DSR_DELETE_REQUESTED: 'dsr_delete_requested',
+
+  // Erros
+  ERROR_DISPLAYED: 'error_displayed',
 } as const;
 
 export type AnalyticsEventName = typeof ANALYTICS_EVENTS[keyof typeof ANALYTICS_EVENTS];
