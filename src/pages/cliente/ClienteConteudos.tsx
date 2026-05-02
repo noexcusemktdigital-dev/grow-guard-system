@@ -363,6 +363,7 @@ export default function ClienteConteudos() {
         actionLabel="este roteiro"
         creditCost={CREDIT_COST_APPROVE_CONTENT}
       />
+      <AssessoriaPopup storageKey="noexcuse_popup_conteudos_v1" servico="Produção de Conteúdo" />
     </div>
   );
 }
