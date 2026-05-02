@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useMarketingAssets, useMarketingFolders, useMarketingMutations } from "@/hooks/useMarketing";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 type FileType = "image" | "video" | "pdf" | "document" | "presentation" | "other";
 
@@ -160,7 +161,7 @@ export default function Marketing() {
       { name: newFolderName.trim(), parent_id: currentFolderId || undefined, category: activeCategory || undefined },
       {
         onSuccess: () => { toast.success("Pasta criada"); setShowNewFolder(false); setNewFolderName(""); },
-        onError: () => toast.error("Erro ao criar pasta"),
+        onError: (err: unknown) => reportError(err, { title: "Erro ao criar pasta", category: "marketing.folder_create" }),
       }
     );
   };
@@ -173,7 +174,7 @@ export default function Marketing() {
         { file, folderId: currentFolderId || undefined },
         {
           onSuccess: () => toast.success(`${file.name} enviado`),
-          onError: () => toast.error(`Erro ao enviar ${file.name}`),
+          onError: (err: unknown) => reportError(err, { title: `Erro ao enviar ${file.name}`, category: "marketing.asset_upload" }),
         }
       );
     });
@@ -190,7 +191,7 @@ export default function Marketing() {
     if (deleteConfirm.type === "folder" && deleteConfirm.id) {
       deleteFolder.mutate(deleteConfirm.id, {
         onSuccess: () => { toast.success("Pasta excluída"); setDeleteConfirm(null); },
-        onError: () => toast.error("Erro ao excluir pasta"),
+        onError: (err: unknown) => reportError(err, { title: "Erro ao excluir pasta", category: "marketing.folder_delete" }),
       });
     } else if (deleteConfirm.ids) {
       deleteConfirm.ids.forEach((id) => {
@@ -205,7 +206,7 @@ export default function Marketing() {
     if (!renameFolder || !renameFolder.name.trim()) return;
     updateFolder.mutate({ id: renameFolder.id, name: renameFolder.name.trim() }, {
       onSuccess: () => { toast.success("Pasta renomeada"); setRenameFolder(null); },
-      onError: () => toast.error("Erro ao renomear"),
+      onError: (err: unknown) => reportError(err, { title: "Erro ao renomear pasta", category: "marketing.folder_rename" }),
     });
   };
 
@@ -213,7 +214,7 @@ export default function Marketing() {
     if (!renameAssetTarget || !renameAssetTarget.name.trim()) return;
     updateAsset.mutate({ id: renameAssetTarget.id, name: renameAssetTarget.name.trim() }, {
       onSuccess: () => { toast.success("Arquivo renomeado"); setRenameAssetTarget(null); },
-      onError: () => toast.error("Erro ao renomear"),
+      onError: (err: unknown) => reportError(err, { title: "Erro ao renomear arquivo", category: "marketing.asset_rename" }),
     });
   };
 

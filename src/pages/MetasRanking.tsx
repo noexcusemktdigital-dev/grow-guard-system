@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 const MONETARY_TYPES = ["faturamento", "avg_ticket", "revenue"];
 const isMonetaryType = (type: string) => MONETARY_TYPES.includes(type);
@@ -121,12 +122,12 @@ export default function MetasRanking() {
     if (editingGoal) {
       updateGoal.mutate({ id: editingGoal.id, ...payload }, {
         onSuccess: () => { toast.success("Meta atualizada"); setShowGoalDialog(false); },
-        onError: () => toast.error("Erro ao atualizar meta"),
+        onError: (err: unknown) => reportError(err, { title: "Erro ao atualizar meta", category: "metas.update" }),
       });
     } else {
       createGoal.mutate({ ...payload, status: "active" }, {
         onSuccess: () => { toast.success("Meta criada com sucesso"); setShowGoalDialog(false); },
-        onError: () => toast.error("Erro ao criar meta"),
+        onError: (err: unknown) => reportError(err, { title: "Erro ao criar meta", category: "metas.create" }),
       });
     }
   };
@@ -134,7 +135,7 @@ export default function MetasRanking() {
   const handleArchiveGoal = (id: string) => {
     archiveGoal.mutate(id, {
       onSuccess: () => toast.success("Meta arquivada"),
-      onError: () => toast.error("Erro ao arquivar"),
+      onError: (err: unknown) => reportError(err, { title: "Erro ao arquivar", category: "metas.archive" }),
     });
   };
 

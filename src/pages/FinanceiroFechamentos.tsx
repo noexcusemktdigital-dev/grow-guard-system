@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -98,7 +99,7 @@ export default function FinanceiroFechamentos() {
 
   const handleSave = async () => {
     if (!selectedUnitId || !orgId) {
-      toast.error("Selecione uma unidade");
+      reportError(new Error("Selecione uma unidade"), { title: "Selecione uma unidade", category: "financeiro.validation" });
       return;
     }
     setSaving(true);
@@ -133,7 +134,7 @@ export default function FinanceiroFechamentos() {
       qc.invalidateQueries({ queryKey: ["unit-closings"] });
       setDialogOpen(false);
     } catch (e: unknown) {
-      toast.error(`Erro: ${e instanceof Error ? e.message : String(e)}`);
+      reportError(e, { title: "Erro ao publicar fechamento", category: "financeiro.fechamento_save" });
     } finally {
       setSaving(false);
     }

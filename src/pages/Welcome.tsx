@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Loader2, CheckCircle, X, Check, PartyPopper } from "lucide-react";
 import logoDark from "@/assets/NOE3.png";
@@ -119,11 +120,11 @@ const Welcome = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allRulesPass) {
-      toast.error("A senha não atende todos os requisitos.");
+      reportError(new Error("A senha não atende todos os requisitos."), { title: "A senha não atende todos os requisitos.", category: "welcome.validation" });
       return;
     }
     if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem");
+      reportError(new Error("As senhas não coincidem"), { title: "As senhas não coincidem", category: "welcome.validation" });
       return;
     }
 
@@ -137,15 +138,15 @@ const Welcome = () => {
       // Map specific errors to user-friendly messages
       const msg = error.message?.toLowerCase() || "";
       if (msg.includes("same_password") || msg.includes("different_password")) {
-        toast.error("A nova senha deve ser diferente da senha atual.");
+        reportError(error, { title: "A nova senha deve ser diferente da senha atual.", category: "welcome.auth" });
       } else if (msg.includes("weak_password") || msg.includes("leaked") || msg.includes("pwned") || msg.includes("breached")) {
-        toast.error("Essa senha foi encontrada em vazamentos de dados. Por segurança, escolha uma senha diferente que não tenha sido exposta.");
+        reportError(error, { title: "Essa senha foi encontrada em vazamentos de dados. Por segurança, escolha uma senha diferente que não tenha sido exposta.", category: "welcome.auth" });
       } else if (error.status === 401 || msg.includes("not authenticated") || msg.includes("session")) {
-        toast.error("Sessão expirada. Peça ao administrador para reenviar o convite.");
+        reportError(error, { title: "Sessão expirada. Peça ao administrador para reenviar o convite.", category: "welcome.auth" });
       } else if (error.status === 403) {
-        toast.error("Link expirado. Peça ao administrador para reenviar o convite.");
+        reportError(error, { title: "Link expirado. Peça ao administrador para reenviar o convite.", category: "welcome.auth" });
       } else {
-        toast.error(error.message || "Erro ao criar senha. Tente novamente.");
+        reportError(error, { title: error.message || "Erro ao criar senha. Tente novamente.", category: "welcome.auth" });
       }
     } else {
       setSuccess(true);
