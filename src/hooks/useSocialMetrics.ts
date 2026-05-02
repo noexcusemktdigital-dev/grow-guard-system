@@ -43,7 +43,7 @@ export function useSocialMetrics(
     queryKey: ["social_metrics", orgId, from.toISOString(), to.toISOString()],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("social_engagement_metrics" as "social_engagement_metrics")
+        .from("social_engagement_metrics" as const)
         .select(
           `*, social_posts!inner(platform, caption, published_at, platform_post_id)`,
         )
@@ -87,7 +87,7 @@ export function usePostMetrics(postId: string | null | undefined) {
     queryKey: ["social_metrics_post", postId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("social_engagement_metrics" as "social_engagement_metrics")
+        .from("social_engagement_metrics" as const)
         .select(
           `*, social_posts!inner(platform, caption, published_at, platform_post_id)`,
         )

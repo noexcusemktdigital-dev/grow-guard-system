@@ -372,11 +372,6 @@ export function ArtWizard({
       toast({ title: "Aprove todos os textos de todas as peças", variant: "destructive" });
       return;
     }
-    if (false) { // referências são opcionais
-      toast({ title: "Envie pelo menos 3 referências", variant: "destructive" });
-      return;
-    }
-
     const finalFormats = outputMode === "print"
       ? Array(totalPieces).fill(printFormat)
       : (artFormats.length === totalPieces ? artFormats : Array(totalPieces).fill(artFormat));

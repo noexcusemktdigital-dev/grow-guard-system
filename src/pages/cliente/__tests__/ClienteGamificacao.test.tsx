@@ -54,6 +54,39 @@ vi.mock("@/hooks/useRoleAccess", () => ({
   useRoleAccess: () => ({ isAdmin: false }),
 }));
 
+vi.mock("@/hooks/useGamificationData", () => ({
+  useGamificationData: () => ({
+    data: {
+      org_id: "org-1",
+      profile: {},
+      org: {},
+      gamification: { xp: 120, points: 45, streak_days: 0, last_activity_at: null },
+      counts: {
+        total_leads: 1,
+        won_leads: 0,
+        won_value: 0,
+        pipeline_value: 0,
+        complete_leads: 0,
+        contents: 0,
+        dispatches: 0,
+        sites: 0,
+        active_agents: 0,
+        calendar_events: 0,
+        checklist_done: 0,
+        academy_done: 0,
+        custom_funnels: 0,
+      },
+      flags: { wa_connected: false, has_strategy: false },
+      team_ranking: [],
+      total_org_xp: 0,
+      claimed_reward_ids: [],
+      avg_eval: null,
+      evals_count: 0,
+    },
+    isLoading: false,
+  }),
+}));
+
 vi.mock("@/hooks/useOrgMembers", () => ({
   useOrgMembers: () => ({ data: [] }),
 }));
@@ -124,7 +157,17 @@ vi.mock("../ClienteGamificacaoHelpers", () => {
       { id: "sales", emoji: "sales", title: "Primeira Venda", description: "Feche 10 vendas", xp: 200 },
     ],
     rewardTiers: [],
-    getLevelInfo: () => ({ name: "Novato", minXp: 0, maxXp: 499, icon: Award, color: "text-muted-foreground", progress: 0, nextXp: 499 }),
+    getLevelInfo: () => ({
+      name: "Novato",
+      title: "Novato",
+      level: 1,
+      minXp: 0,
+      maxXp: 499,
+      icon: Award,
+      color: "text-muted-foreground",
+      progress: 0,
+      nextXp: 499,
+    }),
     Medal3D: ({ medal }: any) => <div data-testid="medal">{medal.title}</div>,
     CompletenessScore: () => <div data-testid="completeness-score" />,
     XpSuggestions: () => <div data-testid="xp-suggestions" />,
@@ -150,17 +193,14 @@ describe("ClienteGamificacao", () => {
 
   it("renders XP and level section", () => {
     renderWithProviders(<ClienteGamificacao />);
-    // Should show XP info - use queryAllBy to avoid multiple match issues
-    const xpElements = screen.queryAllByText(/\d+ XP/i);
-    const pontosElements = screen.queryAllByText(/pontos/i);
-    expect(xpElements.length > 0 || pontosElements.length > 0).toBe(true);
+    expect(screen.getAllByText(/Nível 1/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\d+ XP/i).length).toBeGreaterThan(0);
   });
 
   it("renders medals/trophies section", () => {
     renderWithProviders(<ClienteGamificacao />);
-    // Medal section shows "medalhas" count
-    const medalhasElements = screen.queryAllByText(/medalhas/i);
-    expect(medalhasElements.length).toBeGreaterThan(0);
+    expect(screen.getByText("Medalhas")).toBeInTheDocument();
+    expect(screen.getAllByTestId("medal")).toHaveLength(2);
   });
 
   it("renders without loading state when data is available", () => {

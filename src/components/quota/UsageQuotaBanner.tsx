@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { memo } from "react";
-import { AlertTriangle, ArrowUpRight, Infinity } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Infinity as InfinityIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -15,7 +15,7 @@ export const UsageQuotaBanner = memo(function UsageQuotaBanner({ used, limit, la
   if (limit === -1) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-        <Infinity className="w-4 h-4 text-emerald-600 shrink-0" />
+        <InfinityIcon className="w-4 h-4 text-emerald-600 shrink-0" />
         <div className="flex-1">
           <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
             {used} {label} usados este mês

@@ -12,9 +12,9 @@ import { z } from 'zod';
 const UUID = z.string().uuid();
 const PositiveInt = z.number().int().positive();
 const PositiveBRL = z.number().positive().multipleOf(0.01);
-const NonEmptyString = z.string().min(1).trim();
+const NonEmptyString = z.string().trim().min(1);
 const Email = z.string().email().toLowerCase();
-const PhoneBR = z.string().regex(/^(\+55)?[\s\-\.]?\(?\d{2}\)?\s?\d{4,5}[\s\-\.]?\d{4}$/, 'invalid_phone_br');
+const PhoneBR = z.string().regex(/^(\+55)?[\s.-]?\(?\d{2}\)?\s?\d{4,5}[\s.-]?\d{4}$/, 'invalid_phone_br');
 const CPF = z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, 'invalid_cpf');
 const CNPJ = z.string().regex(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/, 'invalid_cnpj');
 

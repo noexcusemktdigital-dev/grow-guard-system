@@ -149,11 +149,11 @@ function buildPersonalizedSteps(answers: Record<string, any> | null, strategyRes
   })();
 
   const metricas = (() => {
-    let tip1 = metaFaturamento
+    const tip1 = metaFaturamento
       ? `Sua meta é ${metaFaturamento}/mês. Monitore o pipeline diariamente — o valor total das propostas abertas indica se você vai atingir a meta.`
       : "Acompanhe o valor total do pipeline — ele mostra o potencial de receita das oportunidades em andamento.";
 
-    let tip2 = `Taxa de conversão atual: ${answers?.conversao_etapa === "menos_10" ? "menos de 10%" : answers?.conversao_etapa === "10-30" ? "10-30%" : answers?.conversao_etapa === "nao" ? "não medida ainda — comece a medir agora" : "em desenvolvimento"}. Use os filtros para identificar em qual etapa você perde mais.`;
+    const tip2 = `Taxa de conversão atual: ${answers?.conversao_etapa === "menos_10" ? "menos de 10%" : answers?.conversao_etapa === "10-30" ? "10-30%" : answers?.conversao_etapa === "nao" ? "não medida ainda — comece a medir agora" : "em desenvolvimento"}. Use os filtros para identificar em qual etapa você perde mais.`;
 
     return {
       icon: <BarChart3 className="w-6 h-6" />,

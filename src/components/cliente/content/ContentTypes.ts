@@ -72,8 +72,8 @@ function pythonToJson(src: string): string {
 export function parseConteudoPrincipal(raw: unknown): unknown {
   if (!raw) return null;
   if (typeof raw === "string") {
-    try { return JSON.parse(raw); } catch {}
-    try { return JSON.parse(pythonToJson(raw)); } catch {}
+    try { return JSON.parse(raw); } catch { /* try next parser */ }
+    try { return JSON.parse(pythonToJson(raw)); } catch { /* try fallback parser */ }
     // Last resort: brute-force
     try {
       const fixed = raw.replace(/'/g, '"').replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");

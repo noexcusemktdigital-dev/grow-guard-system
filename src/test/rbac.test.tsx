@@ -310,7 +310,7 @@ describe("QA-004: unauthenticated user access control", () => {
       "/cliente/dashboard",
     ];
     for (const route of protectedRoutes) {
-      const isAuthenticated = null !== null; // null role = not authenticated
+      const isAuthenticated = false; // null role = not authenticated
       expect(isAuthenticated).toBe(false);
     }
   });

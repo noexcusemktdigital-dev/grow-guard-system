@@ -98,7 +98,7 @@ export default function ClienteChat() {
         invokeEdge("whatsapp-sync-photos", { body: { limit: 30 } })
           .then(() => { if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }); })
           .catch(() => {});
-      } catch {}
+      } catch { /* photo sync is best effort */ }
     };
     sync();
     return () => { cancelled = true; };

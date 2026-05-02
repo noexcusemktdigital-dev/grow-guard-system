@@ -15,7 +15,7 @@ export function PWAUpdatePrompt() {
   } = useRegisterSW({
     onRegisteredSW(_swUrl, r) {
       // Verificar update a cada hora
-      r && setInterval(() => r.update(), 60 * 60 * 1000);
+      if (r) setInterval(() => r.update(), 60 * 60 * 1000);
     },
   });
 

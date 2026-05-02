@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
     // Match instance by instance_id (instanceName in Evolution)
     const instanceName = body.instance || body.instanceName || "";
-    let instance = instances.find((i: { instance_id: string }) => i.instance_id === instanceName) || instances[0];
+    const instance = instances.find((i: { instance_id: string }) => i.instance_id === instanceName) || instances[0];
 
     // ─── CONNECTION_UPDATE ───
     if (event === "CONNECTION_UPDATE") {

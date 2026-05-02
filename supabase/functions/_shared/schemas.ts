@@ -16,9 +16,9 @@ import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
 export const UUID = z.string().uuid();
 export const PositiveInt = z.number().int().positive();
 export const PositiveBRL = z.number().positive().multipleOf(0.01);
-export const NonEmptyString = z.string().min(1).trim();
+export const NonEmptyString = z.string().trim().min(1);
 export const Email = z.string().email().toLowerCase();
-export const PhoneBR = z.string().regex(/^(\+55)?[\s\-\.]?\(?\d{2}\)?\s?\d{4,5}[\s\-\.]?\d{4}$/, "invalid_phone_br");
+export const PhoneBR = z.string().regex(/^(\+55)?[\s.-]?\(?\d{2}\)?\s?\d{4,5}[\s.-]?\d{4}$/, "invalid_phone_br");
 export const CPF = z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, "invalid_cpf");
 export const CNPJ = z.string().regex(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/, "invalid_cnpj");
 

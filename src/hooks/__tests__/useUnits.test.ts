@@ -150,7 +150,13 @@ describe("useUnitMutations", () => {
     });
 
     await waitFor(() => expect(result.current.deleteUnit.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("delete-unit", { body: { unit_id: "u1" } });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "delete-unit",
+      expect.objectContaining({
+        body: { unit_id: "u1" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 
   it("deleteUnit handles edge function error response", async () => {

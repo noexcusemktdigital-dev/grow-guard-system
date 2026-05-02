@@ -86,10 +86,12 @@ function scoreColor(s: number): [number, number, number] {
 /** Strip emojis and special unicode from text for safe jsPDF rendering */
 function safeText(text: string): string {
   if (!text) return "";
-  // Remove emoji and other problematic unicode ranges
-  return text
-    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "")
-    .replace(/[⚠️✓✔️▸►●○◆◇★☆♦♠♣♥❤️🔥💡📊📈📉📌📍📎📦🏗️🎯💰💸🚀⭐]/g, "")
+    // Remove emoji and other problematic unicode ranges
+    return text
+      // eslint-disable-next-line no-misleading-character-class
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "")
+      // eslint-disable-next-line no-misleading-character-class
+      .replace(/[⚠️✓✔️▸►●○◆◇★☆♦♠♣♥❤️🔥💡📊📈📉📌📍📎📦🏗️🎯💰💸🚀⭐]/g, "")
     .trim();
 }
 
@@ -292,7 +294,7 @@ function drawCoverPage(b: PdfBuilder, result: StrategyResult, title: string, log
     const logoX = (A4_W - logoW) / 2;
     try {
       pdf.addImage(logoData.base64, "PNG", logoX, 60, logoW, logoH);
-    } catch {}
+    } catch { /* logo rendering is optional */ }
   } else {
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(28);
@@ -480,7 +482,7 @@ async function drawDiagnosticSection(b: PdfBuilder, result: StrategyResult, char
         const finalH = Math.min(imgH, 70);
         b.pdf.addImage(imgData, "PNG", M_LEFT + 10, b.y, imgW, finalH);
         b.y += finalH + 4;
-      } catch {}
+      } catch { /* chart rendering is optional */ }
     } else if (gps.radar_data?.length) {
       b.subheading("RADAR DAS 5 ETAPAS");
       b.spacer(2);

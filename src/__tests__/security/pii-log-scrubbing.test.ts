@@ -41,7 +41,7 @@ function redact(obj: unknown): unknown {
 }
 
 const PII_PATTERNS = [
-  { re: /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, replacement: "***@***" },
+  { re: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, replacement: "***@***" },
   { re: /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, replacement: "***" },
   { re: /\b\d{11}\b/g, replacement: "***" },
   { re: /(?:\+55\s?)?\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4}/g, replacement: "***" },

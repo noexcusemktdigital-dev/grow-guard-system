@@ -15,7 +15,7 @@ export async function getCachedContacts(): Promise<WhatsAppContact[]> {
 export async function setCachedContacts(contacts: WhatsAppContact[]) {
   try {
     await set(CONTACTS_KEY, contacts.slice(0, 50));
-  } catch {}
+  } catch { /* cache writes are best effort */ }
 }
 
 export async function getCachedMessages(contactId: string): Promise<WhatsAppMessage[]> {
@@ -29,5 +29,5 @@ export async function getCachedMessages(contactId: string): Promise<WhatsAppMess
 export async function setCachedMessages(contactId: string, messages: WhatsAppMessage[]) {
   try {
     await set(MESSAGES_PREFIX + contactId, messages.slice(-100));
-  } catch {}
+  } catch { /* cache writes are best effort */ }
 }

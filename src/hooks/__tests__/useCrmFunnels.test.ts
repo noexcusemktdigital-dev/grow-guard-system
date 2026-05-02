@@ -78,8 +78,8 @@ describe("useCrmFunnels", () => {
   it("fetches funnels when orgId is present", async () => {
     mockOrgId.data = "org-1";
     const funnels = [
-      { id: "f1", name: "Default", is_default: true, stages: [] },
-      { id: "f2", name: "Sales", is_default: false, stages: ["novo", "qualificado"] },
+      { id: "f1", name: "Default", is_default: true, stages: [{ key: "novo", label: "Novo", color: "blue", icon: "circle-dot" }] },
+      { id: "f2", name: "Sales", is_default: false, stages: [{ key: "qualificado", label: "Qualificado", color: "green", icon: "circle-dot" }] },
     ];
     mockQueryResult.data = funnels;
     mockQueryResult.error = null;

@@ -178,9 +178,13 @@ describe("useGenerateBriefing", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(briefing);
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("generate-social-briefing", {
-      body: { briefing_text: "Test briefing" },
-    });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "generate-social-briefing",
+      expect.objectContaining({
+        body: { briefing_text: "Test briefing" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 
   it("handles edge function error", async () => {

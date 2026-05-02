@@ -24,7 +24,7 @@ export function getStoredOrgId(userId: string): string | null {
 export function setStoredOrgId(userId: string, orgId: string) {
   try {
     localStorage.setItem(getActiveOrgKey(userId), orgId);
-  } catch {}
+  } catch { /* localStorage may be unavailable */ }
 }
 
 export function useUserOrgId() {

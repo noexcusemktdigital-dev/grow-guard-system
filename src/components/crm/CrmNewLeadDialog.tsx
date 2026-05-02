@@ -51,7 +51,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const customFieldsSchema = (() => {
     const seen = new Set<string>();
     return rawSchema.map((f: any, i: number) => {
-      let baseKey = f?.key || `field_${i}`;
+      const baseKey = f?.key || `field_${i}`;
       let key = baseKey;
       let suffix = 2;
       while (seen.has(key)) key = `${baseKey}_${suffix++}`;

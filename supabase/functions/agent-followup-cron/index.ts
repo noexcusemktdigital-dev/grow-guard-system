@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
           const instance = instanceMap.get(agent.organization_id);
           if (!instance) continue;
 
-          const cleanPhone = contact.phone.replace(/[\s\-\+\(\)]/g, "");
+          const cleanPhone = contact.phone.replace(/[\s+()-]/g, "");
           const zapiUrl = `https://api.z-api.io/instances/${instance.instance_id}/token/${instance.token}/send-text`;
           const zapiRes = await fetch(zapiUrl, {
             method: "POST",

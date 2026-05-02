@@ -587,7 +587,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     }
 
     const aiData = await aiResponse.json();
-    let replyText = aiData.choices?.[0]?.message?.content || "";
+    const replyText = aiData.choices?.[0]?.message?.content || "";
     const tokensUsed = aiData.usage?.total_tokens || 0;
 
     if (!replyText) {
@@ -734,7 +734,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     const isGroup = contact.phone.endsWith("-group");
     const cleanPhone = isGroup
       ? contact.phone.replace(/-group$/, "")
-      : contact.phone.replace(/[\s\-\+\(\)]/g, "");
+      : contact.phone.replace(/[\s+()-]/g, "");
 
     // ─── Simulate human typing delay ───
     const delayMs = Math.min(Math.max(Math.round((cleanReply.length / 40) * 1000 + 1500), 2000), 12000);

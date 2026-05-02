@@ -45,7 +45,6 @@ vi.mock("sonner", () => ({
 vi.mock("@/assets/NOE3.png", () => ({ default: "logo.png" }));
 vi.mock("@/components/SaasBrandingPanel", () => ({ default: () => <div data-testid="branding" /> }));
 vi.mock("@/components/ui/tabs", () => {
-  const { useState } = require("react");
   function StatefulTabs({ children, defaultValue }: any) {
     return <div data-default={defaultValue}>{children}</div>;
   }

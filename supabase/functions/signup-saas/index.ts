@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     // 5. Save terms acceptance
     try {
       await supabaseAdmin.from("profiles").update({ accepted_terms_at: new Date().toISOString() } as Record<string, unknown>).eq("id", user.id);
-    } catch {}
+    } catch { /* profile terms timestamp is best effort */ }
 
     // 6. Provision org/subscription/wallet (same logic as before)
     return await provisionUser(supabaseAdmin, user.id, company_name || (full_name ? full_name + "'s Company" : "Minha Empresa"), referral_code, headers, supabaseUrl);
