@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "Sistema Noé (grow-guard-system)"
+message: "If you use this software in research or commercial work, please cite it as below."
+type: software
+authors:
+  - given-names: "Rafael"
+    family-names: "Marutaka"
+    affiliation: "Grupo Lamadre"
+    email: rafael@grupolamadre.com.br
+repository-code: "https://github.com/noexcusemktdigital-dev/grow-guard-system"
+abstract: "Plataforma de marketing digital para redes de franquias com 3 portais (franqueadora, franqueado, cliente)."
+keywords:
+  - franchise-management
+  - marketing-platform
+  - multi-tenant-saas
+  - lgpd
+  - supabase
+  - lovable-cloud
+license: Other
+date-released: "2026-04-28"
