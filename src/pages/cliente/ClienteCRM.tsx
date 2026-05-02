@@ -36,6 +36,7 @@ import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 
 // ===== Main Component =====
 export interface ClienteCRMProps {
