@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import { imagetools } from "vite-imagetools";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -16,6 +17,19 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    imagetools({
+      defaultDirectives: (url) => {
+        // Imagens com ?img usam otimização default (WebP + AVIF, quality 80)
+        if (url.searchParams.has('img')) {
+          return new URLSearchParams({
+            format: 'webp;avif',
+            quality: '80',
+            as: 'picture',
+          });
+        }
+        return new URLSearchParams();
+      },
+    }),
     VitePWA({
       registerType: "prompt",
       injectRegister: "auto",
