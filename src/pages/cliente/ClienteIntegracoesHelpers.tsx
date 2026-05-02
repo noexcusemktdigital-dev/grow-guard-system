@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, MessageSquare, Code2, Zap, TestTube2, Trash2, Plus, Plug, Server, Pencil, Stethoscope, CheckCircle2, XCircle, Loader2, QrCode, Smartphone } from "lucide-react";
+import { Link2, Wifi, WifiOff, Settings2, RefreshCw, Unplug, AlertTriangle, Headset, Copy, Key, Webhook, MessageSquare, Code2, Zap, TestTube2, Trash2, Plus, Plug, Server, Pencil, Stethoscope, CheckCircle2, XCircle, Loader2, QrCode, Smartphone, ShieldCheck, Cloud, Building2, ListChecks } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,238 @@ export const PLATFORMS = [
   { key: "make", label: "Make (Integromat)", icon: "🔧", placeholder: "https://hook.us1.make.com/...", instructions: "Crie um cenário no Make com trigger 'Webhook'. Cole a URL gerada acima." },
   { key: "zapier", label: "Zapier", icon: "⚡", placeholder: "https://hooks.zapier.com/hooks/catch/...", instructions: "Crie um Zap com trigger 'Webhooks by Zapier > Catch Hook'. Cole a URL gerada." },
 ];
+
+export function WhatsAppProviderModules({
+  instances,
+  isPending,
+  projectId,
+  onOpenMetaSetup,
+  onOpenIzitechSetup,
+  onCheckStatus,
+  onDisconnect,
+  onEdit,
+  onReconnect,
+  onReconfigureWebhook,
+}: {
+  instances: WhatsAppInstance[];
+  isPending: boolean;
+  projectId?: string;
+  onOpenMetaSetup: () => void;
+  onOpenIzitechSetup: () => void;
+  onCheckStatus: (instance: WhatsAppInstance) => void;
+  onDisconnect: (instance: WhatsAppInstance) => void;
+  onEdit: (instance: WhatsAppInstance) => void;
+  onReconnect: (instance: WhatsAppInstance) => void;
+  onReconfigureWebhook: (instance: WhatsAppInstance) => void;
+}) {
+  const metaInstances = instances.filter(inst => inst.provider === "whatsapp_cloud");
+  const izitechInstances = instances.filter(inst => inst.provider !== "whatsapp_cloud");
+  const cloudWebhookUrl = `https://${projectId || "<supabase-project-id>"}.supabase.co/functions/v1/whatsapp-cloud-webhook`;
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-3" aria-labelledby="meta-whatsapp-cloud-title">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 id="meta-whatsapp-cloud-title" className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" /> WhatsApp Cloud API — Meta oficial
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Fluxo oficial para App Review: WABA, Phone Number ID, webhook da Meta e templates aprovados.
+            </p>
+          </div>
+          <Button size="sm" onClick={onOpenMetaSetup} className="gap-1.5 self-start sm:self-auto">
+            <Cloud className="w-3.5 h-3.5" /> Conectar via Meta oficial
+          </Button>
+        </div>
+
+        <Card className="border-emerald-500/20 bg-emerald-500/[0.03]">
+          <CardContent className="p-4 space-y-3">
+            <div className="grid gap-3 md:grid-cols-3">
+              <MetaReviewChecklistItem icon={<Cloud className="w-3.5 h-3.5" />} title="Consent screen" text="Mostrar permissões whatsapp_business_messaging, whatsapp_business_management e business_management." />
+              <MetaReviewChecklistItem icon={<Webhook className="w-3.5 h-3.5" />} title="Webhook Meta" text="Usar messages e message_template_status_update no App Dashboard." />
+              <MetaReviewChecklistItem icon={<ListChecks className="w-3.5 h-3.5" />} title="Vídeo de revisão" text="Demonstrar recebimento, resposta, template, opt-in, opt-out e desconexão." />
+            </div>
+            <div className="rounded-lg border border-border bg-background/70 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Webhook oficial Meta</p>
+              <p className="mt-1 break-all font-mono text-[11px] text-foreground">{cloudWebhookUrl}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {metaInstances.length === 0 ? (
+          <Card>
+            <CardContent className="p-5 text-center space-y-2">
+              <p className="text-xs font-medium">Nenhuma conexão Meta Cloud cadastrada.</p>
+              <p className="text-xs text-muted-foreground">Conecte a WABA oficial antes de gravar o vídeo para a Meta.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          metaInstances.map(inst => (
+            <MetaCloudInstanceCard
+              key={inst.id}
+              instance={inst}
+              webhookUrl={cloudWebhookUrl}
+              isPending={isPending}
+              onCheckStatus={() => onCheckStatus(inst)}
+              onDisconnect={() => onDisconnect(inst)}
+            />
+          ))
+        )}
+      </section>
+
+      <section className="space-y-3" aria-labelledby="izitech-whatsapp-title">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 id="izitech-whatsapp-title" className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Plug className="w-4 h-4 text-blue-500" /> WhatsApp via Izitech
+            </h3>
+            <p className="text-xs text-muted-foreground">Instâncias conectadas por QR Code, operação assistida e Evolution API.</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={onOpenIzitechSetup} className="gap-1.5 self-start sm:self-auto">
+            <QrCode className="w-3.5 h-3.5" /> Adicionar via QR
+          </Button>
+        </div>
+
+        {izitechInstances.length === 0 ? (
+          <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância Izitech configurada.</p></CardContent></Card>
+        ) : (
+          izitechInstances.map(inst => (
+            <InstanceCard
+              key={inst.id}
+              instance={inst}
+              onCheckStatus={() => onCheckStatus(inst)}
+              onDisconnect={() => onDisconnect(inst)}
+              onEdit={() => onEdit(inst)}
+              onReconnect={() => onReconnect(inst)}
+              onReconfigureWebhook={() => onReconfigureWebhook(inst)}
+              isPending={isPending}
+            />
+          ))
+        )}
+      </section>
+    </div>
+  );
+}
+
+function MetaReviewChecklistItem({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="flex gap-2.5 rounded-lg border border-border bg-background/70 p-3">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600">
+        {icon}
+      </div>
+      <div>
+        <p className="text-xs font-semibold">{title}</p>
+        <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function MetaCloudInstanceCard({ instance, webhookUrl, isPending, onCheckStatus, onDisconnect }: {
+  instance: WhatsAppInstance;
+  webhookUrl: string;
+  isPending: boolean;
+  onCheckStatus: () => void;
+  onDisconnect: () => void;
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const isConn = instance.status === "connected";
+  const metadata = (instance.cloud_metadata || {}) as Record<string, unknown>;
+
+  return (
+    <>
+      <Card className="overflow-hidden border-emerald-500/20">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isConn ? "bg-emerald-500/10" : "bg-muted"}`}>
+                <Cloud className={`w-5 h-5 ${isConn ? "text-emerald-500" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-semibold">{instance.label || instance.verified_name || instance.phone_number_id || instance.instance_id}</h4>
+                  <Badge variant="outline" className={`text-[10px] gap-1 ${isConn ? "text-emerald-600 border-emerald-500/30" : "text-muted-foreground border-border"}`}>
+                    {isConn ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                    {isConn ? "Conectado" : "Desconectado"}
+                  </Badge>
+                  <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30">Meta oficial</Badge>
+                </div>
+                {instance.verified_name && <p className="text-xs text-muted-foreground">Nome verificado: {instance.verified_name}</p>}
+                {instance.phone_number && <p className="text-xs text-muted-foreground">Número: {instance.phone_number}</p>}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button variant="outline" size="sm" onClick={onCheckStatus} disabled={isPending} title="Verificar status" aria-label="Atualizar Meta Cloud">
+                <RefreshCw className={`w-3.5 h-3.5 ${isPending ? "animate-spin" : ""}`} />
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)} disabled={isPending} title="Desconectar Meta Cloud" className="gap-1">
+                <Unplug className="w-3.5 h-3.5" /> Desconectar
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-3">
+            <MetaDataPill label="WABA ID" value={instance.waba_id || "Não informado"} icon={<Building2 className="w-3 h-3" />} />
+            <MetaDataPill label="Phone Number ID" value={instance.phone_number_id || instance.instance_id || "Não informado"} icon={<Smartphone className="w-3 h-3" />} />
+            <MetaDataPill label="Business ID" value={instance.business_account_id || "Não informado"} icon={<ShieldCheck className="w-3 h-3" />} />
+          </div>
+
+          <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Webhook className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="text-xs font-medium">Webhook Meta Cloud</span>
+              <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30">messages</Badge>
+              <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30">message_template_status_update</Badge>
+            </div>
+            <p className="break-all font-mono text-[10px] text-muted-foreground">{instance.webhook_url || webhookUrl}</p>
+          </div>
+
+          {(metadata.quality_rating || metadata.messaging_limit) && (
+            <div className="flex flex-wrap gap-2">
+              {metadata.quality_rating && <Badge variant="outline" className="text-[9px]">Quality: {String(metadata.quality_rating)}</Badge>}
+              {metadata.messaging_limit && <Badge variant="outline" className="text-[9px]">Limit: {String(metadata.messaging_limit)}</Badge>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-4 h-4" /> Desconectar Meta Cloud
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Desconectar <strong>{instance.label || instance.verified_name || instance.phone_number_id}</strong> removerá WABA ID, Phone Number ID e token da plataforma.
+            </p>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" size="sm" onClick={() => { setConfirmOpen(false); onDisconnect(); }} disabled={isPending} className="gap-1">
+                <Unplug className="w-3.5 h-3.5" /> Confirmar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function MetaDataPill({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <p className="mt-1 break-all font-mono text-[11px] text-foreground">{value}</p>
+    </div>
+  );
+}
 
 /* ── Edit Instance Dialog ── */
 export function EditInstanceDialog({ instance, open, onOpenChange, onSave, isPending }: {
@@ -404,4 +636,3 @@ export function InstanceCard({ instance, onCheckStatus, onDisconnect, onEdit, on
     </>
   );
 }
-

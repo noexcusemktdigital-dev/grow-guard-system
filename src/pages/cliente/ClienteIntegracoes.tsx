@@ -26,7 +26,7 @@ import {
 
 import {
   SUPPORT_LINK, WEBHOOK_EVENTS, PLATFORMS,
-  EditInstanceDialog, DiagnosticsDialog, QrCodeDialog, InstanceCard,
+  EditInstanceDialog, DiagnosticsDialog, QrCodeDialog, WhatsAppProviderModules,
   type OutboundWebhook,
 } from "./ClienteIntegracoesHelpers";
 
@@ -34,6 +34,7 @@ export default function ClienteIntegracoes() {
   const { data: instances, isLoading, refetch } = useWhatsAppInstances();
   const setupMutation = useSetupWhatsApp();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardMode, setWizardMode] = useState<"meta_cloud" | "izitech">("meta_cloud");
   const [editInstance, setEditInstance] = useState<WhatsAppInstance | null>(null);
   const [diagOpen, setDiagOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -106,7 +107,14 @@ export default function ClienteIntegracoes() {
 
   const handleDisconnect = async (instance: WhatsAppInstance) => {
     try {
-      await setupMutation.mutateAsync({ instanceId: instance.instance_id, instanceToken: instance.token, clientToken: instance.client_token, action: "disconnect" });
+      await setupMutation.mutateAsync({
+        instanceId: instance.instance_id,
+        instanceToken: instance.token,
+        clientToken: instance.client_token,
+        action: "disconnect",
+        provider: instance.provider,
+        phoneNumberId: instance.phone_number_id || undefined,
+      });
       refetch();
       toast.success("Instância removida");
     } catch (err: unknown) {
@@ -293,24 +301,18 @@ export default function ClienteIntegracoes() {
             </div>
           )}
 
-          {/* ── WhatsApp — Izitech ── */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Plug className="w-4 h-4 text-emerald-500" /> WhatsApp — Izitech
-            </h3>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-muted-foreground">Instâncias conectadas via Izitech</p>
-              <Button size="sm" onClick={() => setWizardOpen(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Adicionar WhatsApp</Button>
-            </div>
-
-            {allInstances.length === 0 ? (
-              <Card><CardContent className="p-5 text-center"><p className="text-xs text-muted-foreground">Nenhuma instância configurada.</p></CardContent></Card>
-            ) : (
-              allInstances.map(inst => (
-                <InstanceCard key={inst.id} instance={inst} onCheckStatus={() => handleCheckStatus(inst)} onDisconnect={() => handleDisconnect(inst)} onEdit={() => setEditInstance(inst)} onReconnect={() => handleReconnect(inst)} onReconfigureWebhook={() => handleReconfigureWebhook(inst)} isPending={setupMutation.isPending} />
-              ))
-            )}
-          </div>
+          <WhatsAppProviderModules
+            instances={allInstances}
+            isPending={setupMutation.isPending}
+            projectId={projectId}
+            onOpenMetaSetup={() => { setWizardMode("meta_cloud"); setWizardOpen(true); }}
+            onOpenIzitechSetup={() => { setWizardMode("izitech"); setWizardOpen(true); }}
+            onCheckStatus={handleCheckStatus}
+            onDisconnect={handleDisconnect}
+            onEdit={setEditInstance}
+            onReconnect={handleReconnect}
+            onReconfigureWebhook={handleReconfigureWebhook}
+          />
 
           {/* ── 3. API Aberta ── */}
           <div className="space-y-3">
@@ -434,7 +436,7 @@ export default function ClienteIntegracoes() {
         </>
       )}
 
-      <WhatsAppSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <WhatsAppSetupWizard open={wizardOpen} onOpenChange={setWizardOpen} mode={wizardMode} />
       <EditInstanceDialog instance={editInstance} open={!!editInstance} onOpenChange={v => { if (!v) setEditInstance(null); }} onSave={handleEditSave} isPending={setupMutation.isPending} />
       <DiagnosticsDialog open={diagOpen} onOpenChange={setDiagOpen} instances={instances || []} setupMutation={setupMutation} refetch={refetch} />
       <QrCodeDialog

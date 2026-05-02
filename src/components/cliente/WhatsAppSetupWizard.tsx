@@ -18,6 +18,7 @@ import {
   ArrowRight, ArrowLeft, ShieldCheck,
   QrCode, Copy, Headset,
   MessageSquare, HelpCircle, Zap, CreditCard, Receipt, Lock,
+  Cloud, Building2, Webhook, ListChecks,
 } from "lucide-react";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
@@ -25,12 +26,13 @@ import { WhatsAppHowItWorks } from "./WhatsAppHowItWorks";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: "meta_cloud" | "izitech";
 }
 
 const INSTANCE_NAME_REGEX = /^[a-zA-Z0-9-]+$/;
 const SUPPORT_LINK = "https://wa.me/5500000000000?text=Olá! Preciso de ajuda para configurar a integração WhatsApp.";
 
-export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
+export function WhatsAppSetupWizard({ open, onOpenChange, mode = "izitech" }: Props) {
   const { refetch } = useWhatsAppInstances();
   const { data: orgId } = useUserOrgId();
   const { isAdmin } = useMemberPermissions();
@@ -230,6 +232,120 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
   };
 
   const openSupport = () => window.open(SUPPORT_LINK, "_blank");
+
+  if (mode === "meta_cloud") {
+    return (
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); } onOpenChange(v); }}>
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          {!canSetup ? (
+            <div className="px-6 py-12 flex flex-col items-center text-center space-y-4">
+              <Lock className="w-12 h-12 text-muted-foreground/40" />
+              <p className="text-sm font-semibold">Configuração restrita</p>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                Apenas administradores podem configurar a conexão oficial com a Meta.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="px-6 pt-6 pb-4 border-b border-border">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500" /> WhatsApp Cloud API — Meta oficial
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
+                    Conecte a WABA oficial usada no App Review da Meta. Este fluxo é separado da operação via QR/Izitech.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+
+              <div className="px-6 py-5 space-y-5">
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Cloud className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">Fluxo oficial para verificação Meta</p>
+                      <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                        Use os dados da WhatsApp Business Account aprovada no Meta Business Manager. A gravação deve mostrar a consent screen da Meta antes de salvar estes dados na plataforma.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <MetaRequirement icon={<ShieldCheck className="w-3.5 h-3.5" />} label="Permissões" text="whatsapp_business_messaging, whatsapp_business_management, business_management" />
+                    <MetaRequirement icon={<Webhook className="w-3.5 h-3.5" />} label="Webhook" text="messages e message_template_status_update" />
+                    <MetaRequirement icon={<ListChecks className="w-3.5 h-3.5" />} label="Vídeo" text="mensagem, resposta, template, opt-in, opt-out e desconexão" />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <MessageSquare className="w-3 h-3 text-muted-foreground" /> Phone Number ID <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      value={cloudPhoneNumberId}
+                      onChange={(e) => setCloudPhoneNumberId(e.target.value)}
+                      placeholder="Ex: 123456789012345"
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <Building2 className="w-3 h-3 text-muted-foreground" /> WABA ID
+                    </Label>
+                    <Input
+                      value={cloudWabaId}
+                      onChange={(e) => setCloudWabaId(e.target.value)}
+                      placeholder="Ex: 987654321098765"
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Nome verificado</Label>
+                    <Input
+                      value={cloudVerifiedName}
+                      onChange={(e) => setCloudVerifiedName(e.target.value)}
+                      placeholder="Ex: NoExcuse Digital"
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Access token por organização</Label>
+                    <Input
+                      value={cloudAccessToken}
+                      onChange={(e) => setCloudAccessToken(e.target.value)}
+                      placeholder="Opcional se houver token global configurado"
+                      className="font-mono text-xs"
+                      type="password"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-muted-foreground">Webhook para o App Dashboard da Meta</p>
+                  <p className="break-all font-mono text-[11px] text-foreground">{cloudWebhookUrl}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    No vídeo, mostre este endpoint configurado no app Meta e os campos assinados: <strong>messages</strong> e <strong>message_template_status_update</strong>.
+                  </p>
+                </div>
+
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleConnectCloud} disabled={cloudSaving || !cloudPhoneNumberId.trim()} className="gap-1.5">
+                    {cloudSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                    Salvar Meta Cloud
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); } onOpenChange(v); }}>
@@ -581,6 +697,18 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MetaRequirement({ icon, label, text }: { icon: React.ReactNode; label: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-background/80 p-3">
+      <div className="flex items-center gap-1.5 text-xs font-semibold">
+        <span className="text-emerald-600">{icon}</span>
+        {label}
+      </div>
+      <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">{text}</p>
+    </div>
   );
 }
 
