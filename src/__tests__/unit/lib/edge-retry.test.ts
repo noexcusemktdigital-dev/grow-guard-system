@@ -68,7 +68,7 @@ describe("T5 EDGE-RETRY — baseMs custom e backoff exponencial", () => {
       .mockResolvedValueOnce({ data: null, error: makeError(503) })
       .mockResolvedValueOnce({ data: { ok: true }, error: null });
 
-    await invokeEdge("fn", { retryBaseMs: 200 });
+    await invokeEdge("fn", { method: "GET", retryBaseMs: 200 });
 
     // Primeiro sleep deve ser baseMs * 2^0 = 200 (+ jitter random <100)
     expect(sleepCalls.length).toBeGreaterThanOrEqual(1);
@@ -81,7 +81,7 @@ describe("T5 EDGE-RETRY — baseMs custom e backoff exponencial", () => {
       .mockResolvedValueOnce({ data: null, error: makeError(503) })
       .mockResolvedValueOnce({ data: { ok: true }, error: null });
 
-    await invokeEdge("fn", { retryBaseMs: 100, retries: 2 });
+    await invokeEdge("fn", { method: "GET", retryBaseMs: 100, retries: 2 });
 
     // attempt 1: sleep = 100 * 2^0 = 100
     // attempt 2: sleep = 100 * 2^1 = 200
@@ -101,7 +101,7 @@ describe("T5 EDGE-RETRY — status 429 e 504", () => {
       .mockResolvedValueOnce({ data: null, error: makeError(429) })
       .mockResolvedValueOnce({ data: { done: true }, error: null });
 
-    const result = await invokeEdge("fn");
+    const result = await invokeEdge("fn", { method: "GET" });
 
     expect(result.error).toBeNull();
     expect(result.data).toEqual({ done: true });
@@ -113,7 +113,7 @@ describe("T5 EDGE-RETRY — status 429 e 504", () => {
       .mockResolvedValueOnce({ data: null, error: makeError(504) })
       .mockResolvedValueOnce({ data: { score: 88 }, error: null });
 
-    const result = await invokeEdge("fn");
+    const result = await invokeEdge("fn", { method: "GET" });
 
     expect(result.error).toBeNull();
     expect(result.data?.score).toBe(88);
@@ -125,7 +125,7 @@ describe("T5 EDGE-RETRY — status 429 e 504", () => {
       .mockResolvedValueOnce({ data: null, error: makeError(503) })
       .mockResolvedValueOnce({ data: { ok: true }, error: null });
 
-    const result = await invokeEdge("fn", { retries: 2 });
+    const result = await invokeEdge("fn", { method: "GET", retries: 2 });
 
     expect(result.attempts).toBe(2);
   });
@@ -137,7 +137,7 @@ describe("T5 EDGE-RETRY — idempotência e POST", () => {
     sleepCalls.length = 0;
   });
 
-  it("GET (default) é idempotente — retry habilitado em 503", async () => {
+  it("GET é idempotente — retry habilitado em 503", async () => {
     mockInvoke
       .mockResolvedValueOnce({ data: null, error: makeError(503) })
       .mockResolvedValueOnce({ data: { ok: true }, error: null });
@@ -183,7 +183,7 @@ describe("T5 EDGE-RETRY — esgotamento de retries", () => {
   it("esgotando retries → retorna error (não lança exceção)", async () => {
     mockInvoke.mockResolvedValue({ data: null, error: makeError(503) });
 
-    const result = await invokeEdge("fn", { retries: 2 });
+    const result = await invokeEdge("fn", { method: "GET", retries: 2 });
 
     expect(result.data).toBeNull();
     expect(result.error).not.toBeNull();

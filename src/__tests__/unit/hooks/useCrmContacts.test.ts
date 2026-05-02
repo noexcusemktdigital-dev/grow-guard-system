@@ -18,25 +18,34 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 
+const {
+  mockDelete,
+  mockDeleteResult,
+  mockFrom,
+  mockInsert,
+  mockInsertResult,
+  mockOrgId,
+  mockSingle,
+  mockUpdate,
+  mockUpdateResult,
+} = vi.hoisted(() => ({
+  mockOrgId: { data: "org-contacts-test" as string | null },
+  mockInsertResult: { data: null as unknown, error: null as unknown },
+  mockUpdateResult: { data: null as unknown, error: null as unknown },
+  mockDeleteResult: { error: null as unknown },
+  mockSingle: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockInsert: vi.fn(),
+  mockDelete: vi.fn(),
+  mockFrom: vi.fn(),
+}));
+
 // ── Mock useUserOrgId ─────────────────────────────────────────────────────────
-const mockOrgId = { data: "org-contacts-test" as string | null };
 vi.mock("@/hooks/useUserOrgId", () => ({
   useUserOrgId: () => mockOrgId,
 }));
 
 // ── Chainable Supabase mock ───────────────────────────────────────────────────
-const mockInsertResult = { data: null as unknown, error: null as unknown };
-const mockUpdateResult = { data: null as unknown, error: null as unknown };
-const mockDeleteResult = { error: null as unknown };
-
-const mockSingle = vi.fn();
-const mockEq = vi.fn();
-const mockIn = vi.fn();
-const mockSelect = vi.fn();
-const mockUpdate = vi.fn();
-const mockInsert = vi.fn();
-const mockDelete = vi.fn();
-
 function buildInsertChain() {
   const chain: Record<string, unknown> = {};
   chain.select = vi.fn().mockReturnValue({
@@ -67,8 +76,6 @@ function buildBulkUpdateChain() {
   chain.in = vi.fn().mockResolvedValue(mockUpdateResult);
   return chain;
 }
-
-const mockFrom = vi.fn();
 
 vi.mock("@/lib/supabase", () => ({
   supabase: { from: mockFrom },
