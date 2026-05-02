@@ -34,7 +34,7 @@ function daysUntilExpiry(endDate: string | null): number | null {
 
 export default function ContratosGerenciamento() {
   const { toast } = useToast();
-  const { data: contracts, isLoading } = useNetworkContracts();
+  const { data: contracts, isLoading, isError, error, refetch } = useNetworkContracts();
   const { updateContract, deleteContract } = useContractMutations();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -87,6 +87,18 @@ export default function ContratosGerenciamento() {
   };
 
   if (isLoading) return <div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
+
+  if (isError) {
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+        <h3 className="font-semibold text-destructive mb-1 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> Erro ao carregar contratos
+        </h3>
+        <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar os contratos."}</p>
+        <Button size="sm" variant="outline" className="mt-3" onClick={() => refetch()}>Tentar novamente</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -22,7 +22,7 @@ const PRIORITY_VARIANTS: Record<string, "default" | "secondary" | "destructive">
 const TYPE_LABELS: Record<string, string> = { Informativo: "Informativo", "Atualização de sistema": "Atualização", "Alerta operacional": "Alerta", Campanha: "Campanha", Institucional: "Institucional", Urgente: "Urgente" };
 
 export default function ClienteComunicados() {
-  const { data: announcements, isLoading } = useAnnouncements();
+  const { data: announcements, isLoading, isError, error, refetch } = useAnnouncements();
   const { data: views } = useAnnouncementViews();
   const { markViewed, confirmRead } = useAnnouncementViewMutations();
   const [search, setSearch] = useState("");
@@ -62,6 +62,20 @@ export default function ClienteComunicados() {
       <div className="w-full space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="w-full space-y-6">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+          <h3 className="font-semibold text-destructive mb-1 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> Erro ao carregar comunicados
+          </h3>
+          <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar os comunicados."}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
       </div>
     );
   }
