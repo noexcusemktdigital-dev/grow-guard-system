@@ -1407,6 +1407,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_diagnostics_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_diagnostics_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2155,6 +2162,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2305,6 +2319,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
             referencedColumns: ["id"]
           },
           {
@@ -2541,6 +2562,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_files_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_files_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2690,6 +2718,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_lead_notes_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2741,6 +2776,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_lead_products_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_lead_products_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -2764,6 +2806,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           custom_fields: Json | null
+          deleted_at: string | null
           email: string | null
           funnel_id: string | null
           id: string
@@ -2788,6 +2831,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           custom_fields?: Json | null
+          deleted_at?: string | null
           email?: string | null
           funnel_id?: string | null
           id?: string
@@ -2812,6 +2856,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           custom_fields?: Json | null
+          deleted_at?: string | null
           email?: string | null
           funnel_id?: string | null
           id?: string
@@ -3083,6 +3128,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_proposals_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3222,6 +3274,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_tasks_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3336,6 +3395,42 @@ export type Database = {
           is_active?: boolean
           max_uses?: number | null
           uses_count?: number
+        }
+        Relationships: []
+      }
+      dsr_requests: {
+        Row: {
+          details: Json | null
+          id: string
+          processed_at: string | null
+          rejection_reason: string | null
+          request_type: string
+          requested_at: string
+          requested_by: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          details?: Json | null
+          id?: string
+          processed_at?: string | null
+          rejection_reason?: string | null
+          request_type: string
+          requested_at?: string
+          requested_by: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          details?: Json | null
+          id?: string
+          processed_at?: string | null
+          rejection_reason?: string | null
+          request_type?: string
+          requested_at?: string
+          requested_by?: string
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -3502,6 +3597,7 @@ export type Database = {
       finance_clients: {
         Row: {
           created_at: string
+          deleted_at: string | null
           document: string | null
           email: string | null
           id: string
@@ -3513,6 +3609,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
@@ -3524,6 +3621,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
@@ -3895,6 +3993,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "finance_revenues_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "finance_clients_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "finance_revenues_finance_month_id_fkey"
             columns: ["finance_month_id"]
             isOneToOne: false
@@ -4151,6 +4256,13 @@ export type Database = {
             referencedRelation: "crm_leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "franqueado_prospections_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
         ]
       }
       franqueado_strategies: {
@@ -4196,6 +4308,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "franqueado_strategies_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
             referencedColumns: ["id"]
           },
         ]
@@ -4889,6 +5008,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "meta_leadgen_events_crm_lead_id_fkey"
+            columns: ["crm_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "meta_leadgen_events_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -5496,6 +5622,7 @@ export type Database = {
       organization_memberships: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           invited_by: string | null
           organization_id: string
@@ -5504,6 +5631,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           invited_by?: string | null
           organization_id: string
@@ -5512,6 +5640,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           invited_by?: string | null
           organization_id?: string
@@ -7889,6 +8018,198 @@ export type Database = {
           },
         ]
       }
+      crm_leads_active: {
+        Row: {
+          archived_at: string | null
+          assigned_to: string | null
+          company: string | null
+          contact_id: string | null
+          created_at: string | null
+          custom_fields: Json | null
+          deleted_at: string | null
+          email: string | null
+          funnel_id: string | null
+          id: string | null
+          lost_at: string | null
+          lost_reason: string | null
+          name: string | null
+          organization_id: string | null
+          phone: string | null
+          source: string | null
+          stage: string | null
+          tags: string[] | null
+          temperature: string | null
+          updated_at: string | null
+          value: number | null
+          whatsapp_contact_id: string | null
+          won_at: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          assigned_to?: string | null
+          company?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          custom_fields?: Json | null
+          deleted_at?: string | null
+          email?: string | null
+          funnel_id?: string | null
+          id?: string | null
+          lost_at?: string | null
+          lost_reason?: string | null
+          name?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          source?: string | null
+          stage?: string | null
+          tags?: string[] | null
+          temperature?: string | null
+          updated_at?: string | null
+          value?: number | null
+          whatsapp_contact_id?: string | null
+          won_at?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          assigned_to?: string | null
+          company?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          custom_fields?: Json | null
+          deleted_at?: string | null
+          email?: string | null
+          funnel_id?: string | null
+          id?: string | null
+          lost_at?: string | null
+          lost_reason?: string | null
+          name?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          source?: string | null
+          stage?: string | null
+          tags?: string[] | null
+          temperature?: string | null
+          updated_at?: string | null
+          value?: number | null
+          whatsapp_contact_id?: string | null
+          won_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_funnel_id_fkey"
+            columns: ["funnel_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funnels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_clients_active: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          document: string | null
+          email: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          organization_id: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          document?: string | null
+          email?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          document?: string | null
+          email?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_clients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_memberships_active: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          id: string | null
+          invited_by: string | null
+          organization_id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string | null
+          invited_by?: string | null
+          organization_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string | null
+          invited_by?: string | null
+          organization_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_memberships_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_memberships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _chunked_delete_old_automation_logs: {
@@ -8461,6 +8782,13 @@ export type Database = {
         }
         Returns: number
       }
+      purge_soft_deleted: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          table_name: string
+        }[]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -8493,6 +8821,10 @@ export type Database = {
           _org_id: string
         }
         Returns: undefined
+      }
+      soft_delete_record: {
+        Args: { p_id: string; p_table: string }
+        Returns: boolean
       }
       start_meta_ads_oauth: { Args: { p_org_id?: string }; Returns: Json }
       sync_team_chat_channels: { Args: { _org_id: string }; Returns: undefined }
