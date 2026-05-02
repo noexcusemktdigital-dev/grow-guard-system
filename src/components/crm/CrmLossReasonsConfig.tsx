@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
