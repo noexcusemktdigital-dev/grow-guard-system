@@ -4,6 +4,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { publishToPlatform } from "../_shared/socialPublish.ts";
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, UUID, NonEmptyString } from "../_shared/schemas.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
+// social-publish-post creates/publishes content — shape is account + caption
+const SocialPublishPostSchema = z.object({
+  social_account_id: UUID,
+  caption: NonEmptyString.max(5000),
+  image_url: z.string().url().optional(),
+  scheduled_for: z.string().optional(),
+});
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'social-publish-post');
@@ -31,20 +41,16 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    const body = await req.json().catch(() => ({}));
-    const { social_account_id, caption, image_url, scheduled_for } = body as {
-      social_account_id?: string;
-      caption?: string;
-      image_url?: string;
-      scheduled_for?: string;
-    };
-
-    if (!social_account_id || !caption) {
-      return new Response(JSON.stringify({ error: "social_account_id e caption são obrigatórios" }), {
-        status: 400,
-        headers: cors,
-      });
+    let parsedBody: { social_account_id: string; caption: string; image_url?: string; scheduled_for?: string };
+    try {
+      const raw = await req.json().catch(() => ({}));
+      parsedBody = parseOrThrow(SocialPublishPostSchema, raw);
+    } catch (err) {
+      const vr = validationErrorResponse(err, cors);
+      if (vr) return vr;
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: cors });
     }
+    const { social_account_id, caption, image_url, scheduled_for } = parsedBody;
 
     const admin = createClient(supaUrl, service);
     const { data: account } = await admin.from("social_accounts").select("*").eq("id", social_account_id).maybeSingle();

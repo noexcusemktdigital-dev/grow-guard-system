@@ -3,6 +3,24 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse } from "../_shared/schemas.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
+// google-calendar-sync: action-based body — adapt CalendarSchemas pattern
+const CalendarSyncBodySchema = z.object({
+  action: z.enum(["pull", "push", "delete"]),
+  portal: z.string().optional(),
+  event: z.object({
+    id: z.string().optional(),
+    title: z.string().max(500).optional(),
+    description: z.string().optional(),
+    location: z.string().optional(),
+    start_at: z.string().optional(),
+    end_at: z.string().optional(),
+    all_day: z.boolean().optional(),
+    google_event_id: z.string().optional(),
+  }).optional(),
+});
 
 async function refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -48,7 +66,16 @@ serve(async (req) => {
     if (userError || !user) return jsonRes({ error: "Unauthorized" }, 401);
     const userId = user.id;
 
-    const { action, event, portal } = await req.json();
+    let parsedSync: z.infer<typeof CalendarSyncBodySchema>;
+    try {
+      const raw = await req.json();
+      parsedSync = parseOrThrow(CalendarSyncBodySchema, raw);
+    } catch (err) {
+      const vr = validationErrorResponse(err, { ...getCorsHeaders(req), "Content-Type": "application/json" });
+      if (vr) return vr;
+      return jsonRes({ error: "Invalid request body" }, 400);
+    }
+    const { action, event, portal } = parsedSync;
 
     const serviceClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: orgId } = await serviceClient.rpc("get_user_org_id", { _user_id: userId, _portal: portal || "saas" });

@@ -3,6 +3,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, UUID } from "../_shared/schemas.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
+// social-get-insights uses social_account_id (not organization_id) — permissive schema
+const GetInsightsBodySchema = z.object({
+  social_account_id: UUID,
+  period: z.string().optional(),
+});
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -270,11 +278,16 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    const body = await req.json().catch(() => ({}));
-    const social_account_id: string | undefined = body.social_account_id;
-    if (!social_account_id) {
-      return new Response(JSON.stringify({ error: "social_account_id required" }), { status: 400, headers: cors });
+    let body: { social_account_id: string; period?: string };
+    try {
+      const raw = await req.json().catch(() => ({}));
+      body = parseOrThrow(GetInsightsBodySchema, raw);
+    } catch (err) {
+      const vr = validationErrorResponse(err, cors);
+      if (vr) return vr;
+      return new Response(JSON.stringify({ error: "Invalid request body" }), { status: 400, headers: cors });
     }
+    const social_account_id = body.social_account_id;
 
     const admin = createClient(supaUrl, service);
 

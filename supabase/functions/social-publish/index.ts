@@ -2,6 +2,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, UUID } from "../_shared/schemas.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
+// social-publish uses a post-lookup pattern — body carries IDs, not content
+const SocialPublishBodySchema = z.object({
+  social_post_id: UUID,
+  org_id: UUID,
+});
 
 // ---------------------------------------------------------------------------
 // Types
@@ -375,9 +383,9 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // --- 2. Parse request body ---
-    let body: { social_post_id?: string; org_id?: string };
+    let raw: unknown;
     try {
-      body = await req.json();
+      raw = await req.json();
     } catch {
       return new Response(
         JSON.stringify({ error: "Invalid JSON body" }),
@@ -385,14 +393,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { social_post_id, org_id } = body;
-
-    if (!social_post_id || !org_id) {
-      return new Response(
-        JSON.stringify({ error: "social_post_id e org_id são obrigatórios" }),
-        { status: 400, headers: jsonHeaders }
-      );
+    let body: { social_post_id: string; org_id: string };
+    try {
+      body = parseOrThrow(SocialPublishBodySchema, raw);
+    } catch (err) {
+      const vr = validationErrorResponse(err, corsHeaders);
+      if (vr) return vr;
+      throw err;
     }
+
+    const { social_post_id, org_id } = body;
 
     console.log(`[social-publish] post=${social_post_id} org=${org_id} user=${user.id}`);
 
