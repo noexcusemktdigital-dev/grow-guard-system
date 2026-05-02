@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { maskEmail } from '../_shared/redact.ts';
