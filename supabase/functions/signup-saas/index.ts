@@ -315,6 +315,30 @@ async function provisionUser(
 
   console.log(`SaaS signup: user=${userId}, org=${org.id}, referral=${referralCode || 'none'}, discount=${discountPercent}%, whatsapp=${whatsappProvisioned}`);
 
+  // Fire welcome email (non-blocking, idempotent)
+  try {
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const userEmail = authUser?.user?.email;
+    const userFullName = (authUser?.user?.user_metadata as any)?.full_name || "";
+    if (userEmail) {
+      fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          email: userEmail,
+          full_name: userFullName,
+          organization_id: org.id,
+        }),
+      }).catch((e) => console.warn("welcome email dispatch failed:", e?.message || e));
+    }
+  } catch (e) {
+    console.warn("welcome email lookup failed:", (e as any)?.message || e);
+  }
+
   return new Response(JSON.stringify({
     success: true, organization_id: org.id, user_id: userId,
     referral_applied: !!referralCode && !!resolvedParentOrgId,
