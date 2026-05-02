@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Circle, ChevronRight, Layers, UserPlus, Zap, Settings2, X } from "lucide-react";
