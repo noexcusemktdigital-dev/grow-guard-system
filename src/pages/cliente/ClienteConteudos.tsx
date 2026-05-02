@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
 
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
