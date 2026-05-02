@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
+import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-prospection.ts';
 
 const CREDIT_COST = 30;
 
@@ -58,34 +59,21 @@ serve(async (req) => {
       }
     }
 
-    const nivelContatoLabel = nivel_contato === "quente" ? "Quente (já demonstrou interesse)" : nivel_contato === "morno" ? "Morno (já houve contato)" : "Frio (nunca falou)";
-
-    const userPrompt = `Crie um plano completo de prospecção B2B para o seguinte cenário:
-
-DADOS DO PROSPECT:
-- Nome da Empresa: ${nome_empresa || "Não informado"}
-- Região: ${regiao}
-- Nicho/Segmento: ${nicho}
-- Porte: ${porte || "Não informado"}
-- Site: ${site || "Não informado"}
-- Redes Sociais: ${redes_sociais || "Não informado"}
-- Nível de Contato: ${nivelContatoLabel}
-- Decisor: ${contato_decisor ? `${contato_decisor}${cargo_decisor ? ` (${cargo_decisor})` : ""}` : "Não informado"}
-- O que já se sabe sobre a empresa: ${conhecimento_previo || "Nada informado"}
-- Principal dor ou necessidade identificada: ${desafio || "Não informado"}
-- Objetivo da Abordagem: ${objetivo || "Agendar diagnóstico gratuito"}
-
-CONTEXTO IMPORTANTE:
-O objetivo final de toda prospecção é AGENDAR UMA CONVERSA DE DIAGNÓSTICO OU ESTRATÉGIA GRATUITA. Nós oferecemos ao prospect uma reunião onde analisamos a situação da empresa e criamos uma estratégia personalizada sem custo. Esse é o nosso principal gancho de vendas — o prospect recebe valor real gratuitamente e, a partir do diagnóstico, apresentamos nossas soluções.
-
-CENÁRIOS DE CONTATO:
-- Se o nível de contato é FRIO: Foque na abordagem inicial, pesquisa sobre a empresa e no convite para o diagnóstico gratuito como isca de valor.
-- Se o nível é MORNO (já houve contato anterior): Foque em retomar a conversa, relembrar o que foi discutido e reforçar o convite para o diagnóstico.
-- Se o nível é QUENTE (indicação ou interesse demonstrado): Foque em agilizar o agendamento da reunião, aproveitando a confiança já existente pela indicação.
-
-Use o nome da empresa e do decisor nos scripts quando disponíveis. Todos os scripts devem ter como call-to-action o agendamento do diagnóstico/estratégia gratuita.
-
-Use a ferramenta generate_prospection_plan para retornar o plano estruturado.`;
+    const userPrompt = buildUserPrompt({
+      regiao,
+      nicho,
+      porte,
+      desafio,
+      objetivo,
+      nome_empresa,
+      site,
+      redes_sociais,
+      conhecimento_previo,
+      nivel_contato,
+      contato_decisor,
+      cargo_decisor,
+    });
+    console.log(`[generate-prospection] prompt_version=${PROMPT_VERSION}`);
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -100,11 +88,7 @@ Use a ferramenta generate_prospection_plan para retornar o plano estruturado.`;
           messages: [
             {
               role: "system",
-              content: `Você é um consultor de vendas B2B brasileiro sênior, especialista em franquias e agências de marketing digital. Seu papel é criar planos de prospecção detalhados e actionáveis para franqueados que vendem serviços de marketing, branding, performance e CRM.
-
-O modelo de vendas é baseado em oferecer um DIAGNÓSTICO ou ESTRATÉGIA GRATUITA ao prospect. O objetivo final é sempre agendar uma conversa/reunião onde analisamos a empresa do prospect e criamos uma estratégia personalizada sem custo. A partir dessa reunião, apresentamos nossas soluções. Nunca tente vender diretamente — o gancho é sempre o valor gratuito do diagnóstico.
-
-Sempre responda em português brasileiro. Seja prático, direto e use linguagem profissional de vendas consultivas.`,
+              content: SYSTEM_PROMPT,
             },
             { role: "user", content: userPrompt },
           ],
