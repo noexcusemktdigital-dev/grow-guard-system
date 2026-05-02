@@ -2,10 +2,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { buildSystemPrompt, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-template-layout.ts';
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-template-layout');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   // SEC-NOE-002: User auth required

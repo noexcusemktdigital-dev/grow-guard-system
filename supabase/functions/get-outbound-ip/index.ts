@@ -1,9 +1,14 @@
 // @ts-nocheck
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'get-outbound-ip');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   try {

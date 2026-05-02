@@ -1,10 +1,15 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'ads-get-config');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   const googleClientId = Deno.env.get("GOOGLE_ADS_CLIENT_ID") || "";

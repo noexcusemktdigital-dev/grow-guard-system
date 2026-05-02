@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOrCreateAsaasCustomer, fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { assertOrgMember, AuthError } from '../_shared/auth.ts';
 import { parseOrThrow, validationErrorResponse, SubscriptionSchemas } from '../_shared/schemas.ts';
 
@@ -16,8 +17,12 @@ const PLAN_PRICES: Record<string, number> = {
 };
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-create-subscription');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   try {

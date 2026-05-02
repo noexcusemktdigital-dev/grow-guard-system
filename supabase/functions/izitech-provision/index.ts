@@ -8,10 +8,15 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const IZITECH_URL = "https://mdmhsqcfmpyufohxjsrv.supabase.co/functions/v1/provision-instance";
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'izitech-provision');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   const json = (body: Record<string, unknown>, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
