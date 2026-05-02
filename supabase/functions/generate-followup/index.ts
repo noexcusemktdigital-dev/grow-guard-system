@@ -5,6 +5,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-followup.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, GenerateExtendedSchemas } from '../_shared/schemas.ts';
 
 serve(async (req) => {
   const ctx = newRequestContext(req, 'generate-followup');
@@ -33,7 +34,7 @@ serve(async (req) => {
   if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
   try {
-    const { strategy_result, month_ref, analise_parcial, ciclos_anteriores } = await req.json();
+    const { strategy_result, month_ref, analise_parcial, ciclos_anteriores } = parseOrThrow(GenerateExtendedSchemas.Followup, await req.json());
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
@@ -81,6 +82,8 @@ serve(async (req) => {
       headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (e) {
+    const valRes = validationErrorResponse(e, getCorsHeaders(req));
+    if (valRes) return valRes;
     log.error("generate-followup error", { error: String(e) });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
       status: 500,

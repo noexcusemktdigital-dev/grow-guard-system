@@ -4,6 +4,7 @@ import { getOrCreateAsaasCustomer, fetchPixQrCode } from "../_shared/asaas-custo
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { assertOrgMember, AuthError } from '../_shared/auth.ts';
+import { parseOrThrow, validationErrorResponse, SubscriptionSchemas } from '../_shared/schemas.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -43,18 +44,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    const rawBody = await req.json();
+    const body = parseOrThrow(SubscriptionSchemas.Create, rawBody);
     // Support both unified (plan) and legacy (sales_plan + marketing_plan)
     const plan = body.plan || body.sales_plan || body.marketing_plan;
     const billing_type = body.billing_type;
     const organization_id = body.organization_id;
     const coupon_code = body.coupon_code || null;
-
-    if (!organization_id || !billing_type) {
-      return new Response(JSON.stringify({ error: "organization_id and billing_type are required" }), {
-        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
 
     // SEC-002: Validate org membership before financial mutation (anti-IDOR/BOLA)
     try {
@@ -351,6 +347,8 @@ Deno.serve(async (req) => {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
+    const valRes = validationErrorResponse(err, getCorsHeaders(req));
+    if (valRes) return valRes;
     console.error("asaas-create-subscription error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

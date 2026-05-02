@@ -5,6 +5,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { SYSTEM_PROMPT, STAGE_PROMPTS, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-script.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, GenerateExtendedSchemas } from '../_shared/schemas.ts';
 
 // Fixed credit cost per script generation
 const CREDIT_COST = 20;
@@ -50,7 +51,7 @@ serve(async (req) => {
     const _rl = await checkRateLimit(userId, null, 'generate-script', { windowSeconds: 60, maxRequests: 20 });
     if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
-    const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext, from_gps } = await req.json();
+    const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext, from_gps } = parseOrThrow(GenerateExtendedSchemas.Script, await req.json());
 
     if (!stage || !stagePrompts[stage]) {
       return new Response(
@@ -229,6 +230,8 @@ serve(async (req) => {
       }
     );
   } catch (e) {
+    const valRes = validationErrorResponse(e, getCorsHeaders(req));
+    if (valRes) return valRes;
     log.error("generate-script error", { error: String(e) });
     return new Response(
       JSON.stringify({

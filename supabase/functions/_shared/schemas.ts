@@ -206,6 +206,95 @@ export const GenerateSchemas = {
 } as const;
 
 // ────────────────────────────────────────
+// WhatsApp
+// ────────────────────────────────────────
+export const WhatsAppSchemas = {
+  Send: z.object({
+    organization_id: UUID.optional(),
+    instance_id: z.string().optional(),
+    phone: PhoneBR.optional(),
+    contactPhone: z.string().max(30).optional(),
+    contactId: UUID.optional(),
+    message: z.string().max(4096).optional(),
+    type: z.string().max(50).optional(),
+    mediaUrl: z.string().url().optional(),
+    quotedMessageId: UUID.optional(),
+    action: z.string().max(50).optional(),
+    templateName: z.string().max(200).optional(),
+    templateLanguage: z.string().max(20).optional(),
+    templateComponents: z.array(z.object({}).passthrough()).optional(),
+  }),
+
+  BulkSend: z.object({
+    organization_id: UUID,
+    dispatch_id: z.string().min(1),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Subscriptions
+// ────────────────────────────────────────
+export const SubscriptionSchemas = {
+  Create: z.object({
+    organization_id: UUID,
+    plan_id: UUID.optional(),
+    plan: z.string().max(100).optional(),
+    sales_plan: z.string().max(100).optional(),
+    marketing_plan: z.string().max(100).optional(),
+    billing_type: z.enum(["PIX", "BOLETO", "CREDIT_CARD"]).default("PIX"),
+    coupon_code: z.string().max(50).optional().nullable(),
+  }),
+
+  Cancel: z.object({
+    organization_id: UUID,
+    reason: z.string().max(500).optional(),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Generic CRM operations
+// ────────────────────────────────────────
+export const CrmSchemas = {
+  RunAutomations: z.object({
+    organization_id: UUID.optional(),
+    lead_id: UUID.optional(),
+    trigger: z.string().max(100).optional(),
+    event_id: z.string().optional(),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Generate AI (extended)
+// ────────────────────────────────────────
+export const GenerateExtendedSchemas = {
+  Followup: z.object({
+    organization_id: UUID.optional(),
+    strategy_result: z.unknown().optional(),
+    month_ref: z.string().max(20).optional(),
+    analise_parcial: z.unknown().optional(),
+    ciclos_anteriores: z.unknown().optional(),
+  }),
+
+  Script: z.object({
+    organization_id: UUID.optional(),
+    stage: NonEmptyString.max(100),
+    briefing: z.string().max(5000).optional(),
+    context: z.unknown().optional(),
+    mode: z.string().max(50).optional(),
+    existingScript: z.string().max(10000).optional(),
+    referenceLinks: z.array(z.string().url()).optional(),
+    additionalContext: z.string().max(2000).optional(),
+    from_gps: z.boolean().optional(),
+  }),
+
+  Strategy: z.object({
+    organization_id: UUID.optional(),
+    answers: z.unknown(),
+    section: z.string().max(100).optional(),
+  }),
+} as const;
+
+// ────────────────────────────────────────
 // Webhooks (signature de payload — passthrough para novos campos de provedores)
 // ────────────────────────────────────────
 export const WebhookSchemas = {
