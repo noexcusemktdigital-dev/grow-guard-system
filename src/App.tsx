@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -292,6 +293,7 @@ function App() {
       </BrowserRouter>
     </TooltipProvider>
     </QueryClientProvider>
+    <PWAUpdatePrompt />
   );
 }
 
