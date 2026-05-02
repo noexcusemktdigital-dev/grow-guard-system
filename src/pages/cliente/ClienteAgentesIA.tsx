@@ -132,6 +132,7 @@ export default function ClienteAgentesIA() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <AssessoriaPopup storageKey="noexcuse_popup_agentes_v1" servico="Configuração de Agentes de IA" />
     </div>
   );
 }
