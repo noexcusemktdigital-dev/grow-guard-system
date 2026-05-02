@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST_PER_CONTENT = 30;
 
@@ -37,6 +38,10 @@ serve(async (req) => {
       estiloLote, nomeEmpresa, produto, diferencial, doresPublico, desejosPublico,
       organization_id,
     } = await req.json();
+
+    // API-005: Rate limit por usuario (20/min)
+    const _rl = await checkRateLimit(_authUser.id, organization_id ?? null, 'generate-content', { windowSeconds: 60, maxRequests: 20 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");

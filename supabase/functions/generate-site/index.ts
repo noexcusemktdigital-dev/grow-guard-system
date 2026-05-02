@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST = 100;
 
@@ -48,6 +49,11 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const organization_id = body.organization_id;
+
+    // API-005: Rate limit por usuario (3/min - geracao muito cara)
+    const _rl = await checkRateLimit(_authUser.id, organization_id ?? null, 'generate-site', { windowSeconds: 60, maxRequests: 3 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
+
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     // Skip credit debit on edit mode and before GPS is approved
