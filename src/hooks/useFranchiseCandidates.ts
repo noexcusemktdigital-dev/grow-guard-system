@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export interface FranchiseCandidate {
   id: string;
@@ -59,7 +60,7 @@ export function useFranchiseCandidates() {
       queryClient.invalidateQueries({ queryKey: ["franchise-candidates"] });
       toast.success("Status atualizado");
     },
-    onError: () => toast.error("Erro ao atualizar status"),
+    onError: (err: unknown) => reportError(err, { title: "Erro ao atualizar status", category: "franchise.candidate_status" }),
   });
 
   const updateNotes = useMutation({
@@ -74,7 +75,7 @@ export function useFranchiseCandidates() {
       queryClient.invalidateQueries({ queryKey: ["franchise-candidates"] });
       toast.success("Observações salvas");
     },
-    onError: () => toast.error("Erro ao salvar observações"),
+    onError: (err: unknown) => reportError(err, { title: "Erro ao salvar observações", category: "franchise.candidate_notes" }),
   });
 
   return { ...query, updateStatus, updateNotes };

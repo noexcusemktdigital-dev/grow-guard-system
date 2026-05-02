@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import type { MetaAdsInsights } from "./use-meta-ads";
 
 // Threshold: CPL acima deste valor por 2 consultas seguidas dispara alerta
@@ -36,11 +37,10 @@ export function useAdsAlerts(data: MetaAdsInsights | undefined) {
 
     // CPL > R$50 por 2 consultas seguidas
     if (prev > CPL_ALERT_THRESHOLD && curr > CPL_ALERT_THRESHOLD) {
-      toast.error("CPL crítico — Meta Ads", {
-        description: `CPL em R$${curr.toFixed(2)} (acima de R$${CPL_ALERT_THRESHOLD} por 2 consultas seguidas). Revise suas campanhas.`,
-        duration: 8000,
-        id: "ads-cpl-alert", // evita duplicatas
-      });
+      reportError(
+        new Error(`CPL em R$${curr.toFixed(2)} (acima de R$${CPL_ALERT_THRESHOLD} por 2 consultas seguidas). Revise suas campanhas.`),
+        { title: "CPL crítico — Meta Ads", category: "ads.cpl_threshold" }
+      );
       return;
     }
 

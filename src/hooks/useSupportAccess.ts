@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export function useSupportTokens() {
   const { data: orgId } = useUserOrgId();
@@ -65,7 +66,7 @@ export function useGenerateSupportToken() {
       toast.success("Token de acesso gerado com sucesso");
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Erro ao gerar token");
+      reportError(err, { title: "Erro ao gerar token", category: "support.generate_token" });
     },
   });
 }
@@ -87,7 +88,7 @@ export function useRevokeSupportToken() {
       toast.success("Acesso revogado com sucesso");
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Erro ao revogar acesso");
+      reportError(err, { title: "Erro ao revogar acesso", category: "support.revoke_token" });
     },
   });
 }

@@ -22,6 +22,7 @@ import { AtendimentoConfig } from "@/components/atendimento/AtendimentoConfig";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
@@ -109,7 +110,7 @@ export default function Atendimento() {
       const ext = file.name.split(".").pop();
       const path = `${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("support-attachments").upload(path, file);
-      if (error) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+      if (error) { reportError(error, { title: `Erro ao enviar ${file.name}`, category: "support.attachment_upload" }); continue; }
       const { data } = supabase.storage.from("support-attachments").getPublicUrl(path);
       urls.push(data.publicUrl);
     }
@@ -117,7 +118,7 @@ export default function Atendimento() {
   }
 
   async function handleCreate() {
-    if (!novoTitulo.trim()) { toast.error("Informe o título"); return; }
+    if (!novoTitulo.trim()) { reportError(new Error("Informe o título do chamado"), { title: "Informe o título", category: "support.validation" }); return; }
     setCreatingTicket(true);
     try {
       await createTicket.mutateAsync({
@@ -129,8 +130,8 @@ export default function Atendimento() {
       setCreateDialog(false);
       setNovoTitulo(""); setNovaDescricao("");
       toast.success("Chamado criado!");
-    } catch {
-      toast.error("Erro ao criar chamado");
+    } catch (err) {
+      reportError(err, { title: "Erro ao criar chamado", category: "support.create_ticket" });
     }
     setCreatingTicket(false);
   }
@@ -150,8 +151,8 @@ export default function Atendimento() {
       } as Record<string, unknown>);
       setNewMessage("");
       setMsgAttachments([]);
-    } catch {
-      toast.error("Erro ao enviar mensagem");
+    } catch (err) {
+      reportError(err, { title: "Erro ao enviar mensagem", category: "support.send_message" });
     }
     setUploadingMsg(false);
   }

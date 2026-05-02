@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { endOfMonth, format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/typed";
 
@@ -85,11 +86,11 @@ export function useChargeClient() {
       if (msg === "already_paid") {
         toast.info("Já pago neste mês");
       } else if (msg.includes("Unauthorized") || msg.includes("401")) {
-        toast.error("Sessão expirada. Recarregue a página e tente novamente.");
+        reportError(err, { title: "Sessão expirada. Recarregue a página e tente novamente.", category: "asaas.auth" });
       } else if (msg.includes("not_allowed_ip")) {
-        toast.error("IP não autorizado no Asaas. Configure o proxy.");
+        reportError(err, { title: "IP não autorizado no Asaas. Configure o proxy.", category: "asaas.ip_blocked" });
       } else {
-        toast.error(msg);
+        reportError(err, { title: "Erro ao gerar cobrança", category: "asaas.charge" });
       }
     },
   });
@@ -154,7 +155,7 @@ export function useManagePayment() {
       }
     },
     onError: (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Erro ao processar ação");
+      reportError(err, { title: "Erro ao processar ação", category: "asaas.manage_payment" });
     },
   });
 }
