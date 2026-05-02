@@ -34,7 +34,7 @@ const funnelStages = [
 ];
 
 export default function ClienteScripts() {
-  const { data: scripts, isLoading } = useClienteScripts();
+  const { data: scripts, isLoading, isError, error, refetch } = useClienteScripts();
   const { createScript, updateScript, deleteScript: deleteScriptMutation } = useClienteScriptMutations();
   const { permissions, isAdmin } = useMemberPermissions();
   const canGenerate = isAdmin || permissions.can_generate_scripts;
@@ -112,6 +112,19 @@ export default function ClienteScripts() {
       <div className="w-full space-y-6">
         <PageHeader title="Scripts & Playbooks" subtitle="Scripts de prospecção e negociação" icon={<BookOpen className="w-5 h-5 text-primary" />} />
         <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Scripts & Playbooks" subtitle="Scripts de prospecção e negociação" icon={<BookOpen className="w-5 h-5 text-primary" />} />
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+          <h3 className="font-semibold text-destructive mb-1">Erro ao carregar scripts</h3>
+          <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar os scripts."}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
       </div>
     );
   }

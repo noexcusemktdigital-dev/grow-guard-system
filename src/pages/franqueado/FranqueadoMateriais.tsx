@@ -55,9 +55,9 @@ type DbAsset = NonNullable<ReturnType<typeof useMarketingAssets>["data"]>[number
 
 export default function FranqueadoMateriais() {
   // Resolve to parent org (franqueadora) for content
-  const { data: sourceOrgId, isLoading: loadingSource } = useContentSourceOrgId();
-  const { data: folders, isLoading: foldersLoading } = useMarketingFolders(sourceOrgId || undefined);
-  const { data: assets, isLoading: assetsLoading } = useMarketingAssets(undefined, sourceOrgId || undefined);
+  const { data: sourceOrgId, isLoading: loadingSource, isError: isErrorSource, error: errorSource, refetch: refetchSource } = useContentSourceOrgId();
+  const { data: folders, isLoading: foldersLoading, isError: isErrorFolders } = useMarketingFolders(sourceOrgId || undefined);
+  const { data: assets, isLoading: assetsLoading, isError: isErrorAssets } = useMarketingAssets(undefined, sourceOrgId || undefined);
   const [activeCategory, setActiveCategory] = useState<MarketingCategory | null>(null);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -66,6 +66,7 @@ export default function FranqueadoMateriais() {
   const [previewAsset, setPreviewAsset] = useState<DbAsset | null>(null);
 
   const isLoading = loadingSource || foldersLoading || assetsLoading;
+  const isError = isErrorSource || isErrorFolders || isErrorAssets;
 
   // Breadcrumb path within a category
   const breadcrumb = useMemo(() => {
@@ -167,6 +168,19 @@ export default function FranqueadoMateriais() {
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Materiais de Marketing" subtitle="Acesse materiais da franqueadora" icon={<FolderOpen className="w-5 h-5 text-primary" />} />
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+          <h3 className="font-semibold text-destructive mb-1">Erro ao carregar materiais</h3>
+          <p className="text-sm text-muted-foreground">{errorSource instanceof Error ? errorSource.message : "Não foi possível carregar os materiais de marketing."}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => refetchSource()}>Tentar novamente</Button>
         </div>
       </div>
     );

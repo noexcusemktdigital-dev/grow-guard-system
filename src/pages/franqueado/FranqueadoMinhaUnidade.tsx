@@ -1,10 +1,11 @@
 // @ts-nocheck
 import { useState } from "react";
-import { Building2, FileText, Users, DollarSign } from "lucide-react";
+import { Building2, FileText, Users, DollarSign, AlertTriangle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -18,7 +19,7 @@ export default function FranqueadoMinhaUnidade() {
   const [tab, setTab] = useState("dados");
 
   // Find the unit linked to this franchisee's org
-  const { data: unit, isLoading } = useQuery({
+  const { data: unit, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["my-unit", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,6 +38,21 @@ export default function FranqueadoMinhaUnidade() {
       <div className="w-full space-y-6">
         <PageHeader title="Minha Unidade" subtitle="Dados e gestão da sua unidade" icon={<Building2 className="w-5 h-5 text-primary" />} />
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Minha Unidade" subtitle="Dados e gestão da sua unidade" icon={<Building2 className="w-5 h-5 text-primary" />} />
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+          <h3 className="font-semibold text-destructive mb-1 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> Erro ao carregar unidade
+          </h3>
+          <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar os dados da unidade."}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
       </div>
     );
   }

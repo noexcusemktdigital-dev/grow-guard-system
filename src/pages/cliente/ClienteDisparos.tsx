@@ -33,7 +33,7 @@ const STEP_TITLES = ["Mensagem", "Destinatários", "Confirmar"];
 
 export default function ClienteDisparos() {
   const navigate = useNavigate();
-  const { data: dispatches, isLoading } = useClienteDispatches();
+  const { data: dispatches, isLoading, isError, error, refetch } = useClienteDispatches();
   const { createDispatch, deleteDispatch, triggerBulkSend } = useClienteDispatchMutations();
   const { data: instance } = useWhatsAppInstance();
 
@@ -149,6 +149,19 @@ export default function ClienteDisparos() {
         <PageHeader title="Disparos WhatsApp" subtitle="Envie mensagens e campanhas" icon={<Send className="w-5 h-5 text-primary" />} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="w-full space-y-6">
+        <PageHeader title="Disparos WhatsApp" subtitle="Envie mensagens e campanhas" icon={<Send className="w-5 h-5 text-primary" />} />
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+          <h3 className="font-semibold text-destructive mb-1">Erro ao carregar disparos</h3>
+          <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : "Não foi possível carregar os disparos."}</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => refetch()}>Tentar novamente</Button>
         </div>
       </div>
     );
