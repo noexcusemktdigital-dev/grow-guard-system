@@ -13,6 +13,7 @@ import {
 } from "@/hooks/useAcademy";
 import { useAcademyModules } from "@/hooks/useAcademy";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import type { Json } from "@/integrations/supabase/types";
 
 function getYouTubeEmbedUrl(url: string): string | null {
@@ -181,7 +182,7 @@ function QuizView({ quizId, moduleId, onBack }: { quizId: string; moduleId: stri
             insertCertificate.mutate(moduleId);
             toast.success("Parabéns! Certificado emitido!");
           } else {
-            toast.error(`Nota: ${score}%. Tente novamente.`);
+            reportError(new Error(`Nota: ${score}%. Tente novamente.`), { title: `Nota: ${score}%`, category: "academy.quiz_fail" });
           }
         },
       }

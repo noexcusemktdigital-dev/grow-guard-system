@@ -9,6 +9,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useAllDailyMessages, useDailyMessageMutations } from "@/hooks/useDailyMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 interface Props {
   open: boolean;
@@ -50,7 +51,7 @@ export function HomeMensagemAdmin({ open, onOpenChange }: Props) {
                     onClick={() => {
                       archiveMessage.mutate(m.id, {
                         onSuccess: () => toast.success("Mensagem removida"),
-                        onError: () => toast.error("Erro ao remover"),
+                        onError: (e) => reportError(e, { title: "Erro ao remover", category: "mensagem_admin.delete" }),
                       });
                     }}
                   >
@@ -72,7 +73,7 @@ export function HomeMensagemAdmin({ open, onOpenChange }: Props) {
                   toast.success("Mensagem criada!");
                   setShowForm(false);
                 },
-                onError: () => toast.error("Erro ao criar mensagem"),
+                onError: (e) => reportError(e, { title: "Erro ao criar mensagem", category: "mensagem_admin.create" }),
               });
             }}
             onCancel={() => setShowForm(false)}

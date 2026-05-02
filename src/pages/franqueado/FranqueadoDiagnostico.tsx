@@ -14,6 +14,7 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { lazy, Suspense } from "react";
 
 // PERF-WARN-02: recharts deferred — chart only renders when user has answered questions.
@@ -150,7 +151,7 @@ export default function FranqueadoDiagnostico() {
       setNotes("");
       setSelectedLeadId("");
     },
-    onError: () => toast.error("Erro ao salvar diagnóstico"),
+    onError: (e) => reportError(e, { title: "Erro ao salvar diagnóstico", category: "diagnostico.save" }),
   });
 
   const getScoreColor = (score: number) => {

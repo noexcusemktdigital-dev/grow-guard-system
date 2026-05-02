@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { reportError } from '@/lib/error-toast';
 import { Download, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { analytics } from '@/lib/analytics';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
@@ -65,9 +66,7 @@ export function LGPDSettings() {
         description: 'Seus dados foram baixados em JSON.',
       });
     } catch (err: unknown) {
-      toast.error('Erro na exportação', {
-        description: err instanceof Error ? err.message : 'Tente novamente em instantes.',
-      });
+      reportError(err instanceof Error ? err : new Error(String(err)), { title: 'Erro na exportação', category: 'lgpd.export' });
     } finally {
       setExporting(false);
     }
@@ -75,9 +74,7 @@ export function LGPDSettings() {
 
   async function handleDelete() {
     if (confirmText !== 'EXCLUIR MINHA CONTA') {
-      toast.error('Confirmação incorreta', {
-        description: 'Digite exatamente "EXCLUIR MINHA CONTA"',
-      });
+      reportError(new Error('Digite exatamente "EXCLUIR MINHA CONTA"'), { title: 'Confirmação incorreta', category: 'lgpd.delete_confirm' });
       return;
     }
     setDeleting(true);
@@ -109,9 +106,7 @@ export function LGPDSettings() {
       await supabase.auth.signOut();
       navigate('/auth');
     } catch (err: unknown) {
-      toast.error('Erro na exclusão', {
-        description: err instanceof Error ? err.message : 'Tente novamente.',
-      });
+      reportError(err instanceof Error ? err : new Error(String(err)), { title: 'Erro na exclusão', category: 'lgpd.delete' });
     } finally {
       setDeleting(false);
     }

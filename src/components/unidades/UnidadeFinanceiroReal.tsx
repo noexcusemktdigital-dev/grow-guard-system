@@ -14,6 +14,7 @@ import { useUnitMutations } from "@/hooks/useUnits";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 interface Props {
   unit: { id: string; unit_org_id?: string | null; transfer_percent?: number; royalty_percent?: number; system_fee?: number; system_active?: boolean; financial_notes?: string; saas_commission_percent?: number };
@@ -60,7 +61,7 @@ export function UnidadeFinanceiroReal({ unit, readOnly }: Props) {
           }
           toast.success("Configuração financeira salva!");
         },
-        onError: (e) => toast.error(`Erro: ${e.message}`),
+        onError: (e) => reportError(e, { title: "Erro ao salvar dados financeiros", category: "unidade.financeiro_save" }),
       }
     );
   };

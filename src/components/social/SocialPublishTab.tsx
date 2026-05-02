@@ -19,6 +19,7 @@ import {
   Facebook,
 } from "lucide-react";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -282,23 +283,23 @@ export function SocialPublishTab({ accounts }: Props) {
       setImageUrl(url);
       toast.success("Imagem enviada.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro no upload.");
+      reportError(err instanceof Error ? err : new Error(String(err)), { title: "Erro no upload", category: "social.image_upload" });
     } finally {
       setUploading(false);
     }
   }
 
   async function handleSubmit(scheduled: boolean) {
-    if (!accountId) return toast.error("Selecione uma conta.");
-    if (!caption.trim()) return toast.error("Escreva uma legenda.");
-    if (overLimit) return toast.error(`Legenda excede ${maxLen} caracteres.`);
-    if (requiresImage && !imageUrl) return toast.error("Instagram exige uma imagem.");
+    if (!accountId) return void reportError(new Error("Selecione uma conta."), { title: "Selecione uma conta", category: "social.publish_validation" });
+    if (!caption.trim()) return void reportError(new Error("Escreva uma legenda."), { title: "Escreva uma legenda", category: "social.publish_validation" });
+    if (overLimit) return void reportError(new Error(`Legenda excede ${maxLen} caracteres.`), { title: `Legenda excede ${maxLen} caracteres`, category: "social.publish_validation" });
+    if (requiresImage && !imageUrl) return void reportError(new Error("Instagram exige uma imagem."), { title: "Instagram exige uma imagem", category: "social.publish_validation" });
 
     let scheduled_for: string | undefined;
     if (scheduled) {
-      if (!scheduleDate || !scheduleTime) return toast.error("Defina data e hora do agendamento.");
+      if (!scheduleDate || !scheduleTime) return void reportError(new Error("Defina data e hora do agendamento."), { title: "Defina data e hora do agendamento", category: "social.schedule_validation" });
       const dt = new Date(`${scheduleDate}T${scheduleTime}`);
-      if (dt.getTime() < Date.now() + 60_000) return toast.error("Agende para pelo menos 1 minuto no futuro.");
+      if (dt.getTime() < Date.now() + 60_000) return void reportError(new Error("Agende para pelo menos 1 minuto no futuro."), { title: "Agendamento muito próximo", category: "social.schedule_validation" });
       scheduled_for = dt.toISOString();
     }
 

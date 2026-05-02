@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 interface Props {
   unitOrgId: string | null | undefined;
@@ -48,9 +49,9 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
   const canInvite = !maxUsers || !members || members.length < maxUsers;
 
   async function handleInvite() {
-    if (!invEmail.trim() || !invName.trim()) { toast.error("Preencha nome e email"); return; }
-    if (!unitOrgId) { toast.error("Unidade sem organização vinculada"); return; }
-    if (maxUsers && members && members.length >= maxUsers) { toast.error(`Limite de ${maxUsers} usuários atingido`); return; }
+    if (!invEmail.trim() || !invName.trim()) { reportError(new Error("Preencha nome e email"), { title: "Preencha nome e email", category: "unidade.usuarios_validation" }); return; }
+    if (!unitOrgId) { reportError(new Error("Unidade sem organização vinculada"), { title: "Unidade sem organização vinculada", category: "unidade.usuarios_validation" }); return; }
+    if (maxUsers && members && members.length >= maxUsers) { reportError(new Error(`Limite de ${maxUsers} usuários atingido`), { title: `Limite de ${maxUsers} usuários atingido`, category: "unidade.usuarios_limit" }); return; }
     setInviting(true);
     try {
       const { data, error } = await invokeEdge("invite-user", {
@@ -70,11 +71,11 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("já está cadastrado") || msg.includes("already been registered")) {
-        toast.error("Este e-mail já está cadastrado. O usuário deve acessar /acessofranquia e usar 'Esqueci minha senha' para redefinir o acesso.");
+        reportError(new Error(msg), { title: "E-mail já cadastrado", category: "unidade.usuarios_duplicate" });
       } else if (msg.includes("Limite de")) {
-        toast.error(msg);
+        reportError(new Error(msg), { title: msg, category: "unidade.usuarios_limit" });
       } else {
-        toast.error(msg || "Erro ao convidar membro. Verifique os dados e tente novamente.");
+        reportError(e, { title: "Erro ao convidar membro", category: "unidade.usuarios_invite" });
       }
     }
     setInviting(false);
