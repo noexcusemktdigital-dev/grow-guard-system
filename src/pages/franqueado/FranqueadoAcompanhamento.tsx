@@ -70,7 +70,7 @@ function ListEditor({ items, onChange, placeholder = "Descreva..." }: { items: s
         <div key={i} className="flex gap-2">
           <Input value={item} onChange={(e) => { const n = [...items]; n[i] = e.target.value; onChange(n); }} placeholder={placeholder} className="flex-1" />
           {items.length > 1 && (
-            <Button size="icon" variant="ghost" onClick={() => onChange(items.filter((_, j) => j !== i))}><XCircle className="w-4 h-4 text-destructive" /></Button>
+            <Button size="icon" variant="ghost" aria-label="Remover item" onClick={() => onChange(items.filter((_, j) => j !== i))}><XCircle className="w-4 h-4 text-destructive" /></Button>
           )}
         </div>
       ))}
@@ -298,7 +298,7 @@ function AnaliseAreaEditor({
                       />
                     )}
                     {!indicadoresFixos && !readOnly && (
-                      <Button size="icon" variant="ghost" className="w-6 h-6"
+                      <Button size="icon" variant="ghost" className="w-6 h-6" aria-label="Remover indicador"
                         onClick={() => onChange({
                           ...section,
                           indicadores: (section.indicadores || []).filter((_, j) => j !== i),
@@ -699,6 +699,7 @@ function FolderListView({ folders, onSelect, isMatriz, canEdit, units, onRename 
                     size="icon"
                     variant="ghost"
                     className="w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    aria-label="Renomear pasta"
                     onClick={e => {
                       e.stopPropagation();
                       setEditingFolderName(f.name);
@@ -1133,7 +1134,7 @@ function PautaCard({ pauta, idx, onChange, onRemove }: { pauta: ConteudoPauta; i
             <FileText className="w-4 h-4 text-muted-foreground" />
             <Input value={pauta.titulo} onChange={(e) => onChange(idx, "titulo", e.target.value)} placeholder="Título do post/criativo" className="font-semibold border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 text-base" />
           </div>
-          <Button size="icon" variant="ghost" onClick={() => onRemove(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
+          <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => onRemove(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
@@ -1236,7 +1237,7 @@ function CampanhaCard({ campanha, idx, onChange, onRemove }: { campanha: Trafego
             <TrendingUp className="w-4 h-4 text-blue-500" />
             <Input value={campanha.nome_campanha} onChange={(e) => onChange(idx, "nome_campanha", e.target.value)} placeholder="Nome da Campanha" className="font-semibold border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 text-base" />
           </div>
-          <Button size="icon" variant="ghost" onClick={() => onRemove(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
+          <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => onRemove(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
@@ -1387,7 +1388,7 @@ function WebSecaoCard({ secao, idx, onChange, onRemove }: { secao: WebSecao; idx
             <Globe className="w-4 h-4 text-emerald-500" />
             <Input value={secao.titulo} onChange={(e) => onChange(idx, { titulo: e.target.value })} placeholder="Nome da Página / Seção" className="font-semibold border-0 bg-transparent p-0 h-auto shadow-none focus-visible:ring-0 text-base" />
           </div>
-          <Button size="icon" variant="ghost" onClick={() => onRemove(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
+          <Button size="icon" variant="ghost" aria-label="Remover" onClick={() => onRemove(idx)}><XCircle className="w-4 h-4 text-destructive" /></Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">

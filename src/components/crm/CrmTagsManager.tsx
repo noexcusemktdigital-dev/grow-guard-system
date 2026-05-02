@@ -188,6 +188,7 @@ export function CrmTagsManager() {
                     size="icon"
                     variant="ghost"
                     className="w-6 h-6"
+                    aria-label="Editar tag"
                     onClick={() => {
                       setEditingTag(tag.name);
                       setEditName(tag.name);
@@ -199,6 +200,7 @@ export function CrmTagsManager() {
                     size="icon"
                     variant="ghost"
                     className="w-6 h-6 text-destructive"
+                    aria-label="Excluir tag"
                     onClick={() => {
                       if (confirm(`Excluir a tag "${tag.name}" de todos os leads?`)) {
                         deleteTag.mutate(tag.name);
