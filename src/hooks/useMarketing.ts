@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 /** Resolves to parent_org_id if franchisee, otherwise own org_id */
 export function useContentSourceOrgId() {
@@ -56,7 +56,7 @@ export function useMarketingMutations() {
 
   const createFolder = useMutation({
     mutationFn: async (folder: { name: string; parent_id?: string; category?: string }) => {
-      const { data, error } = await supabase.from("marketing_folders").insert({ ...folder, organization_id: orgId ?? "" } as any).select().single();
+      const { data, error } = await supabase.from("marketing_folders").insert({ ...folder, organization_id: orgId ?? "" } satisfies TablesInsert<"marketing_folders">).select().single();
       if (error) throw error;
       return data;
     },

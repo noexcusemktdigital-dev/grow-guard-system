@@ -1,10 +1,10 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { endOfMonth, format } from "date-fns";
+import type { Tables } from "@/integrations/supabase/typed";
 
 export interface ClientPayment {
   id: string;
@@ -32,14 +32,14 @@ export function useClientPayments(month?: string) {
     queryKey: ["client-payments", orgId, month],
     queryFn: async () => {
       let q = supabase
-        .from("client_payments" as any)
+        .from("client_payments")
         .select("*")
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (month) q = q.eq("month", month);
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []) as unknown as ClientPayment[];
+      return (data || []) as Tables<"client_payments">[];
     },
     enabled: !!orgId,
   });
@@ -50,12 +50,12 @@ export function useAllClientPayments() {
     queryKey: ["all-client-payments"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("client_payments" as any)
+        .from("client_payments")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
-      return (data || []) as unknown as ClientPayment[];
+      return (data || []) as Tables<"client_payments">[];
     },
   });
 }

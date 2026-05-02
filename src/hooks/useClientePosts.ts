@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +6,7 @@ import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useClienteWallet } from "./useClienteWallet";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
 export interface PostItem {
   id: string;
@@ -34,7 +34,7 @@ export function usePostHistory() {
     queryKey: ["client-posts", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts")
         .select("*")
         .eq("organization_id", orgId ?? "")
         .order("created_at", { ascending: false });
@@ -193,7 +193,7 @@ export function useGeneratePost() {
 
       // Save to DB
       const { data, error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts")
         .insert({
           organization_id: orgId,
           content_id: payload.content_id || null,
@@ -208,7 +208,7 @@ export function useGeneratePost() {
           status: "pending",
           created_by: user?.id,
           caption: payload.caption || null,
-        } as any)
+        } satisfies TablesInsert<"client_posts">)
         .select()
         .single();
 
@@ -285,7 +285,7 @@ export function useDeletePost() {
   return useMutation({
     mutationFn: async (postId: string) => {
       const { error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts")
         .delete()
         .eq("id", postId);
       if (error) throw error;
@@ -303,7 +303,7 @@ export function useBulkDeletePosts() {
   return useMutation({
     mutationFn: async (postIds: string[]) => {
       const { error } = await supabase
-        .from("client_posts" as any)
+        .from("client_posts")
         .delete()
         .in("id", postIds);
       if (error) throw error;
@@ -321,8 +321,8 @@ export function useBulkApprovePosts() {
   return useMutation({
     mutationFn: async (postIds: string[]) => {
       const { error } = await supabase
-        .from("client_posts" as any)
-        .update({ status: "approved" } as any)
+        .from("client_posts")
+        .update({ status: "approved" } satisfies TablesUpdate<"client_posts">)
         .in("id", postIds);
       if (error) throw error;
     },
@@ -355,8 +355,8 @@ export function useApprovePost() {
       if (result_url) updatePayload.result_url = result_url;
 
       const { data, error } = await supabase
-        .from("client_posts" as any)
-        .update(updatePayload as any)
+        .from("client_posts")
+        .update(updatePayload as TablesUpdate<"client_posts">)
         .eq("id", postId)
         .select()
         .single();

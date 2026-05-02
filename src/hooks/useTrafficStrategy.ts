@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
+import type { TablesUpdate } from "@/integrations/supabase/typed";
 
 export interface TrafficPlatformStrategy {
   platform: string;
@@ -55,7 +55,7 @@ export function useActiveTrafficStrategy() {
     queryKey: ["traffic-strategy-active", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("traffic_strategies" as any)
+        .from("traffic_strategies")
         .select("*")
         .eq("organization_id", orgId!)
         .eq("is_active", true)
@@ -76,7 +76,7 @@ export function useTrafficStrategyHistory() {
     queryKey: ["traffic-strategy-history", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("traffic_strategies" as any)
+        .from("traffic_strategies")
         .select("*")
         .eq("organization_id", orgId!)
         .eq("is_active", false)
@@ -134,8 +134,8 @@ export function useApproveTrafficStrategy() {
       if (rpcErr) throw rpcErr;
       // Update status
       const { error } = await supabase
-        .from("traffic_strategies" as any)
-        .update({ status: "approved" } as Record<string, unknown>)
+        .from("traffic_strategies")
+        .update({ status: "approved" } satisfies TablesUpdate<"traffic_strategies">)
         .eq("id", strategyId);
       if (error) throw error;
     },
