@@ -17,6 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { AiAgent } from "@/types/cliente";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 
 export default function ClienteAgentesIA() {
   const { data: agents, isLoading } = useClienteAgents();
