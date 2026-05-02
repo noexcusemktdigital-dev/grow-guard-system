@@ -10,6 +10,7 @@ import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -69,14 +70,14 @@ export default function MatrizEmpresa() {
     const file = e.target.files?.[0];
     if (!file || !org) return;
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Logo deve ter no máximo 2MB");
+      reportError(new Error("Logo deve ter no máximo 2MB"), { title: "Logo deve ter no máximo 2MB", category: "empresa.logo_size" });
       return;
     }
     const ext = file.name.split(".").pop();
     const path = `${org.id}/logo.${ext}`;
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) {
-      toast.error("Erro ao fazer upload da logo");
+      reportError(error, { title: "Erro ao fazer upload da logo", category: "empresa.logo_upload" });
       return;
     }
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);

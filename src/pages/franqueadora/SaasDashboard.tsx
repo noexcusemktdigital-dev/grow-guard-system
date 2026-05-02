@@ -22,6 +22,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlatformErrors, useResolveError, useDeleteError, useErrorStats } from "@/hooks/useSaasAdmin";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -124,8 +125,7 @@ function ErrosTab() {
       setResolveDialog(null);
       setResolveNote("");
     } catch (err) {
-      logger.error("Erro ao resolver:", err);
-      toast.error("Falha ao resolver erro");
+      reportError(err, { title: "Falha ao resolver erro", category: "saas_admin.resolve_error" });
     }
   };
 
@@ -136,8 +136,7 @@ function ErrosTab() {
       toast.success("Erro excluído");
       setDeleteTarget(null);
     } catch (err) {
-      logger.error("Erro ao excluir:", err);
-      toast.error("Falha ao excluir erro");
+      reportError(err, { title: "Falha ao excluir erro", category: "saas_admin.delete_error" });
     }
   };
 

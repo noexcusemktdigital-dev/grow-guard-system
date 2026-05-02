@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import type { StrategyResult, EtapaEstrategica } from "@/hooks/useFranqueadoStrategies";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
@@ -87,8 +88,7 @@ export function StrategyResultView({
       });
       toast.success("PDF gerado com sucesso!");
     } catch (e) {
-      console.error("PDF error:", e);
-      toast.error("Erro ao gerar PDF");
+      reportError(e, { title: "Erro ao gerar PDF", category: "strategy.pdf_export" });
     }
   };
 
