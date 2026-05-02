@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Sparkles, Loader2, TrendingUp, AlertTriangle, CheckCircle2, Lightbulb, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
