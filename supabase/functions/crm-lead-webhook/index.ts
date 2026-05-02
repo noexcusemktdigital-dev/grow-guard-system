@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, LeadSchemas } from '../_shared/schemas.ts';
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'crm-lead-webhook');
@@ -76,15 +77,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = JSON.parse(rawBody);
+    const body = parseOrThrow(LeadSchemas.Webhook, JSON.parse(rawBody));
     const { name, email, phone, company, source, value, tags, custom_fields, funnel_id } = body;
-
-    if (!name) {
-      return new Response(JSON.stringify({ error: "Field 'name' is required" }), {
-        status: 400,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -234,6 +228,8 @@ Deno.serve(async (req) => {
       { headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }) }
     );
   } catch (err: unknown) {
+    const valResp = validationErrorResponse(err, withCorrelationHeader(ctx, getCorsHeaders(req)));
+    if (valResp) return valResp;
     log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,

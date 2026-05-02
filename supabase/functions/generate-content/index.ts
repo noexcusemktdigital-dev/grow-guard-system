@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
 
 const CREDIT_COST_PER_CONTENT = 30;
 
@@ -35,12 +36,13 @@ serve(async (req) => {
   if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
   try {
+    const rawBody = await req.json();
     const {
       quantidade, formatos, objetivos, tema, plataforma, tom, publico,
       estrategia, funilMomento, contextoEspecial, contextoDetalhe,
       estiloLote, nomeEmpresa, produto, diferencial, doresPublico, desejosPublico,
       organization_id,
-    } = await req.json();
+    } = parseOrThrow(GenerateSchemas.Content, rawBody);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -347,6 +349,8 @@ Gere conteúdos COMPLETOS, prontos para publicar. Não gere apenas ideias.`;
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (e) {
+    const valResp = validationErrorResponse(e, getCorsHeaders(req));
+    if (valResp) return valResp;
     console.error("generate-content error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),

@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskEmail } from '../_shared/redact.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, ValidationError, MemberSchemas } from '../_shared/schemas.ts';
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
@@ -128,13 +129,8 @@ Deno.serve(async (req) => {
     const user = { id: callerUser.id, email: callerUser.email };
     const callerId = user.id;
 
-    const { email, full_name, role, organization_id, team_ids } = await req.json();
-
-    if (!email || !organization_id) {
-      return new Response(JSON.stringify({ error: "email and organization_id required" }), {
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    const rawBody = await req.json();
+    const { email, full_name, role, organization_id, team_ids } = parseOrThrow(MemberSchemas.Invite, rawBody);
 
     // Prevent self-invite
     if (email.toLowerCase().trim() === user.email?.toLowerCase()) {
@@ -367,6 +363,8 @@ Deno.serve(async (req) => {
       { headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }) }
     );
   } catch (err: unknown) {
+    const valResp = validationErrorResponse(err, withCorrelationHeader(ctx, getCorsHeaders(req)));
+    if (valResp) return valResp;
     log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),

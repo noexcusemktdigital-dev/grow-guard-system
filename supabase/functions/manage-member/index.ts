@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskEmail } from '../_shared/redact.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, MemberSchemas } from '../_shared/schemas.ts';
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'manage-member');
@@ -22,7 +23,8 @@ Deno.serve(async (req) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     // Parse body early so we can handle accept_invitation before auth
-    const body = await req.json();
+    const rawBody = await req.json();
+    const body = parseOrThrow(MemberSchemas.Update, rawBody);
     const { user_id, organization_id, action = "update", role, full_name, job_title } = body;
 
     const admin = createClient(supabaseUrl, serviceKey);
@@ -234,6 +236,8 @@ Deno.serve(async (req) => {
     console.log("[manage-member] Update successful", { user_id, organization_id });
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: responseHeaders });
   } catch (err: unknown) {
+    const valResp = validationErrorResponse(err, getCorsHeaders(req));
+    if (valResp) return valResp;
     log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 200,
