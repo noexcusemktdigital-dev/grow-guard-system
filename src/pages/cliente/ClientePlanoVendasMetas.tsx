@@ -16,15 +16,31 @@ import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 // PERF-WARN-01: recharts deferred — charts only render when user has active goals with progress data.
 const MetasCharts = lazy(() => import("./ClientePlanoVendasMetasCharts"));
 
+export interface GoalItem {
+  id: string;
+  title?: string;
+  metric?: string;
+  target_value?: number;
+  scope?: string;
+  priority?: string;
+  [key: string]: unknown;
+}
+
+export interface GoalProgressItem {
+  currentValue: number;
+  percent: number;
+  [key: string]: unknown;
+}
+
 export interface ClientePlanoVendasMetasProps {
-  activeGoals: any[];
-  historicGoals: any[] | undefined;
-  goalProgress: Record<string, any> | undefined;
+  activeGoals: GoalItem[];
+  historicGoals: GoalItem[] | undefined;
+  goalProgress: Record<string, GoalProgressItem> | undefined;
   goalsLoading: boolean;
   scopeFilter: string;
   setScopeFilter: (v: string) => void;
   onNewMeta: () => void;
-  onEditMeta: (goal: any) => void;
+  onEditMeta: (goal: GoalItem) => void;
   onArchiveMeta: (id: string) => void;
   isMonetaryMetric: (m: string) => boolean;
 }

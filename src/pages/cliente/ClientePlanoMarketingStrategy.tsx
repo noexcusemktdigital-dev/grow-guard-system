@@ -74,7 +74,7 @@ export function StrategyDashboard({ result, onApprove, onRegenerate, isApproving
             <div className="flex items-center gap-4">
               <div className="relative flex gap-2">
                 <ScoreRing score={result_.diagnostico?.score_geral ?? 0} label="Marketing" size={70} />
-                {hasComercial && <ScoreRing score={(result_.diagnostico_comercial as any)?.score_comercial ?? 0} label="Comercial" size={70} />}
+                {hasComercial && <ScoreRing score={(result_.diagnostico_comercial as { score_comercial?: number } | null)?.score_comercial ?? 0} label="Comercial" size={70} />}
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">

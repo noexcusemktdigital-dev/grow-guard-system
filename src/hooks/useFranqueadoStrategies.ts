@@ -36,7 +36,8 @@ export interface StrategyResult {
     radar_data: { eixo: string; score: number; max: number }[];
     problemas_por_etapa: Record<string, string[]>;
     gargalos_ece: {
-      infraestrutura: string;
+      infraestrutura?: string;
+      estrutura?: string;
       coleta: string;
       escala: string;
     };

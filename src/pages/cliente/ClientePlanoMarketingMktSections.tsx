@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,11 +29,11 @@ export const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2, 160 60% 
 /* ═══════════════ MARKETING: RESUMO ═══════════════ */
 
 export function MktResumo({ result }: { result: StrategyResult }) {
-  const diag = (result as any).diagnostico || (result as any).diagnostico_gps || {};
+  const diag = result.diagnostico || result.diagnostico_gps || {};
   const radar = diag.radar;
-  const gpsRadarData = Array.isArray((diag as any).radar_data) ? (diag as any).radar_data : [];
+  const gpsRadarData = Array.isArray(diag.radar_data) ? diag.radar_data : [];
   const radarData = gpsRadarData.length > 0
-    ? gpsRadarData.map((item: any) => ({ subject: item.eixo, value: item.score, max: item.max || 100 }))
+    ? gpsRadarData.map((item) => ({ subject: item.eixo, value: item.score, max: item.max || 100 }))
     : radar ? [
         { subject: "Autoridade", value: radar.autoridade, max: 10 },
         { subject: "Aquisição", value: radar.aquisicao, max: 10 },
@@ -143,28 +142,28 @@ export function MktClienteIdeal({ result }: { result: StrategyResult }) {
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center text-3xl">{(icp as any).avatar_emoji || "👤"}</div>
+            <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center text-3xl">{icp.avatar_emoji || "👤"}</div>
             <div>
-              <h3 className="font-bold text-lg">{(icp as any).nome_persona || "Cliente Ideal"}</h3>
-              <p className="text-sm text-muted-foreground">{(icp as any).demografia}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{(icp as any).perfil_profissional}</p>
+              <h3 className="font-bold text-lg">{icp.nome_persona || "Cliente Ideal"}</h3>
+              <p className="text-sm text-muted-foreground">{icp.demografia}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{icp.perfil_profissional}</p>
             </div>
           </div>
         </div>
         <CardContent className="p-6 space-y-4">
-          <p className="text-sm text-muted-foreground">{(icp as any).descricao}</p>
-          {(icp as any).comportamento_digital && (
+          <p className="text-sm text-muted-foreground">{icp.descricao}</p>
+          {icp.comportamento_digital && (
             <div className="p-3 rounded-lg bg-muted/30">
               <p className="text-xs font-semibold mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Comportamento Digital</p>
-              <p className="text-sm">{(icp as any).comportamento_digital}</p>
+              <p className="text-sm">{icp.comportamento_digital}</p>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
-              { label: "Dores", items: (icp as any).dores, icon: Flame, color: "text-red-500" },
-              { label: "Desejos", items: (icp as any).desejos, icon: Heart, color: "text-pink-500" },
-              { label: "Objeções", items: (icp as any).objecoes, icon: Shield, color: "text-orange-500" },
-              { label: "Gatilhos de Compra", items: (icp as any).gatilhos_compra, icon: Sparkles, color: "text-green-500" },
+              { label: "Dores", items: icp.dores, icon: Flame, color: "text-red-500" },
+              { label: "Desejos", items: icp.desejos, icon: Heart, color: "text-pink-500" },
+              { label: "Objeções", items: icp.objecoes, icon: Shield, color: "text-orange-500" },
+              { label: "Gatilhos de Compra", items: icp.gatilhos_compra, icon: Sparkles, color: "text-green-500" },
             ].map((section, i) => section.items?.length > 0 && (
               <div key={i} className="p-3 rounded-lg bg-muted/30">
                 <p className={`text-xs font-semibold mb-1.5 flex items-center gap-1 ${section.color}`}>
@@ -184,16 +183,16 @@ export function MktClienteIdeal({ result }: { result: StrategyResult }) {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Target className="w-4 h-4 text-primary" /> Proposta de Valor</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {(pv as any).headline && (
+            {pv.headline && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-center">
-                <p className="font-bold text-lg text-primary">"{(pv as any).headline}"</p>
+                <p className="font-bold text-lg text-primary">"{pv.headline}"</p>
               </div>
             )}
             <div className="flex flex-col md:flex-row items-stretch gap-3">
               {[
-                { label: "Problema", value: (pv as any).problema, color: "bg-destructive/5 border-destructive/20 text-destructive" },
-                { label: "Método", value: (pv as any).metodo, color: "bg-primary/5 border-primary/20 text-primary" },
-                { label: "Resultado", value: (pv as any).resultado, color: "bg-green-500/5 border-green-500/20 text-green-600" },
+                { label: "Problema", value: pv.problema, color: "bg-destructive/5 border-destructive/20 text-destructive" },
+                { label: "Método", value: pv.metodo, color: "bg-primary/5 border-primary/20 text-primary" },
+                { label: "Resultado", value: pv.resultado, color: "bg-green-500/5 border-green-500/20 text-green-600" },
               ].map((step, i) => (
                 <div key={i} className="flex items-center gap-2 flex-1">
                   <div className={`flex-1 p-4 rounded-lg border text-center ${step.color}`}>
@@ -204,10 +203,10 @@ export function MktClienteIdeal({ result }: { result: StrategyResult }) {
                 </div>
               ))}
             </div>
-            {(pv as any).prova && (
+            {pv.prova && (
               <div className="p-3 rounded-lg bg-muted/30 text-center">
                 <p className="text-xs font-semibold text-muted-foreground mb-0.5">Prova Social</p>
-                <p className="text-sm">{(pv as any).prova}</p>
+                <p className="text-sm">{pv.prova}</p>
               </div>
             )}
           </CardContent>
@@ -224,10 +223,10 @@ export function MktConcorrencia({ result }: { result: StrategyResult }) {
   if (!ac) return <p className="text-sm text-muted-foreground p-4">Análise de concorrência não disponível.</p>;
   return (
     <div className="space-y-4">
-      <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground leading-relaxed">{(ac as any).visao_geral}</p></CardContent></Card>
-      {(ac as any).concorrentes?.length > 0 && (
+      <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground leading-relaxed">{ac.visao_geral}</p></CardContent></Card>
+      {ac.concorrentes?.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {(ac as any).concorrentes.map((c: ConcorrenteRow, i: number) => (
+          {ac.concorrentes.map((c, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
               <Card className="h-full"><CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
@@ -235,19 +234,19 @@ export function MktConcorrencia({ result }: { result: StrategyResult }) {
                   <h4 className="font-semibold text-sm">{c.nome}</h4>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2"><ThumbsUp className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /><p className="text-xs">{(c as any).pontos_fortes}</p></div>
-                  <div className="flex items-start gap-2"><ThumbsDown className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" /><p className="text-xs">{(c as any).pontos_fracos}</p></div>
-                  <div className="flex items-start gap-2"><Lightbulb className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" /><p className="text-xs font-medium">{(c as any).oportunidade_diferenciacao}</p></div>
+                  <div className="flex items-start gap-2"><ThumbsUp className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" /><p className="text-xs">{c.pontos_fortes as string}</p></div>
+                  <div className="flex items-start gap-2"><ThumbsDown className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" /><p className="text-xs">{c.pontos_fracos as string}</p></div>
+                  <div className="flex items-start gap-2"><Lightbulb className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" /><p className="text-xs font-medium">{c.oportunidade_diferenciacao}</p></div>
                 </div>
               </CardContent></Card>
             </motion.div>
           ))}
         </div>
       )}
-      {(ac as any).posicionamento_recomendado && (
+      {ac.posicionamento_recomendado && (
         <Card className="border-primary/20 bg-primary/5"><CardContent className="p-4">
           <p className="text-xs font-semibold text-primary mb-1">Posicionamento Recomendado</p>
-          <p className="text-sm">{(ac as any).posicionamento_recomendado}</p>
+          <p className="text-sm">{ac.posicionamento_recomendado}</p>
         </CardContent></Card>
       )}
     </div>
@@ -264,15 +263,15 @@ export function MktTomVoz({ result }: { result: StrategyResult }) {
     <div className="space-y-4">
       <Card className="bg-gradient-to-r from-primary/10 to-transparent"><CardContent className="p-6 text-center">
         <p className="text-xs text-muted-foreground mb-1">Tom Principal</p>
-        <h3 className="text-xl font-bold">{(tc as any).tom_principal}</h3>
-        {(tc as any).personalidade_marca?.length > 0 && <div className="flex flex-wrap justify-center gap-2 mt-3">{(tc as any).personalidade_marca.map((p: string, i: number) => <Badge key={i} className="text-xs">{p}</Badge>)}</div>}
+        <h3 className="text-xl font-bold">{tc.tom_principal}</h3>
+        {tc.personalidade_marca?.length > 0 && <div className="flex flex-wrap justify-center gap-2 mt-3">{tc.personalidade_marca.map((p, i) => <Badge key={i} className="text-xs">{p}</Badge>)}</div>}
       </CardContent></Card>
-      {(tc as any).voz_exemplo && <Card><CardContent className="p-4"><p className="text-xs font-semibold mb-2">Exemplo de como a marca fala:</p><div className="p-4 rounded-lg bg-muted/30 border-l-4 border-primary italic text-sm">{(tc as any).voz_exemplo}</div></CardContent></Card>}
+      {tc.voz_exemplo && <Card><CardContent className="p-4"><p className="text-xs font-semibold mb-2">Exemplo de como a marca fala:</p><div className="p-4 rounded-lg bg-muted/30 border-l-4 border-primary italic text-sm">{tc.voz_exemplo}</div></CardContent></Card>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Card className="border-green-500/20"><CardContent className="p-4"><p className="text-xs font-semibold text-green-600 mb-2 flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> Palavras para USAR</p><TagList items={(tc as any).palavras_usar} variant="outline" /></CardContent></Card>
-        <Card className="border-destructive/20"><CardContent className="p-4"><p className="text-xs font-semibold text-destructive mb-2 flex items-center gap-1"><ThumbsDown className="w-3 h-3" /> Palavras para EVITAR</p><TagList items={(tc as any).palavras_evitar} variant="outline" /></CardContent></Card>
+        <Card className="border-green-500/20"><CardContent className="p-4"><p className="text-xs font-semibold text-green-600 mb-2 flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> Palavras para USAR</p><TagList items={tc.palavras_usar} variant="outline" /></CardContent></Card>
+        <Card className="border-destructive/20"><CardContent className="p-4"><p className="text-xs font-semibold text-destructive mb-2 flex items-center gap-1"><ThumbsDown className="w-3 h-3" /> Palavras para EVITAR</p><TagList items={tc.palavras_evitar} variant="outline" /></CardContent></Card>
       </div>
-      {(tc as any).exemplos_posts?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Exemplos de Posts</CardTitle></CardHeader><CardContent><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{(tc as any).exemplos_posts.map((ex: any, i: number) => <div key={i} className="p-3 rounded-lg bg-muted/30"><Badge variant="outline" className="text-[10px] mb-2 capitalize">{ex.tipo}</Badge><p className="text-sm">{ex.exemplo}</p></div>)}</div></CardContent></Card>}
+      {tc.exemplos_posts?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Exemplos de Posts</CardTitle></CardHeader><CardContent><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{tc.exemplos_posts.map((ex, i) => <div key={i} className="p-3 rounded-lg bg-muted/30"><Badge variant="outline" className="text-[10px] mb-2 capitalize">{ex.tipo}</Badge><p className="text-sm">{ex.exemplo}</p></div>)}</div></CardContent></Card>}
       <Card className="border-primary/20 bg-primary/5"><CardContent className="p-4 flex items-center justify-between"><div><p className="text-sm font-medium">Aplique esse tom nos seus scripts</p><p className="text-xs text-muted-foreground">Use as dores, objeções e gatilhos do ICP para criar scripts de venda</p></div><Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/scripts")}><PenTool className="w-3.5 h-3.5" /> Gerar Scripts</Button></CardContent></Card>
     </div>
   );
@@ -283,11 +282,11 @@ export function MktTomVoz({ result }: { result: StrategyResult }) {
 export function MktAquisicao({ result }: { result: StrategyResult }) {
   const navigate = useNavigate();
   const ea = result.estrategia_aquisicao;
-  const funil = (ea as any)?.funil;
-  const pieData = ((ea as any)?.canais_prioritarios || []).reduce((acc: { name: string; value: number }[], c: CanalRow) => {
-    const tipo = (c as any).tipo === "organico" ? "Orgânico" : (c as any).tipo === "pago" ? "Tráfego Pago" : "Parcerias";
+  const funil = ea?.funil;
+  const pieData = (ea?.canais_prioritarios || []).reduce((acc: { name: string; value: number }[], c: CanalRow) => {
+    const tipo = c.tipo === "organico" ? "Orgânico" : c.tipo === "pago" ? "Tráfego Pago" : "Parcerias";
     const existing = acc.find(a => a.name === tipo);
-    if (existing) existing.value += ((c as any).percentual || 0); else acc.push({ name: tipo, value: (c as any).percentual || 0 });
+    if (existing) existing.value += (c.percentual || 0); else acc.push({ name: tipo, value: c.percentual || 0 });
     return acc;
   }, []);
   const funnelData = funil ? [
@@ -299,8 +298,8 @@ export function MktAquisicao({ result }: { result: StrategyResult }) {
     <div className="space-y-4">
       {funnelData.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Funil de Aquisição</CardTitle></CardHeader><CardContent><div className="flex flex-col items-center gap-2 py-4">{funnelData.map((stage, i) => <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.2 }} className="text-center rounded-xl py-3 px-6 text-sm font-medium" style={{ width: `${100 - i * 20}%`, background: `hsl(var(--primary) / ${0.15 + i * 0.1})`, border: `1px solid hsl(var(--primary) / ${0.3 + i * 0.1})` }}><span className="font-bold text-lg">{stage.value.toLocaleString("pt-BR")}</span><span className="text-xs text-muted-foreground ml-2">{stage.name}</span></motion.div>)}</div></CardContent></Card>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {pieData.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Distribuição de Canais</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={220}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}%`}>{pieData.map((_: any, i: number) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>}
-        {(ea as any)?.canais_prioritarios?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Canais Prioritários</CardTitle></CardHeader><CardContent><div className="space-y-2">{(ea as any).canais_prioritarios.map((c: CanalRow, i: number) => <div key={i} className="p-3 rounded-lg bg-muted/30"><div className="flex items-center justify-between mb-1"><Badge variant="outline" className="text-xs">{c.nome}</Badge><span className="text-xs font-bold">{(c as any).percentual}%</span></div><Progress value={(c as any).percentual} className="h-1.5 mb-1" /><p className="text-xs text-muted-foreground">{(c as any).acao_principal}</p></div>)}</div></CardContent></Card>}
+        {pieData.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Distribuição de Canais</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={220}><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}%`}>{pieData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>}
+        {ea?.canais_prioritarios?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Canais Prioritários</CardTitle></CardHeader><CardContent><div className="space-y-2">{ea.canais_prioritarios.map((c, i) => <div key={i} className="p-3 rounded-lg bg-muted/30"><div className="flex items-center justify-between mb-1"><Badge variant="outline" className="text-xs">{c.nome}</Badge><span className="text-xs font-bold">{c.percentual}%</span></div><Progress value={c.percentual} className="h-1.5 mb-1" /><p className="text-xs text-muted-foreground">{c.acao_principal}</p></div>)}</div></CardContent></Card>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card className="border-primary/20 bg-primary/5"><CardContent className="p-4 flex items-center justify-between"><div><p className="text-sm font-medium">Configurar Tráfego Pago</p><p className="text-xs text-muted-foreground">Aplique os canais na estratégia de anúncios</p></div><Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/trafego-pago")}>Ir</Button></CardContent></Card>
@@ -318,9 +317,9 @@ export function MktConteudo({ result }: { result: StrategyResult }) {
   const pilarIcons: Record<string, React.ElementType> = { educacao: Lightbulb, autoridade: Target, prova_social: Users, oferta: DollarSign };
   return (
     <div className="space-y-4">
-      {(ec as any)?.pilares?.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{(ec as any).pilares.map((p: PilarRow, i: number) => { const Icon = pilarIcons[(p as any).tipo] || Lightbulb; return (<motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}><Card className="h-full"><CardContent className="p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-4 h-4 text-primary" /></div><div><p className="font-semibold text-sm">{p.nome}</p><Badge variant="outline" className="text-[10px] capitalize">{(p as any).tipo?.replace("_", " ")}</Badge></div></div>{(p as any).percentual && <span className="text-lg font-bold text-primary">{(p as any).percentual}%</span>}</div><Progress value={(p as any).percentual || 25} className="h-1.5 mb-2" /><p className="text-xs text-muted-foreground mb-2">{p.descricao}</p><TagList items={(p as any).exemplos} variant="secondary" /></CardContent></Card></motion.div>); })}</div>}
-      {(ec as any)?.calendario_semanal?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Calendário Semanal</CardTitle></CardHeader><CardContent><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">{(ec as any).calendario_semanal.map((dia: CalendarioRow, i: number) => <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }} className="p-3 rounded-lg bg-muted/30 text-center border hover:border-primary/30 transition-colors"><p className="text-xs font-bold text-primary">{dia.dia}</p><Badge variant="outline" className="text-[9px] mt-1">{dia.formato}</Badge><p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{(dia as any).sugestao}</p></motion.div>)}</div></CardContent></Card>}
-      {(ec as any)?.ideias_conteudo?.length > 0 && <Card><CardHeader className="pb-2 flex flex-row items-center justify-between"><CardTitle className="text-sm">Ideias de Conteúdo ({(ec as any).ideias_conteudo.length})</CardTitle><Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/conteudos")}><Sparkles className="w-3.5 h-3.5" /> Gerar Conteúdos</Button></CardHeader><CardContent><div className="space-y-2">{(ec as any).ideias_conteudo.map((idea: IdeiaRow, i: number) => <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30"><Badge variant="outline" className="text-[10px] shrink-0">{idea.formato}</Badge><span className="text-xs flex-1">{idea.titulo}</span><Badge variant="secondary" className="text-[10px]">{(idea as any).etapa_funil}</Badge></div>)}</div></CardContent></Card>}
+      {ec?.pilares?.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-3">{ec.pilares.map((p, i) => { const Icon = pilarIcons[p.tipo || ""] || Lightbulb; return (<motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}><Card className="h-full"><CardContent className="p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-4 h-4 text-primary" /></div><div><p className="font-semibold text-sm">{p.nome}</p><Badge variant="outline" className="text-[10px] capitalize">{p.tipo?.replace("_", " ")}</Badge></div></div>{p.percentual && <span className="text-lg font-bold text-primary">{p.percentual}%</span>}</div><Progress value={p.percentual || 25} className="h-1.5 mb-2" /><p className="text-xs text-muted-foreground mb-2">{p.descricao}</p><TagList items={p.exemplos} variant="secondary" /></CardContent></Card></motion.div>); })}</div>}
+      {ec?.calendario_semanal?.length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" /> Calendário Semanal</CardTitle></CardHeader><CardContent><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">{ec.calendario_semanal.map((dia, i) => <motion.div key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }} className="p-3 rounded-lg bg-muted/30 text-center border hover:border-primary/30 transition-colors"><p className="text-xs font-bold text-primary">{dia.dia}</p><Badge variant="outline" className="text-[9px] mt-1">{dia.formato}</Badge><p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{String(dia.sugestao ?? "")}</p></motion.div>)}</div></CardContent></Card>}
+      {ec?.ideias_conteudo?.length > 0 && <Card><CardHeader className="pb-2 flex flex-row items-center justify-between"><CardTitle className="text-sm">Ideias de Conteúdo ({ec.ideias_conteudo.length})</CardTitle><Button size="sm" className="gap-1.5" onClick={() => navigate("/cliente/conteudos")}><Sparkles className="w-3.5 h-3.5" /> Gerar Conteúdos</Button></CardHeader><CardContent><div className="space-y-2">{ec.ideias_conteudo.map((idea, i) => <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30"><Badge variant="outline" className="text-[10px] shrink-0">{idea.formato}</Badge><span className="text-xs flex-1">{idea.titulo}</span><Badge variant="secondary" className="text-[10px]">{String(idea.etapa_funil ?? "")}</Badge></div>)}</div></CardContent></Card>}
     </div>
   );
 }
@@ -329,13 +328,13 @@ export function MktConteudo({ result }: { result: StrategyResult }) {
 
 export function MktProjecao({ result }: { result: StrategyResult }) {
   const pc = result.plano_crescimento;
-  const projecoes = (pc as any)?.projecoes_mensais || [];
-  const ind = (pc as any)?.indicadores;
+  const projecoes = pc?.projecoes_mensais || [];
+  const ind = pc?.indicadores;
   const bench = result.benchmarks_setor;
-  const chartData = projecoes.map((p: ProjecaoRow) => ({ name: `Mês ${p.mes}`, leads: p.leads, clientes: (p as any).clientes, receita: p.receita, investimento: p.investimento }));
+  const chartData = projecoes.map((p) => ({ name: `Mês ${p.mes}`, leads: p.leads, clientes: String(p.clientes ?? ""), receita: p.receita, investimento: p.investimento }));
   return (
     <div className="space-y-4">
-      {ind && <div className="grid grid-cols-2 md:grid-cols-5 gap-3">{[{ label: "CPC Médio", value: ind.cpc_medio, tip: "Custo Por Clique." }, { label: "CPL", value: ind.cpl_estimado, tip: "Custo Por Lead." }, { label: "CAC", value: ind.cac_estimado, tip: "Custo de Aquisição de Cliente." }, { label: "ROI", value: ind.roi_esperado, tip: "Retorno sobre Investimento." }, { label: "LTV", value: ind.ltv_estimado || "—", tip: "Lifetime Value." }].map((kpi, i) => <Card key={i}><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">{kpi.label} <InfoTip text={kpi.tip} /></p><p className="font-bold text-sm mt-0.5">{kpi.value}</p></CardContent></Card>)}</div>}
+      {ind && <div className="grid grid-cols-2 md:grid-cols-5 gap-3">{[{ label: "CPC Médio", value: ind.cpc_medio, tip: "Custo Por Clique." }, { label: "CPL", value: ind.cpl_estimado, tip: "Custo Por Lead." }, { label: "CAC", value: ind.cac_estimado, tip: "Custo de Aquisição de Cliente." }, { label: "ROI", value: ind.roi_esperado, tip: "Retorno sobre Investimento." }, { label: "LTV", value: ind.ltv_estimado || "—", tip: "Lifetime Value." }].map((kpi, i) => <Card key={i}><CardContent className="p-3 text-center"><p className="text-xs text-muted-foreground">{kpi.label} <InfoTip text={kpi.tip} /></p><p className="font-bold text-sm mt-0.5">{String(kpi.value ?? "—")}</p></CardContent></Card>)}</div>}
       {chartData.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Leads & Clientes</CardTitle></CardHeader>
@@ -375,7 +374,7 @@ export function MktProjecao({ result }: { result: StrategyResult }) {
           </CardContent>
         </Card>
       </div>}
-      {bench && <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /> Benchmarks: {(bench as any).setor}</CardTitle></CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 md:grid-cols-3 gap-3"><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">Taxa Conversão</p><p className="font-bold text-sm">{(bench as any).taxa_conversao_media}</p></div><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">CPL Médio</p><p className="font-bold text-sm">{(bench as any).cpl_medio_setor}</p></div><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">Ticket Médio</p><p className="font-bold text-sm">{(bench as any).ticket_medio_setor}</p></div></div>{(bench as any).tendencias?.length > 0 && <div><p className="text-xs font-semibold mb-1.5">Tendências do Setor</p><TagList items={(bench as any).tendencias} variant="outline" /></div>}{(bench as any).insight_competitivo && <div className="p-3 rounded-lg bg-primary/5 border border-primary/20"><p className="text-xs font-semibold text-primary mb-0.5">Insight</p><p className="text-sm">{(bench as any).insight_competitivo}</p></div>}</CardContent></Card>}
+      {bench && <Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /> Benchmarks: {bench.setor}</CardTitle></CardHeader><CardContent className="space-y-3"><div className="grid grid-cols-2 md:grid-cols-3 gap-3"><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">Taxa Conversão</p><p className="font-bold text-sm">{bench.taxa_conversao_media}</p></div><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">CPL Médio</p><p className="font-bold text-sm">{bench.cpl_medio_setor}</p></div><div className="p-3 rounded-lg bg-muted/30 text-center"><p className="text-xs text-muted-foreground">Ticket Médio</p><p className="font-bold text-sm">{bench.ticket_medio_setor}</p></div></div>{bench.tendencias?.length > 0 && <div><p className="text-xs font-semibold mb-1.5">Tendências do Setor</p><TagList items={bench.tendencias} variant="outline" /></div>}{bench.insight_competitivo && <div className="p-3 rounded-lg bg-primary/5 border border-primary/20"><p className="text-xs font-semibold text-primary mb-0.5">Insight</p><p className="text-sm">{bench.insight_competitivo}</p></div>}</CardContent></Card>}
     </div>
   );
 }
@@ -387,8 +386,8 @@ export function MktExecucao({ result }: { result: StrategyResult }) {
   const estrutura = result.estrutura_recomendada || [];
   return (
     <div className="space-y-4">
-      {(estrutura as EstruturaRow[]).length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Checklist de Estrutura</CardTitle></CardHeader><CardContent><div className="space-y-2">{(estrutura as any[]).map((e: EstruturaRow, i: number) => <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">{(e as any).status === "tem" ? <CheckSquare className="w-4 h-4 text-green-500 shrink-0" /> : <XSquare className="w-4 h-4 text-destructive shrink-0" />}<div className="flex-1 min-w-0"><div className="flex items-center gap-2"><p className="text-sm font-medium">{e.titulo}</p><Badge variant={(e as any).prioridade === "alta" ? "destructive" : (e as any).prioridade === "media" ? "secondary" : "outline"} className="text-[10px]">{(e as any).prioridade}</Badge></div><p className="text-xs text-muted-foreground">{(e as any).recomendacao}</p></div></div>)}</div></CardContent></Card>}
-      {(plano as PlanoMesRow[]).length > 0 && <div className="space-y-3">{(plano as any[]).map((mes: PlanoMesRow, i: number) => <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}><Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{(mes as any).mes}</div>{mes.titulo}</CardTitle></CardHeader><CardContent><div className="space-y-2">{mes.passos?.map((passo: PassoRow, j: number) => <div key={j} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/30"><div className="flex items-center gap-2 flex-1 min-w-0"><span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{j + 1}</span><span className="text-xs">{passo.titulo}</span></div><ToolButton ferramenta={passo.ferramenta || ""} /></div>)}</div></CardContent></Card></motion.div>)}</div>}
+      {(estrutura as EstruturaRow[]).length > 0 && <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Checklist de Estrutura</CardTitle></CardHeader><CardContent><div className="space-y-2">{(estrutura as EstruturaRow[]).map((e, i) => <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">{e.status === "tem" ? <CheckSquare className="w-4 h-4 text-green-500 shrink-0" /> : <XSquare className="w-4 h-4 text-destructive shrink-0" />}<div className="flex-1 min-w-0"><div className="flex items-center gap-2"><p className="text-sm font-medium">{e.titulo}</p><Badge variant={e.prioridade === "alta" ? "destructive" : e.prioridade === "media" ? "secondary" : "outline"} className="text-[10px]">{e.prioridade}</Badge></div><p className="text-xs text-muted-foreground">{e.recomendacao}</p></div></div>)}</div></CardContent></Card>}
+      {(plano as PlanoMesRow[]).length > 0 && <div className="space-y-3">{(plano as PlanoMesRow[]).map((mes, i) => <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.15 }}><Card><CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">{mes.mes}</div>{mes.titulo}</CardTitle></CardHeader><CardContent><div className="space-y-2">{mes.passos?.map((passo, j) => <div key={j} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/30"><div className="flex items-center gap-2 flex-1 min-w-0"><span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">{j + 1}</span><span className="text-xs">{passo.titulo}</span></div><ToolButton ferramenta={passo.ferramenta || ""} /></div>)}</div></CardContent></Card></motion.div>)}</div>}
     </div>
   );
 }

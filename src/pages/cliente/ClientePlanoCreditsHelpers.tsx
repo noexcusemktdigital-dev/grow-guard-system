@@ -308,7 +308,7 @@ export function SubscriptionDialog({
   const [couponDiscount, setCouponDiscount] = useState<number>(0);
   const [couponValid, setCouponValid] = useState<boolean | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [paymentResult, setPaymentResult] = useState<any>(null);
+  const [paymentResult, setPaymentResult] = useState<Record<string, unknown> | null>(null);
   const { data: orgId } = useUserOrgId();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -515,7 +515,7 @@ export function SubscriptionDialog({
 /* ── Credit Pack Purchase Dialog ── */
 export function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPack | null; open: boolean; onOpenChange: (o: boolean) => void }) {
   const [billingType, setBillingType] = useState("PIX");
-  const [paymentResult, setPaymentResult] = useState<any>(null);
+  const [paymentResult, setPaymentResult] = useState<Record<string, unknown> | null>(null);
   const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
 

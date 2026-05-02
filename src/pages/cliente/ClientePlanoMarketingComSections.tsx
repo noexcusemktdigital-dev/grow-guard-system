@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,21 @@ import {
 import { CHART_COLORS as THEME_COLORS, CHART_GRID_COLOR, ChartTooltip } from "@/lib/chartTheme";
 import { InfoTip } from "./ClientePlanoMarketingHelpers";
 import { CHART_COLORS } from "./ClientePlanoMarketingMktSections";
+
+export interface DiagnosticoComercial {
+  score_comercial?: number;
+  nivel?: string;
+  analise?: string;
+  radar_comercial?: Array<{ eixo: string; score: number; max?: number }> | Record<string, number>;
+  insights?: Array<string | { tipo?: string; type?: string; texto?: string; descricao?: string; titulo?: string }>;
+  gaps?: Array<string | { texto?: string; descricao?: string; titulo?: string }>;
+  funil_reverso?: Record<string, number | string>;
+  projecao_leads?: Array<{ mes?: string; periodo?: string; atual?: number; com_estrategia?: number; projetado?: number }>;
+  projecao_receita?: Array<{ mes?: string; periodo?: string; atual?: number; com_estrategia?: number; projetado?: number }>;
+  plano_acao?: Array<{ fase?: string; titulo?: string; periodo?: string; items?: Array<string | Record<string, string>>; acoes?: Array<string | Record<string, string>>; descricao?: string }>;
+  estrategias_vendas?: Array<{ titulo?: string; nome?: string; descricao?: string; passos?: Array<string | { acao?: string; titulo?: string }>; resultado_esperado?: string }>;
+  [key: string]: unknown;
+}
 
 /* ═══════════════ COMERCIAL: NIVEIS & HELPER ═══════════════ */
 
@@ -32,12 +46,12 @@ export function getComercialNivel(score: number) {
 
 /* ═══════════════ COMERCIAL: SCORE & RADAR ═══════════════ */
 
-export function ComScoreRadar({ dc }: { dc: any }) {
+export function ComScoreRadar({ dc }: { dc: DiagnosticoComercial }) {
   if (!dc) return <p className="text-sm text-muted-foreground p-4">Diagnóstico comercial não disponível.</p>;
 
   const radarComercial = dc.radar_comercial;
   const radarData = Array.isArray(radarComercial)
-    ? radarComercial.map((item: any) => ({
+    ? radarComercial.map((item) => ({
         subject: item.eixo,
         value: Number(item.score) || 0,
         max: Number(item.max) || 100,
@@ -126,7 +140,7 @@ export function ComScoreRadar({ dc }: { dc: any }) {
           <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500" /> Gaps Identificados</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {dc.gaps.map((gap: any, i: number) => (
+              {dc.gaps.map((gap, i) => (
                 <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-orange-500/5 border border-orange-500/15">
                   <AlertTriangle className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
                   <p className="text-xs">{typeof gap === "string" ? gap : gap.texto || gap.descricao || gap.titulo || JSON.stringify(gap)}</p>
@@ -142,7 +156,7 @@ export function ComScoreRadar({ dc }: { dc: any }) {
 
 /* ═══════════════ COMERCIAL: FUNIL REVERSO ═══════════════ */
 
-export function ComFunilReverso({ dc }: { dc: any }) {
+export function ComFunilReverso({ dc }: { dc: DiagnosticoComercial }) {
   const funilReverso = dc.funil_reverso;
   if (!funilReverso) return <p className="text-sm text-muted-foreground p-4">Funil reverso não disponível.</p>;
 
@@ -167,7 +181,7 @@ export function ComFunilReverso({ dc }: { dc: any }) {
 
 /* ═══════════════ COMERCIAL: INSIGHTS ═══════════════ */
 
-export function ComInsights({ dc }: { dc: any }) {
+export function ComInsights({ dc }: { dc: DiagnosticoComercial }) {
   const insights = dc.insights || [];
   if (!insights.length) return <p className="text-sm text-muted-foreground p-4">Nenhum insight disponível.</p>;
 
@@ -182,7 +196,7 @@ export function ComInsights({ dc }: { dc: any }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {insights.map((insight: any, i: number) => {
+      {insights.map((insight, i) => {
         const text = typeof insight === "string" ? insight : insight.texto || insight.descricao || insight.titulo || (typeof insight === "object" ? JSON.stringify(insight) : String(insight));
         const tipo = typeof insight === "object" ? (insight.tipo || insight.type || "info") : "info";
         const { icon: Icon, cls } = iconMap[tipo] || { icon: Lightbulb, cls: "text-muted-foreground border-muted bg-muted/30" };
@@ -204,13 +218,13 @@ export function ComInsights({ dc }: { dc: any }) {
 
 /* ═══════════════ COMERCIAL: ESTRATÉGIAS ═══════════════ */
 
-export function ComEstrategias({ dc }: { dc: any }) {
+export function ComEstrategias({ dc }: { dc: DiagnosticoComercial }) {
   const estrategias = dc.estrategias_vendas || [];
   if (!estrategias.length) return <p className="text-sm text-muted-foreground p-4">Estratégias de vendas não disponíveis.</p>;
 
   return (
     <div className="space-y-3">
-      {estrategias.map((est: any, i: number) => (
+      {estrategias.map((est, i) => (
         <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
           <Card>
             <CardContent className="p-4">
@@ -221,7 +235,7 @@ export function ComEstrategias({ dc }: { dc: any }) {
               {est.descricao && <p className="text-xs text-muted-foreground mb-3">{est.descricao}</p>}
               {est.passos?.length > 0 && (
                 <div className="space-y-1.5 ml-11">
-                  {est.passos.map((p: any, j: number) => (
+                  {est.passos.map((p, j) => (
                     <p key={j} className="text-xs flex items-start gap-1.5">
                       <span className="text-primary font-bold">{j + 1}.</span>
                       {typeof p === "string" ? p : p.acao || p.titulo || JSON.stringify(p)}
@@ -244,7 +258,7 @@ export function ComEstrategias({ dc }: { dc: any }) {
 
 /* ═══════════════ COMERCIAL: PROJEÇÕES ═══════════════ */
 
-export function ComProjecoes({ dc }: { dc: any }) {
+export function ComProjecoes({ dc }: { dc: DiagnosticoComercial }) {
   const hasLeads = dc.projecao_leads?.length > 0;
   const hasReceita = dc.projecao_receita?.length > 0;
   if (!hasLeads && !hasReceita) return <p className="text-sm text-muted-foreground p-4">Projeções não disponíveis.</p>;
@@ -256,7 +270,7 @@ export function ComProjecoes({ dc }: { dc: any }) {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Leads</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={dc.projecao_leads.map((p: any) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
+              <AreaChart data={dc.projecao_leads.map((p) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
                 <defs>
                   <linearGradient id="areaAtual" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={THEME_COLORS.teal} stopOpacity={0.3} />
@@ -283,7 +297,7 @@ export function ComProjecoes({ dc }: { dc: any }) {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Projeção de Receita</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={dc.projecao_receita.map((p: any) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
+              <AreaChart data={dc.projecao_receita.map((p) => ({ name: p.mes || p.periodo, atual: p.atual, estrategia: p.com_estrategia || p.projetado }))}>
                 <defs>
                   <linearGradient id="areaRecAtual" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={THEME_COLORS.teal} stopOpacity={0.3} />
@@ -311,7 +325,7 @@ export function ComProjecoes({ dc }: { dc: any }) {
 
 /* ═══════════════ COMERCIAL: PLANO DE AÇÃO ═══════════════ */
 
-export function ComPlanoAcao({ dc }: { dc: any }) {
+export function ComPlanoAcao({ dc }: { dc: DiagnosticoComercial }) {
   const planoAcao = dc.plano_acao || [];
   if (!planoAcao.length) return <p className="text-sm text-muted-foreground p-4">Plano de ação não disponível.</p>;
 
@@ -322,7 +336,7 @@ export function ComPlanoAcao({ dc }: { dc: any }) {
       {/* Vertical timeline line */}
       <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-border" />
 
-      {planoAcao.map((fase: any, i: number) => {
+      {planoAcao.map((fase, i) => {
         const items = fase.items || fase.acoes || [];
         const periodo = fase.periodo || `${(i + 1) * 30} dias`;
         const titulo = fase.fase || fase.titulo || `Fase ${i + 1}`;
@@ -344,7 +358,7 @@ export function ComPlanoAcao({ dc }: { dc: any }) {
 
               {items.length > 0 ? (
                 <div className="space-y-1.5">
-                  {items.map((acao: any, j: number) => {
+                  {items.map((acao, j) => {
                     const text = typeof acao === "string" ? acao : acao.acao || acao.titulo || acao.texto || JSON.stringify(acao);
                     return (
                       <div key={j} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30">

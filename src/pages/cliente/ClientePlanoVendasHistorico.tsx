@@ -21,7 +21,7 @@ export interface ClientePlanoVendasHistoricoProps {
 
 export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: ClientePlanoVendasHistoricoProps) {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any>(null);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<Record<string, unknown> | null>(null);
 
   const selectedHistoryScores = useMemo(() => {
     if (!selectedHistoryItem) return null;

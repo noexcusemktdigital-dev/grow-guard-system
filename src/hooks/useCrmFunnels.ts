@@ -74,6 +74,7 @@ export interface CrmFunnel {
   is_default: boolean;
   allow_backtrack?: boolean;
   backtrack_mode?: "allow" | "warn" | "block";
+  custom_fields_schema?: unknown[];
   created_at: string;
   updated_at: string;
 }
