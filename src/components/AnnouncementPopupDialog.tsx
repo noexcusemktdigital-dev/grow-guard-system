@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -14,6 +13,19 @@ import { useAnnouncementViews, useAnnouncementViewMutations } from "@/hooks/useA
 import { AlertTriangle, CheckCircle2, Download, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
+/** Shape returned by get_announcements_with_parent RPC — extended fields beyond the base type. */
+interface AnnouncementRow {
+  id: string;
+  title: string;
+  content?: string;
+  priority?: string;
+  status?: string;
+  published_at?: string;
+  show_popup?: boolean;
+  require_confirmation?: boolean;
+  attachment_url?: string;
+}
+
 export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean }) {
   const { data: announcements } = useAnnouncements();
   const { data: views } = useAnnouncementViews();
@@ -24,10 +36,10 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
   const viewedIds = useMemo(() => new Set((views ?? []).map(v => v.announcement_id)), [views]);
   const confirmedIds = useMemo(() => new Set((views ?? []).filter(v => v.confirmed_at).map(v => v.announcement_id)), [views]);
 
-  const popupAnnouncements = useMemo(() => {
+  const popupAnnouncements = useMemo((): AnnouncementRow[] => {
     if (!announcements) return [];
-    return announcements.filter(a =>
-      (a as unknown as { show_popup?: boolean }).show_popup === true &&
+    return (announcements as AnnouncementRow[]).filter(a =>
+      a.show_popup === true &&
       a.published_at &&
       a.status === "active" &&
       !viewedIds.has(a.id)
@@ -42,10 +54,9 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
   }, [popupAnnouncements.length, enabled]);
 
   const current = popupAnnouncements[currentIndex];
-  const currentExt = current as unknown as typeof current & { require_confirmation?: boolean; attachment_url?: string };
   if (!current) return null;
 
-  const needsConfirmation = currentExt.require_confirmation === true;
+  const needsConfirmation = current.require_confirmation === true;
   const isConfirmed = confirmedIds.has(current.id);
 
   const handleDismiss = () => {
@@ -97,15 +108,15 @@ export function AnnouncementPopupDialog({ enabled = true }: { enabled?: boolean 
             {current.content || "Sem conteúdo."}
           </div>
 
-          {currentExt.attachment_url && (
+          {current.attachment_url && (
             <a
-              href={currentExt.attachment_url}
+              href={current.attachment_url}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-primary hover:underline p-3 rounded-lg border border-border bg-muted/30"
             >
               <Download className="w-4 h-4 shrink-0" />
-              <span className="truncate">{(currentExt.attachment_url as string).split("/").pop()}</span>
+              <span className="truncate">{current.attachment_url.split("/").pop()}</span>
             </a>
           )}
 
