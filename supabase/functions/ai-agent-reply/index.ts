@@ -794,7 +794,7 @@ Ações automáticas disponíveis (inclua no FINAL da resposta, o usuário NÃO 
     });
 
     // ─── Debit credits after successful response ───
-    await debitCredits(adminClient, organization_id, tokensUsed, agent.name);
+    await debitCredits(adminClient, organization_id, tokensUsed, agent.name, supabaseUrl, serviceRoleKey);
 
     return new Response(JSON.stringify({ success: true, reply: cleanReply, actions }), {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
