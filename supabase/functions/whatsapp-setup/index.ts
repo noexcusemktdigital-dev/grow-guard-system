@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
           headers: { apikey: key },
         });
         const stateData = await stateRes.json();
-        console.log("[get-qr] connectionState:", JSON.stringify(stateData));
+        console.log("[get-qr] connectionState:", JSON.stringify(redact(stateData)));
 
         // Check if instance doesn't exist on server
         if (stateRes.status === 404 || stateData?.response?.message?.[0]?.includes("does not exist")) {
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
             }),
           });
           const createData = await createRes.json();
-          console.log("[get-qr] Recreate response:", createRes.status, JSON.stringify(createData));
+          console.log("[get-qr] Recreate response:", createRes.status, JSON.stringify(redact(createData)));
 
           // The create response often includes the QR code directly
           const qrFromCreate = createData?.qrcode?.base64 || createData?.base64 || null;
@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
               headers: { apikey: inst.client_token },
             });
             const stateData = await stateRes.json();
-            console.log("[check-status] Evolution connectionState for", inst.instance_id, ":", JSON.stringify(stateData));
+            console.log("[check-status] Evolution connectionState for", inst.instance_id, ":", JSON.stringify(redact(stateData)));
             connected = stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED";
 
             // Fallback: if 404 (instance not found), try listing all instances
@@ -460,7 +460,7 @@ Deno.serve(async (req) => {
               { headers: { "Client-Token": inst.client_token } }
             );
             const statusData = await statusRes.json();
-            console.log("[check-status] Z-API /status for", inst.instance_id, ":", JSON.stringify(statusData));
+            console.log("[check-status] Z-API /status for", inst.instance_id, ":", JSON.stringify(redact(statusData)));
             connected = statusData.connected === true;
 
             if (connected) {
@@ -588,7 +588,7 @@ Deno.serve(async (req) => {
             lastSetBody = rawSetBody;
           }
 
-          console.log("[reconfigure-webhook] set response:", setRes.status, JSON.stringify(lastSetBody));
+          console.log("[reconfigure-webhook] set response:", setRes.status, JSON.stringify(redact(lastSetBody)));
           if (setRes.ok) {
             setOk = true;
             break;
@@ -617,7 +617,7 @@ Deno.serve(async (req) => {
           headers: { apikey: key },
         });
         currentWebhook = await findRes.json();
-        console.log("[reconfigure-webhook] current webhook:", JSON.stringify(currentWebhook));
+        console.log("[reconfigure-webhook] current webhook:", JSON.stringify(redact(currentWebhook)));
       } catch (err) {
         console.error("[reconfigure-webhook] find error:", err);
       }
@@ -712,7 +712,7 @@ Deno.serve(async (req) => {
           }),
         });
         const createData = await createRes.json();
-        console.log("[connect] Evolution create response:", createRes.status, JSON.stringify(createData));
+        console.log("[connect] Evolution create response:", createRes.status, JSON.stringify(redact(createData)));
         if (!createRes.ok && createRes.status !== 403 && createRes.status !== 409) {
           console.warn("[connect] Evolution create non-fatal error:", createRes.status);
         }
@@ -759,7 +759,7 @@ Deno.serve(async (req) => {
             // Mantém rawSetBody bruto se não for JSON
           }
 
-          console.log("[connect] Evolution webhook set response:", setRes.status, JSON.stringify(parsedSetBody));
+          console.log("[connect] Evolution webhook set response:", setRes.status, JSON.stringify(redact(parsedSetBody)));
           if (setRes.ok) break;
         }
       } catch (err) {
@@ -774,7 +774,7 @@ Deno.serve(async (req) => {
           headers: { apikey: effectiveApiKey },
         });
         const stateData = await stateRes.json();
-        console.log("[connect] Evolution connectionState:", JSON.stringify(stateData));
+        console.log("[connect] Evolution connectionState:", JSON.stringify(redact(stateData)));
         if (stateData?.instance?.state === "open" || stateData?.state === "open" || stateData?.status === "CONNECTED") {
           connStatus = "connected";
         }

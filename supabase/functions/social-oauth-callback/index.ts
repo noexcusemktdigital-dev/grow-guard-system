@@ -227,7 +227,7 @@ serve(async (req) => {
           `https://graph.facebook.com/v25.0/me?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
         );
         const meData = await meRes.json();
-        console.log("Meta /me response:", JSON.stringify(meData));
+        console.log("Meta /me response:", JSON.stringify(redact(meData)));
         if (meData.id) userId = meData.id;
         if (meData.name) userName = meData.name;
       } catch (e) {
@@ -282,7 +282,7 @@ serve(async (req) => {
           `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,tasks,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
         );
         const pagesData = await pagesRes.json();
-        console.log("Meta /me/accounts response:", JSON.stringify(pagesData));
+        console.log("Meta /me/accounts response:", JSON.stringify(redact(pagesData)));
 
         let pageSeeds = Array.isArray(pagesData?.data) ? pagesData.data : [];
 
@@ -291,7 +291,7 @@ serve(async (req) => {
             `https://graph.facebook.com/v25.0/me/assigned_pages?fields=id,name,access_token,tasks,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(accessToken)}`,
           );
           const assignedData = await assignedRes.json();
-          console.log("Meta /me/assigned_pages response:", JSON.stringify(assignedData));
+          console.log("Meta /me/assigned_pages response:", JSON.stringify(redact(assignedData)));
           pageSeeds = Array.isArray(assignedData?.data) ? assignedData.data : [];
         }
 
@@ -398,7 +398,7 @@ serve(async (req) => {
               `https://graph.facebook.com/v25.0/${igId}?fields=name,username,profile_picture_url&access_token=${encodeURIComponent(pageAccessToken)}`,
             );
             const igData = await igRes.json();
-            console.log("IG account info:", JSON.stringify(igData));
+            console.log("IG account info:", JSON.stringify(redact(igData)));
             igName = igData?.name ?? null;
             igUsername = igData?.username ?? null;
             igPicture = igData?.profile_picture_url ?? null;
