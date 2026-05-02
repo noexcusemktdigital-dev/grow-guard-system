@@ -29,6 +29,8 @@ import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { generateIdempotencyKey, generateRequestId } from "@/lib/idempotency";
+import { analytics } from "@/lib/analytics";
+import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
 
 /* ── Token Usage Card ── */
 export function TokenUsageCard() {
@@ -541,10 +543,14 @@ export function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPac
     },
     onSuccess: (data) => {
       toast.success(`Cobrança de R$ ${data.value} criada!`);
+      analytics.track(ANALYTICS_EVENTS.CREDITS_PURCHASED, { pack_id: pack?.id });
       setPaymentResult(data);
       qc.invalidateQueries({ queryKey: ["asaas-payments"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => {
+      analytics.track(ANALYTICS_EVENTS.CHECKOUT_FAILED, { pack_id: pack?.id, error_code: err instanceof Error ? err.message : String(err) });
+      toast.error(err instanceof Error ? err.message : String(err));
+    },
   });
 
   if (!pack) return null;

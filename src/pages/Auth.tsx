@@ -12,6 +12,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import logoDark from "@/assets/NOE3.png";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
 import { useAuth } from "@/contexts/AuthContext";
+import { analytics } from "@/lib/analytics";
+import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
 
 const PHRASES = [
   "SEM DESCULPAS.\nSÓ RESULTADOS.",
@@ -76,6 +78,7 @@ const Auth = () => {
       const msg = (error.message || "").toLowerCase();
       const status = (error as { status?: number }).status;
       console.error("[Auth] login error", { message: error.message, status });
+      analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, { error_code: error.message, source: "franchise" });
 
       if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
         toast.error("Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada e o spam.");
@@ -100,6 +103,8 @@ const Auth = () => {
     // Sign-in succeeded — navigate immediately. Heavy role/portal checks
     // run in background so DB slowness can't masquerade as a credential error.
     setLoading(false);
+    analytics.identify(data.user.id);
+    analytics.track(ANALYTICS_EVENTS.LOGIN_SUCCEEDED, { source: "franchise" });
 
     // Best-effort role lookup with short timeout — falls back to franqueado portal.
     let destination = "/franqueado/inicio";

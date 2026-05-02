@@ -6,6 +6,8 @@ import { useMemberPermissions } from "./useMemberPermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { playSound } from "@/lib/sounds";
 import { useState, useCallback } from "react";
+import { analytics } from "@/lib/analytics";
+import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
 
 const PAGE_SIZE = 50;
 
@@ -252,7 +254,8 @@ export function useCrmLeadMutations() {
 
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, lead) => {
+      analytics.track(ANALYTICS_EVENTS.LEAD_CREATED, { stage: lead.stage, source: lead.source });
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       qc.invalidateQueries({ queryKey: ["crm-leads-by-stage"] });
       qc.invalidateQueries({ queryKey: ["crm-task-counts"] });

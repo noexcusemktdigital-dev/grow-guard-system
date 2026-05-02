@@ -4,6 +4,8 @@ import { supabase as defaultClient } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/edge";
 import type { User, Session } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { analytics } from "@/lib/analytics";
+import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
 
 interface Profile {
   id: string;
@@ -332,6 +334,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const target = redirectTo || (
       role === "cliente_admin" || role === "cliente_user" ? "/" : "/acessofranquia"
     );
+    analytics.track(ANALYTICS_EVENTS.LOGOUT);
+    analytics.reset();
     await supabase.auth.signOut({ scope: 'local' });
     setUser(null);
     setSession(null);
