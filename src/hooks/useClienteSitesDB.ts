@@ -1,23 +1,10 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
-export interface ClientSiteDB {
-  id: string;
-  organization_id: string;
-  name: string;
-  type: string | null;
-  status: string;
-  content: { html: string } | null;
-  url: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-  published_at: string | null;
-  strategy_id: string | null;
-}
+export type ClientSiteDB = Tables<"client_sites">;
 
 export function useClienteSitesDB() {
   const { data: orgId } = useUserOrgId();
@@ -31,7 +18,7 @@ export function useClienteSitesDB() {
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as unknown as ClientSiteDB[];
+      return data as ClientSiteDB[];
     },
     enabled: !!orgId,
   });
@@ -45,17 +32,18 @@ export function useCreateClientSite() {
   return useMutation({
     mutationFn: async ({ name, type, html, strategy_id }: { name: string; type: string; html: string; strategy_id?: string }) => {
       if (!orgId) throw new Error("No org");
+      const payload: TablesInsert<"client_sites"> = {
+        organization_id: orgId,
+        name,
+        type,
+        status: "Rascunho",
+        content: { html } as TablesInsert<"client_sites">["content"],
+        created_by: user?.id,
+        strategy_id: strategy_id || null,
+      };
       const { data, error } = await supabase
         .from("client_sites")
-        .insert({
-          organization_id: orgId,
-          name,
-          type,
-          status: "Rascunho",
-          content: { html } as any,
-          created_by: user?.id,
-          strategy_id: strategy_id || null,
-        } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -73,9 +61,10 @@ export function useApproveSite() {
 
   return useMutation({
     mutationFn: async (siteId: string) => {
+      const patch: TablesUpdate<"client_sites"> = { status: "Aprovado" };
       const { error } = await supabase
         .from("client_sites")
-        .update({ status: "Aprovado" } as any)
+        .update(patch)
         .eq("id", siteId);
       if (error) throw error;
     },
@@ -91,9 +80,10 @@ export function useUpdateSiteUrl() {
 
   return useMutation({
     mutationFn: async ({ siteId, url }: { siteId: string; url: string }) => {
+      const patch: TablesUpdate<"client_sites"> = { url, status: "Publicado", published_at: new Date().toISOString() };
       const { error } = await supabase
         .from("client_sites")
-        .update({ url, status: "Publicado", published_at: new Date().toISOString() } as any)
+        .update(patch)
         .eq("id", siteId);
       if (error) throw error;
     },

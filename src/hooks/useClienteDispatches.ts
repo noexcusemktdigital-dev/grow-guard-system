@@ -1,8 +1,10 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
+
+export type ClientDispatch = Tables<"client_dispatches">;
 
 export function useClienteDispatches() {
   const { data: orgId } = useUserOrgId();
@@ -16,7 +18,7 @@ export function useClienteDispatches() {
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as ClientDispatch[];
     },
     enabled: !!orgId,
   });
@@ -37,13 +39,14 @@ export function useClienteDispatchMutations() {
       delay_seconds?: number;
       source_type?: string;
     }) => {
+      const payload: TablesInsert<"client_dispatches"> = {
+        ...dispatch,
+        organization_id: orgId!,
+        recipients: (dispatch.recipients || []) as TablesInsert<"client_dispatches">["recipients"],
+      };
       const { data, error } = await supabase
         .from("client_dispatches")
-        .insert({
-          ...dispatch,
-          organization_id: orgId!,
-          recipients: dispatch.recipients || [],
-        } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -53,7 +56,7 @@ export function useClienteDispatchMutations() {
   });
 
   const updateDispatch = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & TablesUpdate<"client_dispatches">) => {
       const { data, error } = await supabase.from("client_dispatches").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;

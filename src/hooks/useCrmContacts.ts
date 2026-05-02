@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useState, useCallback } from "react";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
 const PAGE_SIZE = 200;
 
@@ -77,9 +77,10 @@ export function useCrmContactMutations() {
 
   const createContact = useMutation({
     mutationFn: async (contact: Partial<CrmContact> & { name: string }) => {
+      const payload: TablesInsert<"crm_contacts"> = { ...contact, organization_id: orgId ?? "" };
       const { data, error } = await supabase
         .from("crm_contacts")
-        .insert({ ...contact, organization_id: orgId ?? "" } as any)
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
@@ -89,7 +90,7 @@ export function useCrmContactMutations() {
   });
 
   const updateContact = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & TablesUpdate<"crm_contacts">) => {
       const { data, error } = await supabase
         .from("crm_contacts")
         .update(updates)
@@ -111,7 +112,7 @@ export function useCrmContactMutations() {
   });
 
   const bulkUpdateContacts = useMutation({
-    mutationFn: async ({ ids, fields }: { ids: string[]; fields: Record<string, unknown> }) => {
+    mutationFn: async ({ ids, fields }: { ids: string[]; fields: TablesUpdate<"crm_contacts"> }) => {
       const { error } = await supabase.from("crm_contacts").update(fields).in("id", ids);
       if (error) throw error;
     },
