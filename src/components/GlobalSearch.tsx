@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useEffect, useState, useMemo } from "react";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { Search } from "lucide-react";
