@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
@@ -108,7 +107,7 @@ export function usePublishPost() {
       }
     },
     onError: (err: unknown) => {
-      const requestId = (err as any)?.requestId;
+      const requestId = (err instanceof Object && "requestId" in err) ? String((err as Record<string, unknown>).requestId) : undefined;
       const suffix = requestId ? ` (id: ${requestId.slice(0, 8)})` : "";
       toast.error(
         (err instanceof Error ? err.message : "Erro ao publicar post.") + suffix,

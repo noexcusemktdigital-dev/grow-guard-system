@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
@@ -10,6 +9,8 @@ import { useClienteWallet } from "./useClienteWallet";
 import { CREDIT_COSTS } from "@/constants/plans";
 import { analytics } from "@/lib/analytics";
 import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
+import type { Json } from "@/integrations/supabase/types";
 
 const CREDIT_COST_PER_CONTENT = CREDIT_COSTS["generate-content"].cost;
 export const CREDIT_COST_APPROVE_CONTENT = CREDIT_COSTS["approve-content"].cost;
@@ -137,19 +138,19 @@ export function useGenerateContent() {
         const realError = await extractEdgeFunctionError(resp.error);
         throw realError;
       }
-      const result = resp.data as any;
+      const result = resp.data as Record<string, unknown>;
       if (result?.error) throw new Error(result.error as string);
 
-      const conteudos = (result.conteudos || []) as any[];
+      const conteudos = (result.conteudos || []) as Record<string, unknown>[];
       if (conteudos.length === 0) throw new Error("Nenhum conteúdo gerado");
 
       // Batch insert
-      const rows = conteudos.map((c) => ({
-        organization_id: orgId,
+      const rows: TablesInsert<"client_content">[] = conteudos.map((c) => ({
+        organization_id: orgId!,
         title: (c.titulo as string) || "Conteúdo",
-        format: c.formato,
-        objective: c.objetivo,
-        result: c as any,
+        format: c.formato as string | null,
+        objective: c.objetivo as string | null,
+        result: c as unknown as Json,
         status: "pending",
         created_by: user?.id,
         platform: payload.plataforma,
@@ -157,7 +158,7 @@ export function useGenerateContent() {
 
       const { data, error } = await supabase
         .from("client_content")
-        .insert(rows as any[])
+        .insert(rows)
         .select();
 
       if (error) throw error;
@@ -191,7 +192,7 @@ export function useApproveContent() {
 
       if (existing?.status === "approved") return; // Já aprovado, sem débito
 
-      const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+      const { error: debitError } = await supabase.rpc("debit_credits", {
         _org_id: orgId,
         _amount: CREDIT_COST_APPROVE_CONTENT,
         _description: "Conteúdo aprovado",
@@ -201,7 +202,7 @@ export function useApproveContent() {
 
       const { error } = await supabase
         .from("client_content")
-        .update({ status: "approved" } as any)
+        .update({ status: "approved" } satisfies TablesUpdate<"client_content">)
         .eq("id", contentId);
       if (error) throw error;
     },
@@ -234,7 +235,7 @@ export function useApproveBatch() {
       const pendingIds = contentIds.filter(id => !alreadyApproved.has(id));
 
       for (const id of pendingIds) {
-        const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+        const { error: debitError } = await supabase.rpc("debit_credits", {
           _org_id: orgId,
           _amount: CREDIT_COST_APPROVE_CONTENT,
           _description: "Conteúdo aprovado (lote)",
@@ -244,7 +245,7 @@ export function useApproveBatch() {
 
         const { error } = await supabase
           .from("client_content")
-          .update({ status: "approved" } as any)
+          .update({ status: "approved" } satisfies TablesUpdate<"client_content">)
           .eq("id", id);
         if (error) throw new Error(`Erro ao aprovar conteúdo ${id}: ${error.message}`);
       }

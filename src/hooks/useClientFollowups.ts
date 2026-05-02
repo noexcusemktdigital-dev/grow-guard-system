@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/typed";
+import type { Json } from "@/integrations/supabase/types";
 
 type ClientFollowupRow = Tables<"client_followups">;
 
@@ -256,8 +257,8 @@ export function useSaveFollowup() {
           client_name: input.client_name,
           month_ref: input.month_ref,
           status: input.status || "draft",
-          analise: input.analise as any,
-          plano_proximo: input.plano_proximo as any,
+          analise: input.analise as unknown as Json,
+          plano_proximo: input.plano_proximo as unknown as Json,
           unit_org_id: input.unit_org_id || null,
         };
         const { data, error } = await supabase.from("client_followups").update(updatePayload).eq("id", input.id).select().single();
@@ -270,8 +271,8 @@ export function useSaveFollowup() {
           client_name: input.client_name,
           month_ref: input.month_ref,
           status: input.status || "draft",
-          analise: input.analise as any,
-          plano_proximo: input.plano_proximo as any,
+          analise: input.analise as unknown as Json,
+          plano_proximo: input.plano_proximo as unknown as Json,
           unit_org_id: input.unit_org_id || orgId,
         };
         const { data, error } = await supabase.from("client_followups").insert(insertPayload).select().single();

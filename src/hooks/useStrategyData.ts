@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* eslint-disable */
 import { useActiveStrategy } from "./useMarketingStrategy";
 import { useSalesPlan } from "./useSalesPlan";
 import { normalizeMarketingStrategyResult } from "@/lib/normalizeMarketingStrategyResult";
@@ -12,7 +10,7 @@ import { normalizeMarketingStrategyResult } from "@/lib/normalizeMarketingStrate
 export function useStrategyData() {
   const { data: strategy, isLoading } = useActiveStrategy();
   const { data: salesPlan, isLoading: salesLoading } = useSalesPlan();
-  const rawResult = strategy?.strategy_result as any;
+  const rawResult = strategy?.strategy_result;
   const result = normalizeMarketingStrategyResult(rawResult);
   const spAnswers = (salesPlan?.answers || {}) as Record<string, unknown>;
 

@@ -1,21 +1,11 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
 
-export interface MarketingStrategy {
-  id: string;
-  organization_id: string;
-  answers: Record<string, unknown>;
-  score_percentage: number;
-  nivel: string;
-  is_active: boolean;
-  status: string;
-  strategy_result: Record<string, unknown> | null;
-  created_at: string;
-}
+export type MarketingStrategy = Tables<"marketing_strategies">;
 
 export function useActiveStrategy() {
   const { data: orgId } = useUserOrgId();
@@ -24,7 +14,7 @@ export function useActiveStrategy() {
     queryKey: ["marketing-strategy-active", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies")
         .select("*")
         .eq("organization_id", orgId ?? "")
         .eq("is_active", true)
@@ -32,7 +22,7 @@ export function useActiveStrategy() {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data as unknown as MarketingStrategy | null;
+      return data as MarketingStrategy | null;
     },
     enabled: !!orgId,
   });
@@ -45,13 +35,13 @@ export function useStrategyHistory() {
     queryKey: ["marketing-strategy-history", orgId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies")
         .select("*")
         .eq("organization_id", orgId ?? "")
         .eq("is_active", false)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []) as unknown as MarketingStrategy[];
+      return (data ?? []) as MarketingStrategy[];
     },
     enabled: !!orgId,
   });
@@ -59,7 +49,7 @@ export function useStrategyHistory() {
 
 export function useHasActiveStrategy(): { hasStrategy: boolean; isLoading: boolean } {
   const { data, isLoading } = useActiveStrategy();
-  return { hasStrategy: !!data && (data as any).status === "approved", isLoading };
+  return { hasStrategy: !!data && data.status === "approved", isLoading };
 }
 
 export function useSaveStrategy() {
@@ -78,14 +68,14 @@ export function useSaveStrategy() {
 
       // Deactivate previous active strategies
       await supabase
-        .from("marketing_strategies" as any)
-        .update({ is_active: false } as any)
+        .from("marketing_strategies")
+        .update({ is_active: false } satisfies TablesUpdate<"marketing_strategies">)
         .eq("organization_id", orgId)
         .eq("is_active", true);
 
       // Insert new active strategy
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies")
         .insert({
           organization_id: orgId,
           answers: payload.answers,
@@ -94,12 +84,12 @@ export function useSaveStrategy() {
           is_active: true,
           strategy_result: payload.strategy_result || null,
           status: payload.status || "pending",
-        } as any)
+        } satisfies TablesInsert<"marketing_strategies">)
         .select()
         .single();
 
       if (error) throw error;
-      return data as unknown as MarketingStrategy;
+      return data as MarketingStrategy;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["marketing-strategy-active"] });
@@ -123,7 +113,7 @@ export function useApproveStrategy() {
 
       // Primeiro GPS é sempre gratuito — cobra só a partir do segundo
       const { data: previousStrategies } = await supabase
-        .from("marketing_strategies" as any)
+        .from("marketing_strategies")
         .select("id")
         .eq("organization_id", orgId)
         .eq("status", "approved");
@@ -131,7 +121,7 @@ export function useApproveStrategy() {
       const isFirstGPS = !previousStrategies || previousStrategies.length === 0;
 
       if (!isFirstGPS) {
-        const { error: debitError } = await supabase.rpc("debit_credits" as any, {
+        const { error: debitError } = await supabase.rpc("debit_credits", {
           _org_id: orgId,
           _amount: 50,
           _description: "Novo GPS do Negócio aprovado",
@@ -142,14 +132,14 @@ export function useApproveStrategy() {
 
       // Update status
       const { data, error } = await supabase
-        .from("marketing_strategies" as any)
-        .update({ status: "approved" } as any)
+        .from("marketing_strategies")
+        .update({ status: "approved" } satisfies TablesUpdate<"marketing_strategies">)
         .eq("id", strategyId)
         .select()
         .single();
 
       if (error) throw error;
-      return data as unknown as MarketingStrategy;
+      return data as MarketingStrategy;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["marketing-strategy-active"] });

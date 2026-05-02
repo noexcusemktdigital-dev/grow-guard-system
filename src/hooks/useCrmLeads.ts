@@ -380,7 +380,7 @@ export function useCrmLeadMutations() {
 
   const bulkAddTag = useMutation({
     mutationFn: async ({ ids, tag }: { ids: string[]; tag: string }) => {
-      const { error } = await supabase.rpc("bulk_add_tag" as any, { _ids: ids, _tag: tag } as any);
+      const { error } = await supabase.rpc("bulk_add_tag", { _ids: ids, _tag: tag });
       if (error) throw error;
     },
     onSuccess: () => {
