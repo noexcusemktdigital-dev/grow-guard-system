@@ -1,0 +1,52 @@
+[
+  {
+    "name": "estrategia_lancamento_saas",
+    "input": {
+      "business_type": "SaaS de gest\u00e3o para academias",
+      "stage": "pr\u00e9-lan\u00e7amento",
+      "budget_brl": 5000,
+      "target_market": "propriet\u00e1rios de academias de m\u00e9dio porte",
+      "timeframe_months": 3
+    }
+  },
+  {
+    "name": "estrategia_expansao_franquia",
+    "input": {
+      "business_type": "rede de franquias de alimenta\u00e7\u00e3o saud\u00e1vel",
+      "stage": "expans\u00e3o regional",
+      "budget_brl": 50000,
+      "target_market": "cidades do interior paulista com 100k+ habitantes",
+      "timeframe_months": 6
+    }
+  },
+  {
+    "name": "estrategia_retencao_ecommerce",
+    "input": {
+      "business_type": "e-commerce de moda feminina",
+      "stage": "crescimento",
+      "budget_brl": 15000,
+      "target_market": "mulheres de 25-45 anos, classes B e C",
+      "timeframe_months": 2
+    }
+  },
+  {
+    "name": "estrategia_b2b_consultoria",
+    "input": {
+      "business_type": "consultoria em transforma\u00e7\u00e3o digital",
+      "stage": "consolida\u00e7\u00e3o",
+      "budget_brl": 20000,
+      "target_market": "m\u00e9dias empresas do setor industrial",
+      "timeframe_months": 4
+    }
+  },
+  {
+    "name": "estrategia_startup_edtech",
+    "input": {
+      "business_type": "plataforma de cursos t\u00e9cnicos online",
+      "stage": "seed",
+      "budget_brl": 8000,
+      "target_market": "jovens de 18-30 anos buscando requalifica\u00e7\u00e3o profissional",
+      "timeframe_months": 3
+    }
+  }
+]

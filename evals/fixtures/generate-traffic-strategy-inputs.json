@@ -1,0 +1,49 @@
+[
+  {
+    "name": "trafego_pago_infoproduto",
+    "input": {
+      "product": "curso online de fotografia",
+      "monthly_budget_brl": 3000,
+      "current_channels": [],
+      "goal": "gerar 200 leads qualificados por m\u00eas",
+      "audience_description": "entusiastas de fotografia, 25-50 anos"
+    }
+  },
+  {
+    "name": "trafego_organico_blog",
+    "input": {
+      "product": "software de contabilidade para MEI",
+      "monthly_budget_brl": 500,
+      "current_channels": [
+        "instagram"
+      ],
+      "goal": "aumentar tr\u00e1fego org\u00e2nico em 40% em 90 dias",
+      "audience_description": "microempreendedores individuais"
+    }
+  },
+  {
+    "name": "trafego_misto_ecommerce",
+    "input": {
+      "product": "loja online de produtos naturais",
+      "monthly_budget_brl": 8000,
+      "current_channels": [
+        "google_ads",
+        "facebook_ads"
+      ],
+      "goal": "reduzir custo por aquisi\u00e7\u00e3o de R$45 para R$30",
+      "audience_description": "consumidores de produtos saud\u00e1veis, 28-55 anos"
+    }
+  },
+  {
+    "name": "trafego_b2b_linkedin",
+    "input": {
+      "product": "solu\u00e7\u00e3o de compliance trabalhista",
+      "monthly_budget_brl": 6000,
+      "current_channels": [
+        "email_marketing"
+      ],
+      "goal": "gerar 50 reuni\u00f5es qualificadas por trimestre",
+      "audience_description": "diretores de RH e jur\u00eddico de empresas com 200+ funcion\u00e1rios"
+    }
+  }
+]

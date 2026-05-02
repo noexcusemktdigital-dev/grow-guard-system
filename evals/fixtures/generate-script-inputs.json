@@ -1,0 +1,42 @@
+[
+  {
+    "name": "script_vendas_saas_b2b",
+    "input": {
+      "product": "plataforma de CRM para pequenas empresas",
+      "target_audience": "donos de micro e pequenas empresas",
+      "duration_minutes": 2,
+      "goal": "agendar reuni\u00e3o de demonstra\u00e7\u00e3o",
+      "channel": "liga\u00e7\u00e3o telef\u00f4nica"
+    }
+  },
+  {
+    "name": "script_reativacao_cliente",
+    "input": {
+      "product": "plano premium de consultoria financeira",
+      "target_audience": "clientes inativos h\u00e1 mais de 6 meses",
+      "duration_minutes": 3,
+      "goal": "reativar assinatura",
+      "channel": "WhatsApp"
+    }
+  },
+  {
+    "name": "script_video_institucional",
+    "input": {
+      "product": "empresa de log\u00edstica sustent\u00e1vel",
+      "target_audience": "e-commerces e varejistas",
+      "duration_minutes": 1,
+      "goal": "apresentar diferenciais da empresa",
+      "channel": "v\u00eddeo para redes sociais"
+    }
+  },
+  {
+    "name": "script_upsell_plano_superior",
+    "input": {
+      "product": "plano enterprise de software de RH",
+      "target_audience": "clientes atuais no plano b\u00e1sico com 50+ funcion\u00e1rios",
+      "duration_minutes": 2,
+      "goal": "upgrade de plano",
+      "channel": "e-mail com v\u00eddeo"
+    }
+  }
+]
