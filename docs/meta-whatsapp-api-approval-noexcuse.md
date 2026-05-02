@@ -107,8 +107,11 @@ Configurar em **Lovable Cloud → Backend → Secrets**:
 
 - PR GitHub: `#56` mergeado com a separação **WhatsApp Cloud API — Meta oficial**
   e **WhatsApp via Izitech**.
-- Branch `main`: commits posteriores sincronizados até `4396c6dc`.
-- Checks GitHub no commit `4396c6dc`: `TypeScript`, `Bundle Size`, `Lint`,
+- PR GitHub: `#101` mergeado com o ajuste de compatibilidade do App Secret do
+  webhook oficial (`WHATSAPP_CLOUD_APP_SECRET`, `WHATSAPP_APP_SECRET` e
+  `META_APP_SECRET`).
+- Branch `main`: evidência do pacote WhatsApp sincronizada até `9f1e6983`.
+- Checks GitHub no commit `9f1e6983`: `TypeScript`, `Bundle Size`, `Lint`,
   `Unit Tests` e `Dependency Audit` concluídos com sucesso.
 - Lovable: projeto `1d5802a2-4462-4bb6-a30e-a9b2d444f68e` em estado `ready`.
 - Produção:
