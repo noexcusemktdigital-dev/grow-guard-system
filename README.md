@@ -66,6 +66,20 @@ Multi-tenant via `organization_id` + RLS no Supabase. Toda mutação crítica pa
 | [runbooks/](docs/runbooks/) | Runbooks operacionais |
 | [audits/](docs/audits/) | Auditorias técnicas |
 | [CHANGELOG.md](CHANGELOG.md) | Histórico de mudanças |
+| [QUICKSTART.md](docs/QUICKSTART.md) | Setup local em 5 min |
+| [GLOSSARY.md](docs/GLOSSARY.md) | Glossário técnico e de negócio |
+| [API.md](docs/API.md) | API reference (20 endpoints) |
+
+## Métricas do projeto
+
+| Métrica | Valor |
+|---------|-------|
+| Testes Vitest | ~661 passando |
+| Specs E2E Playwright | 9 |
+| Prompts IA versionados | 16/16 |
+| Helpers `_shared/` | 13 |
+| Migrations aplicadas via Lovable API | 4 |
+| Tabelas com RLS reaplicado | 7 |
 
 ## Setup local
 
