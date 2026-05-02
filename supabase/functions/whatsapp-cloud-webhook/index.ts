@@ -60,8 +60,10 @@ Deno.serve(async (req) => {
   const rawBody = await req.text();
 
   // Validação HMAC SHA-256 (header x-hub-signature-256)
-  // Tenta WHATSAPP_APP_SECRET primeiro, fallback META_APP_SECRET (caso seja mesmo Meta App)
-  const appSecret = Deno.env.get("WHATSAPP_APP_SECRET") ?? Deno.env.get("META_APP_SECRET");
+  // Aceita o nome dedicado do runbook e os aliases legados do app Meta.
+  const appSecret = Deno.env.get("WHATSAPP_CLOUD_APP_SECRET") ??
+    Deno.env.get("WHATSAPP_APP_SECRET") ??
+    Deno.env.get("META_APP_SECRET");
   const validation = await verifyMetaWebhook(req, rawBody, appSecret);
   if (!validation.valid) {
     log.warn('hmac_failed', { reason: validation.reason });
