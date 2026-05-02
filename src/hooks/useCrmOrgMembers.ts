@@ -1,7 +1,11 @@
-// @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables } from "@/integrations/supabase/typed";
+
+type OrgMembershipRow = Tables<"organization_memberships"> & {
+  profiles: { full_name: string | null; avatar_url: string | null } | null;
+};
 
 export interface CrmOrgMember {
   user_id: string;
@@ -25,7 +29,7 @@ export function useCrmOrgMembers() {
         .in("role", ["cliente_admin", "cliente_user"])
         .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
-      return (data ?? []).map((m: any) => ({
+      return (data as OrgMembershipRow[] ?? []).map((m) => ({
         user_id: m.user_id,
         full_name: m.profiles?.full_name || "Usuário",
         avatar_url: m.profiles?.avatar_url ?? null,
@@ -52,7 +56,7 @@ export function useCrmOrgMembersMap() {
         .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
       const map: Record<string, { name: string; avatar?: string | null }> = {};
-      (data ?? []).forEach((m: any) => {
+      (data as OrgMembershipRow[] ?? []).forEach((m) => {
         map[m.user_id] = {
           name: m.profiles?.full_name || "Usuário",
           avatar: m.profiles?.avatar_url ?? null,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
@@ -35,7 +34,7 @@ export function useOrgMembers() {
       });
       if (error) throw error;
 
-      return (data ?? []).map((m: any): OrgMember => ({
+      return (data ?? []).map((m: Record<string, unknown>): OrgMember => ({
         user_id: m.user_id,
         role: m.role ?? "cliente_user",
         full_name: m.full_name ?? null,

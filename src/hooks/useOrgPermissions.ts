@@ -1,8 +1,11 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables, TablesInsert } from "@/integrations/supabase/typed";
+
+type OrgPermissionRow = Tables<"org_user_permissions">;
+type OrgPermissionUpsert = TablesInsert<"org_user_permissions">;
 
 export const PERMISSIONS = [
   { key: "crm.view", label: "Ver CRM", group: "CRM" },
@@ -44,7 +47,7 @@ export function useOrgPermissions() {
     queryFn: async (): Promise<Set<string>> => {
       if (!user?.id || !orgId) return new Set();
       const { data, error } = await supabase
-        .from("org_user_permissions" as any)
+        .from("org_user_permissions")
         .select("permission, granted")
         .eq("user_id", user.id)
         .eq("organization_id", orgId);
@@ -53,9 +56,9 @@ export function useOrgPermissions() {
         return new Set();
       }
       return new Set(
-        (data ?? [])
-          .filter((r: any) => r.granted)
-          .map((r: any) => r.permission as string)
+        (data as Pick<OrgPermissionRow, "permission" | "granted">[] ?? [])
+          .filter((r) => r.granted)
+          .map((r) => r.permission)
       );
     },
     enabled: !!user?.id && !!orgId && !isAdmin,
@@ -95,18 +98,18 @@ export function useOrgPermissionsAdmin() {
       if (e1) throw e1;
 
       const { data: permsData, error: e2 } = await supabase
-        .from("org_user_permissions" as any)
+        .from("org_user_permissions")
         .select("user_id, permission, granted")
         .eq("organization_id", orgId);
       if (e2) throw e2;
 
       const permsByUser: Record<string, Set<string>> = {};
-      for (const row of (permsData ?? []) as any[]) {
+      for (const row of (permsData as Pick<OrgPermissionRow, "user_id" | "permission" | "granted">[] ?? [])) {
         if (!permsByUser[row.user_id]) permsByUser[row.user_id] = new Set();
         if (row.granted) permsByUser[row.user_id].add(row.permission);
       }
 
-      return { users: (usersData ?? []) as any[], permsByUser };
+      return { users: (usersData ?? []) as Record<string, unknown>[], permsByUser };
     },
     enabled: !!orgId,
   });
@@ -123,7 +126,7 @@ export function useOrgPermissionsAdmin() {
     }) => {
       if (!orgId) throw new Error("Org não encontrada");
       const { error } = await supabase
-        .from("org_user_permissions" as any)
+        .from("org_user_permissions")
         .upsert(
           {
             organization_id: orgId,
@@ -131,14 +134,14 @@ export function useOrgPermissionsAdmin() {
             permission,
             granted,
             granted_by: user?.id ?? null,
-          },
+          } satisfies OrgPermissionUpsert,
           { onConflict: "organization_id,user_id,permission" }
         );
       if (error) throw error;
     },
     onMutate: async ({ userId, permission, granted }) => {
       await qc.cancelQueries({ queryKey: ["org-members-with-perms", orgId] });
-      const prev = qc.getQueryData<any>(["org-members-with-perms", orgId]);
+      const prev = qc.getQueryData<{ users: Record<string, unknown>[]; permsByUser: Record<string, Set<string>> }>(["org-members-with-perms", orgId]);
       if (prev) {
         const next = {
           ...prev,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,7 +43,7 @@ export function useUserOrgId() {
           _user_id: user.id,
           _portal: portal,
         });
-        if (orgs && orgs.some((o: any) => o.org_id === stored)) {
+        if (orgs && orgs.some((o: { org_id: string }) => o.org_id === stored)) {
           return stored;
         }
         // Stored org is invalid, clear it

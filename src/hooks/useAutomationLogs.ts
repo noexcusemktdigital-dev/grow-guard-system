@@ -1,7 +1,12 @@
-// @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables } from "@/integrations/supabase/typed";
+
+type AutomationLogRow = Tables<"automation_execution_logs"> & {
+  crm_automations: { name: string } | null;
+  crm_leads: { name: string } | null;
+};
 
 export interface AutomationLog {
   id: string;
@@ -46,7 +51,7 @@ export function useAutomationLogs(filters?: { status?: string; automationId?: st
       const { data, error } = await query;
       if (error) throw error;
 
-      return (data || []).map((row: any) => ({
+      return (data as AutomationLogRow[] || []).map((row) => ({
         ...row,
         automation_name: row.crm_automations?.name || null,
         lead_name: row.crm_leads?.name || null,

@@ -1,8 +1,10 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/typed";
+
+type ClientFollowupRow = Tables<"client_followups">;
 
 /* ── Sub-seção de análise ── */
 export interface AnaliseSubSection {
@@ -168,7 +170,7 @@ export function useClientFolders() {
         .order("client_name");
       if (error) throw error;
       const map = new Map<string, { count: number; unit_org_id: string | null }>();
-      (data || []).forEach((row: any) => {
+      (data as Pick<ClientFollowupRow, "client_name" | "id" | "unit_org_id">[] || []).forEach((row) => {
         const name = row.client_name || "Sem nome";
         const existing = map.get(name);
         if (existing) {
@@ -197,7 +199,7 @@ export function useClientFoldersForUnit() {
         .order("client_name");
       if (error) throw error;
       const map = new Map<string, { count: number; unit_org_id: string | null }>();
-      (data || []).forEach((row: any) => {
+      (data as Pick<ClientFollowupRow, "client_name" | "id" | "unit_org_id">[] || []).forEach((row) => {
         const name = row.client_name || "Sem nome";
         const existing = map.get(name);
         if (existing) {
@@ -283,7 +285,7 @@ export function useSaveFollowup() {
       qc.invalidateQueries({ queryKey: ["client-folders-unit"] });
       toast.success("Acompanhamento salvo com sucesso!");
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       toast.error(e.message || "Erro ao salvar acompanhamento");
     },
   });
@@ -323,7 +325,7 @@ export function useRenameFolder() {
       qc.invalidateQueries({ queryKey: ["client-followups"] });
       toast.success("Nome do projeto atualizado!");
     },
-    onError: (e: any) => {
+    onError: (e: unknown) => {
       toast.error(e.message || "Erro ao renomear projeto");
     },
   });

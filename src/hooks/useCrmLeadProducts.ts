@@ -1,7 +1,12 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { Tables, TablesInsert } from "@/integrations/supabase/typed";
+
+type CrmLeadProductRow = Tables<"crm_lead_products"> & {
+  crm_products: { name: string } | null;
+};
+type CrmLeadProductInsert = TablesInsert<"crm_lead_products">;
 
 export interface CrmLeadProduct {
   id: string;
@@ -28,7 +33,7 @@ export function useCrmLeadProducts(leadId: string | null) {
         .eq("lead_id", leadId!)
         .order("created_at");
       if (error) throw error;
-      return (data || []).map((row: any) => ({
+      return (data as CrmLeadProductRow[] || []).map((row) => ({
         ...row,
         product_name: row.crm_products?.name || "Produto removido",
       })) as CrmLeadProduct[];
@@ -60,7 +65,7 @@ export function useCrmLeadProductMutations() {
           unit_price: input.unit_price,
           discount_percent: input.discount_percent || 0,
           notes: input.notes || null,
-        } as any)
+        } satisfies CrmLeadProductInsert)
         .select()
         .single();
       if (error) throw error;
