@@ -20,6 +20,7 @@ export interface WhatsAppInstance {
   label: string | null;
   provider: WhatsAppProvider;
   base_url: string | null;
+  billing_status?: string | null;
   // ── WhatsApp Cloud (Meta) ──
   waba_id?: string | null;
   phone_number_id?: string | null;

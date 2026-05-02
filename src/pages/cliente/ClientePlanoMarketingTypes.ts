@@ -1,48 +1,145 @@
-// @ts-nocheck
+export interface IcpData {
+  avatar_emoji?: string;
+  nome_persona?: string;
+  demografia?: string;
+  perfil_profissional?: string;
+  descricao?: string;
+  comportamento_digital?: string;
+  dores?: string[];
+  desejos?: string[];
+  objecoes?: string[];
+  gatilhos_compra?: string[];
+  [key: string]: unknown;
+}
+
+export interface PropostaValorData {
+  headline?: string;
+  problema?: string;
+  metodo?: string;
+  resultado?: string;
+  prova?: string;
+  [key: string]: unknown;
+}
+
+export interface AnaliseConcorrenciaData {
+  visao_geral?: string;
+  concorrentes?: ConcorrenteRow[];
+  posicionamento_recomendado?: string;
+  [key: string]: unknown;
+}
+
+export interface TomComunicacaoData {
+  tom_principal?: string;
+  personalidade_marca?: string[];
+  voz_exemplo?: string;
+  palavras_usar?: string[];
+  palavras_evitar?: string[];
+  exemplos_posts?: Array<{ tipo?: string; exemplo?: string }>;
+  [key: string]: unknown;
+}
+
+export interface FunilAquisicao {
+  topo?: { estimativa_visitantes?: number };
+  meio?: { estimativa_leads?: number };
+  fundo?: { estimativa_clientes?: number };
+  [key: string]: unknown;
+}
+
+export interface EstrategiaAquisicaoData {
+  funil?: FunilAquisicao;
+  canais_prioritarios?: CanalRow[];
+  [key: string]: unknown;
+}
+
+export interface EstrategiaConteudoData {
+  pilares?: PilarRow[];
+  calendario_semanal?: CalendarioRow[];
+  ideias_conteudo?: IdeiaRow[];
+  [key: string]: unknown;
+}
+
+export interface PlanoIndicadores {
+  cpc_medio?: string;
+  cpl_estimado?: string;
+  cac_estimado?: string;
+  roi_esperado?: string;
+  ltv_estimado?: string;
+  [key: string]: unknown;
+}
+
+export interface PlanoCrescimentoData {
+  projecoes_mensais?: ProjecaoRow[];
+  indicadores?: PlanoIndicadores;
+  [key: string]: unknown;
+}
+
+export interface BenchmarkSetorData {
+  setor?: string;
+  taxa_conversao_media?: string;
+  cpl_medio_setor?: string;
+  ticket_medio_setor?: string;
+  tendencias?: string[];
+  insight_competitivo?: string;
+  [key: string]: unknown;
+}
+
+export interface DiagnosticoData {
+  score_geral?: number;
+  analise?: string;
+  pontos_fortes?: string[];
+  oportunidades?: string[];
+  riscos?: string[];
+  radar?: {
+    autoridade?: number;
+    aquisicao?: number;
+    conversao?: number;
+    retencao?: number;
+    conteudo?: number;
+    branding?: number;
+  };
+  radar_data?: Array<{ eixo: string; score: number; max?: number }>;
+  [key: string]: unknown;
+}
+
 export interface StrategyResult {
   objetivo_principal?: string;
   canal_prioritario?: string;
   investimento_recomendado?: string;
   potencial_crescimento?: string;
   resumo_executivo?: string;
-  diagnostico?: {
-    score_geral?: number;
-    analise?: string;
-    pontos_fortes?: string[];
-    oportunidades?: string[];
-    riscos?: string[];
-    radar?: {
-      autoridade?: number;
-      aquisicao?: number;
-      conversao?: number;
-      retencao?: number;
-      conteudo?: number;
-      branding?: number;
-    };
-  };
-  cliente_ideal?: Record<string, unknown>;
-  analise_competitiva?: Record<string, unknown>;
-  tom_comunicacao?: Record<string, unknown>;
-  estrategia_aquisicao?: Record<string, unknown>;
-  estrategia_conteudo?: Record<string, unknown>;
-  projecoes?: Record<string, unknown>;
-  execucao?: Record<string, unknown>;
+  diagnostico?: DiagnosticoData;
+  diagnostico_gps?: DiagnosticoData & { radar_data?: Array<{ eixo: string; score: number; max?: number }> };
+  icp?: IcpData;
+  proposta_valor?: PropostaValorData;
+  analise_concorrencia?: AnaliseConcorrenciaData;
+  tom_comunicacao?: TomComunicacaoData;
+  estrategia_aquisicao?: EstrategiaAquisicaoData;
+  estrategia_conteudo?: EstrategiaConteudoData;
+  plano_crescimento?: PlanoCrescimentoData;
+  benchmarks_setor?: BenchmarkSetorData;
+  estrutura_recomendada?: EstruturaRow[];
+  plano_execucao?: PlanoMesRow[];
+  diagnostico_comercial?: Record<string, unknown> | null;
   [key: string]: unknown;
 }
 
 export interface ConcorrenteRow {
   nome: string;
-  pontos_fortes?: string[];
-  pontos_fracos?: string[];
+  pontos_fortes?: string | string[];
+  pontos_fracos?: string | string[];
   diferencial_vs?: string;
+  oportunidade_diferenciacao?: string;
   [key: string]: unknown;
 }
 
 export interface CanalRow {
   nome: string;
   peso?: number;
+  percentual?: number;
   descricao?: string;
   acoes?: string[];
+  acao_principal?: string;
+  tipo?: string;
   investimento_sugerido?: string;
   [key: string]: unknown;
 }
@@ -51,6 +148,9 @@ export interface PilarRow {
   nome: string;
   descricao?: string;
   porcentagem?: number;
+  percentual?: number;
+  tipo?: string;
+  exemplos?: string[];
   formatos?: string[];
   [key: string]: unknown;
 }
@@ -83,12 +183,16 @@ export interface EstruturaRow {
   titulo: string;
   descricao?: string;
   responsavel?: string;
+  status?: string;
+  prioridade?: string;
+  recomendacao?: string;
   [key: string]: unknown;
 }
 
 export interface PlanoMesRow {
   titulo: string;
   descricao?: string;
+  mes?: number | string;
   passos?: PassoRow[];
   [key: string]: unknown;
 }

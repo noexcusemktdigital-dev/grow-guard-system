@@ -551,13 +551,13 @@ function NovaEstrategiaTab() {
             <RefreshCw className="w-4 h-4 mr-1" /> Novo Diagnóstico
           </Button>
 
-          {leads && (leads as any[]).length > 0 && (
+          {leads && (leads as Array<{ id: string; name: string }>).length > 0 && (
             <Select onValueChange={handleLinkLead}>
               <SelectTrigger className="w-[200px] h-9 text-xs">
                 <SelectValue placeholder="Vincular ao CRM..." />
               </SelectTrigger>
               <SelectContent>
-                {(leads as any[]).map((lead) => (
+                {(leads as Array<{ id: string; name: string }>).map((lead) => (
                   <SelectItem key={lead.id} value={lead.id} className="text-xs">
                     {lead.name}
                   </SelectItem>

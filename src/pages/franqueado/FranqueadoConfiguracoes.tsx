@@ -137,7 +137,7 @@ function TeamTab() {
         },
       });
       if (error) {
-        const ctx = (error as any).context;
+        const ctx = (error as { context?: unknown }).context;
         if (ctx instanceof Response) {
           const body = await ctx.json().catch(() => null);
           throw new Error(body?.error || error.message);

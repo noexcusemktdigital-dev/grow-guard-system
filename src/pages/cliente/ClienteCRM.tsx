@@ -82,7 +82,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [newLeadOpen, setNewLeadOpen] = useState(false);
-  const [newLeadContact, setNewLeadContact] = useState<any>(null);
+  const [newLeadContact, setNewLeadContact] = useState<LeadRow | null>(null);
   const [funnelManagerOpen, setFunnelManagerOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
@@ -128,18 +128,18 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
   }, [selectedFunnel]);
 
   const rawLeads = leads ?? [];
-  const leadIds = useMemo(() => rawLeads.map((l: any) => l.id), [rawLeads]);
+  const leadIds = useMemo(() => rawLeads.map((l) => l.id), [rawLeads]);
   const { data: taskCounts } = useCrmLeadTaskCounts(leadIds);
   const allLeads = useMemo(() => {
     if (!taskCounts) return rawLeads;
     const todayStr = new Date().toISOString().split("T")[0];
     const yesterday = `${todayStr}T00:00:00.000Z`;
     const tomorrow = `${todayStr}T23:59:59.999Z`;
-    return rawLeads.map((l: any) => {
+    return rawLeads.map((l) => {
       const c = taskCounts[l.id];
       if (!c || c.total === 0) return { ...l, crm_tasks: [] };
       // Synthesize minimal crm_tasks entries for backward compatibility with card UI
-      const tasks: any[] = [];
+      const tasks: Array<{ id: string; due_date: string; completed_at: null }> = [];
       for (let i = 0; i < c.overdue; i++) tasks.push({ id: `syn-o-${l.id}-${i}`, due_date: yesterday, completed_at: null });
       for (let i = 0; i < c.total - c.overdue; i++) tasks.push({ id: `syn-p-${l.id}-${i}`, due_date: tomorrow, completed_at: null });
       return { ...l, crm_tasks: tasks };
@@ -192,9 +192,9 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
       else if (stages.length > 0) map[stages[0].key]?.push(l);
     });
     const earliestDue = (l: LeadRow): number => {
-      const tasks = (l.crm_tasks || []).filter((t: any) => !t.completed_at && t.due_date);
+      const tasks = (l.crm_tasks || []).filter((t) => !t.completed_at && t.due_date);
       if (tasks.length === 0) return Number.POSITIVE_INFINITY;
-      return Math.min(...tasks.map((t: any) => new Date(t.due_date).getTime()));
+      return Math.min(...tasks.map((t) => new Date(t.due_date!).getTime()));
     };
     const cmp = (a: LeadRow, b: LeadRow): number => {
       switch (orderBy) {
@@ -210,8 +210,8 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
         }
         case "updated_at":
         default: {
-          const ua = new Date((a as any).updated_at || a.created_at).getTime();
-          const ub = new Date((b as any).updated_at || b.created_at).getTime();
+          const ua = new Date(a.updated_at || a.created_at).getTime();
+          const ub = new Date(b.updated_at || b.created_at).getTime();
           return ub - ua;
         }
       }
@@ -254,7 +254,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
       currentStageIndex >= 0 && targetStageIndex >= 0 && targetStageIndex < currentStageIndex;
 
     if (isMovingBack) {
-      const funnel = (funnelsData || []).find(f => f.id === (lead as any).funnel_id) as any;
+      const funnel = (funnelsData || []).find(f => f.id === lead.funnel_id);
       const mode = funnel?.backtrack_mode || (funnel?.allow_backtrack === false ? "block" : "allow");
 
       if (mode === "block" || funnel?.allow_backtrack === false) {
@@ -280,7 +280,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
               .eq("organization_id", orgId)
               .in("role", ["cliente_admin", "admin", "super_admin"]);
 
-            const rows = (admins || []).map((a: any) => ({
+            const rows = (admins || []).map((a: { user_id: string }) => ({
               user_id: a.user_id,
               organization_id: orgId,
               title: "Lead retrocedeu no funil",
@@ -573,7 +573,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
       )}
 
       {/* Lead Detail Sheet */}
-      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>, custom_fields_schema: (f as any).custom_fields_schema || [] }))} currentFunnelId={selectedFunnelId || undefined} />
+      <CrmLeadDetailSheet lead={selectedLead} onClose={() => setSelectedLead(null)} stages={stages} funnels={accessibleFunnels.map(f => ({ id: f.id, name: f.name, stages: f.stages as Array<{ key?: string; label?: string; color?: string; icon?: string }>, custom_fields_schema: f.custom_fields_schema || [] }))} currentFunnelId={selectedFunnelId || undefined} />
 
       {/* New Lead Dialog */}
       <CrmNewLeadDialog open={newLeadOpen} onOpenChange={(o) => { setNewLeadOpen(o); if (!o) setNewLeadContact(null); }} defaultStage={stages[0]?.key || "novo"} funnelId={selectedFunnelId || undefined} prefillContact={newLeadContact} />

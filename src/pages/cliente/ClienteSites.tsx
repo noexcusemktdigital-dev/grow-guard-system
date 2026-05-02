@@ -256,7 +256,7 @@ export default function ClienteSites() {
         let errorMsg = "Tente novamente.";
         let errorCode = "";
         try {
-          const ctx = (error as any)?.context;
+          const ctx = (error as { context?: unknown })?.context;
           if (ctx instanceof Response) {
             const body = await ctx.json().catch(() => null);
             errorMsg = body?.error || error.message || errorMsg;

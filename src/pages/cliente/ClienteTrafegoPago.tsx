@@ -25,6 +25,7 @@ import {
   useActiveTrafficStrategy, useTrafficStrategyHistory,
   useGenerateTrafficStrategy, useApproveTrafficStrategy,
   TrafficWizardData,
+  type TrafficPlatformStrategy,
 } from "@/hooks/useTrafficStrategy";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 import { useClienteContent } from "@/hooks/useClienteContent";
@@ -208,7 +209,7 @@ export default function ClienteTrafegoPago() {
   };
 
   const sourceData = (activeStrategy?.source_data || {}) as Record<string, unknown>;
-  const platforms = (activeStrategy?.platforms || []) as any[];
+  const platforms = (activeStrategy?.platforms || []) as TrafficPlatformStrategy[];
 
   // Filter campaigns by platform type (with normalization)
   const filteredCampaigns = (campaigns || []).filter((c) => {

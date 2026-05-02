@@ -118,6 +118,8 @@ export interface LeadRow {
   lost_reason?: string | null;
   whatsapp_contact_id?: string | null;
   assigned_to?: string | null;
+  updated_at?: string;
+  funnel_id?: string | null;
   crm_tasks?: Array<{ id: string; due_date: string | null; completed_at: string | null }> | null;
   [key: string]: unknown;
 }

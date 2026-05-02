@@ -107,7 +107,7 @@ function ScoreSection({ analise }: { analise: FollowupAnalise }) {
     { key: "vendas", label: "Vendas", color: "#f97316", icon: ShoppingCart },
   ];
 
-  const getScore = (section?: AnaliseSubSection) => (section as any)?.score || 0;
+  const getScore = (section?: AnaliseSubSection) => section?.score || 0;
   const scores = {
     conteudo: getScore(analise.conteudo),
     trafego: getScore(analise.trafego),
@@ -211,10 +211,10 @@ function AnaliseAreaSection({
   if (!section) return null;
 
   const metricas = Object.entries(section.metricas || {}).filter(([, v]) => (v as number) > 0);
-  const indicadores = (section as any).indicadores || [];
+  const indicadores = section.indicadores || [];
   const positivos = section.positivos?.filter(Boolean) || [];
   const negativos = section.negativos?.filter(Boolean) || [];
-  const score = (section as any).score || 0;
+  const score = section.score || 0;
   const hasContent = metricas.length > 0 || indicadores.length > 0 || positivos.length > 0 || negativos.length > 0 || section.observacoes;
   if (!hasContent) return null;
 
@@ -251,7 +251,7 @@ function AnaliseAreaSection({
             Indicadores — Meta vs Realizado
           </h3>
           <div className="space-y-5">
-            {indicadores.map((ind: any, i: number) => {
+            {indicadores.map((ind, i) => {
               const pct = ind.ideal > 0 ? Math.min((ind.atual / ind.ideal) * 100, 100) : 0;
               const barColor = pct >= 90 ? "#22c55e" : pct >= 60 ? "#f97316" : "#ef4444";
               return (
@@ -278,13 +278,13 @@ function AnaliseAreaSection({
         </div>
       )}
 
-      {!isConteudo && (section as any).imagens?.filter(Boolean).length > 0 && (
+      {!isConteudo && section.imagens?.filter(Boolean).length > 0 && (
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 mb-8">
           <h3 className="text-sm text-gray-500 uppercase tracking-widest mb-4">
             Anúncios em Veiculação
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {(section as any).imagens.filter(Boolean).map((url: string, idx: number) => (
+            {section.imagens!.filter(Boolean).map((url, idx) => (
               <img key={idx} src={url} alt={`Anúncio ${idx + 1}`}
                 className="rounded-xl border border-white/10 w-full object-cover aspect-square" />
             ))}
@@ -418,7 +418,7 @@ function ConteudoSection({ plano, analise }: { plano: FollowupPlano; analise?: F
       {/* Pautas */}
       <div className="space-y-8">
         {pautas.map((p, i) => {
-          const refImgs = ((p as any).imagens_referencia || []).filter(Boolean) as string[];
+          const refImgs = (p.imagens_referencia || []).filter(Boolean);
           return (
             <motion.div
               key={i}

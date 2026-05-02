@@ -308,7 +308,7 @@ function NewStrategyResultView({ result, radarRef, barChartRef, lineChartRef }: 
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { key: "estrutura", label: "🏗️ Estrutura", value: gps.gargalos_ece.estrutura || (gps.gargalos_ece as any).infraestrutura },
+              { key: "estrutura", label: "🏗️ Estrutura", value: gps.gargalos_ece.estrutura || gps.gargalos_ece.infraestrutura },
               { key: "coleta", label: "📊 Coleta de Dados", value: gps.gargalos_ece.coleta },
               { key: "escala", label: "📈 Escala", value: gps.gargalos_ece.escala },
             ].map((g) => (
