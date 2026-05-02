@@ -1,4 +1,4 @@
-// @ts-nocheck
+import type { ElementType } from "react";
 import { DollarSign, Target, TrendingDown, TrendingUp, Percent, Minus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAdMetrics, useAdMetricsSummary } from "@/hooks/useAdPlatforms";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface KPI {
   label: string;
   value: string;
-  icon: React.ElementType;
+  icon: ElementType;
   delta: number | null; // % change vs previous period
   invert?: boolean; // for CPL: a queda é boa
 }
