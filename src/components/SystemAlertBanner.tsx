@@ -1,4 +1,3 @@
-// @ts-nocheck
 // OPS-005: System alert banner — shows dismissible banners for system health issues
 import { useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'

@@ -1,10 +1,9 @@
-// @ts-nocheck
-import { memo } from "react";
+import { memo, ReactNode } from "react";
 
 interface SectionHeaderProps {
   title: string;
   description?: string;
-  actions?: React.ReactNode;
+  actions?: ReactNode;
 }
 
 export const SectionHeader = memo(function SectionHeader({ title, description, actions }: SectionHeaderProps) {
