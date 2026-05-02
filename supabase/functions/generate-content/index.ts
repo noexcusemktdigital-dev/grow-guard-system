@@ -6,10 +6,13 @@ import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
 import { buildSystemPrompt, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-content.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const CREDIT_COST_PER_CONTENT = 30;
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-content');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
@@ -232,7 +235,7 @@ Use estas informações para personalizar os conteúdos.`;
       salesPlanCtx,
     });
     const userPrompt = buildUserPrompt(count);
-    console.log(`[generate-content] prompt_version=${PROMPT_VERSION}`);
+    log.info(`prompt_version=${PROMPT_VERSION}`);
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -318,7 +321,7 @@ Use estas informações para personalizar os conteúdos.`;
     const result = JSON.parse(toolCall.function.arguments);
 
     return new Response(JSON.stringify(result), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (e) {
     const valResp = validationErrorResponse(e, getCorsHeaders(req));

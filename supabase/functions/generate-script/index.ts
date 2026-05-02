@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { SYSTEM_PROMPT, STAGE_PROMPTS, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-script.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 // Fixed credit cost per script generation
 const CREDIT_COST = 20;
@@ -12,8 +13,10 @@ const CREDIT_COST = 20;
 const stagePrompts = STAGE_PROMPTS;
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-script');
+  const log = makeLogger(ctx);
   const origin = req.headers.get("origin") || "unknown";
-  console.log(`[generate-script] ${req.method} from origin=${origin}`);
+  log.info(`${req.method} from origin=${origin}`);
 
   if (req.method === "OPTIONS")
     return new Response(null, { headers: getCorsHeaders(req) });
@@ -222,11 +225,11 @@ serve(async (req) => {
         tokens_used: tokensUsed,
       }),
       {
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
       }
     );
   } catch (e) {
-    console.error("generate-script error:", e);
+    log.error("generate-script error", { error: String(e) });
     return new Response(
       JSON.stringify({
         error: e instanceof Error ? e.message : "Erro desconhecido",

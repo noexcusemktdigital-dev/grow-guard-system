@@ -10,6 +10,7 @@ import {
   buildUserPrompt as buildStrategyUserPrompt,
   PROMPT_VERSION,
 } from '../_shared/prompts/generate-strategy.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const CREDIT_COST = 50;
 
@@ -349,6 +350,8 @@ async function callAI(
 
 // ── MAIN HANDLER ────────────────────────────────────────────────────
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-strategy');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS")
     return new Response(null, { headers: getCorsHeaders(req) });
 
@@ -561,10 +564,10 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ result: mergedResult, tokens_used: totalTokens }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      { headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" } }
     );
   } catch (err: unknown) {
-    console.error("Strategy generation error:", err);
+    log.error("Strategy generation error", { error: String(err) });
     const message = err instanceof Error ? err.message : "Erro interno";
 
     if (message === "RATE_LIMIT") {

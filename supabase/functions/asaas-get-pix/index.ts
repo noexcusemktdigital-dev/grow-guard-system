@@ -2,8 +2,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-get-pix');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
@@ -50,10 +53,10 @@ Deno.serve(async (req) => {
       encoded_image: pixData.encodedImage,
       copy_paste: pixData.payload,
     }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    console.error("asaas-get-pix error:", err);
+    log.error("asaas-get-pix error", { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

@@ -1,8 +1,11 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'crm-run-automations');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
@@ -189,10 +192,10 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ ok: true, processed: processedCount }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      { headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("crm-run-automations error:", err);
+    log.error("crm-run-automations error", { error: String(err) });
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

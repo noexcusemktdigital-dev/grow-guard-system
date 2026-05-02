@@ -3,8 +3,11 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-social-briefing');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   // SEC-NOE-002: User auth required
@@ -216,10 +219,10 @@ As 2 subheadlines devem complementar as headlines de formas diferentes.
     console.log("✅ Briefing structured:", JSON.stringify(result).slice(0, 300));
 
     return new Response(JSON.stringify(result), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("generate-social-briefing error:", err);
+    log.error("generate-social-briefing error", { error: String(err) });
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Erro desconhecido" }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
