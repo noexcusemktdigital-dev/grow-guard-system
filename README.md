@@ -1,5 +1,14 @@
 # Sistema Noé (grow-guard-system)
 
+[![CI](https://img.shields.io/github/actions/workflow/status/noexcusemktdigital-dev/grow-guard-system/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/noexcusemktdigital-dev/grow-guard-system/actions)
+[![Version](https://img.shields.io/github/package-json/v/noexcusemktdigital-dev/grow-guard-system?style=flat-square)](package.json)
+[![License](https://img.shields.io/badge/license-proprietary-red?style=flat-square)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](https://nodejs.org)
+[![PWA Ready](https://img.shields.io/badge/PWA-ready-purple?style=flat-square)](https://web.dev/progressive-web-apps/)
+[![LGPD](https://img.shields.io/badge/LGPD-compliant-blue?style=flat-square)](docs/SECURITY-POLICY.md)
+[![Supabase](https://img.shields.io/badge/Supabase-gxrhdpbbxfipeopdyygn-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com)
+[![Lovable](https://img.shields.io/badge/deploy-Lovable%20Cloud-orange?style=flat-square)](https://lovable.dev)
+
 > Plataforma de marketing digital para redes de franquias.
 > Cliente principal: NOEXCUSE (Davi Tesch).
 > Operada via Lovable Cloud.
@@ -18,6 +27,19 @@ Sistema Noé é um SaaS multi-tenant para gestão de marketing digital em redes 
 - **Estado/Dados:** TanStack Query, Zod, react-hook-form
 - **Testes:** Vitest + Testing Library + jsdom
 
+## Características
+
+- **PWA Ready** — Progressive Web App com suporte offline e instalação nativa
+- **Multi-tenant** — Isolamento por `organization_id` + Row Level Security no Supabase
+- **LGPD Compliant** — Sanitização de PII via `redact.ts`, consentimento e retenção controlada
+- **Idempotência** — `withIdempotency` wrapper para todas as mutações críticas
+- **Correlation IDs** — Rastreamento ponta a ponta em edge functions e webhooks
+- **Soft-delete** — Registros preservados com `deleted_at`, nunca removidos fisicamente
+- **DSR (Data Subject Requests)** — Suporte a export e exclusão de dados de usuários (LGPD Art. 18)
+- **Anti-BOLA** — `assertOrgMember` em todas as edge functions com mutações cross-tenant
+- **Realtime** — Supabase Realtime em tabelas críticas para updates instantâneos na UI
+- **100+ Edge Functions** — Pagamentos, webhooks, IA generativa, OAuth, crons
+
 ## Arquitetura — 3 Portais
 
 | Portal | Roles | Funcionalidades |
@@ -28,6 +50,23 @@ Sistema Noé é um SaaS multi-tenant para gestão de marketing digital em redes 
 
 Multi-tenant via `organization_id` + RLS no Supabase. Toda mutação crítica passa por `assertOrgMember` (anti-BOLA) nas edge functions.
 
+## Documentação
+
+| Doc | Conteúdo |
+|-----|----------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitetura técnica, 3 portais, helpers, multi-tenancy |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Workflow de contribuição, PRs, testes |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploy via Lovable Cloud, rollback |
+| [SECURITY-POLICY.md](docs/SECURITY-POLICY.md) | Política de segurança e disclosure |
+| [ONBOARDING.md](docs/ONBOARDING.md) | Guia para novos desenvolvedores |
+| [PERFORMANCE.md](docs/PERFORMANCE.md) | Métricas e Lighthouse CI |
+| [FAQ.md](docs/FAQ.md) | Perguntas frequentes |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Diagnóstico e soluções |
+| [adr/](docs/adr/) | Architecture Decision Records |
+| [runbooks/](docs/runbooks/) | Runbooks operacionais |
+| [audits/](docs/audits/) | Auditorias técnicas |
+| [CHANGELOG.md](CHANGELOG.md) | Histórico de mudanças |
+
 ## Setup local
 
 ### Pré-requisitos
@@ -35,7 +74,8 @@ Multi-tenant via `organization_id` + RLS no Supabase. Toda mutação crítica pa
 - npm (ou bun — `bun.lockb` presente)
 - Acesso ao Supabase do projeto (`gxrhdpbbxfipeopdyygn`)
 
-### Passos
+### Quick Start
+
 ```bash
 git clone https://github.com/noexcusemktdigital-dev/grow-guard-system.git
 cd grow-guard-system
@@ -45,6 +85,8 @@ npm run dev
 ```
 
 App roda em http://localhost:8080.
+
+Para guia completo de onboarding (Supabase, segredos, testes, primeiro PR), veja [ONBOARDING.md](docs/ONBOARDING.md).
 
 ## Comandos principais
 
