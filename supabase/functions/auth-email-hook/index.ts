@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
@@ -34,7 +33,8 @@ const EMAIL_SUBJECTS: Record<string, string> = {
   reauthentication: 'Seu código de verificação',
 }
 
-const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const EMAIL_TEMPLATES: Record<string, React.ComponentType<Record<string, unknown>>> = {
   signup: SignupEmail,
   invite: InviteEmail,
   magiclink: MagicLinkEmail,
@@ -162,14 +162,19 @@ async function handleWebhook(req: Request): Promise<Response> {
     })
   }
 
+  type EmailWebhookPayload = {
+    run_id: string;
+    version: string;
+    data: { action_type: string; email: string; url: string; token: string; new_email?: string };
+  };
   // Verify webhook signature
-  let payload: any
+  let payload: EmailWebhookPayload
   let run_id = ''
   try {
     const verified = await verifyWebhookRequest({
       req, secret: apiKey, parser: parseEmailWebhookPayload,
     })
-    payload = verified.payload
+    payload = verified.payload as EmailWebhookPayload
     run_id = payload.run_id
   } catch (error) {
     if (error instanceof WebhookError) {

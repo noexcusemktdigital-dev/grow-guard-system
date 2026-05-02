@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Consolidates 18 parallel queries from ClienteGamificacao into one round-trip.
 // Returns aggregates only — no raw arrays — except for what the UI strictly needs
 // (team ranking entries, claim ids).

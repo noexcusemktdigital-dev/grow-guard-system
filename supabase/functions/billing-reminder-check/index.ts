@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkCronSecret } from '../_shared/cron-auth.ts';
@@ -52,8 +51,9 @@ Deno.serve(async (req) => {
       }
 
       // Find admin email for that org
+      type OrgMember = { role: string; email?: string; full_name?: string };
       const { data: members } = await admin.rpc('get_org_members_with_email', { _org_id: cp.organization_id });
-      const target = (members || []).find((m: any) => m.role === 'cliente_admin') || (members || [])[0];
+      const target = ((members || []) as OrgMember[]).find((m) => m.role === 'cliente_admin') || ((members || []) as OrgMember[])[0];
       if (!target?.email) {
         skippedCount++;
         continue;

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Daily cron: detect organizations with low credit balance (>0 and <=50)
  * and trigger the credits_low campaign email — once every 7 days per org.

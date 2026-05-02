@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ads-oauth-callback
  * Callback OAuth unificado para Meta Ads e Google Ads.
