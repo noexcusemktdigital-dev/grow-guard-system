@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Phone, MapPin, Users, Globe, Briefcase, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { Building2, Phone, MapPin, Users, Globe, Briefcase, ArrowRight, ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,8 +145,14 @@ export default function ClienteOnboardingCompany() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 p-8">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-2 w-full max-w-md" />
+        <div className="space-y-4 w-full max-w-md">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
       </div>
     );
   }

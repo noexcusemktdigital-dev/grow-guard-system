@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -404,7 +405,7 @@ function HistoricoTab() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">Carregando...</div>
+          <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma prospecção encontrada</div>
         ) : (

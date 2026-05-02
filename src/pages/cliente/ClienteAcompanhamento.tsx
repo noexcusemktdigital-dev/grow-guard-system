@@ -3,7 +3,8 @@ import { useClientFoldersForUnit } from "@/hooks/useClientFollowups";
 import FranqueadoAcompanhamento from "@/pages/franqueado/FranqueadoAcompanhamento";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, MessageCircle, Sparkles, BarChart3, Target, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MessageCircle, Sparkles, BarChart3, Target, TrendingUp } from "lucide-react";
 import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 
 const WHATSAPP_NUMBER = "5544991129613";
@@ -16,8 +17,11 @@ export default function ClienteAcompanhamento() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-4 w-2/3" />
       </div>
     );
   }
