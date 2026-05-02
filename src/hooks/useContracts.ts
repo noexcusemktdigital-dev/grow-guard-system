@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export function useContractTemplates() {
   const { data: orgId } = useUserOrgId();
@@ -13,7 +13,7 @@ export function useContractTemplates() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as any[];
+      return data ?? [];
     },
     enabled: !!orgId,
   });
@@ -28,7 +28,7 @@ export function useContracts() {
         _org_id: orgId!,
       });
       if (error) throw error;
-      return data as any[];
+      return data ?? [];
     },
     enabled: !!orgId,
   });
@@ -41,7 +41,7 @@ export function useNetworkContracts() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_network_contracts", { _org_id: orgId! });
       if (error) throw error;
-      return data as any[];
+      return data ?? [];
     },
     enabled: !!orgId,
   });
@@ -54,7 +54,7 @@ export function useContractMutations() {
 
   const createTemplate = useMutation({
     mutationFn: async (t: { name: string; content?: string; variables?: Record<string, unknown>[]; template_type?: string; description?: string }) => {
-      const { data, error } = await supabase.from("contract_templates").insert({ ...t, organization_id: orgId! } as any).select().single();
+      const { data, error } = await supabase.from("contract_templates").insert({ ...t, organization_id: orgId! } satisfies TablesInsert<"contract_templates">).select().single();
       if (error) throw error;
       return data;
     },
@@ -93,7 +93,7 @@ export function useContractMutations() {
       owner_type?: string;
       unit_org_id?: string;
     }) => {
-      const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id } as any).select().single();
+      const { data, error } = await supabase.from("contracts").insert({ ...c, organization_id: orgId!, created_by: user?.id } satisfies TablesInsert<"contracts">).select().single();
       if (error) throw error;
       return data;
     },
@@ -138,7 +138,7 @@ export function useContractMutations() {
         .filter(t => !existingNames.has(t.name))
         .map(t => ({ ...t, organization_id: orgId! }));
       if (toInsert.length === 0) return { inserted: 0 };
-      const { error } = await supabase.from("contract_templates").insert(toInsert as any);
+      const { error } = await supabase.from("contract_templates").insert(toInsert as TablesInsert<"contract_templates">[]);
       if (error) throw error;
       return { inserted: toInsert.length };
     },

@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export interface CrmPartner {
   id: string;
@@ -42,7 +42,7 @@ export function useCrmPartnerMutations() {
     mutationFn: async (partner: Partial<CrmPartner> & { name: string }) => {
       const { data, error } = await supabase
         .from("crm_partner_companies")
-        .insert({ ...partner, organization_id: orgId ?? "" } as any)
+        .insert({ ...partner, organization_id: orgId ?? "" } as TablesInsert<"crm_partner_companies">)
         .select()
         .single();
       if (error) throw error;
