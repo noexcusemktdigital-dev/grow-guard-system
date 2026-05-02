@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOrCreateAsaasCustomer, fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { assertOrgMember, AuthError } from '../_shared/auth.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -53,6 +54,18 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "organization_id and billing_type are required" }), {
         status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
+    }
+
+    // SEC-002: Validate org membership before financial mutation (anti-IDOR/BOLA)
+    try {
+      await assertOrgMember(adminClient, user.id, organization_id);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: err.status, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
+      throw err;
     }
 
     if (!plan) {
