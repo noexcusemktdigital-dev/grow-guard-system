@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkCronSecret } from '../_shared/cron-auth.ts';
+import { logJobFailure } from '../_shared/job-failures.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: getCorsHeaders(req) });
@@ -67,6 +68,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ ok: true, sent, skipped, total: (wallets || []).length }), { headers });
   } catch (err) {
+    await logJobFailure({ jobName: 'credits-low-check', jobKind: 'cron' }, err);
     console.error('credits-low-check error', err);
     return new Response(JSON.stringify({ error: String(err?.message || err) }), { status: 500, headers });
   }
