@@ -322,6 +322,7 @@ export default function ClienteDisparos() {
           </div>
         </SheetContent>
       </Sheet>
+      <AssessoriaPopup storageKey="noexcuse_popup_disparos_v1" servico="Disparos em Massa de WhatsApp" />
     </div>
   );
 }
