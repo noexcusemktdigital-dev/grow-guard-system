@@ -4,6 +4,72 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskPhone, redact } from '../_shared/redact.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * INT-009: Secure org resolver.
+ * Priority: path UUID > DB-whitelisted instance lookup > reject.
+ * Body.instance is NEVER trusted directly as an org identifier —
+ * it is only used as a lookup key against the whatsapp_instances whitelist.
+ * When path contains a UUID, body.instance is ignored for org resolution
+ * (it is still used later to match the specific instance row within that org).
+ */
+async function resolveOrgId(
+  req: Request,
+  body: Record<string, unknown>,
+  adminClient: ReturnType<typeof createClient>,
+  corsHeaders: Record<string, string>,
+): Promise<string | Response> {
+  const url = new URL(req.url);
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const webhookIndex = pathParts.lastIndexOf("evolution-webhook");
+
+  const orgCandidate =
+    webhookIndex >= 0 && pathParts.length > webhookIndex + 1
+      ? pathParts[webhookIndex + 1]
+      : pathParts[pathParts.length - 1];
+
+  // 1. Path UUID takes absolute precedence — ignore body.instance for org resolution
+  if (orgCandidate && UUID_REGEX.test(orgCandidate)) {
+    return orgCandidate;
+  }
+
+  // 2. No UUID in path — resolve via DB whitelist using body.instance
+  const instanceName = String(body.instance || body.instanceName || "").trim();
+  if (!instanceName) {
+    return new Response(
+      JSON.stringify({ error: "org_id (path) or instance name (body) required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  const { data: found, error: lookupErr } = await adminClient
+    .from("whatsapp_instances")
+    .select("organization_id")
+    .eq("instance_id", instanceName)
+    .eq("provider", "evolution")
+    .maybeSingle();
+
+  if (lookupErr) {
+    console.error("[evolution-webhook] resolveOrgId DB error:", lookupErr);
+    return new Response(
+      JSON.stringify({ error: "Failed to resolve organization" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // 3. Ambiguity: no path UUID + instance not found in whitelist → reject
+  if (!found) {
+    console.warn("[evolution-webhook] resolveOrgId: instance not found in whitelist, rejecting", { instanceName });
+    return new Response(
+      JSON.stringify({ error: `No whitelisted instance found: ${instanceName}` }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  return found.organization_id as string;
+}
+
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'evolution-webhook');
   const log = makeLogger(ctx);
@@ -39,46 +105,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     console.log("Evolution webhook payload:", JSON.stringify(redact(body)).slice(0, 500));
 
-    // Extract org_id from URL path.
-    // Supports both:
-    // - /evolution-webhook/{org_id}
-    // - /evolution-webhook/{org_id}/messages-upsert|messages-update
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    const webhookIndex = pathParts.lastIndexOf("evolution-webhook");
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-    const orgCandidate =
-      webhookIndex >= 0 && pathParts.length > webhookIndex + 1
-        ? pathParts[webhookIndex + 1]
-        : pathParts[pathParts.length - 1];
-
-    let orgId = orgCandidate && uuidRegex.test(orgCandidate) ? orgCandidate : "";
-
-    // Fallback: resolve org from instance name when org_id is not present in path
-    if (!orgId) {
-      const instanceName = body.instance || body.instanceName || "";
-      if (!instanceName) {
-        return new Response(JSON.stringify({ error: "org_id or instance name required" }), {
-          status: 400,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
-      const { data: found } = await adminClient
-        .from("whatsapp_instances")
-        .select("organization_id")
-        .eq("instance_id", instanceName)
-        .eq("provider", "evolution")
-        .maybeSingle();
-      if (!found) {
-        return new Response(JSON.stringify({ error: `No instance found for name: ${instanceName}` }), {
-          status: 404,
-          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-        });
-      }
-      orgId = found.organization_id;
-    }
+    // INT-009: Secure org resolution — path UUID always takes precedence over body.instance.
+    // This prevents cross-org attacks where an attacker controls the body.instance field.
+    const orgId = await resolveOrgId(req, body, adminClient, getCorsHeaders(req));
+    if (orgId instanceof Response) return orgId; // error response
 
     const rawEvent = String(body.event || "").trim();
     const event = rawEvent.toUpperCase().replace(/[.\s-]/g, "_");
