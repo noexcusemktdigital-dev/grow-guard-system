@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { maskEmail } from '../_shared/redact.ts';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
@@ -72,8 +73,12 @@ function buildBlockedEmail(name: string, amount: number) {
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'send-billing-reminder');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   const resendApiKey = Deno.env.get('RESEND_API_KEY');

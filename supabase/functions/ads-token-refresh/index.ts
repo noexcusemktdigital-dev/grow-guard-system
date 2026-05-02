@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 /**
  * ads-token-refresh
  * Cron job que renova tokens Meta Ads próximos de expirar.
@@ -37,6 +38,10 @@ interface RefreshResult {
 }
 
 serve(async (req: Request) => {
+  const ctx = newRequestContext(req, 'ads-token-refresh');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   // ── Auth: CRON_SECRET ──────────────────────────────────────────────────────
   const cronSecret = Deno.env.get("CRON_SECRET");
   const authHeader = req.headers.get("Authorization") ?? "";

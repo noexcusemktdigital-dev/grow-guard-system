@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 function parseLastMessageTime(raw: unknown): string | null {
   if (raw == null || typeof raw === "boolean") return null;
@@ -94,8 +95,12 @@ function extractLastMessagePreview(chat: Record<string, unknown>): string | null
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'whatsapp-sync-chats');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   try {

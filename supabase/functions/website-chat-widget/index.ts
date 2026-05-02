@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const WIDGET_JS = `
 (function() {
@@ -127,8 +128,12 @@ const WIDGET_JS = `
 `;
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'website-chat-widget');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   return new Response(WIDGET_JS, { headers: getCorsHeaders(req) });

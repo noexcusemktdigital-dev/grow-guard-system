@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 /**
  * Meta Data Deletion Callback — obrigatório pela Plataforma Meta
  * https://developers.facebook.com/docs/development/create-an-app/app-dashboard/data-deletion-callback
@@ -50,6 +51,10 @@ async function parseSignedRequest(
 }
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'meta-data-deletion');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }

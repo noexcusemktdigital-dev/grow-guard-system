@@ -9,6 +9,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from "../_shared/correlation.ts";
 
 const META_SCOPES = [
   "ads_read",
@@ -20,8 +21,12 @@ const META_SCOPES = [
 ].join(",");
 
 serve(async (req: Request) => {
+  const ctx = newRequestContext(req, 'ads-oauth-start');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

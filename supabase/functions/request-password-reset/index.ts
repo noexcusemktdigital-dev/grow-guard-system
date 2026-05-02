@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { maskEmail } from '../_shared/redact.ts';
 
 const RESEND_API_URL = "https://api.resend.com/emails";
@@ -29,8 +30,12 @@ function buildRecoveryHtml(resetUrl: string): string {
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'request-password-reset');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };

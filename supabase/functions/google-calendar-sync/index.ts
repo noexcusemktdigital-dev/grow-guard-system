@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 async function refreshAccessToken(refreshToken: string, clientId: string, clientSecret: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -19,6 +20,10 @@ async function refreshAccessToken(refreshToken: string, clientId: string, client
 }
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'google-calendar-sync');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   const jsonRes = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
       status,

@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from "../_shared/correlation.ts";
 
 // ============================================================
 // social-metrics-sync
@@ -252,8 +253,12 @@ async function fetchLinkedInMetrics(
 // Main handler
 // -------------------------------------------------------
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-metrics-sync');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   // Fail-closed: validate CRON_SECRET

@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 function jsonRes(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -36,6 +37,10 @@ function sanitizeOrigin(origin: string): string {
 }
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'google-calendar-oauth');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from "../_shared/correlation.ts";
 
 // Helper: HMAC-SHA256 sign + base64url encode
 async function signState(payload: object, secret: string): Promise<string> {
@@ -27,8 +28,12 @@ async function signState(payload: object, secret: string): Promise<string> {
 }
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-oauth-meta');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   if (req.method !== "GET") {

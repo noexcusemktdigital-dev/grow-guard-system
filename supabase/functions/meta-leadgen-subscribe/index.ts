@@ -3,9 +3,14 @@
 // Salva o page_access_token na tabela meta_leadgen_subscribed_pages.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from "../_shared/correlation.ts";
 import { redact } from "../_shared/redact.ts";
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'meta-leadgen-subscribe');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   const headers = { ...getCorsHeaders(req), "Content-Type": "application/json" };
