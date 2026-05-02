@@ -4,8 +4,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-followup.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-followup');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   const authHeader = req.headers.get("Authorization");
@@ -75,10 +78,10 @@ serve(async (req) => {
     const result = JSON.parse(cleaned);
 
     return new Response(JSON.stringify(result), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("generate-followup error:", e);
+    log.error("generate-followup error", { error: String(e) });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

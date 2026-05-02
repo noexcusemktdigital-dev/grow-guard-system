@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -331,11 +332,13 @@ async function publishLinkedIn(
 // ---------------------------------------------------------------------------
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-publish');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
 
-  const corsHeaders = getCorsHeaders(req);
+  const corsHeaders = withCorrelationHeader(ctx, getCorsHeaders(req));
   const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
 
   try {
@@ -570,7 +573,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erro inesperado";
-    console.error("[social-publish] unhandled error:", message);
+    log.error("social-publish unhandled error", { error: message });
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 500, headers: getCorsHeaders(req) }

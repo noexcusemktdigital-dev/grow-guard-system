@@ -3,17 +3,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { fetchPixQrCode } from "../_shared/asaas-customer.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 const SYSTEM_FEE = 250;
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-charge-franchisee');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
-    console.log("[asaas-charge-franchisee] Request received:", req.method);
+    log.info("Request received");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
@@ -191,10 +194,10 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    console.error("asaas-charge-franchisee error:", err);
+    log.error("asaas-charge-franchisee error", { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

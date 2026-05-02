@@ -5,10 +5,13 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
 import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-prospection.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const CREDIT_COST = 30;
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-prospection');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS")
     return new Response(null, { headers: getCorsHeaders(req) });
 
@@ -73,7 +76,7 @@ serve(async (req) => {
       contato_decisor,
       cargo_decisor,
     });
-    console.log(`[generate-prospection] prompt_version=${PROMPT_VERSION}`);
+    log.info(`prompt_version=${PROMPT_VERSION}`);
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -304,12 +307,12 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ result, tokens_used: tokensUsed }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      { headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" } }
     );
   } catch (e) {
     const valResp = validationErrorResponse(e, getCorsHeaders(req));
     if (valResp) return valResp;
-    console.error("generate-prospection error:", e);
+    log.error("generate-prospection error", { error: String(e) });
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }

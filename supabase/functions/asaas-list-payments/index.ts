@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -23,6 +24,8 @@ async function fetchAllPages(baseUrl: string, apiKey: string): Promise<Record<st
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-list-payments');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
@@ -163,10 +166,10 @@ Deno.serve(async (req) => {
     allPayments.sort((a, b) => ((b.dueDate as string) || "").localeCompare((a.dueDate as string) || ""));
 
     return new Response(JSON.stringify({ payments: allPayments }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    console.error("asaas-list-payments error:", err);
+    log.error("asaas-list-payments error", { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

@@ -3,8 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-traffic-strategy');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
@@ -333,10 +336,10 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
     if (insertErr) throw insertErr;
 
     return new Response(JSON.stringify({ success: true, strategy: inserted }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
-    console.error("generate-traffic-strategy error:", err);
+    log.error("generate-traffic-strategy error", { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

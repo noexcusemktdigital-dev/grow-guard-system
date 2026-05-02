@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkCronSecret } from "../_shared/cron-auth.ts";
 import { logJobFailure } from "../_shared/job-failures.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 // ============================================================
 // social-token-refresh
@@ -34,6 +35,8 @@ interface RefreshSummary {
 }
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-token-refresh');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
@@ -194,11 +197,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify(summary), {
       status: 200,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err) {
     await logJobFailure({ jobName: 'social-token-refresh', jobKind: 'cron' }, err);
-    console.error("social-token-refresh unexpected error:", err);
+    log.error("social-token-refresh unexpected error", { error: String(err) });
     return new Response(
       JSON.stringify({ error: "Unexpected error", detail: String(err) }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },

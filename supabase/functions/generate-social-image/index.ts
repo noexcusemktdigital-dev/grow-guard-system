@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const CREDIT_COST = 25;
 
@@ -784,6 +785,8 @@ Generate this image now.`;
 // --- Main handler ---
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-social-image');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   // SEC-NOE-002: User auth required
@@ -1342,10 +1345,10 @@ OUTPUT: The same design with the real brand logo composited in, fully legible.`,
     console.log(`✅ Image uploaded: ${urlData.publicUrl}`);
 
     return new Response(JSON.stringify({ url: urlData.publicUrl }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("generate-social-image error:", e);
+    log.error("generate-social-image error", { error: String(e) });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

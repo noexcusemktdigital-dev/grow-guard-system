@@ -4,16 +4,19 @@ import { getOrCreateAsaasCustomer, fetchPixQrCode, buildSplitConfig } from "../_
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { redact } from "../_shared/redact.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-charge-client');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
-    console.log("[asaas-charge-client] Request received:", req.method);
+    log.info("Request received");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const asaasApiKey = Deno.env.get("ASAAS_API_KEY")!;
@@ -242,9 +245,9 @@ Deno.serve(async (req) => {
       surplus_amount: surplusValue,
       franqueadora_share: franqueadoraShare,
       franchisee_share: franchiseeShare,
-    }), { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    }), { headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" } });
   } catch (err: unknown) {
-    console.error("asaas-charge-client error:", err);
+    log.error("asaas-charge-client error", { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });

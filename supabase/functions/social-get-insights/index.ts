@@ -2,6 +2,7 @@
 // Suporta plataforma 'facebook' (Page) e 'instagram' (IG Business via Page)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -245,6 +246,8 @@ async function fetchInstagram(igUserId: string, accessToken: string): Promise<Om
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-get-insights');
+  const log = makeLogger(ctx);
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
@@ -385,10 +388,10 @@ Deno.serve(async (req) => {
       .eq("id", social_account_id);
 
     return new Response(JSON.stringify({ data: payload, cached: false }), {
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { ...withCorrelationHeader(ctx, cors), "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("[social-get-insights] error", e);
+    log.error("social-get-insights error", { error: String(e) });
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
