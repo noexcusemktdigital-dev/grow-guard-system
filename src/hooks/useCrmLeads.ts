@@ -22,6 +22,7 @@ export function useCrmLeads(funnelId?: string, stage?: string) {
         .from("crm_leads")
         .select("id, name, phone, email, company, value, stage, source, tags, created_at, won_at, lost_at, lost_reason, assigned_to, funnel_id, temperature, whatsapp_contact_id, updated_at", { count: "exact" })
         .eq("organization_id", orgId!)
+        .is("deleted_at", null) // LGPD-002: exclui registros soft-deleted
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (funnelId) q = q.eq("funnel_id", funnelId);
@@ -95,6 +96,7 @@ export function useCrmLeadsByStage({
         .eq("funnel_id", funnelId)
         .eq("stage", stage)
         .is("archived_at", null)
+        .is("deleted_at", null) // LGPD-002: exclui registros soft-deleted
         .order("updated_at", { ascending: false })
         .range(page * COLUMN_PAGE_SIZE, (page + 1) * COLUMN_PAGE_SIZE - 1);
 
@@ -323,7 +325,12 @@ export function useCrmLeadMutations() {
 
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("crm_leads").delete().eq("id", id);
+      // LGPD-002: soft-delete auditável — nunca hard-delete em crm_leads
+      const { error } = await supabase
+        .from("crm_leads")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", id)
+        .is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -351,7 +358,12 @@ export function useCrmLeadMutations() {
 
   const bulkDeleteLeads = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from("crm_leads").delete().in("id", ids);
+      // LGPD-002: soft-delete auditável — nunca hard-delete em crm_leads
+      const { error } = await supabase
+        .from("crm_leads")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", ids)
+        .is("deleted_at", null);
       if (error) throw error;
     },
     onSuccess: () => {
