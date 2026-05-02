@@ -52,11 +52,13 @@ import {
   Clock,
   Zap,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { DiagnosticForm } from "./FranqueadoEstrategiaDiagnosticForm";
-import { StrategyResultView } from "./FranqueadoEstrategiaResultViews";
+
+// PERF-WARN-02: recharts + pdf libs deferred — result view only renders after strategy is generated.
+const StrategyResultView = lazy(() => import("./FranqueadoEstrategiaResultViewsLazy"));
 import type { DiagSection } from "./FranqueadoEstrategiaData";
 import { toast } from "sonner";
 import {
@@ -563,11 +565,13 @@ function NovaEstrategiaTab() {
             </Select>
           )}
         </div>
-        <StrategyResultView
-          result={result}
-          title={resultTitle}
-          onSendToCalculator={result.entregaveis_calculadora?.length ? handleSendToCalculator : undefined}
-        />
+        <Suspense fallback={<div className="py-12 flex items-center justify-center"><span className="text-sm text-muted-foreground">Carregando resultado...</span></div>}>
+          <StrategyResultView
+            result={result}
+            title={resultTitle}
+            onSendToCalculator={result.entregaveis_calculadora?.length ? handleSendToCalculator : undefined}
+          />
+        </Suspense>
       </motion.div>
     );
   }
@@ -815,7 +819,11 @@ function MeusDiagnosticosTab() {
                   </Button>
                 ) : null}
               </div>
-              {selected.result && <StrategyResultView result={selected.result} title={selected.title} />}
+              {selected.result && (
+                <Suspense fallback={<div className="py-8 flex items-center justify-center"><span className="text-sm text-muted-foreground">Carregando...</span></div>}>
+                  <StrategyResultView result={selected.result} title={selected.title} />
+                </Suspense>
+              )}
             </div>
           )}
         </SheetContent>

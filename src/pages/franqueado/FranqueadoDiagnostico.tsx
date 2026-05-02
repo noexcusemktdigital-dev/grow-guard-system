@@ -14,7 +14,10 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { toast } from "sonner";
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from "recharts";
+import { lazy, Suspense } from "react";
+
+// PERF-WARN-02: recharts deferred — chart only renders when user has answered questions.
+const DiagnosticoChart = lazy(() => import("./FranqueadoDiagnosticoChart"));
 
 const CATEGORIES = [
   {
@@ -286,16 +289,9 @@ export default function FranqueadoDiagnostico() {
                 <CardTitle className="text-sm font-semibold">Radar por Categoria</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={categoryAverages}>
-                      <PolarGrid stroke="hsl(var(--border))" />
-                      <PolarAngleAxis dataKey="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                      <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9 }} />
-                      <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
+                <Suspense fallback={<div className="h-64 flex items-center justify-center"><span className="text-xs text-muted-foreground">Carregando gráfico...</span></div>}>
+                  <DiagnosticoChart data={categoryAverages} />
+                </Suspense>
               </CardContent>
             </Card>
           )}
