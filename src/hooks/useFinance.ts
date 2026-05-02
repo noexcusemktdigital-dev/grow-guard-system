@@ -134,7 +134,7 @@ export function useFinanceMutations() {
 
   const updateRevenue = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("finance_revenues").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("finance_revenues").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -143,7 +143,7 @@ export function useFinanceMutations() {
 
   const deleteRevenue = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("finance_revenues").delete().eq("id", id);
+      const { error } = await supabase.from("finance_revenues").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-revenues"] }),
@@ -160,7 +160,7 @@ export function useFinanceMutations() {
 
   const updateExpense = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("finance_expenses").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("finance_expenses").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -169,7 +169,7 @@ export function useFinanceMutations() {
 
   const deleteExpense = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("finance_expenses").delete().eq("id", id);
+      const { error } = await supabase.from("finance_expenses").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["finance-expenses"] }),

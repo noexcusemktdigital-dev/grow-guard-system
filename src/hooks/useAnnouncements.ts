@@ -43,7 +43,7 @@ export function useAnnouncementMutations() {
 
   const updateAnnouncement = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("announcements").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("announcements").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -52,7 +52,7 @@ export function useAnnouncementMutations() {
 
   const deleteAnnouncement = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      const { error } = await supabase.from("announcements").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["announcements"] }),

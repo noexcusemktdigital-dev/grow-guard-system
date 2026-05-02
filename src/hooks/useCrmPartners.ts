@@ -57,6 +57,7 @@ export function useCrmPartnerMutations() {
         .from("crm_partner_companies")
         .update(updates)
         .eq("id", id)
+        .eq("organization_id", orgId!)
         .select()
         .single();
       if (error) throw error;
@@ -67,7 +68,7 @@ export function useCrmPartnerMutations() {
 
   const deletePartner = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("crm_partner_companies").delete().eq("id", id);
+      const { error } = await supabase.from("crm_partner_companies").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-partners"] }),

@@ -52,7 +52,7 @@ export function useCalendarEventMutations() {
 
   const updateEvent = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("calendar_events").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("calendar_events").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -61,7 +61,7 @@ export function useCalendarEventMutations() {
 
   const deleteEvent = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+      const { error } = await supabase.from("calendar_events").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),

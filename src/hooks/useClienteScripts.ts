@@ -41,7 +41,7 @@ export function useClienteScriptMutations() {
 
   const updateScript = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("client_scripts").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("client_scripts").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -50,7 +50,7 @@ export function useClienteScriptMutations() {
 
   const deleteScript = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("client_scripts").delete().eq("id", id);
+      const { error } = await supabase.from("client_scripts").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-scripts"] }),

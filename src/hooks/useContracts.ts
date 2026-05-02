@@ -63,7 +63,7 @@ export function useContractMutations() {
 
   const updateTemplate = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("contract_templates").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("contract_templates").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -105,7 +105,7 @@ export function useContractMutations() {
 
   const updateContract = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: unknown }) => {
-      const { data, error } = await supabase.from("contracts").update(updates).eq("id", id).select().single();
+      const { data, error } = await supabase.from("contracts").update(updates).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -117,7 +117,7 @@ export function useContractMutations() {
 
   const deleteContract = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("contracts").delete().eq("id", id);
+      const { error } = await supabase.from("contracts").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => {
