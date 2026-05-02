@@ -1,0 +1,32 @@
+# CODEOWNERS — Sistema Noé (grow-guard-system)
+#
+# Reviewers obrigatórios em PRs que tocam áreas críticas.
+# Sintaxe: <pattern> <@owner1> <@owner2>
+#
+# Configurar branch protection no GitHub para tornar review obrigatório.
+
+# Default — todo o repo
+*                                   @rafmarutaka
+
+# Migrations SQL — sempre revisar (multi-tenant, RLS, integridade)
+/supabase/migrations/               @rafmarutaka
+
+# Edge functions críticas (financeiro, webhooks)
+/supabase/functions/asaas-*         @rafmarutaka
+/supabase/functions/recharge-*      @rafmarutaka
+/supabase/functions/credits-*       @rafmarutaka
+/supabase/functions/*-webhook/      @rafmarutaka
+/supabase/functions/_shared/        @rafmarutaka
+
+# Auth e RBAC
+/src/hooks/useAuth.ts               @rafmarutaka
+/src/components/ProtectedRoute.tsx  @rafmarutaka
+/src/components/AdminOnlyRoute.tsx  @rafmarutaka
+/src/components/RoleAccessGuard.tsx @rafmarutaka
+
+# CI / config
+/.github/                           @rafmarutaka
+/supabase/config.toml               @rafmarutaka
+
+# Auditorias
+/docs/audits/                       @rafmarutaka

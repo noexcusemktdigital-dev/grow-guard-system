@@ -1,0 +1,90 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":separatePatchReleases",
+    "group:allNonMajor"
+  ],
+  "timezone": "America/Sao_Paulo",
+  "schedule": [
+    "after 6am and before 9am every weekday"
+  ],
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 9am on monday"
+    ]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security",
+      "dependencies"
+    ],
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge devDependencies patches/minors",
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "matchUpdateTypes": [
+        "patch",
+        "minor"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Group React ecosystem",
+      "matchPackagePatterns": [
+        "^react",
+        "^@types/react"
+      ],
+      "groupName": "React"
+    },
+    {
+      "description": "Group Radix UI",
+      "matchPackagePatterns": [
+        "^@radix-ui/"
+      ],
+      "groupName": "Radix UI"
+    },
+    {
+      "description": "Group Supabase",
+      "matchPackagePatterns": [
+        "^@supabase/"
+      ],
+      "groupName": "Supabase"
+    },
+    {
+      "description": "Group Tailwind",
+      "matchPackagePatterns": [
+        "^tailwind",
+        "^@tailwindcss/"
+      ],
+      "groupName": "Tailwind"
+    },
+    {
+      "description": "Major updates manually reviewed",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "dependencies",
+        "major-update"
+      ]
+    }
+  ]
+}
