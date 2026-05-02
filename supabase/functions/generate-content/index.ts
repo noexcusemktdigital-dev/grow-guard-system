@@ -5,6 +5,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
+import { buildSystemPrompt, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-content.ts';
 
 const CREDIT_COST_PER_CONTENT = 30;
 
@@ -215,52 +216,23 @@ Use estas informações para personalizar os conteúdos.`;
       styleCtx = `ESTILO DESTE LOTE: ${estiloLote}. Ajuste a profundidade e linguagem conforme essa diretriz.`;
     }
 
-    const systemPrompt = `Você é um estrategista de marketing digital de alto nível. Sua tarefa é gerar um LOTE de ${count} conteúdos completos, estratégicos e prontos para uso.
-
-${estrategiaCtx}
-${manualCtx}
-${salesPlanCtx}
-
-DISTRIBUIÇÃO DE FORMATOS: ${formatDist || "decidir pela IA"}
-OBJETIVOS SELECIONADOS: ${objList || "educar, autoridade, engajamento, vender"}
-PLATAFORMA: ${plataforma || "Instagram"}
-TOM: ${tom || "definido pela estratégia ou educativo e direto"}
-PÚBLICO: ${publico || "definido pela estratégia"}
-${tema ? `TEMA DIRECIONADOR: ${tema}` : "Use os pilares da estratégia como base temática."}
-${funilCtx ? `\n${funilCtx}` : ""}
-${specialCtx ? `\n${specialCtx}` : ""}
-${styleCtx ? `\n${styleCtx}` : ""}
-
-REGRAS DE DISTRIBUIÇÃO DE OBJETIVOS:
-- ~40% educação/educar
-- ~30% autoridade
-- ~20% prova social / engajamento
-- ~10% oferta / venda
-Distribua os objetivos proporcionalmente entre os ${count} conteúdos.
-
-PARA CADA CONTEÚDO, gere a estrutura conforme o formato:
-
-CARROSSEL: conteudo_principal = array de objetos {slide_numero, titulo, texto} (6-8 slides)
-POST ÚNICO: conteudo_principal = {headline, texto, cta}
-ROTEIRO DE VÍDEO: conteudo_principal = {hook, desenvolvimento, conclusao, cta, texto_tela}
-STORY: conteudo_principal = array de {frame_numero, texto, acao}
-ARTIGO: conteudo_principal = {titulo, introducao, secoes: [{subtitulo, texto}], conclusao}
-POST EDUCATIVO: conteudo_principal = {headline, texto, dica_pratica, cta}
-POST DE AUTORIDADE: conteudo_principal = {headline, texto, dado_autoridade, cta}
-
-Cada conteúdo DEVE ter: titulo, formato, objetivo, conteudo_principal, legenda (completa com emojis), headlines (3 variações), hashtags (5-8), embasamento (por que funciona).
-
-REGRAS DE QUALIDADE:
-- Cada conteúdo deve abordar uma dor ou desejo ESPECÍFICO do público
-- Use o tom de voz definido de forma consistente
-- Inclua gatilhos mentais relevantes (escassez, autoridade, prova social, reciprocidade)
-- As legendas devem ter gancho forte na primeira linha
-- Os CTAs devem ser claros e acionáveis
-- Varie os ângulos — não repita a mesma abordagem
-
-Gere conteúdos COMPLETOS, prontos para publicar. Não gere apenas ideias.`;
-
-    const userPrompt = `Gere exatamente ${count} conteúdos estratégicos seguindo a distribuição solicitada. Retorne no formato da tool.`;
+    const systemPrompt = buildSystemPrompt({
+      count,
+      formatDist,
+      objList,
+      plataforma,
+      tom,
+      publico,
+      tema,
+      funilCtx,
+      specialCtx,
+      styleCtx,
+      estrategiaCtx,
+      manualCtx,
+      salesPlanCtx,
+    });
+    const userPrompt = buildUserPrompt(count);
+    console.log(`[generate-content] prompt_version=${PROMPT_VERSION}`);
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
