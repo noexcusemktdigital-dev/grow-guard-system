@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -37,10 +36,11 @@ export function CrmRouletteConfig() {
     if (funnels) {
       const configs: typeof funnelConfigs = {};
       funnels.forEach(f => {
+        const ff = f as typeof f & { roulette_enabled?: boolean; roulette_stage?: string; roulette_members?: string[] };
         configs[f.id] = {
-          enabled: (f as any).roulette_enabled || false,
-          stage: (f as any).roulette_stage || "",
-          members: ((f as any).roulette_members as string[]) || [],
+          enabled: ff.roulette_enabled || false,
+          stage: ff.roulette_stage || "",
+          members: ff.roulette_members || [],
         };
       });
       setFunnelConfigs(configs);
@@ -64,11 +64,11 @@ export function CrmRouletteConfig() {
       roulette_enabled: config.enabled,
       roulette_stage: config.stage || null,
       roulette_members: config.members,
-    } as any);
+    } as Parameters<typeof updateFunnel.mutate>[0]);
     toast({ title: "Roleta do funil salva" });
   };
 
-  const updateFunnelConfig = (funnelId: string, key: string, value: any) => {
+  const updateFunnelConfig = (funnelId: string, key: keyof (typeof funnelConfigs)[string], value: boolean | string | string[]) => {
     setFunnelConfigs(prev => ({
       ...prev,
       [funnelId]: { ...prev[funnelId], [key]: value },
@@ -133,7 +133,7 @@ export function CrmRouletteConfig() {
       {/* Per-Funnel Roulette */}
       {funnels && funnels.map(funnel => {
         const config = funnelConfigs[funnel.id] || { enabled: false, stage: "", members: [] };
-        const stages = (funnel.stages as any[]) || [];
+        const stages = funnel.stages || [];
 
         return (
           <Card key={funnel.id}>
@@ -166,7 +166,7 @@ export function CrmRouletteConfig() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="any" className="text-xs">Qualquer etapa (lead criado)</SelectItem>
-                        {stages.map((s: any) => (
+                        {stages.map((s) => (
                           <SelectItem key={s.key} value={s.key} className="text-xs">
                             {s.label}
                           </SelectItem>

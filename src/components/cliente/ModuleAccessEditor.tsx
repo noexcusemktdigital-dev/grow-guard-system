@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -49,7 +48,7 @@ export function ModuleAccessEditor({ userId }: Props) {
     queryFn: async () => {
       if (!orgId) return [];
       const { data, error } = await supabase
-        .from("org_user_permissions" as any)
+        .from("org_user_permissions")
         .select("permission, granted")
         .eq("user_id", userId)
         .eq("organization_id", orgId);
@@ -69,7 +68,7 @@ export function ModuleAccessEditor({ userId }: Props) {
     mutationFn: async ({ permission, value }: { permission: string; value: boolean }) => {
       if (!orgId) throw new Error("Org não encontrada");
       const { error } = await supabase
-        .from("org_user_permissions" as any)
+        .from("org_user_permissions")
         .upsert(
           {
             organization_id: orgId,
@@ -84,12 +83,12 @@ export function ModuleAccessEditor({ userId }: Props) {
     },
     onMutate: async ({ permission, value }) => {
       await qc.cancelQueries({ queryKey: ["module-access", userId, orgId] });
-      const prev = qc.getQueryData(["module-access", userId, orgId]) as any[];
+      const prev = qc.getQueryData(["module-access", userId, orgId]) as Array<{ permission: string; granted: boolean }>;
       const next = [...(prev ?? []).filter((r) => r.permission !== permission), { permission, granted: value }];
       qc.setQueryData(["module-access", userId, orgId], next);
       return { prev };
     },
-    onError: (err: any, _v, ctx) => {
+    onError: (err: Error, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["module-access", userId, orgId], ctx.prev);
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
     },

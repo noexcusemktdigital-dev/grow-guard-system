@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -58,7 +57,7 @@ interface LeadRow {
   whatsapp_contact_id?: string | null;
   funnel_id?: string | null;
   assigned_to?: string | null;
-  custom_fields?: Record<string, any> | null;
+  custom_fields?: Record<string, string | number | boolean> | null;
 }
 
 interface FunnelOption {
@@ -135,19 +134,19 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
   const [newTag, setNewTag] = useState("");
   const [editTags, setEditTags] = useState<string[]>(lead.tags || []);
   const [editAssignedTo, setEditAssignedTo] = useState<string>(lead.assigned_to || "");
-  const [editCustomFields, setEditCustomFields] = useState<Record<string, any>>(
-    (lead.custom_fields as Record<string, any>) || {}
+  const [editCustomFields, setEditCustomFields] = useState<Record<string, string | number | boolean>>(
+    lead.custom_fields ?? {}
   );
   const { data: members } = useCrmOrgMembers();
   const { data: membersMap } = useCrmOrgMembersMap();
 
   // Schema de campos adicionais do funil atual (deduplicado contra dados legados)
-  const currentFunnel = funnels?.find(f => f.id === (lead as any).funnel_id) ||
+  const currentFunnel = funnels?.find(f => f.id === lead.funnel_id) ||
     funnels?.find(f => f.id === currentFunnelId);
   const customFieldsSchema = (() => {
-    const raw = (currentFunnel as any)?.custom_fields_schema || [];
+    const raw = currentFunnel?.custom_fields_schema || [];
     const seen = new Set<string>();
-    return raw.map((f: any, i: number) => {
+    return raw.map((f, i) => {
       const baseKey = f?.key || `field_${i}`;
       let key = baseKey;
       let suffix = 2;
@@ -184,8 +183,8 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
       value: editValue ? parseFloat(editValue) : null, stage: editStage, tags: editTags,
       assigned_to: editAssignedTo || null,
       // Preserva campos legados não exibidos no schema atual e mescla os editados
-      custom_fields: { ...((lead.custom_fields as Record<string, any>) || {}), ...editCustomFields },
-    } as any);
+      custom_fields: { ...(lead.custom_fields ?? {}), ...editCustomFields },
+    });
     toast({ title: "Lead atualizado" });
   };
 
@@ -342,7 +341,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
           {customFieldsSchema.length > 0 && (
             <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
               <Label className="text-xs font-semibold">Campos adicionais</Label>
-              {customFieldsSchema.map((field: any, idx: number) => (
+              {customFieldsSchema.map((field, idx) => (
                 <div key={`${field.key}__${idx}`}>
                   <Label className="text-xs">{field.label}{field.required ? " *" : ""}</Label>
                   {field.type === "select" ? (

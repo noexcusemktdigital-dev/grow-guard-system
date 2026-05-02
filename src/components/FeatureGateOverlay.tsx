@@ -1,10 +1,10 @@
-// @ts-nocheck
+import type { ElementType } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useFeatureGate } from "@/contexts/FeatureGateContext";
 import { Lock, Zap, Crown, Target, Megaphone, ShieldAlert, MessageSquare, Users, BarChart3, PenTool, Globe, Send, Bot, Navigation, AlertOctagon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const toolDescriptions: Record<string, { label: string; desc: string; icon: any }> = {
+const toolDescriptions: Record<string, { label: string; desc: string; icon: ElementType }> = {
   "/cliente/chat": {
     label: "Conversas WhatsApp",
     desc: "Espelhe seu WhatsApp e gerencie todos os atendimentos da sua equipe em um só lugar. Envie mensagens, áudios, imagens e documentos direto do sistema.",

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Star, FormInput } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useCrmFunnels, useCrmFunnelMutations } from "@/hooks/useCrmFunnels";
+import { useCrmFunnels, useCrmFunnelMutations, type CrmFunnel } from "@/hooks/useCrmFunnels";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
 import { useToast } from "@/hooks/use-toast";
@@ -26,10 +25,10 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const { toast } = useToast();
   const { data: funnelsData } = useCrmFunnels();
   const { createFunnel, updateFunnel, deleteFunnel } = useCrmFunnelMutations();
-  const [deletingFunnel, setDeletingFunnel] = useState<any>(null);
+  const [deletingFunnel, setDeletingFunnel] = useState<CrmFunnel | null>(null);
   const { data: subscription } = useClienteSubscription();
 
-  const [editingFunnel, setEditingFunnel] = useState<any>(null);
+  const [editingFunnel, setEditingFunnel] = useState<CrmFunnel | null>(null);
   const [localStages, setLocalStages] = useState<FunnelStage[]>([]);
   const [funnelName, setFunnelName] = useState("");
   const [funnelDesc, setFunnelDesc] = useState("");
@@ -37,7 +36,8 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
   const [winLabel, setWinLabel] = useState("Ganho");
   const [lossLabel, setLossLabel] = useState("Perdido");
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
-  const [customFieldsSchema, setCustomFieldsSchema] = useState<any[]>([]);
+  type CustomField = { key: string; label: string; type: string; required?: boolean; placeholder?: string; options?: string[] };
+  const [customFieldsSchema, setCustomFieldsSchema] = useState<CustomField[]>([]);
   const [backtrackMode, setBacktrackMode] = useState<"allow" | "warn" | "block">("allow");
 
   const isTrial = subscription?.status === "trial";
@@ -62,7 +62,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       setLossLabel(editingFunnel.loss_label || "Perdido");
       // Hidrata schema garantindo que toda chave seja única (corrige dados legados onde
       // múltiplos campos com o mesmo label compartilhavam a mesma key e duplicavam valores).
-      const rawSchema = ((editingFunnel as any).custom_fields_schema || []) as any[];
+      const rawSchema = ((editingFunnel as CrmFunnel & { custom_fields_schema?: CustomField[] }).custom_fields_schema || []);
       const seen = new Set<string>();
       const dedupedSchema = rawSchema.map((f, i) => {
         const baseKey = f?.key || `field_${i}`;
@@ -75,9 +75,8 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
         return { ...f, key };
       });
       setCustomFieldsSchema(dedupedSchema);
-      const ef: any = editingFunnel;
       const mode: "allow" | "warn" | "block" =
-        ef.backtrack_mode || (ef.allow_backtrack === false ? "block" : "allow");
+        editingFunnel.backtrack_mode || (editingFunnel.allow_backtrack === false ? "block" : "allow");
       setBacktrackMode(mode);
     }
   }, [editingFunnel]);
@@ -92,7 +91,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
     setStageDialogOpen(true);
   };
 
-  const openEditFunnel = (funnel: { id: string; name: string; description?: string; stages: unknown[] }) => {
+  const openEditFunnel = (funnel: CrmFunnel) => {
     setEditingFunnel(funnel);
     setStageDialogOpen(true);
   };
@@ -102,7 +101,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
     const backtrackPayload = {
       allow_backtrack: backtrackMode !== "block",
       backtrack_mode: backtrackMode,
-    } as any;
+    };
     if (editingFunnel) {
       updateFunnel.mutate({ id: editingFunnel.id, name: funnelName, description: funnelDesc, stages: localStages, goal_type: goalType, win_label: winLabel, loss_label: lossLabel, custom_fields_schema: customFieldsSchema, ...backtrackPayload });
     } else {
@@ -174,7 +173,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                 </div>
                 <div className="flex gap-1">
                   {!funnel.is_default && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAsDefault(funnel.id)}>Tornar padrão</Button>}
-                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEditFunnel(funnel as any)}>Editar</Button>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => openEditFunnel(funnel)}>Editar</Button>
                   {!funnel.is_default && deleteFunnel && (
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setDeletingFunnel(funnel)}>
                       <Trash2 className="w-3.5 h-3.5" />
@@ -265,7 +264,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                 <p className="text-[10px] text-muted-foreground">Nenhum campo adicional. Clique em "+ Adicionar campo" para criar.</p>
               )}
               <div className="space-y-2">
-                {customFieldsSchema.map((field: any, idx: number) => (
+                {customFieldsSchema.map((field, idx) => (
                   <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border bg-background/60">
                     <Input
                       value={field.label}
@@ -291,7 +290,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
                         <SelectItem value="select" className="text-xs">Seleção</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setCustomFieldsSchema(customFieldsSchema.filter((_: any, i: number) => i !== idx))}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={() => setCustomFieldsSchema(customFieldsSchema.filter((_, i) => i !== idx))}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>

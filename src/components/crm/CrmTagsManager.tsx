@@ -1,10 +1,10 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/typed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ export function CrmTagsManager() {
         .eq("organization_id", orgId!);
 
       const tagMap: Record<string, number> = {};
-      data?.forEach((lead: any) => {
+      data?.forEach((lead: Pick<Tables<'crm_leads'>, 'tags'>) => {
         (lead.tags || []).forEach((tag: string) => {
           tagMap[tag] = (tagMap[tag] || 0) + 1;
         });
@@ -66,7 +66,7 @@ export function CrmTagsManager() {
       setCreating(false);
       toast({ title: "Tag criada. Aplique-a a um lead para persistir." });
     },
-    onError: (e: any) => toast({ title: e.message || "Erro ao criar tag", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: e.message || "Erro ao criar tag", variant: "destructive" }),
   });
 
   const renameTag = useMutation({
@@ -79,10 +79,10 @@ export function CrmTagsManager() {
         .contains("tags", [oldName]);
 
       for (const lead of leads || []) {
-        const newTags = ((lead as any).tags || []).map((t: string) =>
+        const newTags = (lead.tags || []).map((t: string) =>
           t === oldName ? newName : t,
         );
-        await supabase.from("crm_leads").update({ tags: newTags }).eq("id", (lead as any).id);
+        await supabase.from("crm_leads").update({ tags: newTags }).eq("id", lead.id);
       }
     },
     onSuccess: () => {
@@ -102,8 +102,8 @@ export function CrmTagsManager() {
         .contains("tags", [tagName]);
 
       for (const lead of leads || []) {
-        const newTags = ((lead as any).tags || []).filter((t: string) => t !== tagName);
-        await supabase.from("crm_leads").update({ tags: newTags }).eq("id", (lead as any).id);
+        const newTags = (lead.tags || []).filter((t: string) => t !== tagName);
+        await supabase.from("crm_leads").update({ tags: newTags }).eq("id", lead.id);
       }
     },
     onSuccess: () => {

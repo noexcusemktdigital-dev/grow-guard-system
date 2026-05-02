@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -218,7 +217,7 @@ function OverviewContent({ data }: { data: SocialInsights }) {
                     borderRadius: 8,
                     fontSize: 12,
                   }}
-                  formatter={(value: number, _n, item: any) => [
+                  formatter={(value: number, _n, item: { payload?: { legenda?: string } }) => [
                     `${fmt(value)} interações`,
                     item?.payload?.legenda ? `${item.payload.legenda}…` : "Engajamento",
                   ]}

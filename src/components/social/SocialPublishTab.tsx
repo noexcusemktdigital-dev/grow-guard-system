@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -43,6 +42,7 @@ import {
 } from "@/hooks/useSocialPublishing";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import type { SocialAccount } from "@/hooks/useSocialAccounts";
+import type { Tables } from "@/integrations/supabase/typed";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -151,7 +151,7 @@ function ScheduledWeekGrid({
   onCancel,
   cancelling,
 }: {
-  posts: any[];
+  posts: Tables<'social_scheduled_posts'>[];
   onCancel: (id: string) => void;
   cancelling: boolean;
 }) {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef } from "react";
 import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, ArrowRight, ArrowLeft, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -11,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 const CSV_TEMPLATE_HEADERS = "nome;email;telefone;empresa;cargo;origem;tags;notas";
 const CSV_TEMPLATE_EXAMPLE = 'João Silva;joao@email.com;11999999999;Empresa XYZ;Diretor;Indicação;"tag1, tag2";Observações aqui';
@@ -161,7 +161,7 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
     setProgress(0);
     setImportedCount(0);
 
-    const rows = parsedRows.map(row => ({
+    const rows: TablesInsert<'crm_contacts'>[] = parsedRows.map(row => ({
       organization_id: orgId ?? "",
       name: row.name,
       email: row.email || null,
@@ -184,7 +184,7 @@ export function CrmCsvImportDialog({ open, onOpenChange }: Props) {
     let imported = 0;
 
     for (const batch of batches) {
-      const { error } = await supabase.from("crm_contacts").insert(batch as any);
+      const { error } = await supabase.from("crm_contacts").insert(batch);
       if (error) {
         errors += batch.length;
       } else {
