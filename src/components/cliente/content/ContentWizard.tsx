@@ -15,7 +15,7 @@ const STORAGE_KEY = "roteiro-wizard-prefs-v2";
 function loadPrefs() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
 }
-function savePrefs(prefs: any) {
+function savePrefs(prefs: Record<string, unknown>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
 }
 

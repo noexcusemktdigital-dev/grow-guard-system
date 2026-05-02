@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSupportTokens, useSupportLogs, useGenerateSupportToken, useRevokeSupportToken } from "@/hooks/useSupportAccess";
+import { Tables } from "@/integrations/supabase/types";
 import { formatDistanceToNow, format, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -94,7 +95,7 @@ export function SupportAccessManager() {
     setCustomMinutes("");
   };
 
-  const getStatusBadge = (token: any) => {
+  const getStatusBadge = (token: Tables<"support_access_tokens">) => {
     if (!token.is_active) {
       if (token.revoked_at) return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Revogado</Badge>;
       return <Badge variant="secondary" className="gap-1"><Clock className="w-3 h-3" /> Expirado</Badge>;

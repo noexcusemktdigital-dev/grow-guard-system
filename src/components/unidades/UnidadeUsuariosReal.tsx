@@ -58,7 +58,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
         body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId, team_ids: inviteTeamIds },
       });
       if (error) {
-        const ctx = (error as any).context;
+        const ctx = (error as { context?: unknown }).context;
         if (ctx instanceof Response) {
           const body = await ctx.json().catch(() => null);
           throw new Error(body?.error || error.message);

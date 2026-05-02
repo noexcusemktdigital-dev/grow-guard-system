@@ -12,7 +12,7 @@ import {
 import { useSalesPlan } from "@/hooks/useSalesPlan";
 import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
 
-function buildPersonalizedSteps(answers: Record<string, any> | null, strategyResult: any) {
+function buildPersonalizedSteps(answers: Record<string, unknown> | null, _strategyResult: unknown) {
   const segmento = answers?.segmento || "";
   const ticketMedio = answers?.ticket_medio || "";
   const tamanhoEquipe = answers?.tamanho_equipe || "1";
