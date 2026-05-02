@@ -30,6 +30,7 @@ import { DisparoWizardStep2 } from "@/components/disparos/DisparoWizardStep2";
 import { DisparoWizardStep3 } from "@/components/disparos/DisparoWizardStep3";
 import { DisparoDispatchCard } from "@/components/disparos/DisparoDispatchCard";
 import { DisparoDetailSheet } from "@/components/disparos/DisparoDetailSheet";
+import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 
 const STEP_TITLES = ["Mensagem", "Destinatários", "Confirmar"];
 
