@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useActiveStrategy, useStrategyHistory, useSaveStrategy, useApproveStrategy, useGenerateStrategy } from "@/hooks/useMarketingStrategy";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useSalesPlan, useSaveSalesPlan } from "@/hooks/useSalesPlan";
@@ -590,10 +591,10 @@ export default function ClienteGPSNegocio() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <PageHeader title="GPS do Negócio" subtitle="Carregando..." icon={<Navigation className="w-5 h-5 text-amber-500" />} />
-        <div className="animate-pulse space-y-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-32 rounded-xl bg-muted/50" />)}
-        </div>
+        <Skeleton className="h-10 w-1/3" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
       </div>
     );
   }

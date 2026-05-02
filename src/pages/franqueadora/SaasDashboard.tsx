@@ -22,6 +22,7 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePlatformErrors, useResolveError, useDeleteError, useErrorStats } from "@/hooks/useSaasAdmin";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -38,7 +39,14 @@ const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--cha
 function VisaoGeralTab() {
   const { data: stats, isLoading } = useErrorStats();
 
-  if (isLoading) return <div className="text-muted-foreground py-12 text-center">Carregando estatísticas...</div>;
+  if (isLoading) return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+      </div>
+      <Skeleton className="h-48 w-full" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -191,7 +199,7 @@ function ErrosTab() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8}><div className="space-y-2 py-4">{[1,2,3].map(i => <Skeleton key={i} className="h-8 w-full" />)}</div></TableCell></TableRow>
               ) : !errors?.length ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum erro encontrado 🎉</TableCell></TableRow>
               ) : (
@@ -319,7 +327,7 @@ function AtividadeTab() {
       </div>
 
       {isLoading ? (
-        <div className="text-muted-foreground py-12 text-center">Carregando atividade...</div>
+        <div className="space-y-2">{[1,2,3,4].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
       ) : !recent.length ? (
         <div className="text-muted-foreground py-12 text-center">Nenhuma atividade recente</div>
       ) : (
