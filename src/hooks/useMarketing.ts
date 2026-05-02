@@ -65,7 +65,7 @@ export function useMarketingMutations() {
 
   const deleteFolder = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("marketing_folders").delete().eq("id", id);
+      const { error } = await supabase.from("marketing_folders").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -85,7 +85,7 @@ export function useMarketingMutations() {
 
   const deleteAsset = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("marketing_assets").delete().eq("id", id);
+      const { error } = await supabase.from("marketing_assets").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing-assets"] }),
@@ -115,7 +115,7 @@ export function useMarketingMutations() {
 
   const updateFolder = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { data, error } = await supabase.from("marketing_folders").update({ name }).eq("id", id).select().single();
+      const { data, error } = await supabase.from("marketing_folders").update({ name }).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },
@@ -124,7 +124,7 @@ export function useMarketingMutations() {
 
   const updateAsset = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { data, error } = await supabase.from("marketing_assets").update({ name }).eq("id", id).select().single();
+      const { data, error } = await supabase.from("marketing_assets").update({ name }).eq("id", id).eq("organization_id", orgId!).select().single();
       if (error) throw error;
       return data;
     },

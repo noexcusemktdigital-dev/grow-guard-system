@@ -84,6 +84,7 @@ export function useClienteTaskMutations() {
         .from("client_tasks")
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", id)
+        .eq("organization_id", orgId!)
         .select()
         .single();
       if (error) throw error;
@@ -98,7 +99,7 @@ export function useClienteTaskMutations() {
       const updates = done
         ? { status: "done", completed_at: new Date().toISOString(), completed_by: user.id }
         : { status: "pending", completed_at: null, completed_by: null };
-      const { error } = await supabase.from("client_tasks").update(updates).eq("id", id);
+      const { error } = await supabase.from("client_tasks").update(updates).eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
 
       // Award +10 XP when completing a task
@@ -140,7 +141,7 @@ export function useClienteTaskMutations() {
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("client_tasks").delete().eq("id", id);
+      const { error } = await supabase.from("client_tasks").delete().eq("id", id).eq("organization_id", orgId!);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-tasks"] }),
