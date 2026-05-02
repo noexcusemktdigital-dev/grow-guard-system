@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { toast } from "@/hooks/use-toast";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
@@ -170,16 +171,12 @@ export default function ClienteScripts() {
       </div>
 
       {allScripts.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <BookOpen className="w-12 h-12 text-muted-foreground/30 mb-4" />
-            <p className="text-sm font-medium">Nenhum script cadastrado</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-4">Crie scripts com IA ou escreva manualmente para padronizar suas abordagens comerciais.</p>
-            <Button size="sm" onClick={() => setShowCreate(true)} disabled={!canGenerate} title={!canGenerate ? "Sem permissão para criar scripts" : undefined}>
-              <Plus className="w-4 h-4 mr-1" /> Novo Script
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<BookOpen className="w-8 h-8" />}
+          title="Nenhum script cadastrado"
+          description="Crie scripts com IA ou escreva manualmente para padronizar suas abordagens comerciais."
+          action={canGenerate ? { label: "Novo Script", onClick: () => setShowCreate(true) } : undefined}
+        />
       ) : (
         <Tabs defaultValue={funnelStages[0].key}>
           <TabsList className="flex-wrap">

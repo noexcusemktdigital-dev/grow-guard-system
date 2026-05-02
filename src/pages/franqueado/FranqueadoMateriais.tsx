@@ -14,6 +14,7 @@ import {
   Palette, CalendarDays, Settings2, Share2, Megaphone, MonitorPlay,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useMarketingFolders, useMarketingAssets, useContentSourceOrgId } from "@/hooks/useMarketing";
 import { format } from "date-fns";
 
@@ -336,11 +337,11 @@ export default function FranqueadoMateriais() {
 
       {/* Assets grid */}
       {currentAssets.length === 0 && childFolders.length === 0 ? (
-        <div className="text-center py-16">
-          <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground font-medium">Nenhum material nesta pasta</p>
-          <p className="text-xs text-muted-foreground mt-1">Quando a franqueadora publicar materiais, eles aparecerão aqui.</p>
-        </div>
+        <EmptyState
+          icon={<Inbox className="w-8 h-8" />}
+          title="Nenhum material nesta pasta"
+          description="Quando a franqueadora publicar materiais, eles aparecerão aqui."
+        />
       ) : currentAssets.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {currentAssets.map((asset) => {

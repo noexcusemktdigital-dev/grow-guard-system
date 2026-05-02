@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
@@ -208,16 +209,12 @@ export default function ClienteDisparos() {
       </div>
 
       {allDispatches.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <Send className="w-12 h-12 text-muted-foreground/30 mb-4" />
-            <p className="text-sm font-medium">Nenhum disparo criado</p>
-            <p className="text-xs text-muted-foreground mt-1 mb-4">Crie disparos para enviar mensagens via WhatsApp.</p>
-            <Button size="sm" onClick={() => { resetWizard(); setWizardOpen(true); }}>
-              <Plus className="w-4 h-4 mr-1" /> Criar Disparo
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<Send className="w-8 h-8" />}
+          title="Nenhum disparo criado"
+          description="Crie disparos para enviar mensagens via WhatsApp."
+          action={{ label: "Criar Disparo", onClick: () => { resetWizard(); setWizardOpen(true); } }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {allDispatches.map((d, i) => (
