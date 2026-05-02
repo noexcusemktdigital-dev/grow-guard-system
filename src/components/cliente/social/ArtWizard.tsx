@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -223,10 +222,10 @@ export function ArtWizard({
       setLogoUrl(visualIdentity.logo_url);
     }
     // Hydrate brand colors from palette → used as defaults for "brand" tone + custom solid/gradient
-    const palette = (visualIdentity as any)?.palette as string[] | undefined;
+    const palette = visualIdentity?.palette;
     if (palette && palette.length > 0) {
-      if (primaryColor === "#000000") setPrimaryColor(palette[0]);
-      if (secondaryColor === "#ffffff" && palette[1]) setSecondaryColor(palette[1]);
+      if (primaryColor === "#000000") setPrimaryColor(palette[0].hex);
+      if (secondaryColor === "#ffffff" && palette[1]) setSecondaryColor(palette[1].hex);
     }
   }, [visualIdentity]);
 

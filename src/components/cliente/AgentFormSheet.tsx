@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -191,14 +190,14 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
 
   const addKbUrl = () => {
     if (urlInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] as any }));
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "url" as const, content: urlInput.trim() }] as unknown as typeof f.knowledge_base }));
       setUrlInput("");
     }
   };
 
   const addKbText = () => {
     if (textInput.trim()) {
-      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] as any }));
+      setForm((f) => ({ ...f, knowledge_base: [...knowledgeBase, { type: "text" as const, content: textInput.trim() }] as unknown as typeof f.knowledge_base }));
       setTextInput("");
     }
   };
@@ -223,12 +222,12 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     }
   };
 
-  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) } as any));
+  const removeKbEntry = (idx: number) => setForm((f) => ({ ...f, knowledge_base: knowledgeBase.filter((_, i) => i !== idx) as unknown as typeof f.knowledge_base }));
 
   const toggleObjective = (obj: string) => {
-    const current = (form.objectives ?? []) as any[];
+    const current = (form.objectives ?? []) as string[];
     const exists = current.includes(obj);
-    setForm((f) => ({ ...f, objectives: exists ? current.filter((o: string) => o !== obj) : [...current, obj] } as any));
+    setForm((f) => ({ ...f, objectives: (exists ? current.filter((o) => o !== obj) : [...current, obj]) as unknown as typeof f.objectives }));
   };
 
   const handleGeneratePersona = async () => {
@@ -359,7 +358,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
           />
 
           <AgentFormSheetPrompt
-            form={form as any}
+            form={{ role: form.role, objectives: form.objectives as string[] | undefined }}
             promptConfig={promptConfig}
             crmActions={crmActions}
             engagementRules={engagementRules}
