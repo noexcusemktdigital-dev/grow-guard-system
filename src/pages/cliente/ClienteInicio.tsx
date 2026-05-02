@@ -32,6 +32,7 @@ import { useClienteContentMutations } from "@/hooks/useClienteContent";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInicioData } from "@/hooks/useInicioData";
+import { AssessoriaTeamBanner } from "@/components/shared/AssessoriaTeamBanner";
 
 const adminKpiConfig = [
   { label: "Receita Estimada", icon: DollarSign, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-500", path: "/cliente/crm" },
