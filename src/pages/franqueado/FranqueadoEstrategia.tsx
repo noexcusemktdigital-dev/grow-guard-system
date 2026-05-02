@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { DiagnosticForm } from "./FranqueadoEstrategiaDiagnosticForm";
 import { StrategyResultView } from "./FranqueadoEstrategiaResultViews";
 import type { DiagSection } from "./FranqueadoEstrategiaData";
@@ -226,7 +227,7 @@ function UploadBriefingForm({
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("extract-strategy-answers", {
+      const { data, error } = await invokeEdge("extract-strategy-answers", {
         body: { text },
       });
 

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "sonner";
 
@@ -52,7 +53,7 @@ export function useGenerateSupportToken() {
 
   return useMutation({
     mutationFn: async (params: { duration_minutes: number; access_level: string; ticket_id?: string }) => {
-      const { data, error } = await supabase.functions.invoke("generate-support-access", {
+      const { data, error } = await invokeEdge("generate-support-access", {
         body: { ...params, organization_id: orgId },
       });
       if (error) throw error;
@@ -74,7 +75,7 @@ export function useRevokeSupportToken() {
 
   return useMutation({
     mutationFn: async (tokenId: string) => {
-      const { data, error } = await supabase.functions.invoke("revoke-support-access", {
+      const { data, error } = await invokeEdge("revoke-support-access", {
         body: { token_id: tokenId },
       });
       if (error) throw error;

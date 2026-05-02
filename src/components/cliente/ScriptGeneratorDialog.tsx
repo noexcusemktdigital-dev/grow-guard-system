@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { toast } from "@/hooks/use-toast";
 import { InsufficientCreditsDialog, isInsufficientCreditsError } from "@/components/cliente/InsufficientCreditsDialog";
@@ -70,7 +71,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
     setLastOrgId(orgId);
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-script", {
+      const { data, error } = await invokeEdge("generate-script", {
         body: {
           stage,
           briefing,

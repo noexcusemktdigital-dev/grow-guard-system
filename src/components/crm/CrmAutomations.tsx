@@ -20,6 +20,7 @@ import { useAutomationLogs } from "@/hooks/useAutomationLogs";
 import { format, formatDistanceToNow } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/edge";
 import { ptBR } from "date-fns/locale";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -768,7 +769,7 @@ function AutomationTabContent({
   const forceRun = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("crm-run-automations", { body: {} });
+      const { error } = await invokeEdge("crm-run-automations", { body: {} });
       if (error) throw error;
       toast({ title: "Automações executadas!", description: "Processando fila agora..." });
       setTimeout(() => {

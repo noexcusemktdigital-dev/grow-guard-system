@@ -16,6 +16,7 @@ import { TeamSelector } from "@/components/TeamSelector";
 import { useUnitMembers } from "@/hooks/useUnitMembers";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { toast } from "sonner";
 
 interface Props {
@@ -53,7 +54,7 @@ export function UnidadeUsuariosReal({ unitOrgId, isFranqueadoView, maxUsers }: P
     if (maxUsers && members && members.length >= maxUsers) { toast.error(`Limite de ${maxUsers} usuários atingido`); return; }
     setInviting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("invite-user", {
+      const { data, error } = await invokeEdge("invite-user", {
         body: { email: invEmail.trim(), full_name: invName.trim(), role: invRole, organization_id: unitOrgId, team_ids: inviteTeamIds },
       });
       if (error) {

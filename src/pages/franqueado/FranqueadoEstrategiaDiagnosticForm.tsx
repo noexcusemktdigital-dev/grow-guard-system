@@ -23,6 +23,7 @@ import type { DiagField, DiagSection } from "./FranqueadoEstrategiaData";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/edge";
 
 const STEP_COLORS = [
   "from-slate-500 to-slate-600",
@@ -139,7 +140,7 @@ function AudioTextField({ value, onChange, placeholder }: { value: string; onCha
       const formData = new FormData();
       formData.append("audio", blob, "recording.webm");
 
-      const { data, error } = await supabase.functions.invoke("transcribe-audio", {
+      const { data, error } = await invokeEdge("transcribe-audio", {
         body: formData,
       });
 

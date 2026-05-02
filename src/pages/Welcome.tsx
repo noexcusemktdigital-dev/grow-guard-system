@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -154,7 +155,7 @@ const Welcome = () => {
       try {
         const email = tokenEmail || (await supabase.auth.getUser()).data?.user?.email;
         if (email) {
-          const { data: respData, error: fnErr } = await supabase.functions.invoke("manage-member", {
+          const { data: respData, error: fnErr } = await invokeEdge("manage-member", {
             body: { action: "accept_invitation", email },
           });
           if (fnErr) {

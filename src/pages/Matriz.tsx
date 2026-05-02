@@ -18,6 +18,7 @@ import { useOrgMembers, usePendingInvitations } from "@/hooks/useOrgMembers";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useOrgTeams, useTeamMemberships, useTeamMutations } from "@/hooks/useOrgTeams";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,7 +75,7 @@ export default function Matriz() {
     }
     setInviteLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("invite-user", {
+      const { data, error } = await invokeEdge("invite-user", {
         body: {
           email: inviteEmail,
           full_name: inviteName,
@@ -270,7 +271,7 @@ export default function Matriz() {
                                 className="text-xs h-7 gap-1"
                                 onClick={async () => {
                                   try {
-                                    const { data, error } = await supabase.functions.invoke("invite-user", {
+                                    const { data, error } = await invokeEdge("invite-user", {
                                       body: { email: inv.email, full_name: inv.full_name, role: inv.role, organization_id: orgId, team_ids: inv.team_ids },
                                     });
                                     if (error) throw error;

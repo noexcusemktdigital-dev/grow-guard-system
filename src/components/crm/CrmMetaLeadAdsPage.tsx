@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmFunnels } from "@/hooks/useCrmFunnels";
 
@@ -150,7 +151,7 @@ export default function CrmMetaLeadAdsPage() {
 
   const subscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
+      const { data, error } = await invokeEdge("meta-leadgen-subscribe", {
         body: { org_id: orgId, page_id: pageId, action: "subscribe" },
       });
       if (error) throw await extractEdgeFunctionError(error);
@@ -174,7 +175,7 @@ export default function CrmMetaLeadAdsPage() {
 
   const unsubscribeMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      const { data, error } = await supabase.functions.invoke("meta-leadgen-subscribe", {
+      const { data, error } = await invokeEdge("meta-leadgen-subscribe", {
         body: { org_id: orgId, page_id: pageId, action: "unsubscribe" },
       });
       if (error) throw await extractEdgeFunctionError(error);

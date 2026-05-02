@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { toast as sonnerToast } from "sonner";
 import { type ChargeRow, type ChargeResult } from "./FinanceiroDashboardTypes";
 
@@ -61,7 +62,7 @@ export function RepasseTab({ orgId }: RepasseTabProps) {
 
   const generateCharges = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("asaas-charge-franchisee", {
+      const { data, error } = await invokeEdge("asaas-charge-franchisee", {
         body: { organization_id: orgId, month: currentMonth, billing_type: billingType },
       });
       if (error) throw error;
@@ -80,7 +81,7 @@ export function RepasseTab({ orgId }: RepasseTabProps) {
   const fetchPix = useQuery({
     queryKey: ["pix-qr", pixDialog.paymentId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("asaas-get-pix", { body: { payment_id: pixDialog.paymentId } });
+      const { data, error } = await invokeEdge("asaas-get-pix", { body: { payment_id: pixDialog.paymentId } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data as { encoded_image: string | null; copy_paste: string | null };

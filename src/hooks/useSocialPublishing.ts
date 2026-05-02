@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { toast } from "sonner";
@@ -36,7 +37,7 @@ export function useSocialInsights(socialAccountId: string | null | undefined) {
     queryKey: ["social_insights", socialAccountId],
     queryFn: async () => {
       if (!socialAccountId) return null;
-      const { data, error } = await supabase.functions.invoke("social-get-insights", {
+      const { data, error } = await invokeEdge("social-get-insights", {
         body: { social_account_id: socialAccountId, period: "30d" },
       });
       if (error) throw await extractEdgeFunctionError(error);
@@ -92,7 +93,7 @@ export function usePublishOrSchedule() {
   const { data: orgId } = useUserOrgId();
   return useMutation({
     mutationFn: async (input: PublishInput) => {
-      const { data, error } = await supabase.functions.invoke("social-publish-post", {
+      const { data, error } = await invokeEdge("social-publish-post", {
         body: input,
       });
       if (error) throw await extractEdgeFunctionError(error);

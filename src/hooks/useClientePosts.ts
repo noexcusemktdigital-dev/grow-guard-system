@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -111,7 +112,7 @@ export function useGeneratePost() {
 
       if (payload.type === "art") {
         const file_path = `posts/${orgId}/${Date.now()}.png`;
-        const resp = await supabase.functions.invoke("generate-social-image", {
+        const resp = await invokeEdge("generate-social-image", {
           body: {
             prompt: payload.input_text,
             format: payload.format || "feed",
@@ -164,7 +165,7 @@ export function useGeneratePost() {
         if (resp.data?.error) throw new Error(resp.data.error);
         result_url = resp.data?.url;
       } else {
-        const resp = await supabase.functions.invoke("generate-social-video-frames", {
+        const resp = await invokeEdge("generate-social-video-frames", {
           body: {
             video_description: payload.cena || payload.input_text,
             identidade_visual: payload.identidade_visual,
@@ -229,7 +230,7 @@ export function useGenerateBriefing() {
       identidade_visual?: Record<string, unknown>;
       persona?: Record<string, unknown>;
     }) => {
-      const resp = await supabase.functions.invoke("generate-social-briefing", {
+      const resp = await invokeEdge("generate-social-briefing", {
         body: payload,
       });
       if (resp.error) throw await extractEdgeFunctionError(resp.error);
@@ -259,7 +260,7 @@ export function useGenerateVideoBriefing() {
       identidade_visual?: Record<string, unknown>;
       persona?: Record<string, unknown>;
     }) => {
-      const resp = await supabase.functions.invoke("generate-video-briefing", {
+      const resp = await invokeEdge("generate-video-briefing", {
         body: payload,
       });
       if (resp.error) throw await extractEdgeFunctionError(resp.error);

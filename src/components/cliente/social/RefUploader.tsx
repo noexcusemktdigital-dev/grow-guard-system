@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Upload, X, Plus, Loader2, Star, ImageIcon, Wand2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { toast } from "@/hooks/use-toast";
 import { VisualIdentity } from "@/hooks/useVisualIdentity";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ export function RefUploader({
     if (!orgId || referenceUrls.length === 0 || !setLogoUrl) return;
     setExtractingLogo(true);
     try {
-      const resp = await supabase.functions.invoke("generate-social-image", {
+      const resp = await invokeEdge("generate-social-image", {
         body: {
           extract_logo: true,
           reference_images: referenceUrls.slice(0, 3),

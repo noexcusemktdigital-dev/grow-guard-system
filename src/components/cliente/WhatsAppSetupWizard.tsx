@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle2, Loader2, Wifi, ExternalLink,
@@ -114,7 +115,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
     }
     setCloudSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-setup", {
+      const { data, error } = await invokeEdge("whatsapp-setup", {
         body: {
           provider: "whatsapp_cloud",
           phoneNumberId: cloudPhoneNumberId.trim(),
@@ -160,7 +161,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
 
     try {
       // Step 1: Create instance via whatsapp-setup (Evolution, no manual credentials needed)
-      const { data: createData, error: createError } = await supabase.functions.invoke("whatsapp-setup", {
+      const { data: createData, error: createError } = await invokeEdge("whatsapp-setup", {
         body: { provider: "evolution", instanceName, label: izitechName.trim() },
       });
       if (createError) throw createError;
@@ -177,7 +178,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
       }
 
       // Step 2: Get QR code
-      const { data: qrData } = await supabase.functions.invoke("whatsapp-setup", {
+      const { data: qrData } = await invokeEdge("whatsapp-setup", {
         body: { action: "get-qr", instanceName },
       });
 
@@ -198,7 +199,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
       // Step 3: Poll for connection
       pollingRef.current = setInterval(async () => {
         try {
-          const { data: pollData } = await supabase.functions.invoke("whatsapp-setup", {
+          const { data: pollData } = await invokeEdge("whatsapp-setup", {
             body: { action: "get-qr", instanceName },
           });
 
@@ -527,7 +528,7 @@ export function WhatsAppSetupWizard({ open, onOpenChange }: Props) {
                     onClick={async () => {
                       setPaymentLoading(true);
                       try {
-                        const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
+                        const { data, error } = await invokeEdge("asaas-create-subscription", {
                           body: { organization_id: orgId, plan: "whatsapp", billing_type: billingType },
                         });
                         if (error) throw error;

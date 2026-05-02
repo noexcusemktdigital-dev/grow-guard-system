@@ -32,6 +32,7 @@ import { OrgPermissionsTab } from "@/components/cliente/OrgPermissionsTab";
 import { LGPDSettings } from "@/components/cliente/LGPDSettings";
 import { getEffectiveLimits } from "@/constants/plans";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 function SetPasswordSection() {
@@ -196,7 +197,7 @@ function UsersAndTeamsTab() {
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("invite-user", {
+      const { data, error } = await invokeEdge("invite-user", {
         body: { email: inviteForm.email, full_name: inviteForm.full_name, role: inviteForm.role, organization_id: orgId, team_ids: inviteTeamIds },
       });
       if (error) throw error;
@@ -216,7 +217,7 @@ function UsersAndTeamsTab() {
 
   const resendMutation = useMutation({
     mutationFn: async (inv: { email: string; full_name: string | null; role: string; team_ids: string[] }) => {
-      const { data, error } = await supabase.functions.invoke("invite-user", {
+      const { data, error } = await invokeEdge("invite-user", {
         body: { email: inv.email, full_name: inv.full_name, role: inv.role, organization_id: orgId, team_ids: inv.team_ids },
       });
       if (error) throw error;

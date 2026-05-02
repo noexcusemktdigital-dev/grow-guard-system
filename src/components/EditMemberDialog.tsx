@@ -10,6 +10,7 @@ import { Trash2 } from "lucide-react";
 import { MemberPermissionsEditor } from "@/components/cliente/MemberPermissionsEditor";
 import { ModuleAccessEditor } from "@/components/cliente/ModuleAccessEditor";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -52,7 +53,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
     if (!member) return;
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-member", {
+      const { data, error } = await invokeEdge("manage-member", {
         body: { user_id: member.user_id, organization_id: organizationId, action: "update", full_name: fullName, job_title: jobTitle, role },
       });
       if (error) throw error;
@@ -73,7 +74,7 @@ export function EditMemberDialog({ open, onOpenChange, member, organizationId, r
     if (!member) return;
     setRemoving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("manage-member", {
+      const { data, error } = await invokeEdge("manage-member", {
         body: { user_id: member.user_id, organization_id: organizationId, action: "remove" },
       });
       if (error) throw error;

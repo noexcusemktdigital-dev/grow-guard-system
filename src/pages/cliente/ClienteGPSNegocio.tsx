@@ -29,6 +29,7 @@ import { StrategyDashboard, StrategyHistoryItem } from "./ClientePlanoMarketingS
 import { ClientePlanoVendasMetaDialog, type MetaFormState } from "./ClientePlanoVendasMetaDialog";
 import { MESES_COMPLETOS } from "./ClientePlanoVendasData";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { logger } from "@/lib/logger";
 
 
@@ -448,7 +449,7 @@ export default function ClienteGPSNegocio() {
         let created = 0;
         for (const stage of ["prospeccao", "diagnostico", "fechamento"]) {
           try {
-            const { data, error } = await supabase.functions.invoke("generate-script", {
+            const { data, error } = await invokeEdge("generate-script", {
               body: { stage, briefing: {}, context, organization_id: orgId, from_gps: true },
             });
             if (error || data?.error) continue;

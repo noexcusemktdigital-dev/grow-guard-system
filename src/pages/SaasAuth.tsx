@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { logger } from "@/lib/logger";
 import { supabase, PORTAL_STORAGE_KEY } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,7 +168,7 @@ const SaasAuth = () => {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("signup-saas", {
+      const { data, error } = await invokeEdge("signup-saas", {
         body: {
           email,
           password,
@@ -215,7 +216,7 @@ const SaasAuth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("request-password-reset", {
+      const { data, error } = await invokeEdge("request-password-reset", {
         body: { email, portal: "saas" },
       });
       if (error || data?.error) {
@@ -294,7 +295,7 @@ const SaasAuth = () => {
                 type="button"
                 onClick={async () => {
                   try {
-                    const { data, error } = await supabase.functions.invoke("signup-saas", {
+                    const { data, error } = await invokeEdge("signup-saas", {
                       body: { email, resend_only: true },
                     });
                     if (error || data?.error) toast.error("Erro ao reenviar. Tente novamente.");

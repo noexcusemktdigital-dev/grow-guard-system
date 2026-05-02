@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { logger } from "@/lib/logger";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { getEffectiveLimits } from "@/constants/plans";
@@ -247,7 +248,7 @@ export default function ClienteSites() {
         body.edit_instructions = editInstructions;
       }
 
-      const { data, error } = await supabase.functions.invoke("generate-site", { body });
+      const { data, error } = await invokeEdge("generate-site", { body });
       clearInterval(interval);
 
       if (error) {

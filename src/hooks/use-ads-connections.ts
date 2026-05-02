@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 
 // -----------------------------------------------------------------------
@@ -131,7 +132,7 @@ export function useInitiateMetaOAuth() {
       if (!state) throw new Error("Falha ao gerar state OAuth");
 
       // 2. Obter META_APP_ID + redirect_uri via ads-get-config (deployada)
-      const { data: configData, error: configErr } = await supabase.functions.invoke("ads-get-config");
+      const { data: configData, error: configErr } = await invokeEdge("ads-get-config");
       if (configErr) throw configErr;
       const appId: string = (configData as any)?.meta?.app_id ?? (configData as any)?.app_id;
       const redirectUri: string =

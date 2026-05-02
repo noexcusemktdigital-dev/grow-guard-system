@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -106,7 +107,7 @@ export function useCreateProspection() {
       if (insertErr) throw insertErr;
 
       // 2. Call edge function
-      const { data: fnData, error: fnError } = await supabase.functions.invoke(
+      const { data: fnData, error: fnError } = await invokeEdge(
         "generate-prospection",
         { body: inputs }
       );

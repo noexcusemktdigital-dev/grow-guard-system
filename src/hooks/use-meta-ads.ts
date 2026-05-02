@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useAdsConnectionStatus } from "./use-ads-connections";
 
 export type MetaAdsPeriod = "today" | "last_7d" | "last_30d";
@@ -112,7 +113,7 @@ export function useMetaAdsInsights(period: MetaAdsPeriod = "today", orgId?: stri
       }
 
       // ── CONTA DE FRANQUEADO com conexão OAuth própria ──
-      const { data, error } = await supabase.functions.invoke("ads-sync-metrics", {
+      const { data, error } = await invokeEdge("ads-sync-metrics", {
         body: { org_id: orgId, mode: "noe_insights" },
       });
       if (error) throw error;

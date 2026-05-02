@@ -17,6 +17,7 @@ import { useClienteScripts, useClienteScriptMutations } from "@/hooks/useCliente
 import { toast } from "@/hooks/use-toast";
 import { useMemberPermissions } from "@/hooks/useMemberPermissions";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import ScriptGeneratorDialog from "@/components/cliente/ScriptGeneratorDialog";
 import { ScriptContentRenderer } from "@/components/cliente/ScriptContentRenderer";
 import { StrategyBanner } from "@/components/cliente/StrategyBanner";
@@ -65,7 +66,7 @@ export default function ClienteScripts() {
   const handleImproveWithAI = async (scriptId: string, currentContent: string, category: string) => {
     setImprovingId(scriptId);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-script", {
+      const { data, error } = await invokeEdge("generate-script", {
         body: {
           stage: category || "prospeccao",
           briefing: {},
