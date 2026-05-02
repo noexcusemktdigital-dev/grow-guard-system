@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -68,7 +69,7 @@ const Auth = () => {
     } catch (networkErr) {
       setLoading(false);
       console.error("[Auth] login network error", networkErr);
-      toast.error("Não conseguimos contatar o servidor. Verifique sua conexão e tente novamente.");
+      reportError(networkErr, { title: "Não conseguimos contatar o servidor. Verifique sua conexão e tente novamente.", category: "auth.network" });
       return;
     }
 
@@ -81,21 +82,21 @@ const Auth = () => {
       analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, { error_code: error.message, source: "franchise" });
 
       if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
-        toast.error("Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada e o spam.");
+        reportError(error, { title: "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada e o spam.", category: "auth.email_not_confirmed" });
       } else if (msg.includes("invalid login") || msg.includes("invalid credentials") || msg.includes("invalid_grant")) {
-        toast.error("E-mail ou senha incorretos. Se já trocou a senha recentemente, use 'Esqueci minha senha'.");
+        reportError(error, { title: "E-mail ou senha incorretos. Se já trocou a senha recentemente, use 'Esqueci minha senha'.", category: "auth.invalid_credentials" });
       } else if (status === 429 || msg.includes("rate limit") || msg.includes("too many")) {
-        toast.error("Muitas tentativas em pouco tempo. Aguarde 1 minuto e tente novamente.");
+        reportError(error, { title: "Muitas tentativas em pouco tempo. Aguarde 1 minuto e tente novamente.", category: "auth.rate_limit" });
       } else if (msg.includes("user not found")) {
-        toast.error("Nenhuma conta encontrada com esse e-mail.");
+        reportError(error, { title: "Nenhuma conta encontrada com esse e-mail.", category: "auth.user_not_found" });
       } else if (msg.includes("user disabled") || msg.includes("banned")) {
-        toast.error("Esta conta está bloqueada. Entre em contato com o suporte.");
+        reportError(error, { title: "Esta conta está bloqueada. Entre em contato com o suporte.", category: "auth.banned" });
       } else if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
-        toast.error("Serviço temporariamente lento. Aguarde alguns segundos e tente novamente.");
+        reportError(error, { title: "Serviço temporariamente lento. Aguarde alguns segundos e tente novamente.", category: "auth.network" });
       } else if (status && status >= 500) {
-        toast.error("Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.");
+        reportError(error, { title: "Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.", category: "auth.server_error" });
       } else {
-        toast.error(error.message || "Não foi possível entrar. Tente novamente.");
+        reportError(error, { title: error.message || "Não foi possível entrar. Tente novamente.", category: "auth.login" });
       }
       return;
     }
@@ -133,7 +134,7 @@ const Auth = () => {
       .then(async (check) => {
         if (!check.allowed) {
           await supabase.auth.signOut({ scope: "local" });
-          toast.error((check as { message?: string }).message || "Acesso negado.");
+          reportError(new Error((check as { message?: string }).message || "Acesso negado."), { title: (check as { message?: string }).message || "Acesso negado.", category: "auth.portal_access" });
           if ((check as { redirect?: string }).redirect) {
             navigate((check as { redirect?: string }).redirect!);
           }
@@ -150,13 +151,13 @@ const Auth = () => {
         body: { email, portal: "franchise" },
       });
       if (error || data?.error) {
-        toast.error(data?.error || "Erro ao enviar email de recuperação.");
+        reportError(error ?? new Error(data?.error), { title: data?.error || "Erro ao enviar email de recuperação.", category: "auth.forgot_password" });
       } else {
         toast.success("Email de recuperação enviado! Verifique sua caixa de entrada.");
         setMode("login");
       }
-    } catch {
-      toast.error("Erro ao enviar email de recuperação.");
+    } catch (err) {
+      reportError(err, { title: "Erro ao enviar email de recuperação.", category: "auth.forgot_password" });
     }
     setLoading(false);
   };

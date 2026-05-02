@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Share2, LayoutDashboard, Send, Link2 } from "lucide-react";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useSocialAccounts } from "@/hooks/useSocialAccounts";
@@ -29,7 +30,7 @@ export default function ContasSociais() {
         missing_org: "Organização não identificada.",
         invalid_state: "Sessão inválida. Tente novamente.",
       };
-      toast.error(errorMessages[error] ?? `Erro ao conectar: ${error}`);
+      reportError(new Error(String(error)), { title: errorMessages[error] ?? `Erro ao conectar: ${error}`, category: "contas_sociais.connect" });
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);

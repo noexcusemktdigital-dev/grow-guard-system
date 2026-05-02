@@ -32,6 +32,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useSearchParams } from "react-router-dom";
 
 const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899"];
@@ -246,7 +247,7 @@ export default function ClienteAgenda() {
       handleGooglePull();
     }
     if (searchParams.get("google_error")) {
-      toast.error("Erro ao conectar Google Agenda: " + searchParams.get("google_error"));
+      reportError(new Error(searchParams.get("google_error") ?? ""), { title: "Erro ao conectar Google Agenda: " + searchParams.get("google_error"), category: "agenda.google_connect" });
       setSearchParams({});
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -257,7 +258,7 @@ export default function ClienteAgenda() {
       const result = await syncGoogle.mutateAsync({ action: "pull" });
       const imported = (result as Record<string, unknown>)?.imported || 0;
       toast.success(`Sincronização concluída — ${imported} novo(s) evento(s) importado(s) do Google Agenda`);
-    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erro ao sincronizar"); }
+    } catch (e: unknown) { reportError(e, { title: e instanceof Error ? e.message : "Erro ao sincronizar", category: "agenda.sync" }); }
     setSyncing(false);
   }
 
@@ -324,10 +325,10 @@ export default function ClienteAgenda() {
   }
 
   function handleSave() {
-    if (!title.trim()) { toast.error("Informe o título"); return; }
-    if (!startAt || !endAt) { toast.error("Informe data/hora"); return; }
+    if (!title.trim()) { reportError(new Error("Informe o título"), { title: "Informe o título", category: "agenda.validation" }); return; }
+    if (!startAt || !endAt) { reportError(new Error("Informe data/hora"), { title: "Informe data/hora", category: "agenda.validation" }); return; }
     if (new Date(endAt) <= new Date(startAt)) {
-      toast.error("A data/hora de fim deve ser posterior à de início");
+      reportError(new Error("A data/hora de fim deve ser posterior à de início"), { title: "A data/hora de fim deve ser posterior à de início", category: "agenda.validation" });
       return;
     }
     const payload: Record<string, unknown> = {

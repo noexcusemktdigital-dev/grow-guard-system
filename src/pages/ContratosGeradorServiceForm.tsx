@@ -11,6 +11,7 @@ import { Users, Link2, CalendarDays, Eye } from "lucide-react";
 import { useContractMutations } from "@/hooks/useContracts";
 import { useCrmProposals } from "@/hooks/useCrmProposals";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import {
   SERVICE_CONTENT, SERVICE_PLACEHOLDERS,
 } from "@/constants/contractTemplates";
@@ -82,9 +83,9 @@ export function ServiceContractForm({ onSuccess, initialProposalId }: ServiceCon
   const previewContent = useMemo(() => buildServiceContent(form), [form]);
 
   const handleSave = (status: string) => {
-    if (!selectedProposalId) return toast.error("Selecione uma proposta para gerar o contrato de prestação de serviço");
-    if (!form.contratante_razao_social) return toast.error("Informe a Razão Social do contratante");
-    if (!form.contratante_cnpj) return toast.error("Informe o CNPJ do contratante");
+    if (!selectedProposalId) return reportError(new Error("Selecione uma proposta para gerar o contrato de prestação de serviço"), { title: "Selecione uma proposta para gerar o contrato de prestação de serviço", category: "contratos.validation" });
+    if (!form.contratante_razao_social) return reportError(new Error("Informe a Razão Social do contratante"), { title: "Informe a Razão Social do contratante", category: "contratos.validation" });
+    if (!form.contratante_cnpj) return reportError(new Error("Informe o CNPJ do contratante"), { title: "Informe o CNPJ do contratante", category: "contratos.validation" });
 
     const content = buildServiceContent(form);
     const monthlyValue = parseFloat(form.valor_mensal.replace(/\./g, "").replace(",", ".")) || 0;

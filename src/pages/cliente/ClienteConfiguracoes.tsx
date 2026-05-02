@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
@@ -43,8 +44,8 @@ function SetPasswordSection() {
   if (!isGoogleUser) return null;
 
   const handleSetPassword = async () => {
-    if (password.length < 8) return toast.error("A senha deve ter pelo menos 8 caracteres");
-    if (password !== confirm) return toast.error("As senhas não coincidem");
+    if (password.length < 8) return reportError(new Error("A senha deve ter pelo menos 8 caracteres"), { title: "A senha deve ter pelo menos 8 caracteres", category: "configuracoes.validation" });
+    if (password !== confirm) return reportError(new Error("As senhas não coincidem"), { title: "As senhas não coincidem", category: "configuracoes.validation" });
     setSaving(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -52,7 +53,7 @@ function SetPasswordSection() {
       toast.success("Senha definida! Agora você pode fazer login por e-mail também.");
       setPassword("");
       setConfirm("");
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : String(err) || "Erro ao definir senha"); }
+    } catch (err: unknown) { reportError(err, { title: err instanceof Error ? err.message : "Erro ao definir senha", category: "configuracoes.set_password" }); }
     finally { setSaving(false); }
   };
 
@@ -87,7 +88,7 @@ function ProfileTab() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 2 * 1024 * 1024) return toast.error("Imagem deve ter no máximo 2MB");
+    if (file.size > 2 * 1024 * 1024) return reportError(new Error("Imagem deve ter no máximo 2MB"), { title: "Imagem deve ter no máximo 2MB", category: "configuracoes.validation" });
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
@@ -96,7 +97,7 @@ function ProfileTab() {
       if (uploadError) throw uploadError;
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
       update.mutate({ avatar_url: `${publicUrl}?t=${Date.now()}` });
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : String(err) || "Erro ao enviar foto"); }
+    } catch (err: unknown) { reportError(err, { title: err instanceof Error ? err.message : "Erro ao enviar foto", category: "configuracoes.upload_photo" }); }
     finally { setUploading(false); }
   };
 
@@ -210,7 +211,7 @@ function UsersAndTeamsTab() {
       qc.invalidateQueries({ queryKey: ["org-members"] });
       qc.invalidateQueries({ queryKey: ["pending-invitations"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => reportError(err, { title: err instanceof Error ? err.message : "Erro ao enviar convite", category: "configuracoes.invite" }),
   });
 
   const resendMutation = useMutation({
@@ -226,7 +227,7 @@ function UsersAndTeamsTab() {
       toast.success("Convite reenviado!");
       qc.invalidateQueries({ queryKey: ["pending-invitations"] });
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => reportError(err, { title: err instanceof Error ? err.message : "Erro ao reenviar convite", category: "configuracoes.invite" }),
   });
 
   const cancelInviteMutation = useMutation({
@@ -238,7 +239,7 @@ function UsersAndTeamsTab() {
       toast.success("Convite cancelado");
       qc.invalidateQueries({ queryKey: ["pending-invitations"] });
     },
-    onError: () => toast.error("Erro ao cancelar convite"),
+    onError: () => reportError(new Error("Erro ao cancelar convite"), { title: "Erro ao cancelar convite", category: "configuracoes.invite" }),
   });
 
   const roleLabels: Record<string, string> = { cliente_admin: "Admin", cliente_user: "Usuário", super_admin: "Super Admin", admin: "Admin" };
@@ -584,7 +585,7 @@ function NotificationsTab() {
       const { error } = await supabase.from("profiles").update({ notification_preferences: updated } as Record<string, unknown>).eq("id", user?.id ?? "");
       if (error) throw error;
       toast.success(`${value ? "Ativado" : "Desativado"}`);
-    } catch { toast.error("Erro ao salvar preferência"); }
+    } catch (err) { reportError(err, { title: "Erro ao salvar preferência", category: "configuracoes.preferences" }); }
   };
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />;

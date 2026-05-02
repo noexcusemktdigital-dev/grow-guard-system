@@ -18,6 +18,7 @@ import { useSupportTickets, useSupportMessages, useSupportTicketMutations } from
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { SupportAccessManager } from "@/components/cliente/SupportAccessManager";
@@ -71,7 +72,7 @@ export default function ClienteSuporte() {
   }, [tickets]);
 
   async function handleCreate() {
-    if (!novoTitulo.trim()) { toast.error("Informe o título"); return; }
+    if (!novoTitulo.trim()) { reportError(new Error("Informe o título"), { title: "Informe o título", category: "suporte.validation" }); return; }
     setCreatingTicket(true);
     try {
       await createTicket.mutateAsync({
@@ -85,7 +86,7 @@ export default function ClienteSuporte() {
       setNovaDescricao("");
       toast.success("Chamado criado!");
     } catch {
-      toast.error("Erro ao criar chamado");
+      reportError(new Error("Erro ao criar chamado"), { title: "Erro ao criar chamado", category: "suporte.create_ticket" });
     }
     setCreatingTicket(false);
   }
@@ -96,7 +97,7 @@ export default function ClienteSuporte() {
       await sendMessage.mutateAsync({ ticket_id: selectedTicket.id, content: newMessage });
       setNewMessage("");
     } catch {
-      toast.error("Erro ao enviar mensagem");
+      reportError(new Error("Erro ao enviar mensagem"), { title: "Erro ao enviar mensagem", category: "suporte.send_message" });
     }
   }
 

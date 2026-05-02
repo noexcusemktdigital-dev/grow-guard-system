@@ -17,6 +17,7 @@ import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useCrmSettings, useCrmSettingsMutations } from "@/hooks/useCrmSettings";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { supabase } from "@/lib/supabase";
 import { subscribeToTable } from "@/lib/realtimeManager";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -83,7 +84,7 @@ export default function ClienteIntegracoes() {
       navigator.clipboard.writeText(key);
       toast.success("API Key gerada e copiada!");
     },
-    onError: (err: unknown) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err: unknown) => reportError(err, { title: err instanceof Error ? err.message : "Erro ao gerar API Key", category: "integracoes.api_key" }),
   });
 
   const handleCheckStatus = async (instance: WhatsAppInstance) => {
@@ -101,7 +102,7 @@ export default function ClienteIntegracoes() {
       refetch();
       toast.success("Status atualizado");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      reportError(err, { title: err instanceof Error ? err.message : "Erro ao atualizar status", category: "integracoes.status" });
     }
   };
 
@@ -118,7 +119,7 @@ export default function ClienteIntegracoes() {
       refetch();
       toast.success("Instância removida");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      reportError(err, { title: err instanceof Error ? err.message : "Erro ao remover instância", category: "integracoes.remove_instance" });
     }
   };
 
@@ -133,7 +134,7 @@ export default function ClienteIntegracoes() {
         toast.warning("Instância salva, mas status: " + (res?.status || "desconectado"), { description: "Verifique as credenciais ou o nome da instância no servidor." });
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      reportError(err, { title: err instanceof Error ? err.message : "Erro ao salvar instância", category: "integracoes.save_instance" });
     }
   };
 
@@ -232,7 +233,7 @@ export default function ClienteIntegracoes() {
       }
     } catch (err: unknown) {
       setQrDialogOpen(false);
-      toast.error("Erro na reconexão Izitech: " + (err instanceof Error ? err.message : String(err)));
+      reportError(err, { title: "Erro na reconexão Izitech: " + (err instanceof Error ? err.message : String(err)), category: "integracoes.reconnect" });
     }
   };
 
@@ -252,7 +253,7 @@ export default function ClienteIntegracoes() {
         toast.warning("Webhook pode não ter sido configurado corretamente");
       }
     } catch (err: unknown) {
-      toast.error("Erro ao reconfigurar webhook: " + (err instanceof Error ? err.message : String(err)));
+      reportError(err, { title: "Erro ao reconfigurar webhook: " + (err instanceof Error ? err.message : String(err)), category: "integracoes.webhook" });
     }
   };
 
@@ -267,7 +268,7 @@ export default function ClienteIntegracoes() {
     upsertSettings.mutate({ outbound_webhooks: updated });
   };
   const addWebhook = () => {
-    if (!newUrl.trim()) { toast.error("Informe a URL"); return; }
+    if (!newUrl.trim()) { reportError(new Error("Informe a URL"), { title: "Informe a URL", category: "integracoes.validation" }); return; }
     const platform = PLATFORMS.find(p => p.key === newPlatform) || PLATFORMS[0];
     saveWebhooks([...webhooks, { name: platform.label, url: newUrl.trim(), events: newEvents, active: true }]);
     setNewUrl(""); setNewEvents(["lead_created"]);
@@ -280,7 +281,7 @@ export default function ClienteIntegracoes() {
       const isZapier = url.includes("zapier.com");
       await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, ...(isZapier ? { mode: "no-cors" as RequestMode } : {}), body: JSON.stringify({ event: "test", name: "Lead Teste", email: "teste@exemplo.com", phone: "11999999999", timestamp: new Date().toISOString(), source: "NoExcuse CRM" }) });
       toast.success(`Teste enviado para ${name}`, { description: isZapier ? "Verifique o histórico do Zap para confirmar" : "Verifique se recebeu o payload" });
-    } catch { toast.error("Erro ao testar webhook"); }
+    } catch (err) { reportError(err, { title: "Erro ao testar webhook", category: "integracoes.webhook_test" }); }
   };
   const toggleEvent = (event: string) => setNewEvents(prev => prev.includes(event) ? prev.filter(e => e !== event) : [...prev, event]);
 

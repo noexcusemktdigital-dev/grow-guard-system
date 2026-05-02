@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
@@ -63,7 +64,7 @@ export default function FinanceiroRepasse() {
       qc.invalidateQueries({ queryKey: ["franchisee-charges"] });
     },
     onError: (err: unknown) => {
-      toast.error(`Erro ao gerar cobranças: ${err.message}`);
+      reportError(err, { title: `Erro ao gerar cobranças: ${err.message}`, category: "financeiro.repasse" });
     },
   });
 
