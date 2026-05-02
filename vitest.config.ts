@@ -4,10 +4,19 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: { "@": path.resolve(__dirname, "./src") },
+  },
   test: {
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    server: {
+      deps: {
+        // Resolve node_modules from the symlinked location
+        inline: [/@testing-library/],
+      },
+    },
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",
@@ -17,7 +26,5 @@ export default defineConfig({
       thresholds: { lines: 10, functions: 10 }, // meta inicial — elevar a cada sprint
     },
   },
-  resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
-  },
 });
+
