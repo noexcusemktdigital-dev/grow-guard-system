@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useMemo, useRef, useEffect } from "react";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ export default function ClienteSuporte() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [createDialog, setCreateDialog] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Tables<'support_tickets'> | null>(null);
   const [newMessage, setNewMessage] = useState("");
 
   // New ticket form
@@ -79,7 +79,7 @@ export default function ClienteSuporte() {
         description: novaDescricao,
         category: novaCategoria,
         priority: novaPrioridade,
-      } as any);
+      } as TablesInsert<'support_tickets'>);
       setCreateDialog(false);
       setNovoTitulo("");
       setNovaDescricao("");

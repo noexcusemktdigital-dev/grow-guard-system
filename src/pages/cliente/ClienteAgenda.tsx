@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -262,8 +262,8 @@ export default function ClienteAgenda() {
   }
 
   const [formOpen, setFormOpen] = useState(false);
-  const [detailEvent, setDetailEvent] = useState<any>(null);
-  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [detailEvent, setDetailEvent] = useState<Tables<'calendar_events'> | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Tables<'calendar_events'> | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Form state

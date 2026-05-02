@@ -1,6 +1,5 @@
-// @ts-nocheck
-
 import { useState, useMemo } from "react";
+import type { Tables } from "@/integrations/supabase/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ export default function ClienteComunicados() {
   const { data: views } = useAnnouncementViews();
   const { markViewed, confirmRead } = useAnnouncementViewMutations();
   const [search, setSearch] = useState("");
-  const [detailItem, setDetailItem] = useState<any>(null);
+  const [detailItem, setDetailItem] = useState<Tables<'announcements'> | null>(null);
 
   const viewedIds = useMemo(() => new Set((views ?? []).map(v => v.announcement_id)), [views]);
   const confirmedIds = useMemo(() => new Set((views ?? []).filter(v => v.confirmed_at).map(v => v.announcement_id)), [views]);
@@ -44,7 +43,7 @@ export default function ClienteComunicados() {
     return (announcements ?? []).filter(a => ((a as unknown as { require_confirmation?: boolean }).require_confirmation || a.priority === "Crítica") && !confirmedIds.has(a.id));
   }, [announcements, confirmedIds]);
 
-  function openDetail(item: Record<string, unknown>) {
+  function openDetail(item: Tables<'announcements'>) {
     setDetailItem(item);
     if (!viewedIds.has(item.id)) {
       markViewed.mutate(item.id);

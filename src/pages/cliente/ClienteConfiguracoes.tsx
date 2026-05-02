@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { useState, useEffect, useRef } from "react";
 import { usePermissionProfiles, usePermissionProfileMutations } from "@/hooks/useMemberPermissions";
 import { useSearchParams } from "react-router-dom";
@@ -21,7 +19,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
-import { useOrgMembers, usePendingInvitations } from "@/hooks/useOrgMembers";
+import { useOrgMembers, usePendingInvitations, type OrgMember } from "@/hooks/useOrgMembers";
 import { useClienteSubscription } from "@/hooks/useClienteSubscription";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
@@ -183,7 +181,7 @@ function UsersAndTeamsTab() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: "", full_name: "", role: "cliente_user" });
   const [inviteTeamIds, setInviteTeamIds] = useState<string[]>([]);
-  const [editMember, setEditMember] = useState<any>(null);
+  const [editMember, setEditMember] = useState<OrgMember | null>(null);
   const qc = useQueryClient();
   const [profileManagerOpen, setProfileManagerOpen] = useState(false);
   const { data: permProfiles } = usePermissionProfiles();

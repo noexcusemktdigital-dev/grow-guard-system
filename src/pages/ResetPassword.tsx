@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ const ResetPassword = () => {
     if (tokenHash) {
       supabase.auth.verifyOtp({
         token_hash: tokenHash,
-        type: otpType as any,
+        type: otpType as "recovery" | "email" | "signup" | "invite" | "magiclink" | "email_change",
       }).then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
