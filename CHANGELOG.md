@@ -8,6 +8,16 @@ versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Added (Adicionado)
 
+- Phase 11: useGoalProgress hook, CrmContactsView component, edge-base-url helper, correlation-extra tests (PR #110)
+- Phase 12: error-toast helper, idempotency-edge helper, MemberPermissionsEditor component, useSupportTickets hook, auth-helper tests (PR #114)
+- Lighthouse CI config + docs/PERFORMANCE.md (PR #97)
+- E2E +3 specs: crm-create-lead, content-generation, sidebar-nav (PR #98)
+- docs/FAQ.md + docs/TROUBLESHOOTING.md (888 linhas) (PR #99)
+- src/lib/error-toast.ts helper unificado com rollout em 6+14 callsites (PR #108, #113)
+- src/lib/formatters.ts com 7 formatadores PT-BR (PR #112)
+- analytics-events: ERROR_DISPLAYED event adicionado
+- 8 edge functions removidas de @ts-nocheck (PR #103)
+- 16 components removidos de @ts-nocheck (PR #105, #107, #111)
 - PWA: manifest + service worker + offline page (PR #36)
 - DSR endpoints LGPD Art. 18 (export-data + delete-account) + UI no portal cliente (PR #25, #34)
 - Soft-delete em finance_clients, crm_leads, organization_memberships (PR #20, #27)
@@ -36,16 +46,27 @@ versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Changed (Alterado)
 
+- Types: 39 hooks tipados via Tables<> generics
+- Types: ~26 components tipados com interfaces explícitas
+- Types: 30 pages tipadas (zero `any` em src/pages/)
+- ~250+ ocorrências de `:any` removidas no total
 - README: 73 → 120 linhas com stack + 3 portais + setup (PR #9)
 - CORS hardening: allowlist por origin (PR #13)
 - Frontend: ~50 hooks/components migram para invokeEdge wrapper
 
 ### Fixed (Corrigido)
 
+- evolution-webhook resolver hardening (INT-009) (PR #66)
+- RLS reaplicada em 7 tabelas críticas (PR #59)
+- Frontend defense-in-depth: 19 mutations com segundo filtro orgId (PR #83)
 - LGPD-001: ~40 console.log com PII redactados (PR #7, #42)
 - API-008: CORS aceitava qualquer subdomínio Lovable (PR #13)
 - INT-007: 3 crons sem CRON_SECRET enforce (PR #18)
-- RLS reaplicado em 7 tabelas críticas (PR #59)
+
+### Tests
+
+- ~661 asserts acumulados em suite de testes
+- 9 specs E2E Playwright cobrindo fluxos críticos
 
 ### Security
 
