@@ -1030,6 +1030,5 @@ function LockedModal({ front, onClose }: { front: { title: string; bullets: stri
         </a>
       </div>
     </div>
-    </>
   );
 }
