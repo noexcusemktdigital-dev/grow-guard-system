@@ -5,6 +5,7 @@ import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
+import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-traffic-strategy.ts';
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'generate-traffic-strategy');
@@ -206,67 +207,25 @@ ${topCampaigns}`;
     const selectedPlatforms = plataformas.length > 0 ? plataformas.join(", ") : "Meta Ads, Google Ads, TikTok Ads, LinkedIn Ads";
     const publicoText = [...publico, publico_custom].filter(Boolean).join(", ");
 
-    const prompt = `Você é um estrategista de tráfego pago experiente. Com base nos dados abaixo, gere uma estratégia COMPLETA de tráfego pago.
-
-DADOS DA EMPRESA:
-- Nome: ${org?.name || "Empresa"}
-- Segmento: ${org?.segment || "Não definido"}
-
-DADOS DO WIZARD:
-- Objetivo da campanha: ${objetivo}
-- Produto/Oferta: ${produto}
-- Público-alvo: ${publicoText}
-- Página de destino: ${pagina_destino}
-- Orçamento mensal: R$${orcamento}
-- Plataformas selecionadas: ${selectedPlatforms}
-- Região de atuação: ${regiao}
-- Ativos disponíveis: ${ativos.join(", ") || "Nenhum"}
-
-ESTRATÉGIA DE MARKETING ATIVA:
-${strategyContext}
-
-CONTEÚDOS PUBLICADOS:
-${contentsContext}
-
-SITES:
-${sitesContext}
-
-CRIATIVOS DISPONÍVEIS:
-${postsContext}
-${salesPlanContext}
-
-DADOS REAIS DAS CAMPANHAS ATIVAS (Meta Ads - últimos 30 dias):
-${metricsContext}
-
-IMPORTANTE: Use os dados reais acima para:
-1. Calibrar as estimativas de CPL, CPC e CTR com base na performance histórica real
-2. Identificar o que já está funcionando e amplificar
-3. Identificar o que não está funcionando e sugerir mudanças
-4. Propor orçamento baseado no CPL real, não em médias de mercado
-5. Se o CPL real for alto, diagnosticar causas e propor soluções específicas
-
-- platform: nome da plataforma
-- objective: objetivo específico da campanha nessa plataforma
-- audience: público-alvo detalhado (idade, interesses, comportamentos, localização)
-- budget_suggestion: valor em reais da fatia do orçamento para esta plataforma
-- budget_percentage: percentual do orçamento total
-- ad_copies: array com 2-3 copies de anúncio
-- creative_formats: formatos de criativos recomendados
-- campaign_structure: { campaigns: [{ name, objective, ad_sets: [{ name, targeting, ads: [{ name, format }] }] }] }
-- kpis: { estimated_reach, estimated_clicks, estimated_cpc, estimated_cpl, estimated_ctr, estimated_leads, estimated_clients, estimated_revenue }
-- keywords: array de palavras-chave (apenas Google)
-- interests: array de interesses/comportamentos (Meta, TikTok)
-- tips: array com 3 dicas específicas
-- optimization_actions: array com 3 ações de otimização
-- tutorial: array com passos de execução na plataforma
-
-Também inclua no topo do JSON:
-- diagnostico: análise geral do potencial de aquisição (3-4 frases)
-- kpi_tracking: array de métricas sugeridas para acompanhamento (CPC, CTR, CPL, CPA, ROI)
-- investment_plan: { total_budget, distribution: [{ platform, percentage, amount }] }
-- projections: { total_leads, total_clients, estimated_revenue, estimated_roi }
-
-Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, investment_plan, projections, platforms: [...] }. Sem texto adicional.`;
+    const userPrompt = buildUserPrompt({
+      orgName: org?.name || "Empresa",
+      orgSegment: org?.segment || "Não definido",
+      objetivo,
+      produto,
+      publicoText,
+      pagina_destino,
+      orcamento,
+      selectedPlatforms,
+      regiao,
+      ativos,
+      strategyContext,
+      contentsContext,
+      sitesContext,
+      postsContext,
+      salesPlanContext,
+      metricsContext,
+    });
+    console.log(`[generate-traffic-strategy] prompt_version=${PROMPT_VERSION}`);
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -274,8 +233,8 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Você é um estrategista de tráfego pago. Retorne APENAS JSON válido, sem markdown." },
-          { role: "user", content: prompt },
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
         ],
       }),
     });
