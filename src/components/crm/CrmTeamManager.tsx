@@ -25,7 +25,7 @@ export function CrmTeamManager() {
   const { createTeam, updateTeam, deleteTeam } = useCrmTeamMutations();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<any>(null);
+  const [editingTeam, setEditingTeam] = useState<{ id: string; name: string; description?: string; members: string[]; funnel_ids: string[] } | null>(null);
   const [teamName, setTeamName] = useState("");
   const [teamDesc, setTeamDesc] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);

@@ -64,9 +64,9 @@ export function LGPDSettings() {
       toast.success('Exportação concluída', {
         description: 'Seus dados foram baixados em JSON.',
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Erro na exportação', {
-        description: err?.message ?? 'Tente novamente em instantes.',
+        description: err instanceof Error ? err.message : 'Tente novamente em instantes.',
       });
     } finally {
       setExporting(false);
@@ -108,9 +108,9 @@ export function LGPDSettings() {
 
       await supabase.auth.signOut();
       navigate('/auth');
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Erro na exclusão', {
-        description: err?.message ?? 'Tente novamente.',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
       });
     } finally {
       setDeleting(false);

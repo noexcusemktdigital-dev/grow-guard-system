@@ -96,7 +96,7 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
     setDirty(true);
   };
 
-  const handlePermChange = (key: keyof MemberPermissions, value: any) => {
+  const handlePermChange = (key: keyof MemberPermissions, value: MemberPermissions[keyof MemberPermissions]) => {
     setSelectedProfileId("custom");
     setPerms(prev => ({ ...prev, [key]: value }));
     setDirty(true);
@@ -116,8 +116,8 @@ export function MemberPermissionsEditor({ userId, userName }: MemberPermissionsE
       });
       toast({ title: "Permissões salvas!", description: `Permissões de ${userName} atualizadas com sucesso.` });
       setDirty(false);
-    } catch (err: any) {
-      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao salvar", description: err instanceof Error ? err.message : "Erro desconhecido", variant: "destructive" });
     }
   };
 
