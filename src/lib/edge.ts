@@ -47,10 +47,10 @@ export async function invokeEdge<T = any>(
   const maxRetries = options.retries ?? 2;
   const baseMs = options.retryBaseMs ?? 500;
   // Retry only for idempotent methods or when caller explicitly provides Idempotency-Key
-  const isIdempotent =
-    !options.method ||
-    options.method === "GET" ||
-    Object.keys(headers).some((k) => k.toLowerCase() === "idempotency-key");
+  const hasIdempotencyKey = Object.keys(headers).some(
+    (k) => k.toLowerCase() === "idempotency-key"
+  );
+  const isIdempotent = options.method === "GET" || hasIdempotencyKey;
   const allowRetry = options.retryIdempotent ?? isIdempotent;
 
   let attempt = 0;

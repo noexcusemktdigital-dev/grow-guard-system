@@ -152,6 +152,19 @@ describe('edge — invokeEdge wrapper', () => {
     expect(result.error).toBe(err503);
   });
 
+  it('NÃO retry quando method é omitido — invoke padrão é POST', async () => {
+    const err503 = Object.assign(new Error('Service Unavailable'), {
+      context: { status: 503 },
+    });
+    mockInvoke.mockResolvedValue({ data: null, error: err503 });
+
+    const result = await invokeEdge('fn', { retryBaseMs: 1 });
+
+    expect(mockInvoke).toHaveBeenCalledTimes(1);
+    expect(result.attempts).toBe(1);
+    expect(result.error).toBe(err503);
+  });
+
   it('retry em POST com Idempotency-Key header — tenta até maxRetries+1', async () => {
     const err503 = Object.assign(new Error('Service Unavailable'), {
       context: { status: 503 },
