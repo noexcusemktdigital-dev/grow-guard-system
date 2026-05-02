@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { memo } from "react";
 import { TrendingUp, TrendingDown, Minus, LucideIcon } from "lucide-react";
 
