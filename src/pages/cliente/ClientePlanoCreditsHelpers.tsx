@@ -27,6 +27,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
+import { generateIdempotencyKey, generateRequestId } from "@/lib/idempotency";
 
 /* ── Token Usage Card ── */
 export function TokenUsageCard() {
@@ -524,8 +525,14 @@ export function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPac
     mutationFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
+      const body = { organization_id: orgId, pack_id: pack?.id, billing_type: billingType };
+      const idempKey = await generateIdempotencyKey("buy-credits", body);
       const { data, error } = await supabase.functions.invoke("asaas-buy-credits", {
-        body: { organization_id: orgId, pack_id: pack?.id, billing_type: billingType },
+        body,
+        headers: {
+          "Idempotency-Key": idempKey,
+          "x-request-id": generateRequestId(),
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
