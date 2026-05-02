@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export function useCrmAutomations() {
   const { data: orgId } = useUserOrgId();
@@ -36,7 +36,7 @@ export function useCrmAutomationMutations() {
     }) => {
       const { data, error } = await supabase
         .from("crm_automations")
-        .insert({ ...automation, organization_id: orgId! } as any)
+        .insert({ ...automation, organization_id: orgId! } satisfies TablesInsert<"crm_automations">)
         .select()
         .single();
       if (error) throw error;

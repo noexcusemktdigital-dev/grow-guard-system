@@ -1,9 +1,8 @@
-// @ts-nocheck
-/* eslint-disable */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export function useSupportTickets() {
   const { data: orgId } = useUserOrgId();
@@ -38,7 +37,7 @@ export function useSupportTicketMutations() {
   const createTicket = useMutation({
     mutationFn: async (ticket: { title: string; description?: string; category?: string; subcategory?: string; priority?: string; attachments?: string[] }) => {
       if (!orgId || !user) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase.from("support_tickets").insert({ ...ticket, organization_id: orgId, created_by: user.id } as any).select().single();
+      const { data, error } = await supabase.from("support_tickets").insert({ ...ticket, organization_id: orgId, created_by: user.id } satisfies TablesInsert<"support_tickets">).select().single();
       if (error) throw error;
       return data;
     },
@@ -63,12 +62,12 @@ export function useSupportTicketMutations() {
   const sendMessage = useMutation({
     mutationFn: async (msg: { ticket_id: string; content: string; is_internal?: boolean; attachments?: string[] }) => {
       if (!user) throw new Error("Usuário não autenticado");
-      const { data, error } = await supabase.from("support_messages").insert({ ...msg, user_id: user.id } as any).select().single();
+      const { data, error } = await supabase.from("support_messages").insert({ ...msg, user_id: user.id } satisfies TablesInsert<"support_messages">).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["support-messages", (data as any)?.ticket_id] });
+      qc.invalidateQueries({ queryKey: ["support-messages", data?.ticket_id] });
       qc.invalidateQueries({ queryKey: ["support-tickets-network"] });
     },
   });

@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 export interface CalculatorSettings {
   surplus_type: "fixed" | "percentage";
@@ -28,15 +28,15 @@ export function useCalculatorSettings() {
 
   const upsert = useMutation({
     mutationFn: async (settings: CalculatorSettings) => {
-      const { error } = await (supabase
-        .from("calculator_settings") as any)
+      const { error } = await supabase
+        .from("calculator_settings")
         .upsert(
           {
             organization_id: orgId!,
             surplus_type: settings.surplus_type,
             surplus_value: settings.surplus_value,
             updated_at: new Date().toISOString(),
-          },
+          } satisfies TablesInsert<"calculator_settings">,
           { onConflict: "organization_id" }
         );
       if (error) throw error;

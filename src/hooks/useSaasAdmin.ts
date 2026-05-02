@@ -1,25 +1,15 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import type { Tables } from "@/integrations/supabase/typed";
 
-interface PlatformErrorRow {
-  id: string;
-  severity: string;
-  source: string;
-  resolved: boolean;
-  created_at: string;
-  resolved_at: string | null;
-  error_message?: string;
-  function_name?: string;
-  [key: string]: unknown;
-}
+type PlatformErrorRow = Tables<"platform_error_logs">;
 
 export function usePlatformErrors(filters?: { severity?: string; source?: string; status?: string; search?: string }) {
   return useQuery({
     queryKey: ["platform-errors", filters],
     queryFn: async () => {
       let query = supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -41,7 +31,7 @@ export function usePlatformErrors(filters?: { severity?: string; source?: string
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as unknown as PlatformErrorRow[];
+      return (data ?? []) as PlatformErrorRow[];
     },
   });
 }
@@ -51,7 +41,7 @@ export function useResolveError() {
   return useMutation({
     mutationFn: async ({ errorId, note }: { errorId: string; note?: string }) => {
       const { error } = await supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs")
         .update({ resolved: true, resolved_at: new Date().toISOString(), resolved_note: note || null } as Record<string, unknown>)
         .eq("id", errorId);
       if (error) throw error;
@@ -68,7 +58,7 @@ export function useDeleteError() {
   return useMutation({
     mutationFn: async (errorId: string) => {
       const { error } = await supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs")
         .delete()
         .eq("id", errorId);
       if (error) throw error;
@@ -85,13 +75,13 @@ export function useErrorStats() {
     queryKey: ["error-stats"],
     queryFn: async () => {
       const { data: all, error } = await supabase
-        .from("platform_error_logs" as any)
+        .from("platform_error_logs")
         .select("id, severity, source, resolved, created_at, resolved_at")
         .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
 
-      const items = (all || []) as unknown as PlatformErrorRow[];
+      const items = (all ?? []) as PlatformErrorRow[];
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);

@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useUserOrgId } from "./useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useCallback } from "react";
+import type { TablesInsert } from "@/integrations/supabase/typed";
 
 const TASK_PAGE_SIZE = 100;
 
@@ -78,7 +78,7 @@ export function useCrmTaskMutations() {
           status: "pending",
           assigned_to: task.assigned_to || user?.id || null,
           created_by: user?.id || null,
-        } as any);
+        } satisfies TablesInsert<"client_tasks">);
       } catch (e) {
         // Non-blocking — CRM task already created
         console.warn("Failed to mirror task to client_tasks:", e);

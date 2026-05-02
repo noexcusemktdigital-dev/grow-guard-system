@@ -1,10 +1,11 @@
-// @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/typed";
+import type { Json } from "@/integrations/supabase/types";
 
 // ── New 5-Step + GPS schema ──────────────────────────────────────
 
@@ -242,11 +243,11 @@ export function useCreateStrategy() {
         .insert({
           organization_id: orgId,
           title,
-          diagnostic_answers: answers as any,
+          diagnostic_answers: answers as unknown as Json,
           status: "draft",
           created_by: user.id,
           lead_id: leadId || null,
-        } as any)
+        } satisfies TablesInsert<"franqueado_strategies">)
         .select()
         .single();
       if (insertErr) throw insertErr;
@@ -274,7 +275,7 @@ export function useCreateStrategy() {
 
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_strategies")
-        .update({ result: fnData.result as any, status: "completed" })
+        .update({ result: fnData.result as unknown as Json, status: "completed" } satisfies TablesUpdate<"franqueado_strategies">)
         .eq("id", row.id)
         .select()
         .single();
@@ -356,7 +357,7 @@ export function useRegenerateStrategy() {
 
       const { data: updated, error: updateErr } = await supabase
         .from("franqueado_strategies")
-        .update({ result: fnData.result as any, status: "completed" })
+        .update({ result: fnData.result as unknown as Json, status: "completed" } satisfies TablesUpdate<"franqueado_strategies">)
         .eq("id", id)
         .select()
         .single();

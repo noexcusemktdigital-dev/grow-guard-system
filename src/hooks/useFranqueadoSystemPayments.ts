@@ -1,23 +1,11 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/typed";
 
-export interface SystemPayment {
-  id: string;
-  organization_id: string;
-  month: string;
-  amount: number;
-  billing_type: string;
-  asaas_payment_id: string | null;
-  invoice_url: string | null;
-  status: string;
-  paid_at: string | null;
-  created_at: string;
-}
+export type SystemPayment = Tables<"franchisee_system_payments">;
 
 export function useFranqueadoSystemPayments() {
   const { data: orgId } = useUserOrgId();
@@ -25,14 +13,14 @@ export function useFranqueadoSystemPayments() {
   const payments = useQuery({
     queryKey: ["franchisee-system-payments", orgId],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("franchisee_system_payments" as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- table not in generated types
+      const { data, error } = await supabase
+        .from("franchisee_system_payments")
         .select("*")
         .eq("organization_id", orgId!)
         .order("month", { ascending: false })
-        .limit(12) as any);
+        .limit(12);
       if (error) throw error;
-      return (data || []) as unknown as SystemPayment[];
+      return (data ?? []) as SystemPayment[];
     },
     enabled: !!orgId,
   });
