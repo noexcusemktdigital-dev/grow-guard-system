@@ -374,6 +374,10 @@ export default function ClienteInicio() {
           {/* Monthly Goals */}
           <ClienteInicioGoals goalsDisplay={goalsDisplay} />
         </div>
+
+        <div className="mt-6 rounded-2xl border border-border/60 bg-card p-6">
+          <AssessoriaTeamBanner servico="crescimento do seu negócio" />
+        </div>
       </div>
     </div>
   );
