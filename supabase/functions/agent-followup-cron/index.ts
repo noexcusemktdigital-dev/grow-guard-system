@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { logJobFailure } from '../_shared/job-failures.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -244,7 +243,6 @@ Deno.serve(async (req) => {
     });
   } catch (err: unknown) {
     console.error("agent-followup-cron error:", err);
-    await logJobFailure({ jobName: 'agent-followup-cron', jobKind: 'cron' }, err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

@@ -2,7 +2,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkCronSecret } from '../_shared/cron-auth.ts';
-import { logJobFailure } from '../_shared/job-failures.ts';
 
 /**
  * Cron job: runs daily, finds subscriptions/payments due in 3 days
@@ -142,7 +141,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error('billing-reminder-check error', msg);
-    await logJobFailure({ jobName: 'billing-reminder-check', jobKind: 'cron' }, error);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },

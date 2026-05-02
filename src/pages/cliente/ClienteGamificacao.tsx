@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { FeatureTutorialButton } from "@/components/cliente/FeatureTutorialButton";
 import {
   Trophy, Medal, Star, Target, Coins, Timer, BarChart3, Award,
@@ -16,28 +16,14 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { triggerCelebration } from "@/components/CelebrationEffect";
-import { useClienteGamification } from "@/hooks/useClienteContent";
-import { useCrmLeads } from "@/hooks/useClienteCrm";
-import { useCrmTeam } from "@/hooks/useCrmTeam";
-import { useMyEvaluations } from "@/hooks/useEvaluations";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useClienteContent, useClienteSites } from "@/hooks/useClienteContent";
-import { useClienteDispatches } from "@/hooks/useClienteDispatches";
-import { useClienteAgents } from "@/hooks/useClienteAgents";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { useOrgProfile } from "@/hooks/useOrgProfile";
-import { useWhatsAppInstance } from "@/hooks/useWhatsApp";
 import { useRoleAccess } from "@/hooks/useRoleAccess";
-import { useOrgMembers } from "@/hooks/useOrgMembers";
-import { useOrgTeams } from "@/hooks/useOrgTeams";
-import { useActiveStrategy } from "@/hooks/useMarketingStrategy";
+import { useGamificationData } from "@/hooks/useGamificationData";
 
 import {
   LEVELS, ORG_LEVELS, medalIcons, medalColors, allMedals, rewardTiers,
@@ -47,137 +33,35 @@ import {
 export default function ClienteGamificacao() {
   const { user } = useAuth();
   const { isAdmin } = useRoleAccess();
-  const { data: orgId } = useUserOrgId();
   const qc = useQueryClient();
-  const { data: gamification, isLoading } = useClienteGamification();
-  const { data: leads } = useCrmLeads();
-  const { data: team } = useCrmTeam();
-  const { data: myEvals } = useMyEvaluations();
-  const { data: contents } = useClienteContent();
-  const { data: dispatches } = useClienteDispatches();
-  const { data: sites } = useClienteSites();
-  const { data: agents } = useClienteAgents();
-  const { data: profile } = useUserProfile();
-  const { data: org } = useOrgProfile();
-  const { data: waInstance } = useWhatsAppInstance();
-  const { data: members } = useOrgMembers();
-  const { data: teams } = useOrgTeams();
-  const { data: activeStrategy } = useActiveStrategy();
 
-  // Extra data for new medals
-  const { data: calendarEvents } = useQuery({
-    queryKey: ["gamification-events", orgId],
-    queryFn: async () => {
-      const { count } = await supabase.from("calendar_events").select("id", { count: "exact", head: true }).eq("organization_id", orgId ?? "");
-      return count ?? 0;
-    },
-    enabled: !!orgId,
-    staleTime: 1000 * 60 * 5,
-  });
+  // Single consolidated request — replaces 18 parallel hooks.
+  const { data: g, isLoading } = useGamificationData();
 
-  const { data: checklistDoneCount } = useQuery({
-    queryKey: ["gamification-checklist-done", user?.id],
-    queryFn: async () => {
-      const { count } = await supabase.from("client_checklist_items").select("id", { count: "exact", head: true }).eq("user_id", user?.id ?? "").eq("is_completed", true);
-      return count ?? 0;
-    },
-    enabled: !!user,
-    staleTime: 1000 * 60 * 5,
-  });
+  const orgId = g?.org_id ?? null;
+  const profile = g?.profile ?? null;
+  const org = g?.org ?? null;
+  const gamification = g?.gamification ?? null;
+  const counts = g?.counts;
+  const waConnected = g?.flags.wa_connected ?? false;
+  const hasStrategy = g?.flags.has_strategy ?? false;
+  const teamRankingRaw = g?.team_ranking ?? [];
+  const totalOrgXp = g?.total_org_xp ?? 0;
+  const claimedSet = useMemo(() => new Set(g?.claimed_reward_ids ?? []), [g?.claimed_reward_ids]);
 
-  const { data: academyProgress } = useQuery({
-    queryKey: ["gamification-academy", user?.id],
-    queryFn: async () => {
-      const { count } = await supabase.from("academy_progress").select("id", { count: "exact", head: true }).eq("user_id", user?.id ?? "").not("completed_at", "is", null);
-      return count ?? 0;
-    },
-    enabled: !!user,
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const { data: customFunnels } = useQuery({
-    queryKey: ["gamification-funnels", orgId],
-    queryFn: async () => {
-      const { count } = await supabase.from("crm_funnels").select("id", { count: "exact", head: true }).eq("organization_id", orgId ?? "");
-      return count ?? 0;
-    },
-    enabled: !!orgId,
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const { data: claims } = useQuery({
-    queryKey: ["gamification-claims", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("gamification_claims" as unknown as "profiles")
-        .select("*")
-        .eq("organization_id", orgId ?? "");
-      if (error) throw error;
-      return (data || []) as unknown as Array<Record<string, unknown>>;
-    },
-    enabled: !!orgId,
-  });
-
-  // Team gamification data for ranking
-  const { data: teamGamification } = useQuery({
-    queryKey: ["team-gamification", orgId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_gamification")
-        .select("user_id, xp, title, streak_days")
-        .eq("organization_id", orgId ?? "");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!orgId,
-    staleTime: 1000 * 60 * 2,
-  });
-
-  const claimReward = useMutation({
-    mutationFn: async ({ level, value }: { level: number; value: number }) => {
-      const { error: claimError } = await supabase
-        .from("gamification_claims" as unknown as "profiles")
-        .insert({ user_id: user?.id ?? "", organization_id: orgId ?? "", reward_id: `level-${level}`, status: "claimed" } as Record<string, unknown>);
-      if (claimError) throw claimError;
-      if (value > 0) {
-        const { data: wallet } = await supabase
-          .from("credit_wallets").select("id, balance").eq("organization_id", orgId ?? "").maybeSingle();
-        if (wallet) {
-          await supabase.from("credit_wallets").update({ balance: (wallet.balance || 0) + value }).eq("id", wallet.id);
-          await supabase.from("credit_transactions").insert({
-            organization_id: orgId ?? "", type: "bonus", amount: value,
-            balance_after: (wallet.balance || 0) + value,
-            description: `Recompensa de gamificação - Nível ${level}`,
-            metadata: { source: "gamification_reward", level },
-          });
-        }
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["gamification-claims"] });
-      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
-      triggerCelebration();
-      toast.success("Recompensa resgatada com sucesso! 🎉");
-    },
-    onError: () => toast.error("Erro ao resgatar recompensa"),
-  });
-
-  // For cliente portal: use ALL org leads (most leads have assigned_to=null)
-  const orgLeads = leads ?? [];
-  const totalLeads = orgLeads.length;
-  const wonLeads = orgLeads.filter(l => !!l.won_at).length;
-  const pipelineValue = orgLeads.filter(l => !l.won_at && !l.lost_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
-  const wonValue = orgLeads.filter(l => !!l.won_at).reduce((acc, l) => acc + Number(l.value || 0), 0);
-
-  const contentCount = contents?.length ?? 0;
-  const dispatchCount = dispatches?.length ?? 0;
-  const siteCount = sites?.length ?? 0;
-  const activeAgents = (agents || []).filter(a => a.status === "active").length;
-  const waConnected = waInstance?.status === "connected";
-  const hasStrategy = !!activeStrategy;
-
-  // Complete leads count (value + phone + email)
-  const completeLeads = orgLeads.filter(l => l.value && Number(l.value) > 0 && l.phone && l.email).length;
+  const totalLeads = counts?.total_leads ?? 0;
+  const wonLeads = counts?.won_leads ?? 0;
+  const wonValue = counts?.won_value ?? 0;
+  const pipelineValue = counts?.pipeline_value ?? 0;
+  const completeLeads = counts?.complete_leads ?? 0;
+  const contentCount = counts?.contents ?? 0;
+  const dispatchCount = counts?.dispatches ?? 0;
+  const siteCount = counts?.sites ?? 0;
+  const activeAgents = counts?.active_agents ?? 0;
+  const calendarEvents = counts?.calendar_events ?? 0;
+  const checklistDoneCount = counts?.checklist_done ?? 0;
+  const academyProgress = counts?.academy_done ?? 0;
+  const customFunnels = counts?.custom_funnels ?? 0;
 
   const xp = (gamification as Record<string, unknown>)?.xp ?? 0;
   const streakDays = gamification?.streak_days ?? 0;
@@ -186,14 +70,9 @@ export default function ClienteGamificacao() {
   const levelInfo = getLevelInfo(xp);
   const LevelIcon = levelInfo.icon;
 
-  // Organization-level: sum of all members' XP
-  const totalOrgXp = useMemo(() => {
-    return (teamGamification ?? []).reduce((sum, g) => sum + (g.xp ?? 0), 0);
-  }, [teamGamification]);
   const orgLevelInfo = getLevelInfo(totalOrgXp, ORG_LEVELS);
   const OrgLevelIcon = orgLevelInfo.icon;
 
-  // Streak risk check
   const streakAtRisk = useMemo(() => {
     if (!lastActivity || streakDays === 0) return false;
     const hoursSince = (Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60);
@@ -203,20 +82,17 @@ export default function ClienteGamificacao() {
   const medals = useMemo(() => {
     return allMedals.map(m => {
       let unlocked = false;
-      // Platform usage medals
       if (m.emoji === "profile" && profile?.full_name && profile?.phone && profile?.job_title) unlocked = true;
       if (m.emoji === "company" && org?.cnpj && org?.address && org?.phone) unlocked = true;
       if (m.emoji === "integrator" && waConnected) unlocked = true;
       if (m.emoji === "strategist" && hasStrategy) unlocked = true;
       if (m.emoji === "communicator" && contentCount >= 10) unlocked = true;
-      // New platform medals
-      if (m.emoji === "organizer" && (calendarEvents ?? 0) >= 5) unlocked = true;
+      if (m.emoji === "organizer" && calendarEvents >= 5) unlocked = true;
       if (m.emoji === "detailist" && completeLeads >= 10) unlocked = true;
-      if (m.emoji === "funnel" && (customFunnels ?? 0) >= 1) unlocked = true;
-      if (m.emoji === "checklist" && (checklistDoneCount ?? 0) >= 30) unlocked = true;
-      if (m.emoji === "student" && (academyProgress ?? 0) >= 3) unlocked = true;
+      if (m.emoji === "funnel" && customFunnels >= 1) unlocked = true;
+      if (m.emoji === "checklist" && checklistDoneCount >= 30) unlocked = true;
+      if (m.emoji === "student" && academyProgress >= 3) unlocked = true;
       if (m.emoji === "strategy" && hasStrategy && totalLeads >= 5) unlocked = true;
-      // CRM medals
       if (m.emoji === "lead" && totalLeads >= 1) unlocked = true;
       if (m.emoji === "sales" && wonLeads >= 10) unlocked = true;
       if (m.emoji === "streak" && streakDays >= 30) unlocked = true;
@@ -232,23 +108,45 @@ export default function ClienteGamificacao() {
 
   const unlockedCount = medals.filter(m => m.unlocked).length;
 
-  const avgEval = myEvals && myEvals.length > 0
-    ? (myEvals.reduce((a, e) => a + e.score, 0) / myEvals.length).toFixed(1)
-    : null;
+  const avgEval = g?.avg_eval != null ? g.avg_eval.toFixed(1) : null;
+  const evalsCount = g?.evals_count ?? 0;
 
-  // Ranking with real XP from gamification table
   const teamRanking = useMemo(() => {
-    const gamMap = new Map((teamGamification ?? []).map(g => [g.user_id, g]));
-    return (team ?? []).map(member => {
-      const gam = gamMap.get(member.user_id);
-      const memberXp = gam?.xp ?? 0;
-      const memberTitle = gam?.title ?? "Novato";
-      const memberLevel = getLevelInfo(memberXp);
-      return { ...member, xp: memberXp, title: memberTitle, levelInfo: memberLevel };
-    }).sort((a, b) => b.xp - a.xp);
-  }, [team, teamGamification]);
+    return teamRankingRaw.map(m => ({
+      ...m,
+      levelInfo: getLevelInfo(m.xp),
+    }));
+  }, [teamRankingRaw]);
 
-  const claimedLevels = useMemo(() => new Set((claims || []).map((c: Record<string, unknown>) => c.reward_id as string)), [claims]);
+  const claimReward = useMutation({
+    mutationFn: async ({ level, value }: { level: number; value: number }) => {
+      if (!orgId) throw new Error("no_org");
+      const { error: claimError } = await supabase
+        .from("gamification_claims" as unknown as "profiles")
+        .insert({ user_id: user?.id ?? "", organization_id: orgId, reward_id: `level-${level}`, status: "claimed" } as Record<string, unknown>);
+      if (claimError) throw claimError;
+      if (value > 0) {
+        const { data: wallet } = await supabase
+          .from("credit_wallets").select("id, balance").eq("organization_id", orgId).maybeSingle();
+        if (wallet) {
+          await supabase.from("credit_wallets").update({ balance: (wallet.balance || 0) + value }).eq("id", wallet.id);
+          await supabase.from("credit_transactions").insert({
+            organization_id: orgId, type: "bonus", amount: value,
+            balance_after: (wallet.balance || 0) + value,
+            description: `Recompensa de gamificação - Nível ${level}`,
+            metadata: { source: "gamification_reward", level },
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["gamification-data"] });
+      qc.invalidateQueries({ queryKey: ["credit-wallet"] });
+      triggerCelebration();
+      toast.success("Recompensa resgatada com sucesso! 🎉");
+    },
+    onError: () => toast.error("Erro ao resgatar recompensa"),
+  });
 
   if (isLoading) {
     return (
@@ -274,13 +172,8 @@ export default function ClienteGamificacao() {
           <CardContent className="py-6 relative">
             <div className="flex items-center gap-6">
               <motion.div className="text-center" animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
-                <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-2 mx-auto border-2 border-primary/20 relative overflow-hidden"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))`,
-                    boxShadow: `0 8px 32px hsl(var(--primary) / 0.15), inset 0 1px 2px rgba(255,255,255,0.1)`,
-                  }}
-                >
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-2 mx-auto border-2 border-primary/20 relative overflow-hidden"
+                  style={{ background: `linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))`, boxShadow: `0 8px 32px hsl(var(--primary) / 0.15), inset 0 1px 2px rgba(255,255,255,0.1)` }}>
                   <LevelIcon className={`w-10 h-10 ${levelInfo.color} drop-shadow-lg`} />
                 </div>
                 <p className={`text-lg font-black ${levelInfo.color}`}>{levelInfo.title}</p>
@@ -312,7 +205,6 @@ export default function ClienteGamificacao() {
         </Card>
       </motion.div>
 
-      {/* Streak risk alert */}
       {streakAtRisk && streakDays > 0 && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-orange-500/30 bg-orange-500/5">
@@ -329,18 +221,15 @@ export default function ClienteGamificacao() {
         </motion.div>
       )}
 
-      {/* XP Suggestions */}
       <XpSuggestions
         profile={profile} org={org} waConnected={waConnected}
         totalLeads={totalLeads} wonLeads={wonLeads} contentCount={contentCount}
         siteCount={siteCount} activeAgents={activeAgents} hasStrategy={hasStrategy}
       />
 
-      {/* Profile Completeness Score */}
       <CompletenessScore profile={profile} org={org} waConnected={waConnected} />
 
-      {/* Admin: Team overview */}
-      {isAdmin && members && members.length > 1 && (
+      {isAdmin && (counts?.members ?? 0) > 1 && (
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
@@ -351,11 +240,11 @@ export default function ClienteGamificacao() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               <div className="text-center p-3 rounded-lg bg-muted/30">
-                <p className="text-xl font-bold">{members.length}</p>
+                <p className="text-xl font-bold">{counts?.members ?? 0}</p>
                 <p className="text-[10px] text-muted-foreground">Membros</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-muted/30">
-                <p className="text-xl font-bold">{teams?.length ?? 0}</p>
+                <p className="text-xl font-bold">{counts?.teams ?? 0}</p>
                 <p className="text-[10px] text-muted-foreground">Times</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-muted/30">
@@ -363,7 +252,7 @@ export default function ClienteGamificacao() {
                 <p className="text-[10px] text-muted-foreground">Medalhas da Org</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-muted/30">
-                <p className="text-xl font-bold">{(leads ?? []).length}</p>
+                <p className="text-xl font-bold">{totalLeads}</p>
                 <p className="text-[10px] text-muted-foreground">Leads Totais</p>
               </div>
             </div>
@@ -371,7 +260,6 @@ export default function ClienteGamificacao() {
         </Card>
       )}
 
-      {/* Evaluation + Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="h-full">
           <CardHeader className="pb-2">
@@ -389,7 +277,7 @@ export default function ClienteGamificacao() {
                   ))}
                 </div>
                 <p className="text-2xl font-bold">{avgEval}</p>
-                <p className="text-xs text-muted-foreground">{myEvals?.length} avaliações</p>
+                <p className="text-xs text-muted-foreground">{evalsCount} avaliações</p>
               </div>
             ) : (
               <div className="text-center py-4 text-muted-foreground">
@@ -425,7 +313,6 @@ export default function ClienteGamificacao() {
         </Card>
       </div>
 
-      {/* Medals — 3D Version */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -447,7 +334,6 @@ export default function ClienteGamificacao() {
         </CardContent>
       </Card>
 
-      {/* Nível da Conta (Org) */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
         <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-primary/[0.02]">
           <CardHeader className="pb-2">
@@ -460,13 +346,8 @@ export default function ClienteGamificacao() {
           <CardContent>
             <div className="flex items-center gap-5">
               <div className="text-center shrink-0">
-                <div
-                  className="w-16 h-16 rounded-xl flex items-center justify-center mb-1.5 mx-auto border-2 border-primary/20"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))`,
-                    boxShadow: `0 6px 24px hsl(var(--primary) / 0.1)`,
-                  }}
-                >
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-1.5 mx-auto border-2 border-primary/20"
+                  style={{ background: `linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--primary) / 0.04))`, boxShadow: `0 6px 24px hsl(var(--primary) / 0.1)` }}>
                   <OrgLevelIcon className={`w-8 h-8 ${orgLevelInfo.color} drop-shadow`} />
                 </div>
                 <p className={`text-sm font-black ${orgLevelInfo.color}`}>{orgLevelInfo.title}</p>
@@ -479,7 +360,7 @@ export default function ClienteGamificacao() {
                 </div>
                 <Progress value={orgLevelInfo.progress} className="h-2.5" />
                 <p className="text-[10px] text-muted-foreground">
-                  Soma do XP de {(teamGamification ?? []).length} membro{(teamGamification ?? []).length !== 1 ? "s" : ""} da equipe
+                  Soma do XP de {teamRankingRaw.length} membro{teamRankingRaw.length !== 1 ? "s" : ""} da equipe
                 </p>
               </div>
             </div>
@@ -487,7 +368,6 @@ export default function ClienteGamificacao() {
         </Card>
       </motion.div>
 
-      {/* Rewards — based on org level */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
@@ -499,7 +379,7 @@ export default function ClienteGamificacao() {
           <div className="space-y-3">
             {rewardTiers.map((reward) => {
               const isUnlocked = orgLevelInfo.level >= reward.level;
-              const isClaimed = claimedLevels.has(`level-${reward.level}`);
+              const isClaimed = claimedSet.has(`level-${reward.level}`);
               const tierLevel = ORG_LEVELS[reward.level - 1];
               const TierIcon = tierLevel.icon;
               return (
@@ -531,7 +411,6 @@ export default function ClienteGamificacao() {
         </CardContent>
       </Card>
 
-      {/* Team Ranking — with real XP */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
@@ -549,7 +428,7 @@ export default function ClienteGamificacao() {
             <div className="space-y-2">
               {teamRanking.map((member, idx) => {
                 const isMe = member.user_id === user?.id;
-                const initials = member.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+                const initials = (member.full_name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
                 const MemberLevelIcon = member.levelInfo.icon;
                 return (
                   <div key={member.user_id} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isMe ? "bg-primary/10 border border-primary/20" : "bg-muted/20 hover:bg-muted/30"}`}>

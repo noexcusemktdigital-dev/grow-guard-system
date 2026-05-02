@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST = 25;
 
@@ -825,10 +824,6 @@ serve(async (req) => {
       logo_position, title_position, background_type, color_tone,
       primary_color, secondary_color,
     } = body;
-
-    // API-005: Rate limit por usuario (5/min - geracao de imagem cara)
-    const _rl = await checkRateLimit(_authUser.id, organization_id ?? null, 'generate-social-image', { windowSeconds: 60, maxRequests: 5 });
-    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");

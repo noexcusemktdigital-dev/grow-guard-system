@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
 
           const cpPayment = await adminClient
             .from("client_payments")
-            .select("id, amount, franchisee_share")
+            .select("amount, franchisee_share")
             .eq("organization_id", cpOrgId)
             .eq("contract_id", cpContractId)
             .eq("month", cpMonth)
@@ -251,63 +251,6 @@ Deno.serve(async (req) => {
               status: "received",
               payment_method: "asaas",
             });
-
-            // Email "pagamento confirmado" para o cliente
-            try {
-              const { data: clientMembers } = await adminClient.rpc("get_org_members_with_email", { _org_id: cpOrgId });
-              const clientAdmin = (clientMembers || []).find((m: any) => m.role === "cliente_admin") || (clientMembers || [])[0];
-              if (clientAdmin?.email) {
-                fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-payment-confirmed`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                  },
-                  body: JSON.stringify({
-                    payment_id: cpPayment.data.id || payment.id,
-                    organization_id: cpOrgId,
-                    user_email: clientAdmin.email,
-                    user_name: clientAdmin.full_name || "",
-                    amount: cpPayment.data.amount,
-                    paid_at: new Date().toLocaleDateString("pt-BR"),
-                  }),
-                }).catch((e) => console.warn("payment-confirmed dispatch failed:", e?.message));
-              }
-            } catch (e) {
-              console.warn("payment-confirmed dispatch error:", (e as any)?.message);
-            }
-
-            // Email comissão para franqueado dono da unit
-            try {
-              const { data: clientOrg } = await adminClient
-                .from("organizations").select("name, parent_org_id").eq("id", cpOrgId).maybeSingle();
-              const franchiseeOrgId = (clientOrg as any)?.parent_org_id;
-              const commission = Number(cpPayment.data.amount) - Number(cpPayment.data.franchisee_share || 0);
-              if (franchiseeOrgId && commission > 0) {
-                const { data: franchiseeMembers } = await adminClient.rpc("get_org_members_with_email", { _org_id: franchiseeOrgId });
-                const franchisee = (franchiseeMembers || [])[0];
-                if (franchisee?.email) {
-                  fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-franchisee-commission-email`, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                    },
-                    body: JSON.stringify({
-                      payment_id: cpPayment.data.id || payment.id,
-                      organization_id: franchiseeOrgId,
-                      franchisee_email: franchisee.email,
-                      franchisee_name: franchisee.full_name || "",
-                      client_name: (clientOrg as any)?.name || "",
-                      total_amount: cpPayment.data.amount,
-                      commission_amount: commission,
-                    }),
-                  }).catch((e) => console.warn("franchisee-commission dispatch failed:", e?.message));
-                }
-              }
-            } catch (e) {
-              console.warn("franchisee-commission dispatch error:", (e as any)?.message);
-            }
           }
 
           console.log(`Client payment confirmed: org=${cpOrgId}, contract=${cpContractId}, month=${cpMonth}`);
