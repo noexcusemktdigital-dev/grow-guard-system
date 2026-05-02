@@ -1,14 +1,16 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
-Allow: /
+Allow: /crescimento
+Allow: /landing
+Allow: /plataformadoempresario
+Allow: /termos
+Allow: /privacidade
+Disallow: /cliente
+Disallow: /franqueado
+Disallow: /franqueadora
+Disallow: /admin
+Disallow: /apresentacao/
+Disallow: /welcome
+Disallow: /auth
+Disallow: /reset-password
+
+Sitemap: https://noexcuse.com.br/sitemap.xml

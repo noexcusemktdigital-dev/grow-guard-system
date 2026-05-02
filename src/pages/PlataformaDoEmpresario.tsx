@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { SEOHead } from "@/components/SEOHead";
 
 const SISTEMA_URL = "https://sistema.noexcusedigital.com.br/";
 const WHATSAPP_URL = "https://wa.me/5511999999999?text=Quero%20falar%20com%20um%20especialista%20NOEXCUSE";
@@ -304,6 +305,13 @@ export default function PlataformaDoEmpresario() {
   ];
 
   return (
+    <>
+      <SEOHead
+        title="Plataforma do Empresário — Sistema Noé"
+        description="Para empresários que querem escalar suas redes de franquias com marketing digital estruturado, automação e inteligência de dados."
+        canonical="https://noexcuse.com.br/plataformadoempresario"
+        ogImage="https://noexcuse.com.br/og-default.png"
+      />
     <div style={{ background: "#0a0a0f", color: "#fff", minHeight: "100vh", ...fontBody }}>
       <style>{`
         [data-reveal]{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
@@ -1021,5 +1029,6 @@ function LockedModal({ front, onClose }: { front: { title: string; bullets: stri
         </a>
       </div>
     </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { SEOHead } from "@/components/SEOHead";
 import {
   Sparkles, ArrowRight, Lock, CheckCircle2,
   Target, TrendingUp, BarChart3, Bot,
@@ -134,6 +135,13 @@ const SaasLanding = () => {
   }
 
   return (
+    <>
+      <SEOHead
+        title="Sistema Noé — Marketing Digital para Franquias"
+        description="Plataforma completa para gestão de marketing de redes de franquias: CRM, ads, conteúdo IA, métricas. Para franqueadores e franqueados."
+        canonical="https://noexcuse.com.br/crescimento"
+        ogImage="https://noexcuse.com.br/og-default.png"
+      />
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4"
@@ -559,6 +567,7 @@ const SaasLanding = () => {
         )}
       </AnimatePresence>
     </div>
+    </>
   );
 };
 
