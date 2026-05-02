@@ -29,6 +29,7 @@
     ],
     "useDefineForClassFields": true,
     "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true
   },
   "include": [
