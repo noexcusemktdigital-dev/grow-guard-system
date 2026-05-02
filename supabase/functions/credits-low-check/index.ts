@@ -39,6 +39,20 @@ Deno.serve(async (req) => {
     let skipped = 0;
 
     for (const w of wallets || []) {
+      // Resolve plan total to compute 15% threshold
+      const { data: sub } = await admin
+        .from('subscriptions')
+        .select('plan')
+        .eq('organization_id', w.organization_id)
+        .eq('status', 'active')
+        .maybeSingle();
+      const planTotal = PLAN_CREDITS[(sub as any)?.plan || 'starter'] ?? PLAN_CREDITS.starter;
+      const threshold = Math.max(ABSOLUTE_FLOOR, Math.floor(planTotal * LOW_THRESHOLD_PCT));
+      if (w.balance > threshold) {
+        skipped++;
+        continue;
+      }
+
       // Has a credits_low email been sent in the last 7 days?
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: recent } = await admin
