@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { useUserOrgId } from "./useUserOrgId";
 
@@ -94,7 +95,7 @@ export function useGenerateTrafficStrategy() {
   return useMutation({
     mutationFn: async (wizardData: TrafficWizardData & { strategy_id?: string }) => {
       if (!orgId) throw new Error("Org not found");
-      const resp = await supabase.functions.invoke("generate-traffic-strategy", {
+      const resp = await invokeEdge("generate-traffic-strategy", {
         body: { organization_id: orgId, ...wizardData },
       });
       if (resp.error) {

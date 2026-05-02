@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "sonner";
 
@@ -94,7 +95,7 @@ export function usePublishPost() {
 
   return useMutation({
     mutationFn: async (payload: PublishPostPayload) => {
-      const { data, error } = await supabase.functions.invoke("social-publish", {
+      const { data, error, requestId } = await invokeEdge("social-publish", {
         body: payload,
       });
       if (error) throw error;
@@ -107,8 +108,10 @@ export function usePublishPost() {
       }
     },
     onError: (err: unknown) => {
+      const requestId = (err as any)?.requestId;
+      const suffix = requestId ? ` (id: ${requestId.slice(0, 8)})` : "";
       toast.error(
-        err instanceof Error ? err.message : "Erro ao publicar post.",
+        (err instanceof Error ? err.message : "Erro ao publicar post.") + suffix,
       );
     },
   });
