@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { useUnitMutations } from "@/hooks/useUnits";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 interface Props {
   unit: { id: string; name: string; city: string; state: string; phone: string; email: string; manager_name: string; address: string; status: string; opened_at: string; unit_org_id?: string };
@@ -33,7 +34,7 @@ export function UnidadeDadosEdit({ unit, readOnly }: Props) {
         { id: unit.id, phone: form.phone, email: form.email, address: form.address },
         {
           onSuccess: () => toast.success("Dados salvos com sucesso!"),
-          onError: (e) => toast.error(`Erro ao salvar: ${e.message}`),
+          onError: (e) => reportError(e, { title: "Erro ao salvar dados da unidade", category: "unidade.dados_save" }),
         }
       );
     } else {
@@ -41,7 +42,7 @@ export function UnidadeDadosEdit({ unit, readOnly }: Props) {
         { id: unit.id, ...form },
         {
           onSuccess: () => toast.success("Dados salvos com sucesso!"),
-          onError: (e) => toast.error(`Erro ao salvar: ${e.message}`),
+          onError: (e) => reportError(e, { title: "Erro ao salvar dados da unidade", category: "unidade.dados_save" }),
         }
       );
     }

@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { Share2, AlertCircle, Wifi, Instagram, Linkedin, Globe } from "lucide-react";
 import { useSocialAccounts, usePublishPost, SocialAccount } from "@/hooks/useSocialAccounts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
@@ -86,7 +87,7 @@ export function PublicarModal({ open, onOpenChange, postId }: PublicarModalProps
       );
     }
     if (errorCount > 0) {
-      toast.error(`Erro ao publicar em ${errorCount} conta${errorCount > 1 ? "s" : ""}.`);
+      reportError(new Error(`Falha em ${errorCount} conta${errorCount > 1 ? "s" : ""}`), { title: `Erro ao publicar em ${errorCount} conta${errorCount > 1 ? "s" : ""}`, category: "social.publish_partial" });
     }
 
     setSelectedAccountIds(new Set());

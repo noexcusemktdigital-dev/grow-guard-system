@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useCrmTaskMutations } from "@/hooks/useCrmTasks";
 import { useCrmOrgMembersMap } from "@/hooks/useCrmOrgMembers";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 /* ===== Quick Task Popover ===== */
 function QuickTaskPopover({ lead, children }: { lead: LeadRow; children: React.ReactNode }) {
@@ -45,8 +46,8 @@ function QuickTaskPopover({ lead, children }: { lead: LeadRow; children: React.R
       await updateTask.mutateAsync({ id: task.id, due_date: new Date(dueDate).toISOString() });
       toast.success("Prazo atualizado");
       setOpen(false);
-    } catch {
-      toast.error("Erro ao atualizar prazo");
+    } catch (e) {
+      reportError(e, { title: "Erro ao atualizar prazo", category: "crm.task_update" });
     }
   };
 
@@ -55,8 +56,8 @@ function QuickTaskPopover({ lead, children }: { lead: LeadRow; children: React.R
       await updateTask.mutateAsync({ id: task.id, completed_at: new Date().toISOString() });
       toast.success("Tarefa concluída");
       setOpen(false);
-    } catch {
-      toast.error("Erro ao concluir tarefa");
+    } catch (e) {
+      reportError(e, { title: "Erro ao concluir tarefa", category: "crm.task_complete" });
     }
   };
 
