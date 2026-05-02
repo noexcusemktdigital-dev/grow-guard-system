@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Users, Mail, Plus, Check, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
