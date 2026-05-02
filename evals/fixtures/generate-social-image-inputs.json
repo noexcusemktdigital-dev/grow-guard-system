@@ -1,0 +1,62 @@
+[
+  {
+    "name": "imagem_post_promo_alimentacao",
+    "input": {
+      "brand": "Burger Artesanal Co.",
+      "post_type": "promo\u00e7\u00e3o",
+      "description": "combo especial de hamb\u00farguer artesanal + batata frita por R$39",
+      "platform": "instagram",
+      "style": "fotogr\u00e1fico apetitoso",
+      "colors": [
+        "vermelho",
+        "amarelo dourado",
+        "marrom"
+      ]
+    }
+  },
+  {
+    "name": "imagem_citacao_motivacional",
+    "input": {
+      "brand": "Coach Ana Paula",
+      "post_type": "cita\u00e7\u00e3o",
+      "description": "frase motivacional sobre supera\u00e7\u00e3o de desafios profissionais",
+      "platform": "linkedin",
+      "style": "minimalista profissional",
+      "colors": [
+        "azul marinho",
+        "branco",
+        "dourado"
+      ]
+    }
+  },
+  {
+    "name": "imagem_lancamento_produto",
+    "input": {
+      "brand": "TechGear Brasil",
+      "post_type": "lan\u00e7amento",
+      "description": "novo smartwatch com monitoramento de sa\u00fade avan\u00e7ado",
+      "platform": "instagram",
+      "style": "tech futurista",
+      "colors": [
+        "preto",
+        "ciano neon",
+        "prata"
+      ]
+    }
+  },
+  {
+    "name": "imagem_depoimento_cliente",
+    "input": {
+      "brand": "Escola de Idiomas Global",
+      "post_type": "depoimento",
+      "description": "aluna que conseguiu emprego internacional ap\u00f3s aprender ingl\u00eas",
+      "platform": "facebook",
+      "style": "humanizado e caloroso",
+      "colors": [
+        "verde esmeralda",
+        "branco",
+        "bege"
+      ]
+    }
+  }
+]

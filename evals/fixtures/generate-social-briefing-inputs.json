@@ -1,0 +1,59 @@
+[
+  {
+    "name": "briefing_campanha_dia_maes",
+    "input": {
+      "brand": "Floricultura Bella Rosa",
+      "campaign": "Dia das M\u00e3es",
+      "platforms": [
+        "instagram",
+        "facebook"
+      ],
+      "duration_days": 14,
+      "budget_brl": 1500,
+      "tone": "emocional e acolhedor"
+    }
+  },
+  {
+    "name": "briefing_lancamento_produto_tech",
+    "input": {
+      "brand": "AppGest Pro",
+      "campaign": "Lan\u00e7amento vers\u00e3o 2.0",
+      "platforms": [
+        "linkedin",
+        "twitter"
+      ],
+      "duration_days": 7,
+      "budget_brl": 4000,
+      "tone": "inovador e t\u00e9cnico"
+    }
+  },
+  {
+    "name": "briefing_institucional_saude",
+    "input": {
+      "brand": "Cl\u00ednica Vida Nova",
+      "campaign": "Janeiro Branco - Sa\u00fade Mental",
+      "platforms": [
+        "instagram",
+        "youtube"
+      ],
+      "duration_days": 31,
+      "budget_brl": 2500,
+      "tone": "informativo e humanizado"
+    }
+  },
+  {
+    "name": "briefing_promocao_black_friday",
+    "input": {
+      "brand": "Eletro Express",
+      "campaign": "Black Friday - at\u00e9 60% off",
+      "platforms": [
+        "instagram",
+        "facebook",
+        "tiktok"
+      ],
+      "duration_days": 5,
+      "budget_brl": 10000,
+      "tone": "urgente e empolgante"
+    }
+  }
+]

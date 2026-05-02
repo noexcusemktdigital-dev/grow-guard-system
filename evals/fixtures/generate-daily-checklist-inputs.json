@@ -1,0 +1,77 @@
+[
+  {
+    "name": "checklist_gestor_comercial",
+    "input": {
+      "role": "gestor comercial",
+      "industry": "vendas B2B de software",
+      "team_size": 8,
+      "focus_areas": [
+        "pipeline",
+        "follow-ups",
+        "reuni\u00f5es de equipe",
+        "m\u00e9tricas di\u00e1rias"
+      ],
+      "work_hours": "08:00-18:00"
+    }
+  },
+  {
+    "name": "checklist_social_media_manager",
+    "input": {
+      "role": "social media manager",
+      "industry": "ag\u00eancia de marketing digital",
+      "team_size": 1,
+      "focus_areas": [
+        "agendamento de posts",
+        "monitoramento de coment\u00e1rios",
+        "relat\u00f3rios",
+        "cria\u00e7\u00e3o de conte\u00fado"
+      ],
+      "work_hours": "09:00-17:00"
+    }
+  },
+  {
+    "name": "checklist_lider_suporte",
+    "input": {
+      "role": "l\u00edder de suporte ao cliente",
+      "industry": "SaaS",
+      "team_size": 5,
+      "focus_areas": [
+        "tickets abertos",
+        "SLA",
+        "feedback de clientes",
+        "treinamento da equipe"
+      ],
+      "work_hours": "07:00-16:00"
+    }
+  },
+  {
+    "name": "checklist_empreendedor_solo",
+    "input": {
+      "role": "empreendedor individual",
+      "industry": "consultoria de neg\u00f3cios",
+      "team_size": 1,
+      "focus_areas": [
+        "prospec\u00e7\u00e3o",
+        "entrega de projetos",
+        "financeiro",
+        "desenvolvimento pessoal"
+      ],
+      "work_hours": "08:00-17:00"
+    }
+  },
+  {
+    "name": "checklist_gerente_operacoes",
+    "input": {
+      "role": "gerente de opera\u00e7\u00f5es",
+      "industry": "log\u00edstica e distribui\u00e7\u00e3o",
+      "team_size": 25,
+      "focus_areas": [
+        "status de entregas",
+        "indicadores operacionais",
+        "equipe de campo",
+        "ocorr\u00eancias"
+      ],
+      "work_hours": "06:00-15:00"
+    }
+  }
+]

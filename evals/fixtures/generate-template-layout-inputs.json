@@ -1,0 +1,66 @@
+[
+  {
+    "name": "layout_newsletter_semanal",
+    "input": {
+      "template_type": "newsletter",
+      "brand": "Ag\u00eancia Crescimento Digital",
+      "sections": [
+        "destaque da semana",
+        "dicas r\u00e1pidas",
+        "case de sucesso",
+        "CTA"
+      ],
+      "tone": "profissional e educativo",
+      "format": "email"
+    }
+  },
+  {
+    "name": "layout_proposta_comercial",
+    "input": {
+      "template_type": "proposta comercial",
+      "brand": "Consultoria Estrat\u00e9gica Prime",
+      "sections": [
+        "resumo executivo",
+        "diagn\u00f3stico",
+        "solu\u00e7\u00e3o proposta",
+        "investimento",
+        "pr\u00f3ximos passos"
+      ],
+      "tone": "formal e persuasivo",
+      "format": "PDF"
+    }
+  },
+  {
+    "name": "layout_landing_page_curso",
+    "input": {
+      "template_type": "landing page",
+      "brand": "Academia Online ProDev",
+      "sections": [
+        "hero com headline",
+        "problema e solu\u00e7\u00e3o",
+        "m\u00f3dulos do curso",
+        "depoimentos",
+        "garantia",
+        "CTA final"
+      ],
+      "tone": "empolgante e educativo",
+      "format": "web"
+    }
+  },
+  {
+    "name": "layout_relatorio_mensal",
+    "input": {
+      "template_type": "relat\u00f3rio de resultados",
+      "brand": "Ag\u00eancia Performance Max",
+      "sections": [
+        "sum\u00e1rio executivo",
+        "m\u00e9tricas de tr\u00e1fego",
+        "convers\u00f5es",
+        "ROI por canal",
+        "recomenda\u00e7\u00f5es"
+      ],
+      "tone": "anal\u00edtico e objetivo",
+      "format": "apresenta\u00e7\u00e3o"
+    }
+  }
+]

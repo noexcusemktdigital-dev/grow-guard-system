@@ -1,0 +1,58 @@
+[
+  {
+    "name": "conceitos_marca_fitness",
+    "input": {
+      "brand": "Academia FitZone",
+      "niche": "fitness e bem-estar",
+      "target_audience": "adultos 25-45 anos que querem perder peso",
+      "num_concepts": 3,
+      "content_pillars": [
+        "transforma\u00e7\u00e3o",
+        "comunidade",
+        "resultados reais"
+      ]
+    }
+  },
+  {
+    "name": "conceitos_fintech_jovens",
+    "input": {
+      "brand": "FinF\u00e1cil",
+      "niche": "educa\u00e7\u00e3o financeira",
+      "target_audience": "jovens de 18-30 anos em in\u00edcio de carreira",
+      "num_concepts": 4,
+      "content_pillars": [
+        "aprendizado",
+        "independ\u00eancia financeira",
+        "desmistifica\u00e7\u00e3o"
+      ]
+    }
+  },
+  {
+    "name": "conceitos_restaurante_gourmet",
+    "input": {
+      "brand": "Bistr\u00f4 Maison",
+      "niche": "gastronomia francesa",
+      "target_audience": "p\u00fablico AB, amantes de boa culin\u00e1ria",
+      "num_concepts": 3,
+      "content_pillars": [
+        "experi\u00eancia",
+        "tradi\u00e7\u00e3o",
+        "bastidores da cozinha"
+      ]
+    }
+  },
+  {
+    "name": "conceitos_pet_shop",
+    "input": {
+      "brand": "PetAmor",
+      "niche": "produtos e servi\u00e7os para pets",
+      "target_audience": "tutores de c\u00e3es e gatos, todas as idades",
+      "num_concepts": 5,
+      "content_pillars": [
+        "amor pelos pets",
+        "sa\u00fade animal",
+        "lifestyle pet"
+      ]
+    }
+  }
+]
