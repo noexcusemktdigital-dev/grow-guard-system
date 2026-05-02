@@ -13,3 +13,8 @@ export * as SocialConcepts from './generate-social-concepts.ts';
 export * as TemplateLayout from './generate-template-layout.ts';
 export * as DailyChecklist from './generate-daily-checklist.ts';
 export * as DailyTasks from './generate-daily-tasks.ts';
+export * as Site from './generate-site.ts';
+export * as SocialImage from './generate-social-image.ts';
+export * as SocialVideoFrames from './generate-social-video-frames.ts';
+export * as VideoBriefing from './generate-video-briefing.ts';
+export * as SupportAccess from './generate-support-access.ts';
