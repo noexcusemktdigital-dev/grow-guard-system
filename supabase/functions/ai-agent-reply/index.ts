@@ -85,28 +85,19 @@ function hoursSince(dateStr: string): number {
   return (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60);
 }
 
-async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string) {
+async function debitCredits(adminClient: any, orgId: string, tokensUsed: number, agentName: string, supabaseUrl: string, serviceRoleKey: string) {
   const FIXED_CREDIT_COST = 2;
   try {
-    const { data: gpsApproved } = await adminClient
-      .from("marketing_strategies")
-      .select("id")
-      .eq("organization_id", orgId)
-      .eq("status", "approved")
-      .limit(1)
-      .maybeSingle();
-
-    if (!gpsApproved) {
-      console.log("GPS not yet approved — skipping credit debit");
-      return;
-    }
-
-    await adminClient.rpc("debit_credits", {
-      _org_id: orgId,
-      _amount: FIXED_CREDIT_COST,
-      _description: `Mensagem IA — ${agentName}`,
-      _source: "ai-agent-reply",
-    });
+    const debited = await debitIfGPSDone(
+      adminClient,
+      orgId,
+      FIXED_CREDIT_COST,
+      `Mensagem IA — ${agentName}`,
+      "ai-agent-reply",
+      supabaseUrl,
+      serviceRoleKey,
+    );
+    if (!debited) console.log("GPS not yet approved — skipping credit debit");
   } catch (e) {
     console.error("Debit credits error (non-blocking):", e);
   }
