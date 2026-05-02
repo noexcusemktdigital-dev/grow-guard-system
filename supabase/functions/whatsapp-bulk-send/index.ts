@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskPhone, redact } from '../_shared/redact.ts';
 
 function randomDelay(base: number): number {
   const variance = Math.floor(Math.random() * 5) - 2; // -2 to +2
@@ -164,11 +165,11 @@ Deno.serve(async (req) => {
           });
         } else {
           failed++;
-          console.warn(`Failed to send to ${phone}:`, zapiData);
+          console.warn(`Failed to send to ${maskPhone(phone)}:`, redact(zapiData));
         }
       } catch (err) {
         failed++;
-        console.error(`Error sending to ${phone}:`, err.message);
+        console.error(`Error sending to ${maskPhone(phone)}:`, err.message);
       }
 
       // Throttle between sends (skip after last)

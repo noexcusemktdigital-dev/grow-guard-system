@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskEmail } from '../_shared/redact.ts';
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
     }
 
     // Create user (try-first approach)
-    console.log("[invite-user] Attempting to create user:", email);
+    console.log("[invite-user] Attempting to create user:", maskEmail(email));
     const tempPassword = crypto.randomUUID() + "Aa1!";
     const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
       email,
@@ -211,7 +212,7 @@ Deno.serve(async (req) => {
 
     if (isEmailExists) {
       isNewUser = false;
-      console.log("[invite-user] User already exists, looking up:", email);
+      console.log("[invite-user] User already exists, looking up:", maskEmail(email));
       const existing = await findUserByEmail(adminClient, email);
       if (!existing) throw new Error("Usuário existe mas não foi encontrado na listagem");
 
@@ -268,7 +269,7 @@ Deno.serve(async (req) => {
         console.log("[invite-user] Safe invite URL generated (token_hash approach)");
         try {
           await sendViaResend(email, buildInviteHtml(safeInviteUrl));
-          console.log(`Invite email sent via Resend to ${email}`);
+          console.log(`Invite email sent via Resend to ${maskEmail(email)}`);
         } catch (emailErr) {
           console.error("Failed to send invite email via Resend:", emailErr);
         }
@@ -279,7 +280,7 @@ Deno.serve(async (req) => {
         if (recoveryUrl) {
           try {
             await sendViaResend(email, buildInviteHtml(recoveryUrl));
-            console.log(`Invite email sent via Resend to ${email} (fallback)`);
+            console.log(`Invite email sent via Resend to ${maskEmail(email)} (fallback)`);
           } catch (emailErr) {
             console.error("Failed to send invite email via Resend:", emailErr);
           }
@@ -290,7 +291,7 @@ Deno.serve(async (req) => {
       const loginUrl = orgType === "cliente" ? `${siteUrl}/app` : `${siteUrl}/acessofranquia`;
       try {
         await sendViaResend(email, buildExistingUserInviteHtml(orgName, loginUrl));
-        console.log(`Existing-user invite email sent via Resend to ${email}`);
+        console.log(`Existing-user invite email sent via Resend to ${maskEmail(email)}`);
       } catch (emailErr) {
         console.error("Failed to send existing-user invite email:", emailErr);
       }
@@ -355,7 +356,7 @@ Deno.serve(async (req) => {
         expires_at: expiresAt,
       }, { onConflict: "email,organization_id" });
 
-    console.log(`User invited: ${email} -> org ${organization_id} as ${validRole}`);
+    console.log(`User invited: ${maskEmail(email)} -> org ${organization_id} as ${validRole}`);
 
     return new Response(
       JSON.stringify({ success: true, user_id: userId }),

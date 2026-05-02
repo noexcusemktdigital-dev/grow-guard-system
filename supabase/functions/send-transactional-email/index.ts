@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskEmail } from '../_shared/redact.ts';
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM_ADDRESS = 'NoExcuse Digital <noreply@noexcusedigital.com.br>'
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
     }
 
     const result = await response.json()
-    console.log('Transactional email sent via Resend', { to: body.to, id: result.id })
+    console.log('Transactional email sent via Resend', { to: maskEmail(body.to), id: result.id })
 
     return new Response(
       JSON.stringify({ success: true, id: result.id }),

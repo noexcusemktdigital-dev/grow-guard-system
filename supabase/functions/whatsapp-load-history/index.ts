@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskPhone } from '../_shared/redact.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
     let rawMessages: Record<string, unknown>[] = [];
     let usedFallback = false;
 
-    console.log(`[load-history] Trying chat-messages for ${zapiPhone} (isGroup: ${isGroup})`);
+    console.log(`[load-history] Trying chat-messages for ${maskPhone(zapiPhone)} (isGroup: ${isGroup})`);
     const primaryRes = await fetch(`${zapiBase}/chat-messages/${zapiPhone}?amount=${amount}`, {
       headers: zapiHeaders,
     });

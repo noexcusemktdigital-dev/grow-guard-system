@@ -2,6 +2,7 @@
 // Webhook PÚBLICO chamado pelo Meta quando há novo lead em formulário instantâneo.
 // Configurar no painel Meta App > Webhooks > Page > leadgen com esta URL.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { redact } from "../_shared/redact.ts";
 
 const VERIFY_TOKEN = Deno.env.get("META_LEADGEN_VERIFY_TOKEN") || "noexcuse_leadgen_verify";
 
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("[meta-leadgen-webhook] payload:", JSON.stringify(body));
+    console.log("[meta-leadgen-webhook] payload:", JSON.stringify(redact(body)));
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

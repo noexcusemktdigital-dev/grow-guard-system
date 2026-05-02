@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskEmail } from '../_shared/redact.ts';
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const FROM_ADDRESS = 'NOEXCUSE <financeiro@noexcusedigital.com.br>';
@@ -140,7 +141,7 @@ Deno.serve(async (req) => {
     }
 
     const result = await response.json();
-    console.log('Billing reminder sent', { type: body.type, to: body.user_email, id: result.id });
+    console.log('Billing reminder sent', { type: body.type, to: maskEmail(body.user_email), id: result.id });
 
     return new Response(JSON.stringify({ success: true, id: result.id }), {
       status: 200,

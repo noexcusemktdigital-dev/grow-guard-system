@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskPhone, redact } from '../_shared/redact.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();
-    console.log("Evolution webhook payload:", JSON.stringify(body).slice(0, 500));
+    console.log("Evolution webhook payload:", JSON.stringify(redact(body)).slice(0, 500));
 
     // Extract org_id from URL path.
     // Supports both:
@@ -119,7 +120,7 @@ Deno.serve(async (req) => {
               const phone = ownerJid.replace(/@.*$/, "");
               if (phone && /^\d{8,}$/.test(phone)) {
                 updatePayload.phone_number = phone;
-                console.log("[evolution-webhook] Phone detected on connect:", phone);
+                console.log("[evolution-webhook] Phone detected on connect:", maskPhone(phone));
               }
             }
           }

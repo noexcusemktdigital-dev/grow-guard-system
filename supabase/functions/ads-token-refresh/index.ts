@@ -10,6 +10,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { maskPhone } from "../_shared/redact.ts";
 
 const EVO_URL = "https://evo.grupolamadre.com.br";
 const EVO_INSTANCE = "noe-teste";
@@ -230,12 +231,12 @@ async function sendWhatsAppAlert(
     if (!evoRes.ok) {
       const errBody = await evoRes.text();
       console.error(
-        `WhatsApp alert failed for user ${conn.connected_by} (${phone}):`,
+        `WhatsApp alert failed for user ${conn.connected_by} (${maskPhone(phone)}):`,
         evoRes.status,
         errBody
       );
     } else {
-      console.log(`WhatsApp alert sent to ${phone} for conn ${conn.id}`);
+      console.log(`WhatsApp alert sent to ${maskPhone(phone)} for conn ${conn.id}`);
     }
   } catch (e: unknown) {
     console.error(`WhatsApp alert error for conn ${conn.id}:`, e);

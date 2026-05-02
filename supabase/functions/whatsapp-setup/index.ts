@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { maskPhone, redact } from '../_shared/redact.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
             { headers: { Authorization: `Bearer ${effectiveToken}` } },
           );
           const ghData = await ghRes.json();
-          console.log("[whatsapp-cloud connect] phone number info:", ghRes.status, JSON.stringify(ghData));
+          console.log("[whatsapp-cloud connect] phone number info:", ghRes.status, JSON.stringify(redact(ghData)));
           if (ghRes.ok) {
             detectedDisplayPhone = ghData?.display_phone_number || null;
             verifiedNameApi = ghData?.verified_name || null;
@@ -413,7 +414,7 @@ Deno.serve(async (req) => {
                   const phone = ownerJid.replace(/@.*$/, "");
                   if (phone && /^\d{8,}$/.test(phone)) {
                     phoneNumber = phone;
-                    console.log("[check-status] Evolution phone detected:", phoneNumber);
+                    console.log("[check-status] Evolution phone detected:", maskPhone(phoneNumber));
                   }
                 }
               } catch (err) {
@@ -863,7 +864,7 @@ Deno.serve(async (req) => {
             const phone = ownerJid.replace(/@.*$/, "");
             if (phone && /^\d{8,}$/.test(phone)) {
               phoneNumber = phone;
-              console.log("[connect] Evolution phone detected:", phoneNumber);
+              console.log("[connect] Evolution phone detected:", maskPhone(phoneNumber));
             }
           }
         } catch (err) {
