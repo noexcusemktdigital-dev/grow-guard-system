@@ -2,6 +2,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { debitIfGPSDone } from '../_shared/credits.ts';
 
 const rolePrompts: Record<string, string> = {
   sdr: `Você atua como SDR (Sales Development Representative) altamente qualificado. Seu foco EXCLUSIVO é qualificar leads e enviá-los preparados para os vendedores.
