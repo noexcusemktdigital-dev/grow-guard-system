@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkCronSecret } from "../_shared/cron-auth.ts";
+import { logJobFailure } from "../_shared/job-failures.ts";
 
 // ============================================================
 // social-token-refresh
@@ -196,6 +197,7 @@ serve(async (req) => {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
+    await logJobFailure({ jobName: 'social-token-refresh', jobKind: 'cron' }, err);
     console.error("social-token-refresh unexpected error:", err);
     return new Response(
       JSON.stringify({ error: "Unexpected error", detail: String(err) }),

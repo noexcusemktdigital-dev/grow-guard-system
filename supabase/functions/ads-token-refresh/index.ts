@@ -11,6 +11,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { maskPhone } from "../_shared/redact.ts";
+import { logJobFailure } from "../_shared/job-failures.ts";
 
 const EVO_URL = "https://evo.grupolamadre.com.br";
 const EVO_INSTANCE = "noe-teste";
@@ -150,6 +151,7 @@ serve(async (req: Request) => {
       }
     } catch (err: unknown) {
       console.error(`Unexpected error processing conn ${conn.id}:`, err);
+      await logJobFailure({ jobName: 'ads-token-refresh', jobKind: 'cron', payload: { conn_id: conn.id, org_id: conn.org_id } }, err);
 
       // Mark as expired on unexpected error
       await supabase
