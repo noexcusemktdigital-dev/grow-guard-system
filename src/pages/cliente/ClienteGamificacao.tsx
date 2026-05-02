@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { triggerCelebration } from "@/components/CelebrationEffect";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -145,7 +146,7 @@ export default function ClienteGamificacao() {
       triggerCelebration();
       toast.success("Recompensa resgatada com sucesso! 🎉");
     },
-    onError: () => toast.error("Erro ao resgatar recompensa"),
+    onError: () => reportError(new Error("Erro ao resgatar recompensa"), { title: "Erro ao resgatar recompensa", category: "gamificacao.redeem" }),
   });
 
   if (isLoading) {

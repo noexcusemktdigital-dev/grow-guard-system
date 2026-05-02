@@ -16,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useClienteWallet } from "@/hooks/useClienteWallet";
 import { useCreditAlert } from "@/hooks/useCreditAlert";
 import { useCreditTransactions } from "@/hooks/useCreditTransactions";
@@ -351,7 +352,7 @@ export function SubscriptionDialog({
       if (error || data?.error) {
         setCouponValid(false);
         setCouponDiscount(0);
-        toast.error(data?.error || "Cupom inválido");
+        reportError(new Error(data?.error || "Cupom inválido"), { title: data?.error || "Cupom inválido", category: "plano.coupon" });
       } else if (data?.valid) {
         setCouponValid(true);
         setCouponDiscount(data.discount_percent);
@@ -360,7 +361,7 @@ export function SubscriptionDialog({
     } catch {
       setCouponValid(false);
       setCouponDiscount(0);
-      toast.error("Erro ao validar cupom");
+      reportError(new Error("Erro ao validar cupom"), { title: "Erro ao validar cupom", category: "plano.coupon" });
     } finally {
       setCouponLoading(false);
     }
@@ -398,9 +399,9 @@ export function SubscriptionDialog({
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       if (msg.includes("Unauthorized") || msg.includes("401")) {
-        toast.error("Sessão expirada. Recarregue a página e tente novamente.");
+        reportError(new Error("Sessão expirada. Recarregue a página e tente novamente."), { title: "Sessão expirada. Recarregue a página e tente novamente.", category: "plano.session" });
       } else {
-        toast.error(`Erro: ${msg}`);
+        reportError(new Error(msg), { title: `Erro: ${msg}`, category: "plano.payment" });
       }
     },
   });
@@ -549,7 +550,7 @@ export function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPac
     },
     onError: (err: unknown) => {
       analytics.track(ANALYTICS_EVENTS.CHECKOUT_FAILED, { pack_id: pack?.id, error_code: err instanceof Error ? err.message : String(err) });
-      toast.error(err instanceof Error ? err.message : String(err));
+      reportError(err, { title: err instanceof Error ? err.message : "Erro ao processar pagamento", category: "plano.payment" });
     },
   });
 

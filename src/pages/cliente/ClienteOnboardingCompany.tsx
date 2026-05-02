@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useOrgProfile } from "@/hooks/useOrgProfile";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import logoDark from "@/assets/NOE3.png";
 
 const SEGMENTS = [
@@ -127,7 +128,7 @@ export default function ClienteOnboardingCompany() {
       toast.success("Dados salvos! Agora vamos fazer o diagnóstico do seu negócio.");
       navigate("/cliente/gps-negocio");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : String(err) || "Erro ao salvar");
+      reportError(err, { title: err instanceof Error ? err.message : "Erro ao salvar", category: "onboarding.save" });
     } finally {
       setSaving(false);
     }

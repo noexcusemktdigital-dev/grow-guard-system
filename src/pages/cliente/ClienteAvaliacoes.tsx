@@ -17,6 +17,7 @@ import { useCrmTeam, type TeamMember } from "@/hooks/useCrmTeam";
 import { useEvaluations, useEvaluationMutations } from "@/hooks/useEvaluations";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -61,7 +62,7 @@ function MemberEvolutionSheet({ member, evaluations, open, onOpenChange }: {
   const handleDelete = (id: string) => {
     deleteEvaluation.mutate(id, {
       onSuccess: () => toast.success("Avaliação excluída"),
-      onError: () => toast.error("Erro ao excluir"),
+      onError: () => reportError(new Error("Erro ao excluir"), { title: "Erro ao excluir", category: "avaliacoes.delete" }),
     });
   };
 
@@ -147,11 +148,11 @@ export default function ClienteAvaliacoes() {
   }, [evaluations]);
 
   const handleSubmit = () => {
-    if (!selectedUser) return toast.error("Selecione um membro");
+    if (!selectedUser) return reportError(new Error("Selecione um membro"), { title: "Selecione um membro", category: "avaliacoes.validation" });
     const score = generalScore > 0 ? generalScore : Math.round(
       Object.values(scores).reduce((a, b) => a + b, 0) / Math.max(Object.keys(scores).length, 1)
     );
-    if (score < 1) return toast.error("Preencha a nota geral ou ao menos uma categoria");
+    if (score < 1) return reportError(new Error("Preencha a nota geral ou ao menos uma categoria"), { title: "Preencha a nota geral ou ao menos uma categoria", category: "avaliacoes.validation" });
 
     createEvaluation.mutate(
       { user_id: selectedUser, period, score, categories: scores, comment: comment || undefined },
@@ -367,7 +368,7 @@ export default function ClienteAvaliacoes() {
                                           e.stopPropagation();
                                           deleteEvaluation.mutate(ev.id, {
                                             onSuccess: () => toast.success("Excluída"),
-                                            onError: () => toast.error("Erro"),
+                                            onError: () => reportError(new Error("Erro ao excluir avaliação"), { title: "Erro ao excluir avaliação", category: "avaliacoes.delete" }),
                                           });
                                         }}
                                       >

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Mail, Lock, User, ArrowLeft, Loader2, Sparkles, CheckCircle2, Check, X, AlertTriangle } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -98,7 +99,7 @@ const SaasAuth = () => {
     } catch (networkErr) {
       setLoading(false);
       logger.error("[SaasAuth] login network error", networkErr);
-      toast.error("Não conseguimos contatar o servidor. Verifique sua conexão e tente novamente em instantes.");
+      reportError(networkErr, { title: "Não conseguimos contatar o servidor. Verifique sua conexão e tente novamente em instantes.", category: "auth.network" });
       return;
     }
 
@@ -111,23 +112,23 @@ const SaasAuth = () => {
       analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, { error_code: error.message, source: "saas" });
 
       if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
-        toast.error("Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada e o spam.");
+        reportError(error, { title: "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada e o spam.", category: "auth.email_not_confirmed" });
         setVerificationContext("existing");
         setMode("verify-email");
       } else if (msg.includes("invalid login") || msg.includes("invalid credentials") || msg.includes("invalid_grant")) {
-        toast.error("E-mail ou senha incorretos. Se entrou pelo Google antes, use 'Entrar com Google' ou 'Esqueci minha senha'.");
+        reportError(error, { title: "E-mail ou senha incorretos. Se entrou pelo Google antes, use 'Entrar com Google' ou 'Esqueci minha senha'.", category: "auth.invalid_credentials" });
       } else if (status === 429 || msg.includes("rate limit") || msg.includes("too many")) {
-        toast.error("Muitas tentativas em pouco tempo. Aguarde 1 minuto e tente novamente.");
+        reportError(error, { title: "Muitas tentativas em pouco tempo. Aguarde 1 minuto e tente novamente.", category: "auth.rate_limit" });
       } else if (msg.includes("user not found")) {
-        toast.error("Nenhuma conta encontrada com esse e-mail. Verifique o endereço ou crie uma conta.");
+        reportError(error, { title: "Nenhuma conta encontrada com esse e-mail. Verifique o endereço ou crie uma conta.", category: "auth.user_not_found" });
       } else if (msg.includes("user disabled") || msg.includes("banned")) {
-        toast.error("Esta conta está bloqueada. Entre em contato com o suporte.");
+        reportError(error, { title: "Esta conta está bloqueada. Entre em contato com o suporte.", category: "auth.banned" });
       } else if (msg.includes("fetch") || msg.includes("network") || msg.includes("timeout")) {
-        toast.error("Serviço temporariamente lento. Aguarde alguns segundos e tente novamente.");
+        reportError(error, { title: "Serviço temporariamente lento. Aguarde alguns segundos e tente novamente.", category: "auth.network" });
       } else if (status && status >= 500) {
-        toast.error("Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.");
+        reportError(error, { title: "Serviço de autenticação temporariamente indisponível. Tente novamente em instantes.", category: "auth.server_error" });
       } else {
-        toast.error(error.message || "Não foi possível entrar. Tente novamente.");
+        reportError(error, { title: error.message || "Não foi possível entrar. Tente novamente.", category: "auth.login" });
       }
       return;
     }
@@ -143,7 +144,7 @@ const SaasAuth = () => {
       .then(async (check) => {
         if (!check.allowed) {
           await supabase.auth.signOut({ scope: "local" });
-          toast.error(check.message || "Acesso negado.");
+          reportError(new Error(check.message || "Acesso negado."), { title: check.message || "Acesso negado.", category: "auth.portal_access" });
           if (check.redirect) navigate(check.redirect);
         }
       })
@@ -164,11 +165,11 @@ const SaasAuth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPasswordValid) {
-      toast.error("A senha deve ter pelo menos 8 caracteres.");
+      reportError(new Error("A senha deve ter pelo menos 8 caracteres."), { title: "A senha deve ter pelo menos 8 caracteres.", category: "auth.validation" });
       return;
     }
     if (!acceptedTerms) {
-      toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade.");
+      reportError(new Error("Você precisa aceitar os Termos de Uso e a Política de Privacidade."), { title: "Você precisa aceitar os Termos de Uso e a Política de Privacidade.", category: "auth.validation" });
       return;
     }
     setLoading(true);
@@ -188,10 +189,10 @@ const SaasAuth = () => {
         const errMsg = data?.error || error?.message || "Erro ao criar conta.";
         if (errMsg === "email_exists") {
           setVerificationContext("existing");
-          toast.error("Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.");
+          reportError(new Error(errMsg), { title: "Este email já possui cadastro. Reenviamos a confirmação se a conta ainda não foi ativada.", category: "auth.signup" });
           setMode("verify-email");
         } else {
-          toast.error(errMsg);
+          reportError(new Error(errMsg), { title: errMsg, category: "auth.signup" });
         }
         return;
       }
@@ -202,7 +203,7 @@ const SaasAuth = () => {
       setMode("verify-email");
     } catch (err) {
       setLoading(false);
-      toast.error("Erro ao criar conta. Tente novamente.");
+      reportError(err, { title: "Erro ao criar conta. Tente novamente.", category: "auth.signup" });
       logger.error("Signup error:", err);
     }
   };
@@ -214,7 +215,7 @@ const SaasAuth = () => {
     });
     setGoogleLoading(false);
     if (error) {
-      toast.error("Erro ao entrar com Google. Tente novamente.");
+      reportError(error, { title: "Erro ao entrar com Google. Tente novamente.", category: "auth.google" });
     }
   };
 
@@ -226,13 +227,13 @@ const SaasAuth = () => {
         body: { email, portal: "saas" },
       });
       if (error || data?.error) {
-        toast.error(data?.error || "Erro ao enviar email de recuperação.");
+        reportError(error ?? new Error(data?.error), { title: data?.error || "Erro ao enviar email de recuperação.", category: "auth.forgot_password" });
       } else {
         toast.success("Email de recuperação enviado!");
         setMode("form");
       }
-    } catch {
-      toast.error("Erro ao enviar email de recuperação.");
+    } catch (err) {
+      reportError(err, { title: "Erro ao enviar email de recuperação.", category: "auth.forgot_password" });
     }
     setLoading(false);
   };
@@ -304,10 +305,10 @@ const SaasAuth = () => {
                     const { data, error } = await invokeEdge("signup-saas", {
                       body: { email, resend_only: true },
                     });
-                    if (error || data?.error) toast.error("Erro ao reenviar. Tente novamente.");
+                    if (error || data?.error) reportError(error ?? new Error(data?.error), { title: "Erro ao reenviar. Tente novamente.", category: "auth.resend_email" });
                     else toast.success("Email reenviado!");
-                  } catch {
-                    toast.error("Erro ao reenviar. Tente novamente.");
+                  } catch (err) {
+                    reportError(err, { title: "Erro ao reenviar. Tente novamente.", category: "auth.resend_email" });
                   }
                 }}
                 className="text-sm text-white/40 hover:text-white/70 w-full text-center block transition-colors"

@@ -6,6 +6,7 @@ import {
   CheckCircle2, Unlink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -452,9 +453,7 @@ export default function FranqueadoAnuncios() {
       const url = await initiateOAuth.mutateAsync();
       window.location.href = url;
     } catch (err) {
-      toast.error("Erro ao iniciar conexão", {
-        description: err instanceof Error ? err.message : "Tente novamente.",
-      });
+      reportError(err, { title: "Erro ao iniciar conexão", category: "anuncios.connect" });
       setIsConnecting(false);
     }
   };
@@ -466,8 +465,8 @@ export default function FranqueadoAnuncios() {
     try {
       await disconnect.mutateAsync(activeConnection.id);
       toast.success("Conta desconectada com sucesso.");
-    } catch {
-      toast.error("Erro ao desconectar. Tente novamente.");
+    } catch (err) {
+      reportError(err, { title: "Erro ao desconectar. Tente novamente.", category: "anuncios.disconnect" });
     }
   };
 

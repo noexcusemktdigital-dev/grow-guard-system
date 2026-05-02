@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { FileSignature, DollarSign, Users, Eye } from "lucide-react";
 import { useContractMutations } from "@/hooks/useContracts";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { FRANCHISE_CONTENT, FRANCHISE_PLACEHOLDERS } from "@/constants/contractTemplates";
 import { getPreviewHtml } from "@/lib/contractPdfTemplate";
 
@@ -54,8 +55,8 @@ export function FranchiseContractForm({ onSuccess }: FranchiseContractFormProps)
   const previewContent = useMemo(() => buildFranchiseContent(form), [form]);
 
   const handleSave = (status: string) => {
-    if (!form.franqueada_nome && !form.franqueada_razao_social) return toast.error("Informe o nome ou razão social da franqueada");
-    if (!form.franqueada_cpf && !form.franqueada_cnpj) return toast.error("Informe o CPF ou CNPJ da franqueada");
+    if (!form.franqueada_nome && !form.franqueada_razao_social) return reportError(new Error("Informe o nome ou razão social da franqueada"), { title: "Informe o nome ou razão social da franqueada", category: "contratos.validation" });
+    if (!form.franqueada_cpf && !form.franqueada_cnpj) return reportError(new Error("Informe o CPF ou CNPJ da franqueada"), { title: "Informe o CPF ou CNPJ da franqueada", category: "contratos.validation" });
 
     const content = buildFranchiseContent(form);
     const monthlyValue = parseFloat(form.taxa_manutencao_valor.replace(/\./g, "").replace(",", ".")) || 0;
