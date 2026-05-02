@@ -21,6 +21,7 @@ import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { EditMemberDialog } from "@/components/EditMemberDialog";
 import { TeamSelector } from "@/components/TeamSelector";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -126,7 +127,7 @@ function TeamTab() {
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("invite-user", {
+      const { data, error } = await invokeEdge("invite-user", {
         body: {
           email: inviteForm.email,
           full_name: inviteForm.full_name,

@@ -26,6 +26,7 @@ import {
 } from "@/constants/plans";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { generateIdempotencyKey, generateRequestId } from "@/lib/idempotency";
 
@@ -160,7 +161,7 @@ export function InvoicesCard() {
   const { data, isLoading } = useQuery({
     queryKey: ["asaas-payments", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("asaas-list-payments", {
+      const { data, error } = await invokeEdge("asaas-list-payments", {
         body: { organization_id: orgId },
       });
       if (error) throw error;
@@ -342,7 +343,7 @@ export function SubscriptionDialog({
     setCouponLoading(true);
     setCouponValid(null);
     try {
-      const { data, error } = await supabase.functions.invoke("validate-coupon", {
+      const { data, error } = await invokeEdge("validate-coupon", {
         body: { code: couponCode.trim() },
       });
       if (error || data?.error) {
@@ -374,7 +375,7 @@ export function SubscriptionDialog({
       }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
-      const { data, error } = await supabase.functions.invoke("asaas-create-subscription", {
+      const { data, error } = await invokeEdge("asaas-create-subscription", {
         body: {
           organization_id: orgId,
           plan: plan?.id,
@@ -527,7 +528,7 @@ export function CreditPackDialog({ pack, open, onOpenChange }: { pack: CreditPac
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
       const body = { organization_id: orgId, pack_id: pack?.id, billing_type: billingType };
       const idempKey = await generateIdempotencyKey("buy-credits", body);
-      const { data, error } = await supabase.functions.invoke("asaas-buy-credits", {
+      const { data, error } = await invokeEdge("asaas-buy-credits", {
         body,
         headers: {
           "Idempotency-Key": idempKey,

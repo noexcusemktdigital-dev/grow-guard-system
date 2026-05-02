@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 import { toast } from "sonner";
 
@@ -55,7 +56,7 @@ export function useChargeSystemFee() {
       // Refresh session to ensure fresh token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessão expirada. Faça login novamente.");
-      const { data, error } = await supabase.functions.invoke("asaas-charge-system-fee", {
+      const { data, error } = await invokeEdge("asaas-charge-system-fee", {
         body: { organization_id: orgId, billing_type: billingType },
       });
       if (error) throw error;

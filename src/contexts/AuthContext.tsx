@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { supabase as defaultClient } from "@/integrations/supabase/client";
+import { invokeEdge } from "@/lib/edge";
 import type { User, Session } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 
@@ -164,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const companyName = currentUser.user_metadata?.full_name
                   ? `${currentUser.user_metadata.full_name}'s Company`
                   : "Minha Empresa";
-                await supabase.functions.invoke("signup-saas", {
+                await invokeEdge("signup-saas", {
                   body: { user_id: currentUser.id, company_name: companyName },
                 });
                 logger.info("[Auth] Auto-provisioned Google OAuth user via signup-saas");
@@ -304,7 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .maybeSingle()
               .then(({ data }) => {
                 if (data) {
-                  supabase.functions.invoke("manage-member", {
+                  invokeEdge("manage-member", {
                     body: { action: "accept_invitation", email: userEmail },
                   }).catch((e: unknown) => logger.warn("[Auth] accept_invitation fallback error:", e));
                 }

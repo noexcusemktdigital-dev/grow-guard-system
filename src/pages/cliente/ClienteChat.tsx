@@ -26,6 +26,7 @@ import { useCrmLeads } from "@/hooks/useClienteCrm";
 import { useCrmLeadMutations, useCrmFunnels } from "@/hooks/useClienteCrm";
 import { useLinkContactToCrmLead } from "@/hooks/useWhatsApp";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { subscribeToTable } from "@/lib/realtimeManager";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -82,19 +83,19 @@ export default function ClienteChat() {
     let cancelled = false;
     const sync = async () => {
       try {
-        await supabase.functions.invoke("whatsapp-setup", {
+        await invokeEdge("whatsapp-setup", {
           body: { action: "check-status", instanceId: instance.instance_id },
         });
         if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
       } catch (err) { logger.error("Auto check-status failed:", err); }
       try {
-        await supabase.functions.invoke("whatsapp-sync-chats", {
+        await invokeEdge("whatsapp-sync-chats", {
           body: { instanceId: instance.instance_id },
         });
         if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] });
       } catch (err) { logger.error("Auto sync-chats failed:", err); }
       try {
-        supabase.functions.invoke("whatsapp-sync-photos", { body: { limit: 30 } })
+        invokeEdge("whatsapp-sync-photos", { body: { limit: 30 } })
           .then(() => { if (!cancelled) queryClient.invalidateQueries({ queryKey: ["whatsapp-contacts"] }); })
           .catch(() => {});
       } catch {}

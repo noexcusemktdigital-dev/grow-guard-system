@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { useUnits, useUnitMutations } from "@/hooks/useUnits";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -65,7 +66,7 @@ export default function Unidades() {
     if (!orgId) return;
     setWizardLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("provision-unit", {
+      const { data, error } = await invokeEdge("provision-unit", {
         body: {
           unit_name: unitName,
           city: unitCity,

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { toast } from "@/hooks/use-toast";
@@ -103,7 +104,7 @@ export function useSyncMetrics() {
     mutationFn: async (params: string | { connectionId: string; periodDays?: number }) => {
       const connectionId = typeof params === "string" ? params : params.connectionId;
       const periodDays = typeof params === "string" ? 30 : (params.periodDays ?? 30);
-      const { data, error } = await supabase.functions.invoke("ads-sync-metrics", {
+      const { data, error } = await invokeEdge("ads-sync-metrics", {
         body: { connection_id: connectionId, period_days: periodDays },
       });
       if (error) throw error;
@@ -130,7 +131,7 @@ export function useDisconnectAd() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (connectionId: string) => {
-      const { data, error } = await supabase.functions.invoke("ads-disconnect", {
+      const { data, error } = await invokeEdge("ads-disconnect", {
         body: { connection_id: connectionId },
       });
       if (error) throw error;
@@ -147,7 +148,7 @@ export function useSelectAdAccount() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: { connection_id: string; account_id: string; account_name: string }) => {
-      const { data, error } = await supabase.functions.invoke("ads-select-account", {
+      const { data, error } = await invokeEdge("ads-select-account", {
         body: params,
       });
       if (error) throw error;
@@ -168,7 +169,7 @@ export function useAnalyzeAds() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (periodDays: number = 30) => {
-      const { data, error } = await supabase.functions.invoke("ads-analyze", {
+      const { data, error } = await invokeEdge("ads-analyze", {
         body: { organization_id: orgId, period_days: periodDays },
       });
       if (error) throw error;

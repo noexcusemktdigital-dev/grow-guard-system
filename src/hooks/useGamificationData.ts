@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface GamificationData {
@@ -27,7 +27,7 @@ export function useGamificationData() {
   return useQuery<GamificationData>({
     queryKey: ["gamification-data", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("calculate-gamification");
+      const { data, error } = await invokeEdge("calculate-gamification");
       if (error) throw error;
       return data as GamificationData;
     },

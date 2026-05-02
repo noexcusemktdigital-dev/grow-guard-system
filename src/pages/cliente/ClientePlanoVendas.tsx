@@ -15,6 +15,7 @@ import { useSalesPlan, useSaveSalesPlan, useSalesPlanHistory, useArchiveSalesPla
 import { useClienteScriptMutations } from "@/hooks/useClienteScripts";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useActiveGoals, useHistoricGoals, useGoalMutations } from "@/hooks/useGoals";
 import { useGoalProgress } from "@/hooks/useGoalProgress";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
@@ -107,7 +108,7 @@ export default function ClientePlanoVendas() {
         let created = 0;
         for (const stage of scriptStages) {
           try {
-            const { data, error } = await supabase.functions.invoke("generate-script", {
+            const { data, error } = await invokeEdge("generate-script", {
               body: { stage, briefing: {}, context, organization_id: orgId },
             });
             if (error) {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface InicioData {
@@ -34,7 +34,7 @@ export function useInicioData() {
   return useQuery<InicioData>({
     queryKey: ["inicio-data", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("get-inicio-data");
+      const { data, error } = await invokeEdge("get-inicio-data");
       if (error) throw error;
       return data as InicioData;
     },

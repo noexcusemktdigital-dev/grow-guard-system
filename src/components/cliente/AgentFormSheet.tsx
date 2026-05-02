@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bot, Brain, BookOpen, Cog, Play, History, Lock } from "lucide-react";
 import { useAgentStats } from "@/hooks/useClienteAgents";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { logger } from "@/lib/logger";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
 import { useWhatsAppInstances } from "@/hooks/useWhatsApp";
@@ -98,7 +99,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     );
     if (needsSync && !syncingPhone) {
       setSyncingPhone(true);
-      supabase.functions.invoke("whatsapp-setup", { body: { action: "check-status" } })
+      invokeEdge("whatsapp-setup", { body: { action: "check-status" } })
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ["whatsapp-instances"] });
         })
@@ -233,7 +234,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const handleGeneratePersona = async () => {
     setGenerating("persona");
     try {
-      const { data } = await supabase.functions.invoke("ai-generate-agent-config", {
+      const { data } = await invokeEdge("ai-generate-agent-config", {
         body: { type: "persona", role: form.role, persona, name: form.name },
       });
       if (data?.result) updatePersona("generated_description", data.result);
@@ -243,7 +244,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const handleGenerateGreeting = async () => {
     setGenerating("greeting");
     try {
-      const { data } = await supabase.functions.invoke("ai-generate-agent-config", {
+      const { data } = await invokeEdge("ai-generate-agent-config", {
         body: { type: "greeting", role: form.role, persona, name: form.name },
       });
       if (data?.result) updatePersona("custom_greeting", data.result);
@@ -253,7 +254,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
   const handleGeneratePrompt = async () => {
     setGenerating("prompt");
     try {
-      const { data } = await supabase.functions.invoke("ai-generate-agent-config", {
+      const { data } = await invokeEdge("ai-generate-agent-config", {
         body: { type: "prompt", role: form.role, persona, knowledge_base: knowledgeBase, objectives: form.objectives, name: form.name },
       });
       if (data?.result) updatePrompt("system_prompt", data.result);
@@ -267,7 +268,7 @@ export function AgentFormSheet({ open, onOpenChange, agent, onSave, isSaving }: 
     setSimInput("");
     setSimLoading(true);
     try {
-      const { data } = await supabase.functions.invoke("ai-agent-simulate", {
+      const { data } = await invokeEdge("ai-agent-simulate", {
         body: { agent_config: form, message: simInput, history: simMessages },
       });
       if (data?.reply) {

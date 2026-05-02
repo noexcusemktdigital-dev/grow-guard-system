@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "./useUserOrgId";
 
 export function useUnits() {
@@ -40,7 +41,7 @@ export function useUnitMutations() {
 
   const deleteUnit = useMutation({
     mutationFn: async (unitId: string) => {
-      const { data, error } = await supabase.functions.invoke("delete-unit", {
+      const { data, error } = await invokeEdge("delete-unit", {
         body: { unit_id: unitId },
       });
       if (error) {

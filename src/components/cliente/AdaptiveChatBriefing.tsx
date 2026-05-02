@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { invokeEdge } from "@/lib/edge";
 import type { BriefingAgent } from "./ChatBriefing";
 
 const MAX_QUESTIONS = 15;
@@ -103,7 +104,7 @@ export function AdaptiveChatBriefing({
       setLoadingNext(true);
       setErrorMsg(null);
       try {
-        const { data, error } = await supabase.functions.invoke("get-next-gps-question", {
+        const { data, error } = await invokeEdge("get-next-gps-question", {
           body: {
             answers_so_far: answersSoFar,
             question_index: idx,
