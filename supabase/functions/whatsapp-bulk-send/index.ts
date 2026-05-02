@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     let stopped = false;
 
     for (let i = 0; i < recipients.length; i++) {
-      const phone = recipients[i].replace(/[\s\-\+\(\)]/g, "");
+      const phone = recipients[i].replace(/[\s+()-]/g, "");
 
       try {
         let zapiUrl: string;

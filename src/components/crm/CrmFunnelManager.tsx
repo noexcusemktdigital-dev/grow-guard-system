@@ -65,7 +65,7 @@ export function CrmFunnelManager({ open, onOpenChange, embedded }: CrmFunnelMana
       const rawSchema = ((editingFunnel as any).custom_fields_schema || []) as any[];
       const seen = new Set<string>();
       const dedupedSchema = rawSchema.map((f, i) => {
-        let baseKey = f?.key || `field_${i}`;
+        const baseKey = f?.key || `field_${i}`;
         let key = baseKey;
         let suffix = 2;
         while (seen.has(key)) {

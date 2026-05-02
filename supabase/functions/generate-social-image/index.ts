@@ -976,7 +976,7 @@ Output ONLY the extracted logo image.`,
 
     // Convert reference images to base64 EARLY so CoT can use them too
     const hasRefs = reference_images && reference_images.length > 0;
-    let base64Refs: { type: string; image_url: { url: string } }[] = [];
+    const base64Refs: { type: string; image_url: { url: string } }[] = [];
 
     if (hasRefs) {
       console.log(`📥 Converting ${Math.min(reference_images.length, 5)} reference images to base64...`);
@@ -1085,7 +1085,7 @@ Output ONLY the extracted logo image.`,
     }
 
     // Convert photo_images to base64 for inclusion in the design
-    let photoBase64s: { type: string; image_url: { url: string } }[] = [];
+    const photoBase64s: { type: string; image_url: { url: string } }[] = [];
     if (photo_images && photo_images.length > 0) {
       console.log(`📷 Converting ${photo_images.length} photo images for inclusion in art...`);
       for (const photoUrl of photo_images.slice(0, 4)) {
@@ -1195,7 +1195,7 @@ CRITICAL TEXT RENDERING RULES (MANDATORY):
     }
 
     let usedModel = PRIMARY_MODEL;
-    let response = await callImageModel(PRIMARY_MODEL);
+    const response = await callImageModel(PRIMARY_MODEL);
 
     // Hard stops on rate limit / credit exhaustion — never fall back
     if (response.status === 429) {

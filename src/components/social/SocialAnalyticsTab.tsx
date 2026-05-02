@@ -40,6 +40,8 @@ export function SocialAnalyticsTab({ accounts }: Props) {
     [accounts],
   );
   const [activeId, setActiveId] = useState<string | null>(eligible[0]?.id ?? null);
+  const current = activeId ?? eligible[0]?.id ?? null;
+  const { data, isLoading, isError, error } = useSocialInsights(current);
 
   if (eligible.length === 0) {
     return (
@@ -50,9 +52,6 @@ export function SocialAnalyticsTab({ accounts }: Props) {
       </Card>
     );
   }
-
-  const current = activeId ?? eligible[0].id;
-  const { data, isLoading, isError, error } = useSocialInsights(current);
 
   return (
     <div className="space-y-4">

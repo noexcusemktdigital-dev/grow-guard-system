@@ -27,7 +27,15 @@ function getMonthLabel(ref: string) {
 }
 
 function safeText(t: string) {
-  return t.replace(/[\u{1F000}-\u{1FFFF}]/gu, "").replace(/[^\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF]/g, "");
+  return t
+    .split("")
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join("")
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, "")
+    .replace(/[^\x20-\x7F\u00C0-\u024F\u1E00-\u1EFF]/g, "");
 }
 
 async function loadLogoAsDataUrl(): Promise<string | null> {

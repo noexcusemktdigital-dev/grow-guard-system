@@ -9,6 +9,17 @@ vi.mock("@/hooks/useUserOrgId", () => ({
   useUserOrgId: () => mockOrgId,
 }));
 
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({ user: { id: "user-1" } }),
+}));
+
+vi.mock("@/hooks/useMemberPermissions", () => ({
+  useMemberPermissions: () => ({
+    permissions: { crm_visibility: "all" },
+    isAdmin: true,
+  }),
+}));
+
 // Mock sounds
 vi.mock("@/lib/sounds", () => ({
   playSound: vi.fn(),

@@ -163,13 +163,13 @@ function PageBoundary({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               {/* Auth routes */}
               <Route path="/acessofranquia" element={<Auth />} />
               <Route path="/app" element={<Navigate to="/" replace />} />
@@ -287,13 +287,13 @@ function App() {
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+              </Routes>
+            </Suspense>
+          </AuthProvider>
+        </BrowserRouter>
+        <PWAUpdatePrompt />
+      </TooltipProvider>
     </QueryClientProvider>
-    <PWAUpdatePrompt />
   );
 }
 

@@ -285,9 +285,13 @@ describe("useGenerateStrategy", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("generate-strategy", {
-      body: { answers: { q1: "a1" }, organization_id: "org-1", section: "marketing" },
-    });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "generate-strategy",
+      expect.objectContaining({
+        body: { answers: { q1: "a1" }, organization_id: "org-1" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 
   it("throws when not authenticated", async () => {

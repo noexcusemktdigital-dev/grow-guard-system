@@ -201,9 +201,13 @@ describe("useChargeClient", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("asaas-charge-client", {
-      body: { organization_id: "org-1", contract_id: "ct-1", billing_type: "PIX" },
-    });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "asaas-charge-client",
+      expect.objectContaining({
+        body: { organization_id: "org-1", contract_id: "ct-1", billing_type: "PIX" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 
   it("throws when session is null", async () => {
@@ -255,9 +259,13 @@ describe("useChargeClient", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("asaas-charge-client", {
-      body: { organization_id: "custom-org", contract_id: "ct-1", billing_type: "PIX" },
-    });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "asaas-charge-client",
+      expect.objectContaining({
+        body: { organization_id: "custom-org", contract_id: "ct-1", billing_type: "PIX" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 });
 
@@ -304,9 +312,13 @@ describe("useManagePayment", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("asaas-manage-payment", {
-      body: { action: "cancel", payment_id: "pay-1" },
-    });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "asaas-manage-payment",
+      expect.objectContaining({
+        body: { action: "cancel", payment_id: "pay-1" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 
   it("updates a payment", async () => {

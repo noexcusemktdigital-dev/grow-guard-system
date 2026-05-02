@@ -375,7 +375,7 @@ serve(async (req) => {
       const leads = (insightRow.actions ?? []).filter((a: {action_type:string}) => leadTypes.includes(a.action_type)).reduce((s: number, a: {value:string}) => s + parseInt(a.value ?? "0", 10), 0);
 
       // Busca insights por campanha
-      let campaignInsights: Record<string, {spend:string;impressions:string;clicks:string;actions:{action_type:string;value:string}[];}> = {};
+      const campaignInsights: Record<string, {spend:string;impressions:string;clicks:string;actions:{action_type:string;value:string}[];}> = {};
       if (campaigns.length > 0) {
         const ciRes = await fetch(`${BASE}/${adAccountId}/insights?` + new URLSearchParams({
           fields: "campaign_id,spend,impressions,clicks,actions", date_preset: datePreset, level: "campaign", access_token: accessToken, limit: "100",

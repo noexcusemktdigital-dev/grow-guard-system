@@ -82,12 +82,16 @@ describe("Unidades — Wizard de Provisionamento", () => {
     await user.click(screen.getByText("Criar Unidade"));
 
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("provision-unit", {
-        body: expect.objectContaining({
-          unit_name: "Unidade Teste",
-          parent_org_id: "org-test-123",
+      expect(mockInvoke).toHaveBeenCalledWith(
+        "provision-unit",
+        expect.objectContaining({
+          body: expect.objectContaining({
+            unit_name: "Unidade Teste",
+            parent_org_id: "org-test-123",
+          }),
+          headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
         }),
-      });
+      );
     });
   });
 

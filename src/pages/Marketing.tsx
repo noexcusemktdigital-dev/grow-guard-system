@@ -143,7 +143,12 @@ export default function Marketing() {
   }, [isRedesSociaisRoot, folders, categoryRootFolders]);
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleBackToCategories = () => { setActiveCategory(null); setCurrentFolderId(null); setSearch(""); setTypeFilter(null); setSelectedIds(new Set()); };

@@ -148,7 +148,7 @@ function LeadDetailTabs({ lead, stages, funnels, currentFunnelId }: { lead: Lead
     const raw = (currentFunnel as any)?.custom_fields_schema || [];
     const seen = new Set<string>();
     return raw.map((f: any, i: number) => {
-      let baseKey = f?.key || `field_${i}`;
+      const baseKey = f?.key || `field_${i}`;
       let key = baseKey;
       let suffix = 2;
       while (seen.has(key)) key = `${baseKey}_${suffix++}`;

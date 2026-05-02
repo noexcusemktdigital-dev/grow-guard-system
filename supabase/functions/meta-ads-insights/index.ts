@@ -159,7 +159,7 @@ serve(async (req) => {
 
     // 3. Busca insights por campanha (apenas campanhas ACTIVE / PAUSED)
     const campaignIds = campaigns.map((c) => c.id);
-    let campaignInsights: Record<string, MetaInsightRow> = {};
+    const campaignInsights: Record<string, MetaInsightRow> = {};
 
     if (campaignIds.length > 0) {
       const campaignInsightsRes = await fetch(

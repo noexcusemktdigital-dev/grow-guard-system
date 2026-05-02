@@ -172,9 +172,13 @@ describe("useClienteDispatchMutations", () => {
     });
 
     await waitFor(() => expect(result.current.triggerBulkSend.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-bulk-send", {
-      body: { dispatch_id: "dispatch-id-1" },
-    });
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith(
+      "whatsapp-bulk-send",
+      expect.objectContaining({
+        body: { dispatch_id: "dispatch-id-1" },
+        headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+      }),
+    );
   });
 
   it("triggerBulkSend handles error", async () => {

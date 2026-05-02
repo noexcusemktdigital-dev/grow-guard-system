@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileResult?.data) {
         const p = profileResult.data as Profile;
         setProfile(p);
-        try { localStorage.setItem("noe-cached-profile", JSON.stringify(p)); } catch {}
+        try { localStorage.setItem("noe-cached-profile", JSON.stringify(p)); } catch { /* cache is optional */ }
       }
 
       // Handle roles
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (resolvedRole) {
         setRole(resolvedRole);
         lastFetchedUserRef.current = currentUser.id;
-        try { localStorage.setItem("noe-cached-role", resolvedRole); } catch {}
+        try { localStorage.setItem("noe-cached-role", resolvedRole); } catch { /* cache is optional */ }
       } else {
         // SEC-FIX CODE-003: Never grant a role on DB timeout — fail secure instead.
         // Previous code fell back to "cliente_user" or "franqueado", allowing privilege escalation
@@ -341,7 +341,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.removeItem("noe-cached-role");
       localStorage.removeItem("noe-cached-profile");
-    } catch {}
+    } catch { /* cache cleanup is optional */ }
     window.location.href = target;
   };
 
@@ -355,7 +355,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileData) {
         const p = profileData as Profile;
         setProfile(p);
-        try { localStorage.setItem("noe-cached-profile", JSON.stringify(p)); } catch {}
+        try { localStorage.setItem("noe-cached-profile", JSON.stringify(p)); } catch { /* cache is optional */ }
       }
     }
   };

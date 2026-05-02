@@ -306,9 +306,10 @@ describe("useSetupWhatsApp", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-setup", {
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-setup", expect.objectContaining({
       body: { instanceId: "test", provider: "evolution" },
-    });
+      headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+    }));
   });
 
   it("handles edge function error", async () => {
@@ -339,9 +340,10 @@ describe("useSendWhatsAppMessage", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-send", {
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-send", expect.objectContaining({
       body: { contactPhone: "5511999999999", message: "Hello" },
-    });
+      headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+    }));
   });
 
   it("handles send error", async () => {
@@ -437,9 +439,10 @@ describe("useSendTypingIndicator", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-typing", {
+    expect(mockFunctionsInvoke).toHaveBeenCalledWith("whatsapp-typing", expect.objectContaining({
       body: { contactPhone: "5511999999999" },
-    });
+      headers: expect.objectContaining({ "x-request-id": expect.any(String) }),
+    }));
   });
 });
 

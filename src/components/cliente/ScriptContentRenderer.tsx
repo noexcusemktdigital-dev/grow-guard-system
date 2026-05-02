@@ -52,7 +52,7 @@ function isHeader(line: string): boolean {
 }
 
 function isNumberedItem(line: string): boolean {
-  return /^\s*\d+[\.\)]\s/.test(line);
+  return /^\s*\d+[.)]\s/.test(line);
 }
 
 function isBulletItem(line: string): boolean {
@@ -134,7 +134,7 @@ export function ScriptContentRenderer({ content }: ScriptContentRendererProps) {
         }
 
         if (isNumberedItem(trimmed)) {
-          const match = trimmed.match(/^(\s*\d+[\.\)])\s(.*)$/);
+          const match = trimmed.match(/^(\s*\d+[.)])\s(.*)$/);
           return (
             <div key={i} className="flex gap-2 pl-2">
               <span className="text-primary font-bold shrink-0 min-w-[1.5rem] text-right">

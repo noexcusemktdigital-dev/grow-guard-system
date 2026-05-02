@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const cleanPhone = contactPhone.replace(/[\s\-\+\(\)]/g, "");
+    const cleanPhone = contactPhone.replace(/[\s+()-]/g, "");
 
     // Evolution API doesn't have a native typing endpoint — return success silently
     if (instance.provider === "evolution") {

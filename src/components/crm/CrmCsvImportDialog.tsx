@@ -73,7 +73,7 @@ function parseCsvText(text: string): { headers: string[]; rows: ParsedRow[] } {
 
     const row: ParsedRow = { name: "", email: "", phone: "", company: "", position: "", source: "", tags: "", notes: "" };
     mappedHeaders.forEach((h, idx) => {
-      if (row.hasOwnProperty(h)) row[h] = values[idx] || "";
+      if (Object.prototype.hasOwnProperty.call(row, h)) row[h] = values[idx] || "";
     });
     if (row.name) rows.push(row);
   }

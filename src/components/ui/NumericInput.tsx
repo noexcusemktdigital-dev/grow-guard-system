@@ -25,7 +25,7 @@ export const NumericInput = forwardRef<HTMLInputElement, NumericInputProps>(
 
     const toNumber = (s: string): number | null => {
       if (!s || s === "" || s === "-") return null;
-      const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^\d.\-]/g, "");
+      const clean = s.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
       const n = parseFloat(clean);
       return isNaN(n) ? null : n;
     };
@@ -46,7 +46,7 @@ export const NumericInput = forwardRef<HTMLInputElement, NumericInputProps>(
       if (prefix) raw = raw.replace(prefix, "");
       if (suffix) raw = raw.replace(suffix, "");
 
-      const allowed = allowNegative ? /[^\d,.\-]/g : /[^\d,.]/g;
+      const allowed = allowNegative ? /[^\d,.-]/g : /[^\d,.]/g;
       raw = raw.replace(allowed, "");
 
       const parts = raw.split(",");

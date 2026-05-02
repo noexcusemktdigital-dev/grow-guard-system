@@ -151,7 +151,7 @@ Retorne um JSON com a seguinte estrutura:
     }
 
     const aiData = await aiRes.json();
-    let analysisText = aiData.choices?.[0]?.message?.content || "";
+    const analysisText = aiData.choices?.[0]?.message?.content || "";
 
     // Try to parse JSON from response
     let analysis: Record<string, unknown>;

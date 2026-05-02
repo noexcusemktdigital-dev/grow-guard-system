@@ -154,7 +154,7 @@ serve(async (req) => {
           : { dateTime: event.end_at, timeZone: "America/Sao_Paulo" },
       };
 
-      let googleEventId = event.google_event_id;
+      const googleEventId = event.google_event_id;
       let res;
 
       if (googleEventId) {
