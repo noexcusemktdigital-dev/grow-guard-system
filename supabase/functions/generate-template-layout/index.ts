@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { buildSystemPrompt, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-template-layout.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
@@ -38,64 +39,9 @@ serve(async (req) => {
     const w = 1080;
     const h = format === "feed" ? 1080 : 1920;
 
-    const systemPrompt = `You are an elite graphic designer who creates social media template layouts as JSON.
-
-You must return a valid TemplateConfig JSON object that specifies exact positions and styles for all visual elements.
-
-CANVAS SIZE: ${w}x${h}px
-
-AVAILABLE ELEMENT TYPES:
-1. TextElement: { type: "text", content, x, y, width, fontSize, fontFamily, fontWeight ("normal"|"bold"|"black"), color, align ("left"|"center"|"right"), letterSpacing?, lineHeight?, textTransform? ("uppercase"|"none"), shadow?: { blur, color, offsetX, offsetY } }
-2. ShapeElement: { type: "shape", shape ("rect"|"circle"|"line"|"diagonal-stripe"|"frame"), x, y, width, height, color, opacity, rotation?, borderRadius?, borderWidth?, borderColor? }
-3. ImageElement: { type: "image", src, x, y, width, height, opacity?, borderRadius? }
-
-AVAILABLE FONTS: Montserrat, Poppins, Playfair Display, Space Grotesk, Inter, Bebas Neue, Oswald, Raleway
-
-DESIGN RULES:
-- Create a visually striking, professional layout
-- Use proper typographic hierarchy (title: 48-80px, subtitle: 20-36px, CTA: 16-24px)
-- Apply brand colors strategically
-- Include geometric shapes for visual interest (stripes, frames, rectangles, circles)
-- Ensure sufficient contrast between text and background
-- Leave appropriate white space
-- Position elements following rule of thirds
-- CTA buttons should have a shape element behind them as background
-
-STYLE GUIDELINES BY ESTILO:
-- minimalista: Lots of white space, thin frames, subtle colors, serif fonts, max 3-4 elements
-- bold: Diagonal stripes, large uppercase text, high contrast, Montserrat/Bebas Neue, strong color blocks
-- corporativo: Clean grid, navy/charcoal colors, Inter font, structured layout, subtle accents
-- elegante: Dark backgrounds, gold/metallic accents (#C9A961), Playfair Display, decorative frames
-- criativo: Organic shapes, vibrant colors, asymmetric layout, Poppins/Space Grotesk, rounded elements`;
-
-    const userPrompt = `Create a template layout for this post:
-
-TITLE: "${titulo}"
-SUBTITLE: "${subtitulo || ''}"
-CTA: "${cta || ''}"
-FORMAT: ${format === "feed" ? "Square 1080x1080" : "Story 1080x1920"}
-STYLE: ${estilo || "bold"}
-
-BRAND IDENTITY:
-- Colors: ${identidade_visual?.paleta || "use professional defaults"}
-- Fonts: ${identidade_visual?.fontes || "choose appropriate"}
-- Visual tone: ${identidade_visual?.tom_visual || "modern professional"}
-
-BACKGROUND IMAGE: Will be used as full background (type: "image", imageUrl will be set separately)
-
-Return ONLY the JSON object with this structure:
-{
-  "background": {
-    "type": "image",
-    "imageFit": "cover",
-    "imageMask": "full|left-half|right-half|center-circle|frame-inset",
-    "overlay": { "color": "#hex", "opacity": 0.0-1.0 }
-  },
-  "elements": [ ...array of TextElement, ShapeElement, ImageElement... ]
-}
-
-Important: Do NOT include width, height, brandColors, or logoUrl - those are added automatically.
-The background.imageUrl will be set separately - just define the mask and overlay.`;
+    const systemPrompt = buildSystemPrompt(format || "feed");
+    const userPrompt = buildUserPrompt({ titulo, subtitulo, cta, format: format || "feed", estilo, identidade_visual });
+    console.log(`[generate-template-layout] prompt_version=${PROMPT_VERSION}`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

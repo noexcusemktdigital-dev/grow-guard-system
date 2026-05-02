@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-daily-checklist.ts';
 
 const CREDIT_COST = 5;
 
@@ -190,26 +191,8 @@ Deno.serve(async (req) => {
 
     if (lovableApiKey) {
       // Call Lovable AI for intelligent task generation
-      const systemPrompt = `Você é um gestor de produtividade inteligente de uma plataforma SaaS de marketing e vendas.
-Sua função é gerar um checklist diário personalizado com 5-8 tarefas ACIONÁVEIS e ESPECÍFICAS.
-
-REGRAS:
-- Use números reais dos dados (ex: "Fazer follow-up nos 3 leads quentes parados")
-- Priorize: leads quentes sem contato > tarefas CRM vencidas > mensagens não respondidas > metas atrasadas > conteúdo pendente > rotina
-- Categorias permitidas: "comercial", "marketing", "operacional", "estrategico"
-- Prioridades: "alta", "media", "baixa"
-- Se créditos estiverem baixos (<50), adicione tarefa para verificar plano
-- Se não tem estratégia, sugira criar plano de marketing/vendas
-- Títulos curtos e diretos (máx 60 caracteres)
-- NÃO repita tarefas genéricas se não houver dados que justifiquem`;
-
-      const userPrompt = `Dados do usuário hoje (${today}):
-
-${JSON.stringify(context, null, 2)}
-
-${templateTasks.length > 0 ? `\nTarefas fixas do gestor (incluir obrigatoriamente):\n${templateTasks.map(t => `- ${t}`).join("\n")}` : ""}
-
-Gere o checklist diário personalizado.`;
+      const userPrompt = buildUserPrompt({ today, context, templateTasks });
+      console.log(`[generate-daily-checklist] prompt_version=${PROMPT_VERSION}`);
 
       try {
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -221,7 +204,7 @@ Gere o checklist diário personalizado.`;
           body: JSON.stringify({
             model: "google/gemini-3-flash-preview",
             messages: [
-              { role: "system", content: systemPrompt },
+              { role: "system", content: SYSTEM_PROMPT },
               { role: "user", content: userPrompt },
             ],
             tools: [{
