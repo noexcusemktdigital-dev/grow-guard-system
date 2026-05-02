@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,12 +33,12 @@ export function ChatQuickReplies({ onSelect }: Props) {
     queryFn: async () => {
       if (!orgId) return [];
       const { data, error } = await supabase
-        .from("quick_reply_templates" as unknown as "quick_reply_templates")
+        .from("quick_reply_templates")
         .select("*")
         .eq("organization_id", orgId)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data || []) as unknown as Template[];
+      return (data || []) as Template[];
     },
     enabled: !!orgId,
   });
@@ -47,7 +46,7 @@ export function ChatQuickReplies({ onSelect }: Props) {
   const addMutation = useMutation({
     mutationFn: async ({ label, text }: { label: string; text: string }) => {
       if (!orgId) return;
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("quick_reply_templates")
         .insert({ organization_id: orgId, label, text, position: templates.length });
       if (error) throw error;
@@ -63,7 +62,7 @@ export function ChatQuickReplies({ onSelect }: Props) {
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("quick_reply_templates" as unknown as "quick_reply_templates")
+        .from("quick_reply_templates")
         .delete()
         .eq("id", id);
       if (error) throw error;

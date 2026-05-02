@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AdaptiveChatBriefing
  * Briefing 100% adaptativo: cada pergunta é gerada pela edge function
@@ -7,7 +6,7 @@
  * Mantém o look-and-feel do ChatBriefing (avatar do agente, balões, typing indicator)
  * porém com perguntas dinâmicas — não recebe `steps` estáticos.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Send, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -138,8 +137,9 @@ export function AdaptiveChatBriefing({
         const key = questionToKey(q.question, idx);
         setQuestionKeys((prev) => [...prev, key]);
         addAgentMessage(q.question, key);
-      } catch (e: any) {
-        const msg = e?.message || String(e) || "Falha ao buscar próxima pergunta";
+      } catch (e: unknown) {
+        const err = e as { message?: string };
+        const msg = err?.message || String(e) || "Falha ao buscar próxima pergunta";
         setErrorMsg(msg);
       } finally {
         setLoadingNext(false);
@@ -167,7 +167,7 @@ export function AdaptiveChatBriefing({
   }, [currentQuestion]);
 
   const submitAnswer = useCallback(
-    async (rawValue: any, displayText?: string) => {
+    async (rawValue: string | number | string[], displayText?: string) => {
       if (!currentQuestion) return;
       const key = questionKeys[questionKeys.length - 1] || questionToKey(currentQuestion.question, questionIndex);
 
@@ -384,7 +384,7 @@ export function AdaptiveChatBriefing({
           {(currentQuestion.type === "text" || currentQuestion.type === "number") && (
             <div className="flex gap-2">
               <Input
-                ref={inputRef as any}
+                ref={inputRef as RefObject<HTMLInputElement>}
                 type={currentQuestion.type === "number" ? "number" : "text"}
                 placeholder={currentQuestion.placeholder || "Digite sua resposta…"}
                 value={textValue}
@@ -405,7 +405,7 @@ export function AdaptiveChatBriefing({
           {currentQuestion.type === "textarea" && (
             <div className="flex gap-2 items-end">
               <Textarea
-                ref={inputRef as any}
+                ref={inputRef as RefObject<HTMLTextAreaElement>}
                 placeholder={currentQuestion.placeholder || "Descreva com detalhes…"}
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
