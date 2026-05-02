@@ -9,6 +9,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const MAX_QUESTIONS = 15;
 const SYSTEM_PROMPT = `Você é um consultor de marketing estratégico da NOEXCUSE.
@@ -54,6 +55,8 @@ const QUESTION_TOOL = {
 };
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'get-next-gps-question');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {

@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const TOOL_SCHEMA = {
   type: "function",
@@ -93,6 +94,8 @@ REGRAS:
 Use a ferramenta extract_answers para retornar os dados extraídos.`;
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'extract-strategy-answers');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   // SEC-NOE-002: User auth required

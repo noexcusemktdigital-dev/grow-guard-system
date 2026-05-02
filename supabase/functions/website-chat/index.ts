@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 // Simple in-memory rate limiter (per isolate lifetime)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -19,6 +20,8 @@ function isRateLimited(ip: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'website-chat');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }

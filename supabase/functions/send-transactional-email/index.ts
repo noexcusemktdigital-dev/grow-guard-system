@@ -2,11 +2,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskEmail } from '../_shared/redact.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM_ADDRESS = 'NoExcuse Digital <noreply@noexcusedigital.com.br>'
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'send-transactional-email');
+  const log = makeLogger(ctx);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: getCorsHeaders(req) })
   }

@@ -4,8 +4,11 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 // INT-004: Circuit breaker for WhatsApp provider failover (Evolution ↔ Z-API)
 import { recordSuccess, recordFailure, isOpen } from '../_shared/whatsappCircuitBreaker.ts';
 import { parseOrThrow, validationErrorResponse, WhatsAppSchemas } from '../_shared/schemas.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'whatsapp-send');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }

@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskPhone, redact } from '../_shared/redact.ts';
 import { parseOrThrow, validationErrorResponse, WhatsAppSchemas } from '../_shared/schemas.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 function randomDelay(base: number): number {
   const variance = Math.floor(Math.random() * 5) - 2; // -2 to +2
@@ -14,6 +15,8 @@ function sleep(seconds: number): Promise<void> {
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'whatsapp-bulk-send');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -80,6 +81,8 @@ async function moveToDlq(
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'process-email-queue');
+  const log = makeLogger(ctx);
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')

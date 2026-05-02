@@ -1,6 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 function jsonRes(data: unknown, status = 200, req?: Request) {
   return new Response(JSON.stringify(data), {
@@ -22,6 +23,8 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'transcribe-audio');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(req) });
   }
