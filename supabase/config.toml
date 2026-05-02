@@ -1,6 +1,12 @@
 project_id = "gxrhdpbbxfipeopdyygn"
 
 [functions]
+  # --- LGPD DSR functions (require authenticated user session — verify_jwt = true) ---
+  [functions.dsr-export-data]
+    verify_jwt = true
+  [functions.dsr-delete-account]
+    verify_jwt = true
+
   # --- Cron / internal triggers (use service_role or own auth) ---
   [functions.agent-followup-cron]
     # Called by cron scheduler — SEC-NOE-002 fixed: requires Authorization: Bearer CRON_SECRET
