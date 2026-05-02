@@ -1,16 +1,16 @@
 // @ts-nocheck
 
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Activity, ChevronRight, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, BarChart, Bar, Cell, ReferenceLine,
-} from "recharts";
 import type { Answers } from "./ClientePlanoVendasData";
+
+// PERF-WARN-01: recharts deferred — evolution chart needs >= 2 history items,
+// dialog charts only load on user interaction.
+const EvolutionChart = lazy(() => import("./ClientePlanoVendasHistoricoEvolution"));
+const HistoricoCharts = lazy(() => import("./ClientePlanoVendasHistoricoCharts"));
 import { getNivel } from "./ClientePlanoVendasData";
 import { computeScores, generateInsights, generateActionPlan } from "./ClientePlanoVendasScoring";
 
@@ -47,32 +47,14 @@ export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: Cli
 
       {/* Evolution Chart */}
       {planHistory && planHistory.length >= 2 && (
-        <Card className="glass-card">
-          <CardContent className="py-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4">EVOLUÇÃO DA MATURIDADE COMERCIAL</p>
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={[...planHistory].reverse().map(h => ({
-                  data: new Date(h.created_at as string).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
-                  score: h.score as number,
-                }))} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gradHistoryEvo" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="data" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" axisLine={false} tickLine={false} unit="%" />
-                  <RechartsTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => [`${v}%`, "Score"]} />
-                  <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" fill="url(#gradHistoryEvo)" strokeWidth={2.5} dot={{ r: 4, fill: "hsl(var(--primary))" }} />
-                  <ReferenceLine y={75} stroke="hsl(var(--chart-3))" strokeDasharray="5 5" label={{ value: "Alta Perf.", position: "right", fontSize: 10, fill: "hsl(var(--chart-3))" }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <Suspense fallback={<div className="h-52 animate-pulse bg-muted rounded-xl" />}>
+          <EvolutionChart
+            data={[...planHistory].reverse().map(h => ({
+              data: new Date(h.created_at as string).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }),
+              score: h.score as number,
+            }))}
+          />
+        </Suspense>
       )}
 
       {historyLoading ? (
@@ -139,42 +121,9 @@ export function ClientePlanoVendasHistorico({ planHistory, historyLoading }: Cli
                   </div>
                 </div>
 
-                <Card>
-                  <CardContent className="py-5">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">RADAR POR ÁREA</p>
-                    <div className="h-56">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart data={selectedHistoryScores.radarData} outerRadius="65%">
-                          <PolarGrid stroke="hsl(var(--border))" />
-                          <PolarAngleAxis dataKey="category" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 8 }} />
-                          <Radar name="Score" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.15)" strokeWidth={2} />
-                        </RadarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="py-5">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">SCORE POR CATEGORIA</p>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={selectedHistoryScores.radarData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" unit="%" />
-                          <YAxis type="category" dataKey="category" tick={{ fontSize: 10 }} width={100} stroke="hsl(var(--muted-foreground))" />
-                          <RechartsTooltip formatter={(v: number) => [`${v}%`, "Score"]} />
-                          <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={20}>
-                            {selectedHistoryScores.radarData.map((entry, i) => (
-                              <Cell key={i} fill={entry.value >= 70 ? "hsl(var(--chart-3))" : entry.value >= 40 ? "hsl(var(--chart-2))" : "hsl(var(--destructive))"} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+                <Suspense fallback={<div className="space-y-4"><div className="h-56 animate-pulse bg-muted rounded" /><div className="h-48 animate-pulse bg-muted rounded" /></div>}>
+                  <HistoricoCharts radarData={selectedHistoryScores.radarData} />
+                </Suspense>
 
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">INSIGHTS</p>
