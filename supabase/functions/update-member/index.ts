@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { parseOrThrow, validationErrorResponse, MemberSchemas } from '../_shared/schemas.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
@@ -30,7 +31,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), { status: 200, headers: corsHeaders });
     }
 
-    const { user_id, organization_id, action = "update", role, full_name, job_title } = await req.json();
+    const rawBody = await req.json();
+    const { user_id, organization_id, action = "update", role, full_name, job_title } = parseOrThrow(MemberSchemas.Update, rawBody);
     console.log("[update-member] Action:", action, "target_user:", user_id, "org:", organization_id, "caller:", caller.id);
 
     if (!user_id || !organization_id) {
@@ -149,6 +151,8 @@ Deno.serve(async (req) => {
     console.log("[update-member] Update successful");
     return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
   } catch (err: unknown) {
+    const valResp = validationErrorResponse(err, getCorsHeaders(req));
+    if (valResp) return valResp;
     console.error("[update-member] Unhandled error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), { status: 200, headers: corsHeaders });
   }

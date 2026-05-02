@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
 
 const CREDIT_COST = 30;
 
@@ -37,14 +38,8 @@ serve(async (req) => {
     const _rl = await checkRateLimit(userId, null, 'generate-prospection', { windowSeconds: 60, maxRequests: 20 });
     if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
-    const { regiao, nicho, porte, desafio, objetivo, nome_empresa, site, redes_sociais, conhecimento_previo, nivel_contato, contato_decisor, cargo_decisor, organization_id } = await req.json();
-
-    if (!regiao || !nicho) {
-      return new Response(
-        JSON.stringify({ error: "Região e nicho são obrigatórios" }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    const rawBody = await req.json();
+    const { regiao, nicho, porte, desafio, objetivo, nome_empresa, site, redes_sociais, conhecimento_previo, nivel_contato, contato_decisor, cargo_decisor, organization_id } = parseOrThrow(GenerateSchemas.Prospection, rawBody);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -328,6 +323,8 @@ Sempre responda em português brasileiro. Seja prático, direto e use linguagem 
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (e) {
+    const valResp = validationErrorResponse(e, getCorsHeaders(req));
+    if (valResp) return valResp;
     console.error("generate-prospection error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),

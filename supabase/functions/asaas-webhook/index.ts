@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, WebhookSchemas } from '../_shared/schemas.ts';
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'asaas-webhook');
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
     }
 
     const rawBodyText = await req.text();
-    const body = JSON.parse(rawBodyText || "{}");
+    const body = parseOrThrow(WebhookSchemas.AsaasEvent, JSON.parse(rawBodyText || "{}"));
     const event = body.event;
     const payment = body.payment;
 
@@ -782,6 +783,8 @@ Deno.serve(async (req) => {
 
     return jsonOk({ ok: true });
   } catch (err: unknown) {
+    const valResp = validationErrorResponse(err, withCorrelationHeader(ctx, getCorsHeaders(req)));
+    if (valResp) return valResp;
     log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
