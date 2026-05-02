@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { AssessoriaPopup } from "@/components/shared/AssessoriaPopup";
 import { Share2, BarChart3, Send, Link2 } from "lucide-react";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useSocialAccounts } from "@/hooks/useSocialAccounts";
 import { SocialAccountsTab, PLATFORMS } from "@/components/social/SocialAccountsTab";
 import { SocialAnalyticsTab } from "@/components/social/SocialAnalyticsTab";
@@ -50,7 +51,7 @@ export default function ClienteRedesSociaisHub() {
         server_misconfigured: "Servidor não configurado corretamente.",
         save_failed: "Falha ao salvar a conexão. Tente novamente.",
       };
-      toast.error(errorMessages[error] ?? `Erro ao conectar: ${error}`);
+      reportError(new Error(errorMessages[error] ?? `Erro ao conectar: ${error}`), { title: "Erro ao conectar conta social", category: "social.oauth_callback" });
       const params = new URLSearchParams(searchParams);
       params.delete("error");
       setSearchParams(params, { replace: true });

@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useOnboardingUnits, useOnboardingChecklist, useOnboardingMeetings, useOnboardingTasks, useOnboardingIndicators, useOnboardingMutations } from "@/hooks/useOnboarding";
 import { useUnits } from "@/hooks/useUnits";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   in_progress: { label: "Em implantação", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", icon: <Rocket className="w-3 h-3" /> },
@@ -82,7 +83,7 @@ export default function Onboarding() {
   };
 
   const handleCreateUnit = () => {
-    if (!newUnitId) { toast.error("Selecione uma unidade"); return; }
+    if (!newUnitId) { reportError(new Error("Selecione uma unidade"), { title: "Selecione uma unidade", category: "onboarding.validation" }); return; }
     const unitName = selectedDbUnit?.name || "Implantação";
     const responsible = (selectedDbUnit as unknown as { manager_name?: string } | null)?.manager_name || undefined;
     const startDate = newStartDate || new Date().toISOString().slice(0, 10);
