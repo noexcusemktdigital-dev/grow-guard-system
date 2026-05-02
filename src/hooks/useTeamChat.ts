@@ -99,7 +99,8 @@ export function useTeamChat() {
       const { data, error } = await supabase
         .from("organization_memberships")
         .select("user_id, profiles(full_name, avatar_url)")
-        .eq("organization_id", orgId!);
+        .eq("organization_id", orgId!)
+        .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
       return (data || []).map((m: { user_id: string; profiles: { full_name: string | null; avatar_url: string | null } | null }) => ({
         user_id: m.user_id,

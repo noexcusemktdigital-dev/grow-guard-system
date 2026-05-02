@@ -22,7 +22,8 @@ export function useCrmOrgMembers() {
         .from("organization_memberships")
         .select("user_id, profiles(full_name, avatar_url)")
         .eq("organization_id", orgId!)
-        .in("role", ["cliente_admin", "cliente_user"]);
+        .in("role", ["cliente_admin", "cliente_user"])
+        .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
       return (data ?? []).map((m: any) => ({
         user_id: m.user_id,
@@ -47,7 +48,8 @@ export function useCrmOrgMembersMap() {
       const { data, error } = await supabase
         .from("organization_memberships")
         .select("user_id, profiles(full_name, avatar_url)")
-        .eq("organization_id", orgId!);
+        .eq("organization_id", orgId!)
+        .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
       const map: Record<string, { name: string; avatar?: string | null }> = {};
       (data ?? []).forEach((m: any) => {

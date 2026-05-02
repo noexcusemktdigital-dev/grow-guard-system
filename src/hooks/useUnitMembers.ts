@@ -14,7 +14,8 @@ export function useUnitMembers(unitOrgId: string | null | undefined) {
       const { data, error } = await supabase
         .from("organization_memberships")
         .select("*, profiles(full_name, avatar_url)")
-        .eq("organization_id", targetOrgId!);
+        .eq("organization_id", targetOrgId!)
+        .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
       return data;
     },

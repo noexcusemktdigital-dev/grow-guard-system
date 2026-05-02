@@ -18,7 +18,8 @@ export function useCrmTeam() {
       const { data, error } = await supabase
         .from("organization_memberships")
         .select("user_id, role, profiles(full_name)")
-        .eq("organization_id", orgId!);
+        .eq("organization_id", orgId!)
+        .is("deleted_at", null); // LGPD-002: exclui membros soft-deleted
       if (error) throw error;
       return (data || []).map((m: { user_id: string; role: string | null; profiles: { full_name: string | null } | null }) => ({
         user_id: m.user_id,

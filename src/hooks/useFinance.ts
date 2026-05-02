@@ -52,7 +52,12 @@ export function useFinanceClients() {
   return useQuery({
     queryKey: ["finance-clients", orgId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("finance_clients").select("*").eq("organization_id", orgId!).order("name");
+      const { data, error } = await supabase
+        .from("finance_clients")
+        .select("*")
+        .eq("organization_id", orgId!)
+        .is("deleted_at", null) // LGPD-002: exclui registros soft-deleted
+        .order("name");
       if (error) throw error;
       return data;
     },
