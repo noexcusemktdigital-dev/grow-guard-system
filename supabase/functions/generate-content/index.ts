@@ -7,6 +7,7 @@ import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { parseOrThrow, validationErrorResponse, GenerateSchemas } from '../_shared/schemas.ts';
 import { buildSystemPrompt, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-content.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 const CREDIT_COST_PER_CONTENT = 30;
 
@@ -54,9 +55,10 @@ serve(async (req) => {
     const count = Number(quantidade) || 8;
     const totalCreditCost = CREDIT_COST_PER_CONTENT * count;
 
-    // Pre-check + débito condicional ao GPS aprovado
+    // BOLA/IDOR guard + Pre-check + débito condicional ao GPS aprovado
     if (organization_id) {
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      await assertOrgMember(adminClient, _authUser.id, organization_id);
       const debited = await debitIfGPSDone(
         adminClient, organization_id, totalCreditCost, `Geração de ${count} conteúdo(s)`, "generate-content",
         Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -327,9 +329,6 @@ Use estas informações para personalizar os conteúdos.`;
     const valResp = validationErrorResponse(e, getCorsHeaders(req));
     if (valResp) return valResp;
     console.error("generate-content error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
-      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-    );
+    return authErrorResponse(e, getCorsHeaders(req));
   }
 });

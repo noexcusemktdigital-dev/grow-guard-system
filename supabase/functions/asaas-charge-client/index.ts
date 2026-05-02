@@ -5,6 +5,7 @@ import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { redact } from "../_shared/redact.ts";
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, AuthError, authErrorResponse } from '../_shared/auth.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -49,6 +50,9 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    await assertOrgMember(adminClient, user.id, organization_id);
 
     const billingType = billing_type || "PIX";
     const now = new Date();
@@ -248,8 +252,6 @@ Deno.serve(async (req) => {
     }), { headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" } });
   } catch (err: unknown) {
     log.error("asaas-charge-client error", { error: String(err) });
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return authErrorResponse(err, getCorsHeaders(req));
   }
 });

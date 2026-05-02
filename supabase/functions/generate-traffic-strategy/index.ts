@@ -4,6 +4,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'generate-traffic-strategy');
@@ -63,6 +64,9 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
+
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    await assertOrgMember(adminClient, userId, organization_id);
 
     // Pre-check + débito condicional ao GPS aprovado
     const CREDIT_COST = 25;
@@ -340,8 +344,6 @@ Retorne APENAS um JSON válido com a estrutura: { diagnostico, kpi_tracking, inv
     });
   } catch (err: unknown) {
     log.error("generate-traffic-strategy error", { error: String(err) });
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return authErrorResponse(err, getCorsHeaders(req));
   }
 });

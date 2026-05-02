@@ -12,6 +12,7 @@ import {
 } from '../_shared/prompts/generate-strategy.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 import { parseOrThrow, validationErrorResponse, GenerateExtendedSchemas } from '../_shared/schemas.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 const CREDIT_COST = 50;
 
@@ -396,6 +397,11 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    if (organization_id) {
+      await assertOrgMember(serviceClient, userId, organization_id);
+    }
+
     // Débito condicional ao GPS aprovado (no-op no primeiro GPS; debita em regenerações)
     if (organization_id) {
       const debited = await debitIfGPSDone(
@@ -565,24 +571,6 @@ Deno.serve(async (req) => {
     const valRes = validationErrorResponse(err, getCorsHeaders(req));
     if (valRes) return valRes;
     log.error("Strategy generation error", { error: String(err) });
-    const message = err instanceof Error ? err.message : "Erro interno";
-
-    if (message === "RATE_LIMIT") {
-      return new Response(
-        JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
-        { status: 429, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-    if (message === "AI_CREDITS") {
-      return new Response(
-        JSON.stringify({ error: "Créditos de IA insuficientes." }),
-        { status: 402, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-    );
+    return authErrorResponse(err, getCorsHeaders(req));
   }
 });

@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -113,6 +114,9 @@ Deno.serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // BOLA/IDOR guard: ensure caller belongs to the target org
+    await assertOrgMember(adminClient, user.id, organization_id);
     let orgsToQuery: { id: string; name: string; asaas_customer_id: string }[] = [];
 
     if (network) {
@@ -170,8 +174,6 @@ Deno.serve(async (req) => {
     });
   } catch (err: unknown) {
     log.error("asaas-list-payments error", { error: String(err) });
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return authErrorResponse(err, getCorsHeaders(req));
   }
 });

@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { assertOrgMember, authErrorResponse } from '../_shared/auth.ts';
 
 const CREDIT_COST = 25;
 
@@ -112,8 +113,9 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Pre-check credits
+    // BOLA/IDOR guard + Pre-check credits
     if (organization_id) {
+      await assertOrgMember(supabaseAdmin, _authUser.id, organization_id);
       const { data: wallet } = await supabaseAdmin
         .from("credit_wallets")
         .select("balance")
@@ -424,8 +426,6 @@ Gere ${quantidade} conceitos de posts com prompts visuais EXTREMAMENTE detalhado
     });
   } catch (e) {
     log.error("generate-social-concepts error", { error: String(e) });
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    return authErrorResponse(e, getCorsHeaders(req));
   }
 });
