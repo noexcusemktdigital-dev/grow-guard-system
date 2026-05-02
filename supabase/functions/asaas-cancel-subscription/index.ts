@@ -4,6 +4,7 @@ import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { assertOrgMember, AuthError } from '../_shared/auth.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, SubscriptionSchemas } from '../_shared/schemas.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -41,12 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { organization_id } = await req.json();
-    if (!organization_id) {
-      return new Response(JSON.stringify({ error: "organization_id is required" }), {
-        status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    const { organization_id } = parseOrThrow(SubscriptionSchemas.Cancel, await req.json());
 
     // SEC-002: Validate org membership before financial mutation (anti-IDOR/BOLA)
     try {
@@ -105,6 +101,8 @@ Deno.serve(async (req) => {
       headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
+    const valRes = validationErrorResponse(err, getCorsHeaders(req));
+    if (valRes) return valRes;
     log.error("asaas-cancel-subscription error", { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

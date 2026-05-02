@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 // INT-004: Circuit breaker for WhatsApp provider failover (Evolution ↔ Z-API)
 import { recordSuccess, recordFailure, isOpen } from '../_shared/whatsappCircuitBreaker.ts';
+import { parseOrThrow, validationErrorResponse, WhatsAppSchemas } from '../_shared/schemas.ts';
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -45,11 +46,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    const rawBody = await req.json();
+    const body = parseOrThrow(WhatsAppSchemas.Send, rawBody);
     const {
       contactPhone,
       contactId,
       message,
-      type = "text",
       mediaUrl,
       quotedMessageId,
       action,
@@ -57,7 +59,8 @@ Deno.serve(async (req) => {
       templateName,
       templateLanguage,
       templateComponents,
-    } = await req.json();
+    } = body;
+    const type = (body as any).type ?? "text";
 
     // ─── Helper: resolve instance from contact or org ───
     async function resolveInstance(cId?: string): Promise<Record<string, unknown> | null> {
@@ -367,6 +370,8 @@ Deno.serve(async (req) => {
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (err) {
+    const valRes = validationErrorResponse(err, getCorsHeaders(req));
+    if (valRes) return valRes;
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, CrmSchemas } from '../_shared/schemas.ts';
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'crm-run-automations');
@@ -33,12 +34,15 @@ Deno.serve(async (req) => {
     let targetEventId: string | null = null;
     try {
       if (req.method === "POST") {
-        const body = await req.json().catch(() => null);
-        if (body && typeof body.event_id === "string") {
-          targetEventId = body.event_id;
+        const rawBody = await req.json().catch(() => null);
+        if (rawBody) {
+          const body = parseOrThrow(CrmSchemas.RunAutomations, rawBody);
+          if (typeof body.event_id === "string") {
+            targetEventId = body.event_id;
+          }
         }
       }
-    } catch (_) { /* ignore body parsing errors */ }
+    } catch (_) { /* ignore body parsing errors — cron invocations have no body */ }
 
     // Periodic scans only run in batch mode (cron / manual "Executar agora")
     if (!targetEventId) {

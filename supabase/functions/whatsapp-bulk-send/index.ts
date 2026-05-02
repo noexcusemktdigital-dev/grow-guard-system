@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskPhone, redact } from '../_shared/redact.ts';
+import { parseOrThrow, validationErrorResponse, WhatsAppSchemas } from '../_shared/schemas.ts';
 
 function randomDelay(base: number): number {
   const variance = Math.floor(Math.random() * 5) - 2; // -2 to +2
@@ -53,13 +54,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { dispatch_id } = await req.json();
-    if (!dispatch_id) {
-      return new Response(JSON.stringify({ error: "dispatch_id is required" }), {
-        status: 400,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-      });
-    }
+    const { dispatch_id } = parseOrThrow(WhatsAppSchemas.BulkSend, await req.json());
 
     // Fetch dispatch
     const { data: dispatch, error: dispErr } = await adminClient
@@ -195,6 +190,8 @@ Deno.serve(async (req) => {
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const valRes = validationErrorResponse(err, getCorsHeaders(req));
+    if (valRes) return valRes;
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },

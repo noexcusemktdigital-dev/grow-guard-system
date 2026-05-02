@@ -11,6 +11,7 @@ import {
   PROMPT_VERSION,
 } from '../_shared/prompts/generate-strategy.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, GenerateExtendedSchemas } from '../_shared/schemas.ts';
 
 const CREDIT_COST = 50;
 
@@ -383,13 +384,7 @@ Deno.serve(async (req) => {
     const _rl = await checkRateLimit(userId, null, 'generate-strategy', { windowSeconds: 60, maxRequests: 20 });
     if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
-    const { answers, organization_id, section } = await req.json();
-    if (!answers) {
-      return new Response(
-        JSON.stringify({ error: "Respostas do briefing são obrigatórias" }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    const { answers, organization_id, section } = parseOrThrow(GenerateExtendedSchemas.Strategy, await req.json());
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -567,6 +562,8 @@ Deno.serve(async (req) => {
       { headers: { ...withCorrelationHeader(ctx, getCorsHeaders(req)), "Content-Type": "application/json" } }
     );
   } catch (err: unknown) {
+    const valRes = validationErrorResponse(err, getCorsHeaders(req));
+    if (valRes) return valRes;
     log.error("Strategy generation error", { error: String(err) });
     const message = err instanceof Error ? err.message : "Erro interno";
 
