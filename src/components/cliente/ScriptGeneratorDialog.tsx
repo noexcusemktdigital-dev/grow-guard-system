@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import {
   Sparkles, Pencil, ArrowRight, ArrowLeft, RefreshCw, Save,
@@ -43,8 +42,7 @@ export default function ScriptGeneratorDialog({ open, onOpenChange, onSave, init
   const [manualTitle, setManualTitle] = useState("");
   const [manualContent, setManualContent] = useState("");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [lastAutoContext, setLastAutoContext] = useState<any>(null);
+  const [lastAutoContext, setLastAutoContext] = useState<Record<string, unknown> | null>(null);
   const [lastOrgId, setLastOrgId] = useState<string | null>(null);
 
   useEffect(() => {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/edge";
 import { ptBR } from "date-fns/locale";
-import { useCrmFunnels } from "@/hooks/useCrmFunnels";
+import { useCrmFunnels, type CrmFunnel } from "@/hooks/useCrmFunnels";
+import type { FunnelStage } from "@/components/crm/CrmStageSystem";
 import { useCrmTeams } from "@/hooks/useCrmTeams";
 import { useCrmTeam } from "@/hooks/useCrmTeam";
 import { useSalesPlan } from "@/hooks/useSalesPlan";
@@ -55,13 +55,15 @@ const ACTIONS = [
   { value: "ai_followup", label: "IA: Follow-up automático", ai: true },
 ];
 
+type AutomationRecord = NonNullable<ReturnType<typeof useCrmAutomations>["data"]>[number];
+
 interface RecommendedAutomation {
   name: string;
   description: string;
   trigger_type: string;
   action_type: string;
-  trigger_config?: Record<string, any>;
-  action_config?: Record<string, any>;
+  trigger_config?: Record<string, unknown>;
+  action_config?: Record<string, unknown>;
   ai?: boolean;
 }
 
@@ -251,16 +253,16 @@ export function CrmAutomations() {
     setDialogOpen(true);
   };
 
-  const openEdit = (auto: Record<string, unknown>) => {
-    setEditingId(auto.id as string);
-    setName(auto.name as string);
-    setDescription((auto.description as string) || "");
-    setTriggerType(auto.trigger_type as string);
-    setActionType(auto.action_type as string);
+  const openEdit = (auto: AutomationRecord) => {
+    setEditingId(auto.id);
+    setName(auto.name);
+    setDescription(auto.description || "");
+    setTriggerType(auto.trigger_type);
+    setActionType(auto.action_type);
     setActionConfig((auto.action_config as Record<string, unknown>) || {});
     setTriggerConfig((auto.trigger_config as Record<string, unknown>) || {});
-    setSelectedFunnels(Array.isArray(auto.funnel_ids) ? auto.funnel_ids : []);
-    setSelectedTeams(Array.isArray(auto.team_ids) ? auto.team_ids : []);
+    setSelectedFunnels(Array.isArray(auto.funnel_ids) ? (auto.funnel_ids as string[]) : []);
+    setSelectedTeams(Array.isArray(auto.team_ids) ? (auto.team_ids as string[]) : []);
     setSelectedAgentId((auto.agent_id as string) || "");
     setDialogOpen(true);
   };
@@ -491,7 +493,7 @@ export function CrmAutomations() {
               )}
               {selectedFunnels.length === 1 && funnels && (() => {
                 const f = funnels.find(f => f.id === selectedFunnels[0]);
-                const stages = (f?.stages as any[]) || [];
+                const stages: FunnelStage[] = f?.stages || [];
                 if (stages.length === 0) return null;
                 return (
                   <div>
@@ -503,7 +505,7 @@ export function CrmAutomations() {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Todas as etapas" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all__" className="text-xs">Todas as etapas</SelectItem>
-                        {stages.map((s: any) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                        {stages.map((s) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -583,7 +585,7 @@ export function CrmAutomations() {
                     <Label className="text-xs">Etapa de destino *</Label>
                     {(() => {
                       const targetFunnel = funnels.find(f => f.id === (actionConfig.target_funnel_id || selectedFunnels[0])) || funnels[0];
-                      const stages = (targetFunnel?.stages as any[]) || [];
+                      const stages: FunnelStage[] = targetFunnel?.stages || [];
                       return (
                         <Select
                           value={actionConfig.target_stage || ""}
@@ -591,7 +593,7 @@ export function CrmAutomations() {
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecionar etapa" /></SelectTrigger>
                           <SelectContent>
-                            {stages.map((s: any) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                            {stages.map((s) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       );
@@ -628,14 +630,14 @@ export function CrmAutomations() {
                   </div>
                   {actionConfig.target_funnel_id && (() => {
                     const targetFunnel = funnels.find(f => f.id === actionConfig.target_funnel_id);
-                    const stages = (targetFunnel?.stages as any[]) || [];
+                    const stages: FunnelStage[] = targetFunnel?.stages || [];
                     return (
                       <div>
                         <Label className="text-xs">Etapa inicial no destino</Label>
                         <Select value={actionConfig.target_stage || ""} onValueChange={v => setActionConfig({ ...actionConfig, target_stage: v })}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Primeira etapa" /></SelectTrigger>
                           <SelectContent>
-                            {stages.map((s: any) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                            {stages.map((s) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -752,15 +754,15 @@ function AutomationTabContent({
   isAi, automations, recommended, funnels, onNew, onEdit, onDelete, onToggle, onActivateRec, isAiAction,
 }: {
   isAi: boolean;
-  automations: any[];
+  automations: AutomationRecord[];
   recommended: RecommendedAutomation[];
-  funnels: any[] | undefined;
+  funnels: CrmFunnel[] | undefined;
   onNew: () => void;
-  onEdit: (auto: any) => void;
+  onEdit: (auto: AutomationRecord) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string, isActive: boolean) => void;
   onActivateRec: (rec: RecommendedAutomation) => void;
-  isAiAction: (type: string) => any;
+  isAiAction: (type: string) => { value: string; label: string; ai: boolean } | undefined;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -776,8 +778,9 @@ function AutomationTabContent({
         queryClient.invalidateQueries({ queryKey: ["crm-automations"] });
         queryClient.invalidateQueries({ queryKey: ["automation-execution-logs"] });
       }, 1500);
-    } catch (e: any) {
-      toast({ title: "Erro ao executar", description: e?.message || "Tente novamente", variant: "destructive" });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Tente novamente";
+      toast({ title: "Erro ao executar", description: msg, variant: "destructive" });
     } finally {
       setTimeout(() => setRunning(false), 1500);
     }
@@ -894,7 +897,7 @@ function AutomationTabContent({
   );
 }
 
-function AutomationLogsTab({ automations }: { automations: any[] }) {
+function AutomationLogsTab({ automations }: { automations: AutomationRecord[] }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [automationFilter, setAutomationFilter] = useState("");
   const { data: logs, isLoading } = useAutomationLogs({

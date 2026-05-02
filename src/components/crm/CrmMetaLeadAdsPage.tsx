@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { invokeEdge } from "@/lib/edge";
 import { useUserOrgId } from "@/hooks/useUserOrgId";
-import { useCrmFunnels } from "@/hooks/useCrmFunnels";
+import { useCrmFunnels, type CrmFunnel } from "@/hooks/useCrmFunnels";
+import type { FunnelStage } from "@/components/crm/CrmStageSystem";
 
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { format } from "date-fns";
@@ -34,6 +34,32 @@ interface MetaForm {
   status: string;
   leads_count: number;
   created_time: string;
+}
+
+interface SubscribedPage {
+  page_id: string;
+  page_name: string;
+  active: boolean;
+  [key: string]: unknown;
+}
+
+interface LeadgenMapping {
+  id: string;
+  page_id: string;
+  form_id: string | null;
+  funnel_id: string;
+  stage: string;
+  is_default: boolean;
+  crm_funnels?: { name: string } | null;
+  [key: string]: unknown;
+}
+
+interface LeadgenEvent {
+  id: string;
+  page_id: string;
+  form_id: string | null;
+  status: string;
+  created_at: string;
 }
 
 export default function CrmMetaLeadAdsPage() {
@@ -164,10 +190,10 @@ export default function CrmMetaLeadAdsPage() {
       qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
       qc.invalidateQueries({ queryKey: ["meta-leadgen-mappings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast({
         title: "Erro ao conectar página",
-        description: err.message,
+        description: err instanceof Error ? err.message : undefined,
         variant: "destructive",
       });
     },
@@ -186,8 +212,8 @@ export default function CrmMetaLeadAdsPage() {
       qc.invalidateQueries({ queryKey: ["meta-leadgen-subscribed-pages"] });
       qc.invalidateQueries({ queryKey: ["meta-leadgen-mappings"] });
     },
-    onError: (err: any) => {
-      toast({ title: "Erro ao desconectar página", description: err.message, variant: "destructive" });
+    onError: (err: unknown) => {
+      toast({ title: "Erro ao desconectar página", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     },
   });
 
@@ -195,7 +221,7 @@ export default function CrmMetaLeadAdsPage() {
   const saveMappingMutation = useMutation({
     mutationFn: async () => {
       if (!mappingForm || !orgId) throw new Error("Dados inválidos");
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         organization_id: orgId,
         page_id: mappingForm.page_id,
         page_name: mappingForm.page_name,
@@ -217,8 +243,8 @@ export default function CrmMetaLeadAdsPage() {
       setMappingDialogOpen(false);
       setMappingForm(null);
     },
-    onError: (err: any) => {
-      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    onError: (err: unknown) => {
+      toast({ title: "Erro ao salvar", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     },
   });
 
@@ -270,7 +296,7 @@ export default function CrmMetaLeadAdsPage() {
   };
 
   const openNewMapping = (pageId: string, pageName: string, isDefault = false) => {
-    const defaultFunnel = funnels?.find((f: any) => f.is_default) ?? funnels?.[0];
+    const defaultFunnel = funnels?.find((f) => f.is_default) ?? funnels?.[0];
     const firstStage = defaultFunnel?.stages?.[0];
     const firstStageKey =
       typeof firstStage === "string" ? firstStage : firstStage?.label ?? firstStage?.key ?? "Novo Lead";
@@ -360,8 +386,8 @@ export default function CrmMetaLeadAdsPage() {
             </p>
           ) : (
             <div className="space-y-2">
-              {subscribedPages!.map((p: any) => {
-                const pageMappings = (mappings ?? []).filter((m: any) => m.page_id === p.page_id);
+              {(subscribedPages as SubscribedPage[])!.map((p) => {
+                const pageMappings = (mappings as LeadgenMapping[] ?? []).filter((m) => m.page_id === p.page_id);
                 return (
                   <div key={p.id} className="border rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
@@ -405,7 +431,7 @@ export default function CrmMetaLeadAdsPage() {
                     </div>
                     {pageMappings.length > 0 && (
                       <div className="pl-3 border-l-2 border-muted space-y-1">
-                        {pageMappings.map((m: any) => (
+                        {pageMappings.map((m) => (
                           <div key={m.id} className="flex items-center justify-between text-[11px]">
                             <span>
                               {m.is_default ? (
@@ -455,7 +481,7 @@ export default function CrmMetaLeadAdsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentEvents!.map((e: any) => (
+                {(recentEvents as LeadgenEvent[])!.map((e) => (
                   <TableRow key={e.id}>
                     <TableCell className="text-[11px]">
                       {format(new Date(e.created_at), "dd/MM HH:mm", { locale: ptBR })}
@@ -496,7 +522,7 @@ export default function CrmMetaLeadAdsPage() {
           ) : (
             <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
               {(listPagesMutation.data ?? []).map((p: MetaPage) => {
-                const already = subscribedPages?.some((sp: any) => sp.page_id === p.id && sp.active);
+                const already = (subscribedPages as SubscribedPage[] | undefined)?.some((sp) => sp.page_id === p.id && sp.active);
                 return (
                   <button
                     key={p.id}
@@ -559,7 +585,7 @@ export default function CrmMetaLeadAdsPage() {
                 >
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {(funnels ?? []).map((f: any) => (
+                    {(funnels ?? []).map((f: CrmFunnel) => (
                       <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -575,10 +601,10 @@ export default function CrmMetaLeadAdsPage() {
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(() => {
-                      const stages =
-                        funnels?.find((f: any) => f.id === mappingForm.funnel_id)?.stages ?? [];
-                      const list = stages.length > 0 ? stages : [{ key: "novo", label: "Novo Lead" }];
-                      return list.map((s: any, idx: number) => {
+                      const stages: FunnelStage[] =
+                        funnels?.find((f) => f.id === mappingForm.funnel_id)?.stages ?? [];
+                      const list: Array<FunnelStage | { key: string; label: string }> = stages.length > 0 ? stages : [{ key: "novo", label: "Novo Lead" }];
+                      return list.map((s, idx: number) => {
                         const label = typeof s === "string" ? s : s?.label ?? s?.key ?? `Etapa ${idx + 1}`;
                         const value = label;
                         return (

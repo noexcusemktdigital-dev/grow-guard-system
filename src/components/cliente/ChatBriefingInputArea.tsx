@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ArrowRight, Send, CheckCircle2, HelpCircle, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,7 +245,7 @@ export function ChatBriefingInputArea({
       {currentStep.inputType === "textarea" && (
         <div className="space-y-2">
           <Textarea
-            ref={inputRef as any}
+            ref={inputRef as React.RefObject<HTMLTextAreaElement>}
             value={textValue}
             onChange={e => setTextValue(e.target.value)}
             placeholder={currentStep.placeholder || "Descreva aqui..."}

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Eye, EyeOff, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -18,6 +17,7 @@ import type { AcademyModuleCategory } from "@/types/academy";
 import {
   useAcademyModules, useAcademyLessons, useAcademyQuizzes,
   useAcademyQuizQuestions, useAcademyMutations,
+  type DbModule, type DbLesson, type DbQuiz, type DbQuizQuestion,
 } from "@/hooks/useAcademy";
 
 export function AcademyAdmin() {
@@ -64,14 +64,30 @@ export function AcademyAdmin() {
   );
 }
 
+type AcademyMutations = ReturnType<typeof useAcademyMutations>;
+
+interface AcademyAdminInnerProps {
+  modules: DbModule[];
+  allLessons: DbLesson[];
+  quizzes: DbQuiz[];
+  adminTab: string;
+  setAdminTab: (tab: string) => void;
+  selectedModuleFilter: string;
+  setSelectedModuleFilter: (id: string) => void;
+  filteredLessons: DbLesson[];
+  filteredQuiz: DbQuiz | undefined;
+  activeQuizId: string | undefined;
+  mutations: AcademyMutations;
+}
+
 function AcademyAdminInner({
   modules, allLessons, quizzes,
   adminTab, setAdminTab,
   selectedModuleFilter, setSelectedModuleFilter,
   filteredLessons, filteredQuiz, activeQuizId,
   mutations,
-}: any) {
-  const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId) as any;
+}: AcademyAdminInnerProps) {
+  const { data: questions = [] } = useAcademyQuizQuestions(activeQuizId);
 
   // Module dialog
   const [moduleDialog, setModuleDialog] = useState(false);
@@ -94,7 +110,7 @@ function AcademyAdminInner({
   // Quiz config
   const [passingScore, setPassingScore] = useState<number>(filteredQuiz?.passing_score ?? 70);
 
-  const openEditModule = (mod: any) => {
+  const openEditModule = (mod: DbModule) => {
     setEditingModuleId(mod.id);
     setModuleForm({ title: mod.title, category: mod.category || "Comercial", description: mod.description || "" });
     setModuleDialog(true);
@@ -120,7 +136,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditLesson = (les: any) => {
+  const openEditLesson = (les: DbLesson) => {
     setEditingLessonId(les.id);
     setLessonForm({ title: les.title, content: les.content || "", videoUrl: les.video_url || "", durationMinutes: les.duration_minutes || 30, sortOrder: les.sort_order || 1 });
     setLessonDialog(true);
@@ -146,7 +162,7 @@ function AcademyAdminInner({
     }
   };
 
-  const openEditQuestion = (q: any) => {
+  const openEditQuestion = (q: DbQuizQuestion) => {
     setEditingQuestionId(q.id);
     const opts = (q.options as string[]) ?? [];
     setQuestionForm({ question: q.question, options: [...opts, "", "", "", ""].slice(0, 4), correctAnswer: q.correct_answer });
@@ -391,7 +407,7 @@ function AcademyAdminInner({
             <div><Label>Título</Label><Input value={moduleForm.title} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setModuleForm({ ...moduleForm, title: e.target.value })} className="mt-1" /></div>
             <div>
               <Label>Categoria</Label>
-              <Select value={moduleForm.category} onValueChange={(v: any) => setModuleForm({ ...moduleForm, category: v })}>
+              <Select value={moduleForm.category} onValueChange={(v) => setModuleForm({ ...moduleForm, category: v as AcademyModuleCategory })}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(["Comercial", "Estrategia", "Institucional", "Produtos"] as const).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
