@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST = 5;
 
@@ -31,6 +32,10 @@ Deno.serve(async (req) => {
     }
 
     const callerUserId = user.id;
+
+    const _rl = await checkRateLimit(callerUserId, null, 'generate-daily-tasks', { windowSeconds: 60, maxRequests: 30 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
+
     const body = await req.json().catch(() => ({}));
     const targetUserId: string = body.target_user_id || callerUserId;
 

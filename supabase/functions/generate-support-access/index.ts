@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -22,6 +23,9 @@ Deno.serve(async (req) => {
     if (authErr || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } });
     }
+
+    const _rl = await checkRateLimit(user.id, null, 'generate-support-access', { windowSeconds: 60, maxRequests: 5 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, cors);
 
     const body = await req.json();
     const { duration_minutes, access_level, ticket_id, organization_id } = body;

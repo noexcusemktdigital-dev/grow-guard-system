@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST = 50;
 
@@ -637,6 +638,9 @@ Deno.serve(async (req) => {
       });
     }
     const userId = claimsData.claims.sub as string;
+
+    const _rl = await checkRateLimit(userId, null, 'generate-strategy', { windowSeconds: 60, maxRequests: 20 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
     const { answers, organization_id, section } = await req.json();
     if (!answers) {
