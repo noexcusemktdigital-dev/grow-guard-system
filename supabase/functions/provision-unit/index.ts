@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 function generateReferralCode(name: string): string {
   return name
@@ -12,6 +13,8 @@ function generateReferralCode(name: string): string {
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'provision-unit');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }

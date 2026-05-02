@@ -4,8 +4,11 @@
 // Returns aggregated summaries (counts/sums) instead of raw arrays whenever possible.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'get-inicio-data');
+  const log = makeLogger(ctx);
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 

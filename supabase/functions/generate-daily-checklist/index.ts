@@ -4,10 +4,13 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { debitIfGPSDone } from '../_shared/credits.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 import { SYSTEM_PROMPT, buildUserPrompt, PROMPT_VERSION } from '../_shared/prompts/generate-daily-checklist.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const CREDIT_COST = 5;
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'generate-daily-checklist');
+  const log = makeLogger(ctx);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: getCorsHeaders(req) });
   }

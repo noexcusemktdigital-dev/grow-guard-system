@@ -3,8 +3,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { publishToPlatform } from "../_shared/socialPublish.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-publish-post');
+  const log = makeLogger(ctx);
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 

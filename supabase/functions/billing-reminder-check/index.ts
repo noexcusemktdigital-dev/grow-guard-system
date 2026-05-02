@@ -2,12 +2,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkCronSecret } from '../_shared/cron-auth.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 /**
  * Cron job: runs daily, finds subscriptions/payments due in 3 days
  * and triggers billing-reminder emails (idempotent via email_campaigns).
  */
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'billing-reminder-check');
+  const log = makeLogger(ctx);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: getCorsHeaders(req) });
   }
