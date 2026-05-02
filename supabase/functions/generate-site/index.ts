@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { assertOrgMember, AuthError } from '../_shared/auth.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST = 100;
 
@@ -28,6 +28,9 @@ serve(async (req) => {
     });
   }
 
+  const _rl = await checkRateLimit(_authUser.id, null, 'generate-site', { windowSeconds: 60, maxRequests: 10 });
+  if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
+
   try {
     const body = await req.json();
     const {
@@ -50,21 +53,6 @@ serve(async (req) => {
 
     const organization_id = body.organization_id;
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
-    // SEC-002: Validate org membership before any mutation (anti-IDOR/BOLA)
-    if (organization_id) {
-      try {
-        await assertOrgMember(adminClient, _authUser.id, organization_id);
-      } catch (err) {
-        if (err instanceof AuthError) {
-          return new Response(JSON.stringify({ error: err.message }), {
-            status: err.status,
-            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-          });
-        }
-        throw err;
-      }
-    }
 
     // Skip credit debit on edit mode and before GPS is approved
     if (!edit_mode && organization_id) {

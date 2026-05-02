@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { assertOrgMember, AuthError } from '../_shared/auth.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 const CREDIT_COST = 30;
 
@@ -34,6 +34,9 @@ serve(async (req) => {
     }
     const userId = user.id;
 
+    const _rl = await checkRateLimit(userId, null, 'generate-prospection', { windowSeconds: 60, maxRequests: 20 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
+
     const { regiao, nicho, porte, desafio, objetivo, nome_empresa, site, redes_sociais, conhecimento_previo, nivel_contato, contato_decisor, cargo_decisor, organization_id } = await req.json();
 
     if (!regiao || !nicho) {
@@ -49,22 +52,6 @@ serve(async (req) => {
         JSON.stringify({ error: "AI not configured" }),
         { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
-    }
-
-    // SEC-002: Validate org membership before any mutation (anti-IDOR/BOLA)
-    if (organization_id) {
-      const adminCheck = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-      try {
-        await assertOrgMember(adminCheck, userId, organization_id);
-      } catch (err) {
-        if (err instanceof AuthError) {
-          return new Response(JSON.stringify({ error: err.message }), {
-            status: err.status,
-            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-          });
-        }
-        throw err;
-      }
     }
 
     // Pre-check credits

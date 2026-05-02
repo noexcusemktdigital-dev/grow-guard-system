@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 // Fixed credit cost per script generation
 const CREDIT_COST = 20;
@@ -88,6 +89,9 @@ serve(async (req) => {
       });
     }
     const userId = user.id;
+
+    const _rl = await checkRateLimit(userId, null, 'generate-script', { windowSeconds: 60, maxRequests: 20 });
+    if (!_rl.allowed) return rateLimitResponse(_rl, getCorsHeaders(req));
 
     const { stage, briefing, context, mode, existingScript, organization_id, referenceLinks, additionalContext, from_gps } = await req.json();
 
