@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 import { users } from '../fixtures/users';
 import { login } from '../fixtures/auth';
 
@@ -40,7 +41,6 @@ test.describe('Cliente — DSR export & delete flow', () => {
         if (download) {
           const path = await download.path();
           if (path) {
-            const fs = require('fs');
             const content = fs.readFileSync(path, 'utf-8');
             const json = JSON.parse(content);
             expect(json).toHaveProperty('meta.target_user_id');
