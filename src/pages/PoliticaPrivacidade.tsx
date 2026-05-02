@@ -1,12 +1,20 @@
 // @ts-nocheck
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
+import { SEOHead } from "@/components/SEOHead";
 
 export default function PoliticaPrivacidade() {
   const [searchParams] = useSearchParams();
   const deletionConfirmation = searchParams.get("deletion_confirmed");
 
   return (
+    <>
+      <SEOHead
+        title="Política de Privacidade — Sistema Noé"
+        description="Como tratamos seus dados pessoais conforme a LGPD. Política de privacidade da plataforma Sistema Noé."
+        canonical="https://noexcuse.com.br/privacidade"
+        noindex={true}
+      />
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-6 py-12">
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors">
@@ -154,5 +162,6 @@ export default function PoliticaPrivacidade() {
         </div>
       </div>
     </div>
+    </>
   );
 }

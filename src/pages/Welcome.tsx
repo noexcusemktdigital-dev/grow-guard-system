@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -173,6 +174,13 @@ const Welcome = () => {
   };
 
   return (
+    <>
+      <SEOHead
+        title="Bem-vindo ao Sistema Noé"
+        description="Comece sua jornada na plataforma de marketing digital para franquias. Configure sua conta e acesse todas as ferramentas."
+        canonical="https://noexcuse.com.br/welcome"
+        noindex={true}
+      />
     <div className="min-h-screen flex items-center justify-center p-8 bg-[hsl(0,0%,5%)]">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
@@ -283,6 +291,7 @@ const Welcome = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
+import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/lib/supabase";
 import { supabase as transferClient } from "@/integrations/supabase/client";
 import { Loader2, ChevronDown, Target, TrendingUp, Globe, Megaphone, BarChart3, ShoppingCart, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
@@ -808,6 +809,12 @@ export default function Apresentacao() {
   const plano = (followup.plano_proximo || {}) as FollowupPlano;
 
   return (
+    <>
+      <SEOHead
+        title="Apresentação Comercial — Sistema Noé"
+        description="Apresentação personalizada com análise completa de marketing digital para sua franquia."
+        noindex={true}
+      />
     <div className="min-h-screen bg-[#0a0a0f] text-white scroll-smooth">
       <NavDots sections={[
         { id: "score", label: "Score" },
@@ -906,5 +913,6 @@ export default function Apresentacao() {
         <p className="text-gray-600 text-xs">Powered by No Excuse Digital</p>
       </footer>
     </div>
+    </>
   );
 }

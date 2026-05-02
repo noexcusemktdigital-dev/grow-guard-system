@@ -1,8 +1,16 @@
 // @ts-nocheck
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { SEOHead } from "@/components/SEOHead";
 
 const TermosDeUso = () => (
+  <>
+    <SEOHead
+      title="Termos de Uso — Sistema Noé"
+      description="Termos e condições de uso da plataforma Sistema Noé. Leia antes de utilizar nossos serviços."
+      canonical="https://noexcuse.com.br/termos"
+      noindex={true}
+    />
   <div className="min-h-screen bg-background text-foreground">
     <div className="max-w-3xl mx-auto px-6 py-12">
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors">
@@ -116,6 +124,7 @@ const TermosDeUso = () => (
       </div>
     </div>
   </div>
+  </>
 );
 
 export default TermosDeUso;
