@@ -1,0 +1,36 @@
+[
+  {
+    "name": "lead_pequena_franquia",
+    "input": {
+      "lead_name": "Padaria do Jo\u00e3o",
+      "segment": "alimenta\u00e7\u00e3o",
+      "city": "Cuiab\u00e1",
+      "challenges": [
+        "pouco movimento na manh\u00e3",
+        "concorr\u00eancia forte"
+      ],
+      "budget_brl": 1500
+    }
+  },
+  {
+    "name": "lead_franquia_estabelecida",
+    "input": {
+      "lead_name": "Academia Forma+",
+      "segment": "fitness",
+      "city": "S\u00e3o Paulo",
+      "challenges": [
+        "churn alto p\u00f3s-promo\u00e7\u00e3o",
+        "capta\u00e7\u00e3o cara"
+      ],
+      "budget_brl": 8000
+    }
+  },
+  {
+    "name": "lead_minimal",
+    "input": {
+      "lead_name": "Pet Shop Amigo",
+      "segment": "pet",
+      "city": "Curitiba"
+    }
+  }
+]
