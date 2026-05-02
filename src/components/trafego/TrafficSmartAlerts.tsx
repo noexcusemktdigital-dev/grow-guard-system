@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useMemo } from "react";
+import { useMemo, type ElementType } from "react";
 import { AlertCircle, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 import { useAdMetrics, useAdMetricsSummary, useSyncMetrics, AdConnection } from "@/hooks/useAdPlatforms";
 import { cn } from "@/lib/utils";
@@ -8,7 +7,7 @@ type AlertLevel = "danger" | "warning" | "success" | "info";
 
 interface SmartAlert {
   level: AlertLevel;
-  icon: React.ElementType;
+  icon: ElementType;
   message: string;
   action?: { label: string; onClick: () => void };
 }
