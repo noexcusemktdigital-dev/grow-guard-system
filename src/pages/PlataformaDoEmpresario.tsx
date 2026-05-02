@@ -728,6 +728,7 @@ export default function PlataformaDoEmpresario() {
         <LockedModal front={lockedFront} onClose={() => setLockedFront(null)} />
       )}
     </div>
+    </>
   );
 }
 
