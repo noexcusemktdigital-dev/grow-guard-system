@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, QuerySchemas } from "../_shared/schemas.ts";
 
 Deno.serve(async (req) => {
   const ctx = newRequestContext(req, 'get-inicio-data');
@@ -38,6 +39,19 @@ Deno.serve(async (req) => {
       });
     }
     const userId = claimsData.claims.sub as string;
+
+    // Optional body — validates period_days if caller provides it
+    let periodDays = 30;
+    try {
+      const raw = await req.json().catch(() => ({}));
+      if (raw && typeof raw === "object" && Object.keys(raw).length > 0 && raw.organization_id) {
+        const parsed = parseOrThrow(QuerySchemas.GetInicioData, raw);
+        periodDays = parsed.period_days;
+      }
+    } catch (err) {
+      const vr = validationErrorResponse(err, { ...cors, "Content-Type": "application/json" });
+      if (vr) return vr;
+    }
 
     // Use admin client for cross-table reads (we already validated the user
     // and we filter every query by user_id / org_id below).

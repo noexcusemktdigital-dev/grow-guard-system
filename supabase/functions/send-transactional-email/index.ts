@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskEmail } from '../_shared/redact.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, EmailSchemas } from "../_shared/schemas.ts";
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM_ADDRESS = 'NoExcuse Digital <noreply@noexcusedigital.com.br>'
@@ -47,19 +48,15 @@ Deno.serve(async (req) => {
     )
   }
 
-  let body: { to: string; subject: string; html: string; text?: string }
+  let body: { to: string | string[]; subject: string; html: string; text?: string }
   try {
-    body = await req.json()
-  } catch {
+    const raw = await req.json()
+    body = parseOrThrow(EmailSchemas.SendTransactional, raw)
+  } catch (err) {
+    const vr = validationErrorResponse(err, { ...getCorsHeaders(req), 'Content-Type': 'application/json' })
+    if (vr) return vr
     return new Response(
       JSON.stringify({ error: 'Invalid JSON' }),
-      { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
-    )
-  }
-
-  if (!body.to || !body.subject || !body.html) {
-    return new Response(
-      JSON.stringify({ error: 'Missing required fields: to, subject, html' }),
       { status: 400, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     )
   }

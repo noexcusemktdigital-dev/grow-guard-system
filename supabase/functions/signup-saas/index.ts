@@ -2,6 +2,20 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse } from "../_shared/schemas.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
+// signup-saas has 3 modes (resend_only, legacy user_id, new email+password)
+// Permissive schema validates common known fields, allows extra fields through
+const SignupSaasBodySchema = z.object({
+  email: z.string().email().optional(),
+  password: z.string().min(6).optional(),
+  full_name: z.string().max(300).optional(),
+  company_name: z.string().max(300).optional(),
+  referral_code: z.string().max(100).optional(),
+  user_id: z.string().optional(),
+  resend_only: z.boolean().optional(),
+}).passthrough();
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
@@ -67,7 +81,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Configuração de e-mail não encontrada" }), { headers });
     }
 
-    const body = await req.json();
+    let body: z.infer<typeof SignupSaasBodySchema>;
+    try {
+      const raw = await req.json();
+      body = parseOrThrow(SignupSaasBodySchema, raw);
+    } catch (err) {
+      const vr = validationErrorResponse(err, headers);
+      if (vr) return vr;
+      return new Response(JSON.stringify({ error: "Invalid request body" }), { status: 400, headers });
+    }
 
     // ---- RESEND ONLY MODE (re-send confirmation email) ----
     if (body.resend_only && body.email) {

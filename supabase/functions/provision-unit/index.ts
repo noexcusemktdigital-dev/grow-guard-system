@@ -2,6 +2,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
+import { parseOrThrow, validationErrorResponse, UUID, NonEmptyString } from "../_shared/schemas.ts";
+import { z } from "https://deno.land/x/zod@v3.23.8/mod.ts";
+
+// provision-unit uses unit_name/parent_org_id — permissive, extra fields allowed
+const ProvisionUnitBodySchema = z.object({
+  unit_name: NonEmptyString.max(200),
+  parent_org_id: UUID,
+  city: z.string().max(200).optional(),
+  state: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  phone: z.string().max(30).optional(),
+  manager_name: z.string().max(200).optional(),
+  manager_email: z.string().email().optional(),
+  royalty_percent: z.number().min(0).max(100).optional(),
+  system_fee: z.number().nonnegative().optional(),
+  saas_commission_percent: z.number().min(0).max(100).optional(),
+});
 
 function generateReferralCode(name: string): string {
   return name
@@ -48,6 +65,16 @@ Deno.serve(async (req) => {
     const callerId = claimsData.claims.sub as string;
     console.log("Authenticated user:", callerId);
 
+    let parsedBody: z.infer<typeof ProvisionUnitBodySchema>;
+    try {
+      const raw = await req.json();
+      parsedBody = parseOrThrow(ProvisionUnitBodySchema, raw);
+    } catch (err) {
+      const vr = validationErrorResponse(err, { ...getCorsHeaders(req), "Content-Type": "application/json" });
+      if (vr) return vr;
+      return new Response(JSON.stringify({ error: "Invalid request body" }), { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } });
+    }
+
     const {
       unit_name,
       city,
@@ -60,14 +87,7 @@ Deno.serve(async (req) => {
       system_fee,
       parent_org_id,
       saas_commission_percent,
-    } = await req.json();
-
-    if (!unit_name || !parent_org_id) {
-      return new Response(
-        JSON.stringify({ error: "unit_name and parent_org_id are required" }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    } = parsedBody;
 
     // Verify caller is member of the parent org
     const { data: isMember } = await adminClient.rpc("is_member_of_org", {

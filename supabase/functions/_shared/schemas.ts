@@ -295,6 +295,80 @@ export const GenerateExtendedSchemas = {
 } as const;
 
 // ────────────────────────────────────────
+// Marketing / Social
+// ────────────────────────────────────────
+export const SocialSchemas = {
+  Publish: z.object({
+    organization_id: UUID,
+    post_id: UUID.optional(),
+    content: NonEmptyString.max(5000),
+    platform: z.enum(["facebook", "instagram", "linkedin", "twitter", "tiktok"]),
+    scheduled_at: z.string().optional(),
+    media_urls: z.array(z.string().url()).optional(),
+  }),
+
+  GetInsights: z.object({
+    organization_id: UUID,
+    platform: z.string(),
+    date_from: z.string().optional(),
+    date_to: z.string().optional(),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Onboarding / setup
+// ────────────────────────────────────────
+export const OnboardingSchemas = {
+  ProvisionUnit: z.object({
+    organization_id: UUID,
+    name: NonEmptyString.max(200),
+    parent_org_id: UUID.optional(),
+  }),
+
+  SignupSaas: z.object({
+    email: Email,
+    organization_name: NonEmptyString.max(200),
+    plan: z.enum(["free", "pro", "enterprise"]).default("free"),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Calendar
+// ────────────────────────────────────────
+export const CalendarSchemas = {
+  CreateEvent: z.object({
+    organization_id: UUID,
+    title: NonEmptyString.max(200),
+    starts_at: z.string(),
+    ends_at: z.string(),
+    description: z.string().optional(),
+    invitees: z.array(z.string().email()).optional(),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Generic search/list
+// ────────────────────────────────────────
+export const QuerySchemas = {
+  GetInicioData: z.object({
+    organization_id: UUID,
+    period_days: z.number().int().min(1).max(365).default(30),
+  }),
+} as const;
+
+// ────────────────────────────────────────
+// Transactional Email
+// ────────────────────────────────────────
+export const EmailSchemas = {
+  SendTransactional: z.object({
+    to: z.union([z.string().email(), z.array(z.string().email())]),
+    subject: NonEmptyString.max(500),
+    html: NonEmptyString,
+    text: z.string().optional(),
+  }),
+} as const;
+
+// ────────────────────────────────────────
 // Webhooks (signature de payload — passthrough para novos campos de provedores)
 // ────────────────────────────────────────
 export const WebhookSchemas = {
