@@ -330,7 +330,7 @@ export function useRegenerateStrategy() {
         .from("franqueado_strategies")
         .update({
           title,
-          diagnostic_answers: answers as any,
+          diagnostic_answers: answers as Json,
           status: "draft",
         })
         .eq("id", id);

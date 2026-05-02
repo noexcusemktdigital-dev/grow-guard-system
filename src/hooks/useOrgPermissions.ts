@@ -91,10 +91,11 @@ export function useOrgPermissionsAdmin() {
     queryFn: async () => {
       if (!orgId) return { users: [], permsByUser: {} as Record<string, Set<string>> };
 
-      const { data: usersData, error: e1 } = await supabase.rpc(
-        "get_org_members_with_email" as any,
-        { _org_id: orgId }
-      );
+      // RPC not yet typed in generated types — cast through unknown
+      const { data: usersData, error: e1 } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>
+      ) => ReturnType<typeof supabase.rpc>)("get_org_members_with_email", { _org_id: orgId });
       if (e1) throw e1;
 
       const { data: permsData, error: e2 } = await supabase
