@@ -21,6 +21,7 @@ import { useSupportTickets, useSupportMessages, useSupportTicketMutations } from
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { AttachmentPreview } from "./FranqueadoSuporteComponents";
@@ -124,7 +125,7 @@ function FranqueadoSuporteContent() {
       const ext = file.name.split(".").pop();
       const path = `${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("support-attachments").upload(path, file);
-      if (error) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+      if (error) { reportError(error, { title: `Erro ao enviar ${file.name}`, category: "suporte.attachment_upload" }); continue; }
       const { data } = supabase.storage.from("support-attachments").getPublicUrl(path);
       urls.push(data.publicUrl);
     }
@@ -132,7 +133,7 @@ function FranqueadoSuporteContent() {
   }
 
   async function handleCreate() {
-    if (!novoTitulo.trim()) { toast.error("Informe o título"); return; }
+    if (!novoTitulo.trim()) { reportError(new Error("Informe o título"), { title: "Informe o título do chamado", category: "suporte.validation" }); return; }
     setCreatingTicket(true);
     try {
       let attachmentUrls: string[] = [];
@@ -154,8 +155,7 @@ function FranqueadoSuporteContent() {
       setNovaSubcategoria("");
       toast.success("Chamado criado!");
     } catch (err) {
-      logger.error("Erro ao criar chamado:", err);
-      toast.error("Erro ao criar chamado");
+      reportError(err, { title: "Erro ao criar chamado", category: "suporte.ticket_create" });
     }
     setCreatingTicket(false);
   }
@@ -176,8 +176,7 @@ function FranqueadoSuporteContent() {
       setNewMessage("");
       setMsgAttachments([]);
     } catch (err) {
-      logger.error("Erro ao enviar mensagem:", err);
-      toast.error("Erro ao enviar mensagem");
+      reportError(err, { title: "Erro ao enviar mensagem", category: "suporte.message_send" });
     }
     setUploadingMsg(false);
   }

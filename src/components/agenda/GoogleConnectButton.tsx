@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 import { useGoogleCalendarConnect } from "@/hooks/useGoogleCalendar";
-import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 interface GoogleConnectButtonProps {
   disabled?: boolean;
@@ -20,7 +20,7 @@ export default function GoogleConnectButton({ disabled, portal }: GoogleConnectB
       const url = await connectGoogle.mutateAsync();
       window.location.href = url;
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Erro ao conectar Google Agenda");
+      reportError(e, { title: "Erro ao conectar Google Agenda", category: "agenda.google_connect" });
       setConnecting(false);
     }
   }

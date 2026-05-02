@@ -14,6 +14,7 @@ import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { supabase } from "@/lib/supabase";
 import { differenceInDays } from "date-fns";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 function StatCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) {
   return (
@@ -71,7 +72,7 @@ export default function FranqueadoPerfil() {
     if (!file || !user) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 2MB");
+      reportError(new Error("A imagem deve ter no máximo 2MB"), { title: "A imagem deve ter no máximo 2MB", category: "perfil.avatar_size" });
       return;
     }
 
@@ -80,7 +81,7 @@ export default function FranqueadoPerfil() {
 
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (error) {
-      toast.error("Erro ao enviar imagem");
+      reportError(error, { title: "Erro ao enviar imagem", category: "perfil.avatar_upload" });
       return;
     }
 

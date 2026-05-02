@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 
 export default function FranqueadoraChat() {
   const {
@@ -71,8 +72,8 @@ export default function FranqueadoraChat() {
     try {
       const channelId = await getOrCreateDM(otherUserId);
       if (channelId) setSelectedChannelId(channelId);
-    } catch {
-      toast.error("Erro ao iniciar conversa");
+    } catch (err) {
+      reportError(err, { title: "Erro ao iniciar conversa", category: "chat.dm_create" });
     }
   };
 
@@ -87,8 +88,8 @@ export default function FranqueadoraChat() {
       const { url, name } = await uploadFile(file, selectedChannelId);
       const type = file.type.startsWith("image/") ? "image" : "file";
       sendMessage.mutate({ channelId: selectedChannelId, type, fileUrl: url, fileName: name, content: caption });
-    } catch {
-      toast.error("Erro ao enviar arquivo");
+    } catch (err) {
+      reportError(err, { title: "Erro ao enviar arquivo", category: "chat.file_upload" });
     }
   };
 
@@ -107,8 +108,8 @@ export default function FranqueadoraChat() {
       const channelId = await createCustomGroup.mutateAsync({ name, description, memberIds });
       if (channelId) setSelectedChannelId(channelId);
       toast.success("Grupo criado!");
-    } catch {
-      toast.error("Erro ao criar grupo");
+    } catch (err) {
+      reportError(err, { title: "Erro ao criar grupo", category: "chat.group_create" });
     }
   };
 

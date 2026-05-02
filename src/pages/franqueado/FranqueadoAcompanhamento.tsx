@@ -38,6 +38,7 @@ import {
   Upload, Loader2, ImageIcon, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -817,7 +818,7 @@ function FollowupEditor({ existing, clientName, onBack, readOnly = false, unitOr
       await generateFollowupPdf(clientName, monthRef, buildAnalise(), buildPlano());
       toast.success("PDF exportado!");
     } catch (e: unknown) {
-      toast.error("Erro ao gerar PDF: " + (e instanceof Error ? e.message : ""));
+      reportError(e, { title: "Erro ao gerar PDF", category: "acompanhamento.pdf_export" });
     }
   };
 

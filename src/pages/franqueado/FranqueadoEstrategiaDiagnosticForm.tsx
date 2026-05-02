@@ -22,6 +22,7 @@ import {
 import type { DiagField, DiagSection } from "./FranqueadoEstrategiaData";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeEdge } from "@/lib/edge";
 
@@ -122,8 +123,8 @@ function AudioTextField({ value, onChange, placeholder }: { value: string; onCha
       }, 1000);
 
       toast.info("Gravando áudio... Clique em parar quando terminar.");
-    } catch {
-      toast.error("Não foi possível acessar o microfone. Verifique as permissões.");
+    } catch (err) {
+      reportError(err, { title: "Não foi possível acessar o microfone. Verifique as permissões.", category: "audio.mic_access" });
     }
   };
 
@@ -154,8 +155,7 @@ function AudioTextField({ value, onChange, placeholder }: { value: string; onCha
         toast.warning("Não foi possível identificar fala no áudio. Tente novamente ou escreva manualmente.");
       }
     } catch (err) {
-      console.error("Transcription error:", err);
-      toast.error("Erro ao transcrever áudio. Tente novamente ou escreva manualmente.");
+      reportError(err, { title: "Erro ao transcrever áudio. Tente novamente ou escreva manualmente.", category: "audio.transcription" });
     } finally {
       setTranscribing(false);
       setElapsed(0);

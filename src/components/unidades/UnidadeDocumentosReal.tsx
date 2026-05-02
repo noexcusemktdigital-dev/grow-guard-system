@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUnitDocuments, useUnitDocumentMutations } from "@/hooks/useUnitDocuments";
 import { toast } from "sonner";
+import { reportError } from "@/lib/error-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 const docTypes = ["Contrato de franquia", "Documentos administrativos", "Arquivos internos", "Outros"];
@@ -39,7 +40,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
 
   const handleSave = () => {
     if (!file) {
-      toast.error("Selecione um arquivo para upload");
+      reportError(new Error("Selecione um arquivo para upload"), { title: "Selecione um arquivo para upload", category: "documentos.upload_missing" });
       return;
     }
     const name = form.name || file.name;
@@ -52,7 +53,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
           setFile(null);
           setForm({ name: "", type: "Outros", visibility: "both", notes: "" });
         },
-        onError: (e) => toast.error(`Erro: ${e.message}`),
+        onError: (e) => reportError(e, { title: "Erro ao adicionar documento", category: "documentos.upload" }),
       }
     );
   };
@@ -60,7 +61,7 @@ export function UnidadeDocumentosReal({ unitId, isFranqueadoView }: Props) {
   const handleDelete = (id: string) => {
     deleteDoc.mutate(id, {
       onSuccess: () => toast.success("Documento removido."),
-      onError: (e) => toast.error(`Erro: ${e.message}`),
+      onError: (e) => reportError(e, { title: "Erro ao remover documento", category: "documentos.delete" }),
     });
   };
 
