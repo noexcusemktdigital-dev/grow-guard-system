@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useClienteSubscription } from "./useClienteSubscription";
 import { useClienteWallet } from "./useClienteWallet";
 import { CREDIT_COSTS } from "@/constants/plans";
+import { analytics } from "@/lib/analytics";
+import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
 
 const CREDIT_COST_PER_CONTENT = CREDIT_COSTS["generate-content"].cost;
 export const CREDIT_COST_APPROVE_CONTENT = CREDIT_COSTS["approve-content"].cost;
@@ -161,9 +163,13 @@ export function useGenerateContent() {
       if (error) throw error;
       return { dbRecords: data, conteudos };
     },
-    onSuccess: () => {
+    onSuccess: (_, payload) => {
+      analytics.track(ANALYTICS_EVENTS.AI_CONTENT_GENERATED, { feature: "generate-content", prompt_version: payload.plataforma });
       qc.invalidateQueries({ queryKey: ["client-content-v2"] });
       qc.invalidateQueries({ queryKey: ["content-quota"] });
+    },
+    onError: (err: unknown) => {
+      analytics.track(ANALYTICS_EVENTS.AI_CONTENT_FAILED, { feature: "generate-content", error_code: err instanceof Error ? err.message : String(err) });
     },
   });
 }

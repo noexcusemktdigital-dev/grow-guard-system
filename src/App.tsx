@@ -11,6 +11,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleAccessGuard } from "./components/RoleAccessGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
+import { AnalyticsPageTracker } from "@/lib/analytics-page-tracker";
 
 // Eager: only truly critical auth pages
 import SaasAuth from "./pages/SaasAuth";
@@ -167,6 +168,7 @@ function App() {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AnalyticsPageTracker />
           <AuthProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>

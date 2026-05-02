@@ -18,6 +18,8 @@ import logoDark from "@/assets/NOE3.png";
 import SaasBrandingPanel from "@/components/SaasBrandingPanel";
 import { validatePortalAccess } from "@/lib/portalRoleGuard";
 import { useAuth } from "@/contexts/AuthContext";
+import { analytics } from "@/lib/analytics";
+import { ANALYTICS_EVENTS } from "@/lib/analytics-events";
 
 const BENEFITS = [
   "CRM completo para nunca perder uma venda",
@@ -106,6 +108,7 @@ const SaasAuth = () => {
       const msg = (error.message || "").toLowerCase();
       const status = (error as { status?: number }).status;
       logger.error("[SaasAuth] login error", { message: error.message, status });
+      analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, { error_code: error.message, source: "saas" });
 
       if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
         toast.error("Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada e o spam.");
@@ -132,6 +135,8 @@ const SaasAuth = () => {
     // Sign-in succeeded — navigate immediately. Portal validation runs in background
     // and only acts if it returns an explicit deny. DB slowness must NOT block login.
     setLoading(false);
+    analytics.identify(data.user.id);
+    analytics.track(ANALYTICS_EVENTS.LOGIN_SUCCEEDED, { source: "saas" });
     navigate("/cliente/inicio");
 
     validatePortalAccess(data.user.id, "saas")
@@ -191,6 +196,7 @@ const SaasAuth = () => {
         return;
       }
 
+      analytics.track(ANALYTICS_EVENTS.SIGNUP_COMPLETED, { source: "saas" });
       setVerificationContext("new");
       setLoading(false);
       setMode("verify-email");

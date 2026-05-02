@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Download, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { analytics } from '@/lib/analytics';
+import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -30,6 +32,7 @@ export function LGPDSettings() {
 
   async function handleExport() {
     setExporting(true);
+    analytics.track(ANALYTICS_EVENTS.DSR_EXPORT_REQUESTED);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -78,6 +81,7 @@ export function LGPDSettings() {
       return;
     }
     setDeleting(true);
+    analytics.track(ANALYTICS_EVENTS.DSR_DELETE_REQUESTED);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
