@@ -3,22 +3,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
+import {
+  PROMPT_VERSION,
+  STYLE_LABELS,
+  FORMAT_SPECS,
+  buildFramePrompt,
+  buildBrandContext,
+  extractEnvironment,
+} from '../_shared/prompts/generate-social-video-frames.ts';
 
 const CREDIT_COST_PER_FRAME = 25;
-
-const STYLE_LABELS: Record<string, string> = {
-  corporativo_moderno: "clean corporate advertising style with modern aesthetics",
-  premium_minimalista: "premium minimalist commercial style with elegant simplicity",
-  publicidade_sofisticada: "sophisticated high-end advertisement style",
-  social_media: "vibrant social media content style, eye-catching and dynamic",
-  inspiracional: "inspirational corporate video style, uplifting and motivational",
-};
-
-const FORMAT_SPECS: Record<string, { label: string; aspect: string; resolution: string }> = {
-  story: { label: "vertical", aspect: "9:16", resolution: "1080×1920" },
-  feed: { label: "square", aspect: "1:1", resolution: "1080×1080" },
-  banner: { label: "landscape", aspect: "16:9", resolution: "1920×1080" },
-};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
@@ -103,12 +97,9 @@ serve(async (req) => {
     const message = mensagem || "";
 
     // Brand context
-    let brandContext = "";
-    if (identidade_visual) {
-      const iv = identidade_visual;
-      brandContext = `Brand colors: ${iv.paleta || iv.palette || "professional colors"}. ${iv.estilo || iv.style ? `Style: ${iv.estilo || iv.style}.` : ""} ${iv.tom_visual || iv.tone ? `Tone: ${iv.tom_visual || iv.tone}.` : ""}`;
-    }
+    const brandContext = buildBrandContext(identidade_visual);
 
+    console.log(`[generate-social-video-frames] PROMPT_VERSION=${PROMPT_VERSION}`);
     console.log(`Generating ${num_frames} video frames (style: ${resolvedStyle}, format: ${resolvedFormat}, platform: ${plataforma || "none"})...`);
 
     const frameUrls: string[] = [];
@@ -118,33 +109,20 @@ serve(async (req) => {
       const isFirst = i === 0;
       const isLast = i === num_frames - 1;
 
-      // Build structured prompt following the reference format
-      let framePrompt = `Create a ${isFirst ? "opening" : isLast ? "closing" : "middle"} frame (frame ${i + 1} of ${num_frames}) for a short-form ${formatSpec.label} social media video (${formatSpec.aspect}).
-
-Scene: ${scene}
-
-Action: ${action || "subtle movement suggesting the scene described above"}
-
-Environment: ${extractEnvironment(scene)}
-
-Style: ${styleDescription}${brandContext ? `\n\n${brandContext}` : ""}`;
-
-      if (message) {
-        framePrompt += `\n\nText overlay:\n"${message}"`;
-      }
-      if (cta && isLast) {
-        framePrompt += `\n\nFinal message:\n"${cta}"`;
-      }
-
-      framePrompt += `\n\nCRITICAL RULES:
-- ZERO text, letters, numbers, words, logos, or watermarks in the image
-- Leave clear space at the bottom 20% for text overlay
-- Cinematic quality with professional lighting
-- Maintain visual consistency across all frames
-- ${isFirst ? "OPENING FRAME: visually striking, attention-grabbing hook" : ""}
-- ${isLast ? "CLOSING FRAME: conclusive with strong visual ending" : ""}
-- Vary camera angle/zoom subtly between frames for dynamic motion
-- Composition optimized for mobile viewing`;
+      // Build structured prompt using shared builder
+      const framePrompt = buildFramePrompt({
+        frameIndex: i,
+        totalFrames: num_frames,
+        scene,
+        action,
+        message,
+        cta,
+        formatSpec,
+        styleDescription,
+        brandContext,
+        isFirst,
+        isLast,
+      });
 
       const hasRefs = reference_images && reference_images.length > 0;
       const messageContent: string | { type: string; text?: string; image_url?: { url: string } }[] = hasRefs
@@ -234,15 +212,3 @@ Style: ${styleDescription}${brandContext ? `\n\n${brandContext}` : ""}`;
   }
 });
 
-function extractEnvironment(scene: string): string {
-  if (!scene) return "professional modern environment with clean lighting";
-  // Extract environment hints from scene description
-  const envKeywords = ["escritório", "office", "apartamento", "apartment", "loja", "store", "consultório", "clinic", "sala", "room", "rua", "street", "cidade", "city"];
-  const lower = scene.toLowerCase();
-  for (const kw of envKeywords) {
-    if (lower.includes(kw)) {
-      return scene;
-    }
-  }
-  return `${scene}, professional environment with cinematic lighting`;
-}
