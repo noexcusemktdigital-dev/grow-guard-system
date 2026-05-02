@@ -4410,6 +4410,90 @@ export type Database = {
           },
         ]
       }
+      idempotency_keys: {
+        Row: {
+          created_at: string
+          expires_at: string
+          fn_name: string
+          key: string
+          organization_id: string | null
+          request_hash: string
+          response_body: Json | null
+          response_status: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          fn_name: string
+          key: string
+          organization_id?: string | null
+          request_hash: string
+          response_body?: Json | null
+          response_status?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          fn_name?: string
+          key?: string
+          organization_id?: string | null
+          request_hash?: string
+          response_body?: Json | null
+          response_status?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      job_failures: {
+        Row: {
+          attempt: number
+          correlation_id: string | null
+          error_message: string
+          error_stack: string | null
+          failed_at: string
+          id: number
+          job_kind: string
+          job_name: string
+          organization_id: string | null
+          payload: Json | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          attempt?: number
+          correlation_id?: string | null
+          error_message: string
+          error_stack?: string | null
+          failed_at?: string
+          id?: number
+          job_kind?: string
+          job_name: string
+          organization_id?: string | null
+          payload?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          attempt?: number
+          correlation_id?: string | null
+          error_message?: string
+          error_stack?: string | null
+          failed_at?: string
+          id?: number
+          job_kind?: string
+          job_name?: string
+          organization_id?: string | null
+          payload?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: []
+      }
       marketing_assets: {
         Row: {
           created_at: string
@@ -5827,6 +5911,30 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          fn_name: string
+          organization_id: string | null
+          request_count: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          fn_name: string
+          organization_id?: string | null
+          request_count?: number
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          fn_name?: string
+          organization_id?: string | null
+          request_count?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       referral_discounts: {
         Row: {
           created_at: string
@@ -7158,6 +7266,30 @@ export type Database = {
           },
         ]
       }
+      webhook_events: {
+        Row: {
+          external_event_id: string
+          payload_hash: string | null
+          processed_at: string | null
+          provider: string
+          received_at: string
+        }
+        Insert: {
+          external_event_id: string
+          payload_hash?: string | null
+          processed_at?: string | null
+          provider: string
+          received_at?: string
+        }
+        Update: {
+          external_event_id?: string
+          payload_hash?: string | null
+          processed_at?: string | null
+          provider?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       website_chat_messages: {
         Row: {
           content: string | null
@@ -7779,8 +7911,25 @@ export type Database = {
         Args: { _ids: string[]; _tag: string }
         Returns: undefined
       }
+      check_and_increment_rate_limit: {
+        Args: {
+          p_fn_name: string
+          p_max_requests: number
+          p_organization_id: string
+          p_user_id: string
+          p_window_seconds: number
+        }
+        Returns: {
+          allowed: boolean
+          current_count: number
+          reset_at: string
+        }[]
+      }
       cleanup_ads_oauth_states: { Args: never; Returns: undefined }
+      cleanup_idempotency_keys: { Args: never; Returns: undefined }
+      cleanup_job_failures: { Args: never; Returns: undefined }
       cleanup_old_logs: { Args: never; Returns: Json }
+      cleanup_rate_limits: { Args: never; Returns: undefined }
       cleanup_send_recipients: { Args: never; Returns: undefined }
       collect_meta_noe_insights: {
         Args: {
@@ -8289,6 +8438,18 @@ export type Database = {
       is_team_chat_member: {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
+      }
+      log_job_failure: {
+        Args: {
+          p_correlation_id?: string
+          p_error_message: string
+          p_error_stack?: string
+          p_job_kind?: string
+          p_job_name: string
+          p_organization_id?: string
+          p_payload?: Json
+        }
+        Returns: number
       }
       monthly_index_cleanup: { Args: never; Returns: Json }
       move_to_dlq: {
