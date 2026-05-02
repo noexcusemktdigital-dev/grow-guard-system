@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useClienteNotifications, useClienteContentMutations } from "@/hooks/useClienteContent";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -113,12 +114,11 @@ export default function NotificacoesPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <Bell className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">
-            {filter === "Não lidas" ? "Nenhuma notificação não lida" : "Nenhuma notificação"}
-          </p>
-        </div>
+        <EmptyState
+          icon={<Bell className="w-8 h-8" />}
+          title={filter === "Não lidas" ? "Nenhuma notificação não lida" : "Nenhuma notificação"}
+          description="Quando houver novidades, elas aparecerão aqui."
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((n, idx) => {

@@ -21,6 +21,7 @@ import { useCalculatorSettings } from "@/hooks/useCalculatorSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { EmptyState } from "@/components/ui/empty-state";
 
 // Calculator imports
 import { useCalculator } from "@/hooks/useCalculator";
@@ -437,11 +438,11 @@ function PropostasListTab({ onEdit, onView }: { onEdit: (proposal: Record<string
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center py-16">
-          <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground font-medium">Nenhuma proposta encontrada</p>
-          <p className="text-xs text-muted-foreground mt-1">Use a calculadora para criar sua primeira proposta.</p>
-        </div>
+        <EmptyState
+          icon={<Inbox className="w-8 h-8" />}
+          title="Nenhuma proposta encontrada"
+          description="Use a calculadora para criar sua primeira proposta."
+        />
       ) : (
         <Card className="glass-card">
           <div className="overflow-x-auto">

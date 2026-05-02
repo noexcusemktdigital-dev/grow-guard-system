@@ -9,6 +9,7 @@ import { UnidadeFinanceiroReal } from "@/components/unidades/UnidadeFinanceiroRe
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -181,14 +182,12 @@ export default function Unidades() {
 
       {!selected ? (
         (units ?? []).length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">Nenhuma unidade cadastrada</h3>
-            <p className="text-sm text-muted-foreground mb-4">Cadastre a primeira unidade da rede.</p>
-            <Button onClick={() => { resetWizard(); setShowWizard(true); }}>
-              <Plus className="w-4 h-4 mr-1" /> Nova Unidade
-            </Button>
-          </div>
+          <EmptyState
+            icon={<Inbox className="w-8 h-8" />}
+            title="Nenhuma unidade cadastrada"
+            description="Cadastre a primeira unidade da rede."
+            action={{ label: "Nova Unidade", onClick: () => { resetWizard(); setShowWizard(true); } }}
+          />
         ) : viewMode === "card" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {units?.map(u => (
