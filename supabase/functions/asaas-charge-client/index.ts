@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getOrCreateAsaasCustomer, fetchPixQrCode, buildSplitConfig } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { redact } from "../_shared/redact.ts";
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
 
     if (splitConfig) {
       chargePayload.split = splitConfig;
-      console.log(`Split configured: ${JSON.stringify(splitConfig)}`);
+      console.log(`Split configured: ${JSON.stringify(redact(splitConfig))}`);
     }
 
     const chargeRes = await asaasFetch(`${ASAAS_BASE}/payments`, {

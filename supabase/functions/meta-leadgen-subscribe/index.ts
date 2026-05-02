@@ -3,6 +3,7 @@
 // Salva o page_access_token na tabela meta_leadgen_subscribed_pages.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { redact } from "../_shared/redact.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
@@ -99,7 +100,7 @@ Deno.serve(async (req) => {
       `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token&limit=100&access_token=${accessToken}`,
     );
     const accountsJson = await accountsRes.json();
-    console.log("[meta-leadgen-subscribe] /me/accounts:", JSON.stringify(accountsJson));
+    console.log("[meta-leadgen-subscribe] /me/accounts:", JSON.stringify(redact(accountsJson)));
 
     const pageEntry = (accountsJson.data ?? []).find((p: any) => p.id === page_id);
 
