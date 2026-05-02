@@ -2,28 +2,33 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskPhone, redact } from '../_shared/redact.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'evolution-webhook');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   try {
     // SEC-NOE-002: Fail-closed secret validation — mandatory, rejects if not configured
     const expectedSecret = Deno.env.get("EVOLUTION_WEBHOOK_SECRET");
     if (!expectedSecret) {
-      console.error("[evolution-webhook] EVOLUTION_WEBHOOK_SECRET not configured — rejecting all requests");
+      log.error('EVOLUTION_WEBHOOK_SECRET not configured — rejecting all requests');
       return new Response(JSON.stringify({ error: "Webhook not configured" }), {
         status: 500,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
       });
     }
     const receivedSecret = req.headers.get("x-evolution-secret") || "";
     if (receivedSecret !== expectedSecret) {
-      console.warn("[evolution-webhook] Invalid secret received");
+      log.warn('invalid_secret');
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
       });
     }
 
@@ -409,14 +414,15 @@ Deno.serve(async (req) => {
     }
 
     // Unhandled event
+    log.info('done', { event: event || "unknown" });
     return new Response(JSON.stringify({ ok: true, event: event || "unknown" }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   } catch (err) {
-    console.error("Evolution webhook error:", err);
+    log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 });

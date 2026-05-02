@@ -1,26 +1,31 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'crm-lead-webhook');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 
   try {
     const secret = Deno.env.get("CRM_LEAD_WEBHOOK_SECRET") || Deno.env.get("CRM_WEBHOOK_SECRET");
     if (!secret) {
-      console.error("CRM_WEBHOOK_SECRET not configured — rejecting all requests");
+      log.error('CRM_WEBHOOK_SECRET not configured — rejecting all requests');
       return new Response(JSON.stringify({ error: "Not configured" }), {
         status: 500,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
       });
     }
 
@@ -53,10 +58,10 @@ Deno.serve(async (req) => {
     }
 
     if (!authenticated) {
-      console.warn("[crm-lead-webhook] Invalid or missing authentication");
+      log.warn('auth_failed');
       return new Response(JSON.stringify({ error: "Invalid authentication" }), {
         status: 401,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
       });
     }
 
@@ -137,9 +142,10 @@ Deno.serve(async (req) => {
         description: `Fonte: ${source || "webhook"}`,
       });
 
+      log.info('done', { action: 'updated', lead_id: existingLead.id });
       return new Response(
         JSON.stringify({ success: true, lead_id: existingLead.id, action: "updated" }),
-        { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        { headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }) }
       );
     }
 
@@ -222,14 +228,16 @@ Deno.serve(async (req) => {
 
     if (insertError) throw insertError;
 
+    log.info('done', { action: 'created', lead_id: newLead.id });
     return new Response(
       JSON.stringify({ success: true, lead_id: newLead.id, action: "created" }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      { headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }) }
     );
   } catch (err: unknown) {
+    log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 });

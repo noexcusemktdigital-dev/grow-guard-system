@@ -4,6 +4,7 @@ import { getOrCreateAsaasCustomer } from "../_shared/asaas-customer.ts";
 import { asaasFetch } from "../_shared/asaas-fetch.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { withIdempotency } from "../_shared/idempotency.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const ASAAS_BASE = Deno.env.get("ASAAS_BASE_URL") || "https://api.asaas.com/v3";
 
@@ -14,15 +15,19 @@ const PACK_PRICES: Record<string, { credits: number; price: number }> = {
 };
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-buy-credits');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: cors });
+    return new Response(null, { headers: withCorrelationHeader(ctx, cors) });
   }
 
   const respond = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...cors, "Content-Type": "application/json" }),
     });
 
   try {
@@ -174,7 +179,7 @@ Deno.serve(async (req) => {
 
     return respond(result.status, result.body);
   } catch (err: unknown) {
-    console.error("asaas-buy-credits error:", err);
+    log.error('unhandled_error', { error: String(err) });
     return respond(500, { error: err instanceof Error ? err.message : String(err) });
   }
 });

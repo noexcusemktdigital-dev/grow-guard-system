@@ -4,10 +4,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { redact } from "../_shared/redact.ts";
 import { verifyMetaWebhook } from "../_shared/hmac.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const VERIFY_TOKEN = Deno.env.get("META_LEADGEN_VERIFY_TOKEN") || "noexcuse_leadgen_verify";
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'meta-leadgen-webhook');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   const url = new URL(req.url);
 
   // GET: verificação inicial do webhook (Meta envia hub.challenge)
@@ -32,15 +37,15 @@ Deno.serve(async (req) => {
     const appSecret = Deno.env.get("META_APP_SECRET");
     const validation = await verifyMetaWebhook(req, rawBody, appSecret);
     if (!validation.valid) {
-      console.warn(`[meta-leadgen-webhook] HMAC validation failed: ${validation.reason}`);
+      log.warn('hmac_failed', { reason: validation.reason });
       return new Response(JSON.stringify({ error: "unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { "Content-Type": "application/json" }),
       });
     }
 
     const body = JSON.parse(rawBody);
-    // LGPD-001: redact PII (lead names, emails, phones)
+    // LGPD-001: redact PII (lead names, emails, phones) — keep console.log for redacted payload (no PII)
     console.log("[meta-leadgen-webhook] payload:", JSON.stringify(redact(body)));
 
     const supabase = createClient(
@@ -52,7 +57,7 @@ Deno.serve(async (req) => {
     if (body.object !== "page") {
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { "Content-Type": "application/json" }),
       });
     }
 
@@ -200,16 +205,17 @@ Deno.serve(async (req) => {
         .eq("organization_id", page.organization_id);
     }
 
+    log.info('done', { processed: events.length });
     return new Response(JSON.stringify({ ok: true, processed: events.length }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { "Content-Type": "application/json" }),
     });
   } catch (err) {
-    console.error("[meta-leadgen-webhook] error:", err);
+    log.error('unhandled_error', { error: String(err) });
     // Sempre retornar 200 ao Meta para evitar reentrega em loop por erro nosso
     return new Response(JSON.stringify({ ok: false, error: String(err) }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { "Content-Type": "application/json" }),
     });
   }
 });

@@ -2,11 +2,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskEmail } from '../_shared/redact.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
+  const ctx = newRequestContext(req, 'manage-member');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
 
-  const responseHeaders = { ...getCorsHeaders(req), "Content-Type": "application/json" };
+  if (req.method === "OPTIONS") return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
+
+  const responseHeaders = withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" });
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -229,7 +234,7 @@ Deno.serve(async (req) => {
     console.log("[manage-member] Update successful", { user_id, organization_id });
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: responseHeaders });
   } catch (err: unknown) {
-    console.error("[manage-member] Unhandled error:", err);
+    log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 200,
       headers: responseHeaders,
