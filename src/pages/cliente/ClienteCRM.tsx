@@ -606,6 +606,7 @@ export default function ClienteCRM({ hideQuota = false, configRoute }: ClienteCR
           setTutorialOpen(true);
         }
       }} />
+      {!hideQuota && <AssessoriaPopup storageKey="noexcuse_popup_crm_v1" servico="Implantação e Operação de CRM" />}
     </div>
   );
 }
