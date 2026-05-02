@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Shuffle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -13,6 +12,7 @@ import { useCrmOrgMembers } from "@/hooks/useCrmOrgMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeadQuota } from "@/hooks/useLeadQuota";
 import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/typed";
 
 const SOURCES = ["WhatsApp", "Formulário", "Indicação", "Ads", "LinkedIn", "Evento", "Orgânico"];
 
@@ -33,7 +33,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const { user } = useAuth();
   const { maxLeads, atLimit } = useLeadQuota();
 
-  const rouletteEnabled = !!(crmSettings as any)?.lead_roulette_enabled;
+  const rouletteEnabled = !!(crmSettings as Tables<'crm_settings'> | null)?.lead_roulette_enabled;
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -43,14 +43,15 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
   const [source, setSource] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [assignedTo, setAssignedTo] = useState<string>(rouletteEnabled ? "" : (user?.id ?? ""));
-  const [customFields, setCustomFields] = useState<Record<string, any>>({});
+  const [customFields, setCustomFields] = useState<Record<string, string | number | boolean>>({});
 
   const selectedFunnelData = funnelsData?.find(f => f.id === funnelId);
-  const rawSchema = (selectedFunnelData as any)?.custom_fields_schema || [];
+  type CustomField = { key: string; label: string; type: string; required?: boolean; placeholder?: string; options?: string[] };
+  const rawSchema: CustomField[] = (selectedFunnelData as (typeof selectedFunnelData & { custom_fields_schema?: CustomField[] }))?.custom_fields_schema || [];
   // Deduplica chaves para suportar dados legados onde múltiplos campos compartilhavam a mesma key
   const customFieldsSchema = (() => {
     const seen = new Set<string>();
-    return rawSchema.map((f: any, i: number) => {
+    return rawSchema.map((f, i) => {
       const baseKey = f?.key || `field_${i}`;
       let key = baseKey;
       let suffix = 2;
@@ -105,7 +106,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
       assigned_to: rouletteEnabled ? undefined : (assignedTo || undefined),
       custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
       _maxLeads: maxLeads,
-    } as any);
+    } as Parameters<typeof createLead.mutate>[0]);
     reset();
     onOpenChange(false);
   };
@@ -165,7 +166,7 @@ export function CrmNewLeadDialog({ open, onOpenChange, defaultStage, funnelId, p
           {customFieldsSchema.length > 0 && (
             <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
               <Label className="text-xs font-semibold">Campos adicionais</Label>
-              {customFieldsSchema.map((field: any, idx: number) => (
+              {customFieldsSchema.map((field, idx) => (
                 <div key={`${field.key}__${idx}`}>
                   <Label className="text-xs">{field.label}{field.required ? " *" : ""}</Label>
                   {field.type === "select" ? (
