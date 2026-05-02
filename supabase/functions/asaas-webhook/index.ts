@@ -1,8 +1,13 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'asaas-webhook');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   // Estes dois sao definidos depois e usados por jsonOk para marcar processed_at.
   let _eventIdForProcessed: string | null = null;
   let _adminClientForProcessed: any = null;
@@ -18,12 +23,12 @@ Deno.serve(async (req) => {
         .then(() => {}, (e: any) => console.warn("[asaas-webhook] failed to mark processed_at:", e));
     }
     return new Response(JSON.stringify(data), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   try {
@@ -33,21 +38,22 @@ Deno.serve(async (req) => {
 
     // 1. Token obrigatório — rejeita se não configurado (SEC-NOE-004)
     if (!asaasToken) {
-      console.error("ASAAS_WEBHOOK_TOKEN not configured — rejecting all requests");
+      log.error('ASAAS_WEBHOOK_TOKEN not configured — rejecting all requests');
       await req.text();
       return new Response(JSON.stringify({ error: "Webhook not configured" }), {
         status: 500,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
       });
     }
 
     // 2. Validate token BEFORE parsing body
     const headerToken = req.headers.get("asaas-access-token");
     if (headerToken !== asaasToken) {
+      log.warn('invalid_token');
       await req.text();
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
       });
     }
 
@@ -776,10 +782,10 @@ Deno.serve(async (req) => {
 
     return jsonOk({ ok: true });
   } catch (err: unknown) {
-    console.error("asaas-webhook error:", err);
+    log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
       status: 500,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 });

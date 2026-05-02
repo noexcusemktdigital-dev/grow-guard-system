@@ -7,12 +7,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { verifyMetaWebhook } from "../_shared/hmac.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const VERSION = "v21.0";
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'whatsapp-cloud-webhook');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -28,24 +33,25 @@ Deno.serve(async (req) => {
     const challenge = url.searchParams.get("hub.challenge");
 
     if (mode === "subscribe" && token && verifyToken && token === verifyToken) {
-      console.log("[whatsapp-cloud-webhook] Meta verification OK");
+      log.info('meta_verification_ok');
+      // text/plain — Meta challenge must be plain text; x-request-id added for tracing
       return new Response(challenge ?? "", {
         status: 200,
-        headers: { ...getCorsHeaders(req), "Content-Type": "text/plain" },
+        headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "text/plain" }),
       });
     }
 
-    console.warn("[whatsapp-cloud-webhook] Meta verification failed", { mode, hasToken: !!token });
+    log.warn('meta_verification_failed', { mode, hasToken: !!token });
     return new Response("Forbidden", {
       status: 403,
-      headers: { ...getCorsHeaders(req), "Content-Type": "text/plain" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "text/plain" }),
     });
   }
 
   if (req.method !== "POST") {
     return new Response("Method not allowed", {
       status: 405,
-      headers: getCorsHeaders(req),
+      headers: withCorrelationHeader(ctx, getCorsHeaders(req)),
     });
   }
 
@@ -58,10 +64,10 @@ Deno.serve(async (req) => {
   const appSecret = Deno.env.get("WHATSAPP_APP_SECRET") ?? Deno.env.get("META_APP_SECRET");
   const validation = await verifyMetaWebhook(req, rawBody, appSecret);
   if (!validation.valid) {
-    console.warn(`[whatsapp-cloud-webhook] HMAC validation failed: ${validation.reason}`);
+    log.warn('hmac_failed', { reason: validation.reason });
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 
@@ -69,11 +75,11 @@ Deno.serve(async (req) => {
   try {
     body = JSON.parse(rawBody);
   } catch (e) {
-    console.error("[whatsapp-cloud-webhook] Invalid JSON:", e);
+    log.error('invalid_json', { error: String(e) });
     // Sempre responder 200 para a Meta não reentregar em loop, mas logar.
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 
@@ -102,9 +108,10 @@ Deno.serve(async (req) => {
   }
 
   // Resposta rápida (Meta exige < 5s)
+  log.info('done', { object });
   return new Response(JSON.stringify({ ok: true, object }), {
     status: 200,
-    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
   });
 });
 

@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { maskEmail } from '../_shared/redact.ts';
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "NoExcuse Digital <noreply@noexcusedigital.com.br>";
@@ -92,12 +93,15 @@ async function findUserByEmail(adminClient: ReturnType<typeof createClient>, ema
 }
 
 Deno.serve(async (req) => {
+  const ctx = newRequestContext(req, 'invite-user');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   try {
-    console.log("[invite-user] Function invoked at", new Date().toISOString());
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -356,16 +360,16 @@ Deno.serve(async (req) => {
         expires_at: expiresAt,
       }, { onConflict: "email,organization_id" });
 
-    console.log(`User invited: ${maskEmail(email)} -> org ${organization_id} as ${validRole}`);
+    log.info('done', { user_id: userId, org: organization_id, role: validRole });
 
     return new Response(
       JSON.stringify({ success: true, user_id: userId }),
-      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+      { headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }) }
     );
   } catch (err: unknown) {
-    console.error("invite-user error:", err);
+    log.error('unhandled_error', { error: String(err) });
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 });

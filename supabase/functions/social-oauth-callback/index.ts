@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { redact } from "../_shared/redact.ts";
+import { newRequestContext, makeLogger, withCorrelationHeader } from '../_shared/correlation.ts';
 
 // ============================================================
 // HMAC-SHA256 state verification
@@ -68,14 +69,18 @@ function detectPlatformFromPayload(payload: Record<string, unknown>): "meta" | "
 // ============================================================
 
 serve(async (req) => {
+  const ctx = newRequestContext(req, 'social-oauth-callback');
+  const log = makeLogger(ctx);
+  log.info('request_received', { method: req.method });
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: getCorsHeaders(req) });
+    return new Response(null, { headers: withCorrelationHeader(ctx, getCorsHeaders(req)) });
   }
 
   if (req.method !== "GET") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      headers: withCorrelationHeader(ctx, { ...getCorsHeaders(req), "Content-Type": "application/json" }),
     });
   }
 
@@ -87,10 +92,10 @@ serve(async (req) => {
   const errorBase = `${siteUrl}/cliente/redes-sociais?tab=contas`;
 
   if (!supabaseUrl || !serviceRoleKey || !stateSecret) {
-    console.error("social-oauth-callback: missing required env vars");
+    log.error('missing_required_env_vars');
     return new Response(null, {
       status: 302,
-      headers: { Location: `${errorBase}&error=server_misconfigured` },
+      headers: withCorrelationHeader(ctx, { Location: `${errorBase}&error=server_misconfigured` }),
     });
   }
 
@@ -124,20 +129,20 @@ serve(async (req) => {
     // ---- Verify HMAC state ----
     const { valid, payload } = await verifyState(stateRaw, stateSecret);
     if (!valid || !payload) {
-      console.error("social-oauth-callback: invalid state signature");
+      log.error('invalid_state_signature');
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}&error=invalid_state` },
+        headers: withCorrelationHeader(ctx, { Location: `${errorBase}&error=invalid_state` }),
       });
     }
 
     // ---- Anti-replay: timestamp must be < 10 minutes old ----
     const ts = payload.ts as number;
     if (!ts || Date.now() - ts > 10 * 60 * 1000) {
-      console.error("social-oauth-callback: state expired");
+      log.error('state_expired');
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}&error=state_expired` },
+        headers: withCorrelationHeader(ctx, { Location: `${errorBase}&error=state_expired` }),
       });
     }
 
@@ -145,17 +150,17 @@ serve(async (req) => {
     if (!orgId) {
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}&error=missing_org_id` },
+        headers: withCorrelationHeader(ctx, { Location: `${errorBase}&error=missing_org_id` }),
       });
     }
 
     // ---- Detect platform ----
     const platform = detectPlatformFromPayload(payload);
     if (!platform) {
-      console.error("social-oauth-callback: unknown platform in state:", payload.platform);
+      log.error('unknown_platform', { platform: payload.platform });
       return new Response(null, {
         status: 302,
-        headers: { Location: `${errorBase}&error=unknown_platform` },
+        headers: withCorrelationHeader(ctx, { Location: `${errorBase}&error=unknown_platform` }),
       });
     }
 
@@ -565,15 +570,15 @@ serve(async (req) => {
     // Unreachable — all platforms handled above
     return new Response(null, {
       status: 302,
-      headers: { Location: `${errorBase}&error=unknown_platform` },
+      headers: withCorrelationHeader(ctx, { Location: `${errorBase}&error=unknown_platform` }),
     });
   } catch (err) {
-    console.error("social-oauth-callback unexpected error:", err);
+    log.error('unexpected_error', { error: String(err) });
     return new Response(null, {
       status: 302,
-      headers: {
+      headers: withCorrelationHeader(ctx, {
         Location: `${siteUrl}/cliente/redes-sociais?tab=contas&error=unexpected_error`,
-      },
+      }),
     });
   }
 });
