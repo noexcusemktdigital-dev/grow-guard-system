@@ -278,8 +278,9 @@ export default function FinanceiroFechamentos() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Ano</Label>
+                <Label htmlFor="fechamento-ano">Ano</Label>
                 <Input
+                  id="fechamento-ano"
                   type="number"
                   value={year}
                   onChange={(e) => {
@@ -291,8 +292,8 @@ export default function FinanceiroFechamentos() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Título</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="DRE Unidade - Mês/Ano" />
+              <Label htmlFor="fechamento-titulo">Título</Label>
+              <Input id="fechamento-titulo" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="DRE Unidade - Mês/Ano" />
             </div>
 
             <div className="space-y-1.5">

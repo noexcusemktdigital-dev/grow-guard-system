@@ -70,7 +70,7 @@ export function CrmSetupBar({ onOpenNewLead, onOpenFunnelManager, configRoute }:
             {completedCount}/{steps.length} concluídos
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleDismiss}>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleDismiss} aria-label="Fechar">
           <X className="w-3.5 h-3.5" />
         </Button>
       </div>

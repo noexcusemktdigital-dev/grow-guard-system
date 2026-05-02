@@ -200,10 +200,10 @@ function TaskCard({
           </div>
           {task.source !== "crm" && (
             <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(task)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(task)} aria-label="Editar tarefa">
                 <Edit2 className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onDelete(task.id)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onDelete(task.id)} aria-label="Excluir tarefa">
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>

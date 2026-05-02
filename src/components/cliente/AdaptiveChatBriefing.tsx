@@ -396,7 +396,7 @@ export function AdaptiveChatBriefing({
                   }
                 }}
               />
-              <Button size="icon" disabled={!textValue.trim()} onClick={() => submitAnswer(currentQuestion.type === "number" ? Number(textValue) : textValue.trim())}>
+              <Button size="icon" disabled={!textValue.trim()} aria-label="Enviar resposta" onClick={() => submitAnswer(currentQuestion.type === "number" ? Number(textValue) : textValue.trim())}>
                 <Send className="w-4 h-4" />
               </Button>
             </div>
@@ -412,7 +412,7 @@ export function AdaptiveChatBriefing({
                 rows={3}
                 className="resize-none"
               />
-              <Button size="icon" disabled={!textValue.trim()} onClick={() => submitAnswer(textValue.trim())}>
+              <Button size="icon" disabled={!textValue.trim()} aria-label="Enviar resposta" onClick={() => submitAnswer(textValue.trim())}>
                 <Send className="w-4 h-4" />
               </Button>
             </div>

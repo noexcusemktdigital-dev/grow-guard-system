@@ -253,7 +253,7 @@ function CompetitorListField({ value, onChange }: { value: Competitor[]; onChang
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-muted-foreground">Concorrente {i + 1}</span>
             {competitors.length > 1 && (
-              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => remove(i)}>
+              <Button type="button" variant="ghost" size="icon" className="h-6 w-6" aria-label="Remover concorrente" onClick={() => remove(i)}>
                 <Trash2 className="w-3 h-3 text-destructive" />
               </Button>
             )}

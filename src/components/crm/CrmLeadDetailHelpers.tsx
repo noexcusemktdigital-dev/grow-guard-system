@@ -194,12 +194,12 @@ export function LeadProductsTab({ leadId }: { leadId: string }) {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Quantidade</Label>
-                <Input type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="h-8 text-sm" />
+                <Label htmlFor="produto-qty" className="text-xs">Quantidade</Label>
+                <Input id="produto-qty" type="number" min="1" value={qty} onChange={e => setQty(e.target.value)} className="h-8 text-sm" />
               </div>
               <div>
-                <Label className="text-xs">Desconto (%)</Label>
-                <Input type="number" min="0" max="100" value={discount} onChange={e => setDiscount(e.target.value)} className="h-8 text-sm" />
+                <Label htmlFor="produto-desconto" className="text-xs">Desconto (%)</Label>
+                <Input id="produto-desconto" type="number" min="0" max="100" value={discount} onChange={e => setDiscount(e.target.value)} className="h-8 text-sm" />
               </div>
             </div>
             {selectedProduct && (
@@ -355,18 +355,19 @@ export function ProposalsTab({ leadId, onValueSync }: { leadId: string; onValueS
 
           <div className="space-y-4">
             <div>
-              <Label className="text-xs">Título *</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Proposta comercial..." className="h-8 text-sm" />
+              <Label htmlFor="proposta-titulo" className="text-xs">Título *</Label>
+              <Input id="proposta-titulo" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Proposta comercial..." className="h-8 text-sm" />
             </div>
 
             <div>
-              <Label className="text-xs">Valor (R$)</Label>
-              <Input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+              <Label htmlFor="proposta-valor" className="text-xs">Valor (R$)</Label>
+              <Input id="proposta-valor" type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder="0,00" className="h-8 text-sm" />
             </div>
 
             <div>
-              <Label className="text-xs">Arquivo (PDF, imagem)</Label>
+              <Label htmlFor="proposta-arquivo" className="text-xs">Arquivo (PDF, imagem)</Label>
               <Input
+                id="proposta-arquivo"
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.webp"
                 onChange={e => setFile(e.target.files?.[0] || null)}
